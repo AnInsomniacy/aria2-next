@@ -565,7 +565,8 @@ jobs:
             --disable-shared --enable-static --without-random \
             --prefix=$PREFIX --host=$HOST \
             --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE) \
-            LIBS="-lws2_32"
+            LIBS="-lws2_32" \
+            ac_cv_func_if_indextoname=no
           sudo make -j$(nproc) install
 
       - name: Build OpenSSL
@@ -712,7 +713,8 @@ jobs:
             --disable-shared --enable-static --without-random \
             --prefix=$PREFIX --host=$HOST \
             --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE) \
-            CC="$CC" LIBS="-lws2_32"
+            CC="$CC" LIBS="-lws2_32" \
+            ac_cv_func_if_indextoname=no
           sudo env "PATH=$PATH" make -j$(nproc) install
 
       - name: Build OpenSSL
