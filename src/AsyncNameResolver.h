@@ -68,7 +68,6 @@ private:
   STATUS status_;
   int family_;
   ares_channel channel_;
-  bool usable_;
 
   std::vector<std::string> resolvedAddresses_;
   std::string error_;
@@ -108,12 +107,6 @@ public:
   void setAddr(const std::string& addrString);
 
   const std::string& getHostname() const { return hostname_; }
-
-  // Returns true if the c-ares channel was successfully initialized with
-  // at least one DNS server.  When the underlying platform fails to
-  // supply DNS configuration (e.g. GetAdaptersAddresses on Windows ARM64),
-  // this returns false so the caller can fall back to the system resolver.
-  bool usable() const { return usable_; }
 
   void handle_sock_state(ares_socket_t sock, int read, int write);
 };

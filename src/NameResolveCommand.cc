@@ -93,24 +93,14 @@ bool NameResolveCommand::execute()
     res.push_back(hostname);
   }
   else {
-    bool useSystemResolver = false;
 #ifdef ENABLE_ASYNC_DNS
     if (e_->getOption()->getAsBool(PREF_ASYNC_DNS)) {
-      int rv = resolveHostname(res, hostname);
-      if (rv == 0) {
+      if (resolveHostname(res, hostname) == 0) {
         e_->addCommand(std::unique_ptr<Command>(this));
         return false;
       }
-      if (rv == -1 && !asyncNameResolverMan_->started()) {
-        // Async DNS resolver is not usable (no DNS servers detected).
-        // Fall back to the synchronous system resolver.
-        useSystemResolver = true;
-      }
-      // rv == 1 means success (res populated).
-      // rv == -1 with started() means async DNS failed normally; fall
-      // through to empty-check and onFailure().
     }
-    if (!e_->getOption()->getAsBool(PREF_ASYNC_DNS) || useSystemResolver)
+    else
 #endif // ENABLE_ASYNC_DNS
     {
       NameResolver resolver;
@@ -160,11 +150,7 @@ int NameResolveCommand::resolveHostname(std::vector<std::string>& res,
                                         const std::string& hostname)
 {
   if (!asyncNameResolverMan_->started()) {
-    if (!asyncNameResolverMan_->startAsync(hostname, e_, this)) {
-      A2_LOG_INFO(fmt(MSG_NAME_RESOLUTION_FAILED, getCuid(), hostname.c_str(),
-                      "Async DNS resolver is not usable on this system"));
-      return -1;
-    }
+    asyncNameResolverMan_->startAsync(hostname, e_, this);
   }
 
   switch (asyncNameResolverMan_->getStatus()) {

@@ -65,47 +65,32 @@ bool AsyncNameResolverMan::started() const
   return false;
 }
 
-bool AsyncNameResolverMan::startAsync(const std::string& hostname,
+void AsyncNameResolverMan::startAsync(const std::string& hostname,
                                       DownloadEngine* e, Command* command)
 {
   numResolver_ = 0;
   // Set IPv6 resolver first, so that we can push IPv6 address in
   // front of IPv6 address in getResolvedAddress().
   if (ipv6_) {
-    if (startAsyncFamily(hostname, AF_INET6, e, command)) {
-      ++numResolver_;
-    }
+    startAsyncFamily(hostname, AF_INET6, e, command);
+    ++numResolver_;
   }
   if (ipv4_) {
-    if (startAsyncFamily(hostname, AF_INET, e, command)) {
-      ++numResolver_;
-    }
-  }
-  if (numResolver_ == 0) {
-    // c-ares could not detect any DNS servers on this system.  The caller
-    // should fall back to the synchronous system resolver (getaddrinfo).
-    return false;
+    startAsyncFamily(hostname, AF_INET, e, command);
+    ++numResolver_;
   }
   A2_LOG_INFO(
       fmt(MSG_RESOLVING_HOSTNAME, command->getCuid(), hostname.c_str()));
-  return true;
 }
 
-bool AsyncNameResolverMan::startAsyncFamily(const std::string& hostname,
+void AsyncNameResolverMan::startAsyncFamily(const std::string& hostname,
                                             int family, DownloadEngine* e,
                                             Command* command)
 {
-  auto resolver = std::make_shared<AsyncNameResolver>(family, servers_);
-  if (!resolver->usable()) {
-    A2_LOG_INFO(fmt("Async DNS resolver (family=%d) is not usable,"
-                    " will fall back to system resolver",
-                    family));
-    return false;
-  }
-  asyncNameResolver_[numResolver_] = std::move(resolver);
+  asyncNameResolver_[numResolver_] =
+      std::make_shared<AsyncNameResolver>(family, servers_);
   asyncNameResolver_[numResolver_]->resolve(hostname);
   setNameResolverCheck(numResolver_, e, command);
-  return true;
 }
 
 void AsyncNameResolverMan::getResolvedAddress(

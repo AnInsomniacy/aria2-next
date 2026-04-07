@@ -774,49 +774,36 @@ std::string AbstractCommand::resolveHostname(std::vector<std::string>& addrs,
   }
 
   std::string ipaddr;
-  bool useSystemResolver = false;
 #ifdef ENABLE_ASYNC_DNS
   if (getOption()->getAsBool(PREF_ASYNC_DNS)) {
     if (!asyncNameResolverMan_->started()) {
-      if (!asyncNameResolverMan_->startAsync(hostname, e_, this)) {
-        // c-ares could not obtain DNS server configuration from the
-        // system (known issue on Windows ARM64 with
-        // GetAdaptersAddresses).  Fall back to the synchronous system
-        // resolver (getaddrinfo) for this and all subsequent lookups
-        // on this command.
-        A2_LOG_WARN(fmt("CUID#%" PRId64 " - Async DNS unavailable for %s,"
-                        " using system resolver",
-                        getCuid(), hostname.c_str()));
-        useSystemResolver = true;
-      }
+      asyncNameResolverMan_->startAsync(hostname, e_, this);
     }
-    if (!useSystemResolver) {
-      switch (asyncNameResolverMan_->getStatus()) {
-      case -1:
-        if (!isProxyRequest(req_->getProtocol(), getOption())) {
-          e_->getRequestGroupMan()
-              ->getOrCreateServerStat(req_->getHost(), req_->getProtocol())
-              ->setError();
-        }
-        throw DL_ABORT_EX2(fmt(MSG_NAME_RESOLUTION_FAILED, getCuid(),
-                               hostname.c_str(),
-                               asyncNameResolverMan_->getLastError().c_str()),
-                           error_code::NAME_RESOLVE_ERROR);
-      case 0:
-        return A2STR::NIL;
-
-      case 1:
-        asyncNameResolverMan_->getResolvedAddress(addrs);
-        if (addrs.empty()) {
-          throw DL_ABORT_EX2(fmt(MSG_NAME_RESOLUTION_FAILED, getCuid(),
-                                 hostname.c_str(), "No address returned"),
-                             error_code::NAME_RESOLVE_ERROR);
-        }
-        break;
+    switch (asyncNameResolverMan_->getStatus()) {
+    case -1:
+      if (!isProxyRequest(req_->getProtocol(), getOption())) {
+        e_->getRequestGroupMan()
+            ->getOrCreateServerStat(req_->getHost(), req_->getProtocol())
+            ->setError();
       }
+      throw DL_ABORT_EX2(fmt(MSG_NAME_RESOLUTION_FAILED, getCuid(),
+                             hostname.c_str(),
+                             asyncNameResolverMan_->getLastError().c_str()),
+                         error_code::NAME_RESOLVE_ERROR);
+    case 0:
+      return A2STR::NIL;
+
+    case 1:
+      asyncNameResolverMan_->getResolvedAddress(addrs);
+      if (addrs.empty()) {
+        throw DL_ABORT_EX2(fmt(MSG_NAME_RESOLUTION_FAILED, getCuid(),
+                               hostname.c_str(), "No address returned"),
+                           error_code::NAME_RESOLVE_ERROR);
+      }
+      break;
     }
   }
-  if (!getOption()->getAsBool(PREF_ASYNC_DNS) || useSystemResolver)
+  else
 #endif // ENABLE_ASYNC_DNS
   {
     NameResolver res;

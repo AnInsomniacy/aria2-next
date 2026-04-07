@@ -113,48 +113,18 @@ void AsyncNameResolver::handle_sock_state(ares_socket_t fd, int read, int write)
 }
 
 AsyncNameResolver::AsyncNameResolver(int family, const std::string& servers)
-    : status_(STATUS_READY), family_(family), usable_(true)
+    : status_(STATUS_READY), family_(family)
 {
   ares_options opts{};
   opts.sock_state_cb = sock_state_cb;
   opts.sock_state_cb_data = this;
 
-  int rv = ares_init_options(&channel_, &opts, ARES_OPT_SOCK_STATE_CB);
-  if (rv != ARES_SUCCESS) {
-    A2_LOG_WARN(fmt("ares_init_options failed: %s", ares_strerror(rv)));
-    usable_ = false;
-    return;
-  }
+  // TODO evaluate return value
+  ares_init_options(&channel_, &opts, ARES_OPT_SOCK_STATE_CB);
 
   if (!servers.empty()) {
     if (ares_set_servers_csv(channel_, servers.c_str()) != ARES_SUCCESS) {
       A2_LOG_DEBUG("ares_set_servers_csv failed");
-    }
-  }
-  else {
-    // Verify that c-ares was able to obtain at least one DNS server from
-    // the system.  On some platforms (notably Windows ARM64), the
-    // GetAdaptersAddresses API may return an empty DNS server list even
-    // though the system's networking is fully functional.  When this
-    // happens, every subsequent query will fail with "Could not contact
-    // DNS servers".  Detecting this at init time allows a graceful
-    // fallback to the system resolver (getaddrinfo).
-    // See: https://github.com/c-ares/c-ares/issues/1020
-    struct ares_addr_port_node* serverList = nullptr;
-    if (ares_get_servers_ports(channel_, &serverList) == ARES_SUCCESS) {
-      if (!serverList) {
-        A2_LOG_WARN("c-ares: no DNS servers detected from system"
-                    " configuration. Async DNS will be disabled and the"
-                    " system resolver will be used instead.");
-        usable_ = false;
-      }
-      else {
-        ares_free_data(serverList);
-      }
-    }
-    else {
-      A2_LOG_WARN("c-ares: failed to query configured DNS servers");
-      usable_ = false;
     }
   }
 }

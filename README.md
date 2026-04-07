@@ -38,7 +38,7 @@ chmod +x aria2c   # Linux/macOS only
 |------------|---------|-----------|
 | zlib | 1.3.1 | All |
 | expat | 2.5.0 | All |
-| c-ares | 1.34.6 | All |
+| c-ares | 1.19.1 | All |
 | SQLite | 3.43.1 | All |
 | libssh2 | 1.11.0 | All |
 | OpenSSL | System | Linux |

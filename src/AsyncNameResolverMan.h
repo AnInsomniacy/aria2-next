@@ -60,10 +60,8 @@ public:
   void setIPv6(bool ipv6) { ipv6_ = ipv6; }
   // Returns true if asynchronous name resolution has been started.
   bool started() const;
-  // Starts asynchronous name resolution.  Returns true if the async
-  // resolver is usable, false if DNS server detection failed and the
-  // caller should fall back to the system resolver.
-  bool startAsync(const std::string& hostname, DownloadEngine* e,
+  // Starts asynchronous name resolution.
+  void startAsync(const std::string& hostname, DownloadEngine* e,
                   Command* command);
   // Appends resolved addresses to |res|.
   void getResolvedAddress(std::vector<std::string>& res) const;
@@ -84,7 +82,7 @@ public:
   void setServers(std::string servers) { servers_ = std::move(servers); }
 
 private:
-  bool startAsyncFamily(const std::string& hostname, int family,
+  void startAsyncFamily(const std::string& hostname, int family,
                         DownloadEngine* e, Command* command);
   void setNameResolverCheck(size_t resolverIndex, DownloadEngine* e,
                             Command* command);
