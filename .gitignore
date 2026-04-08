@@ -44,3 +44,16 @@ compile
 main.log
 main.trs
 test-suite.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Build
+build/
