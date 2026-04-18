@@ -245,10 +245,16 @@ jobs:
       - name: Install cross-compilation toolchain
         run: |
           sudo apt-get update
+          # LoongArch64 has no unversioned metapackage in Ubuntu 24.04;
+          # must install version-specific packages and create symlinks.
           sudo apt-get install -y --no-install-recommends \
             make binutils autoconf automake autotools-dev autopoint libtool \
             patch ca-certificates pkg-config curl dpkg-dev gettext \
-            gcc-loongarch64-linux-gnu g++-loongarch64-linux-gnu
+            gcc-14-loongarch64-linux-gnu g++-14-loongarch64-linux-gnu
+          # Create unversioned symlinks so $HOST-gcc / $HOST-g++ resolve
+          for tool in gcc g++ gcc-ar gcc-nm gcc-ranlib gcov; do
+            sudo ln -sf $HOST-${tool}-14 /usr/bin/$HOST-$tool
+          done
 
       - name: Download dependency sources
         run: |
