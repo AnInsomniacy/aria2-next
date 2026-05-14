@@ -1,7 +1,6 @@
 SUBDIRS = po lib third_party src doc test
 
 ACLOCAL_AMFLAGS = -I m4 --install
-RST2HTML = @RST2HTML@
 
 EXTRA_DIST = config.rpath \
 	     tools/script-helper \
@@ -10,31 +9,29 @@ EXTRA_DIST = config.rpath \
 	     packaging/scripts/makerelease \
 	     packaging/scripts/mingw-config packaging/scripts/mingw-release packaging/scripts/mingw-build-memo \
 	     packaging/scripts/android-config packaging/scripts/android-release \
+	     packaging/README.md \
+	     packaging/docs/ANDROID.md packaging/docs/WINDOWS.md \
 	     packaging/macos/makerelease-osx.mk \
+	     packaging/macos/welcome.html \
 	     packaging/macos/DS_Store packaging/macos/etc/paths.d/aria2c packaging/macos/etc/manpaths.d/aria2 \
 	     packaging/docker/Dockerfile.mingw \
 	     packaging/docker/Dockerfile.android \
 	     packaging/legacy/Dockerfile.raspberrypi \
+	     packaging/legacy/README.md \
 	     packaging/legacy/travis.yml \
 	     packaging/android/generic-config packaging/android/openssl-config packaging/android/zlib-config \
+	     maintenance/README.md maintenance/open-issue-review.md maintenance/issue-review-matrix.csv \
+	     maintenance/modernization-progress.md \
+	     third_party/README.md \
+	     tools/README.md \
 	     doc/requirements.txt \
 	     examples/libaria2ex.cc examples/libaria2wx.cc
 
-dist_doc_DATA = README README.rst README.html
-
-.PHONY: clang-format
-
-if HAVE_RST2HTML
-README.html: README.rst
-	$(RST2HTML)  $< > $@
-else # !HAVE_RST2HTML
-README.html: README.rst
-	@echo Warning: rst2html not installed. Placing only a dummy file for $@
-	echo "<!doctype html>" > $@
-	echo "<p>Readme has not been built!.<br>Instead see <a href='README.rst'>README.rst</a></p>" >> $@
-endif # !HAVE_RST2HTML
+dist_doc_DATA = README.md
 
 dist_noinst_DATA = LICENSE.OpenSSL
+
+.PHONY: clang-format
 
 # Format source files using clang-format.  Don't format source files
 # under third_party directory since we are not responsible for their coding

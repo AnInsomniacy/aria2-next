@@ -1,6 +1,8 @@
 # aria2-next
 
-aria2-next is a maintained [aria2](https://github.com/aria2/aria2) fork focused on reliability fixes, current dependency baselines, and reproducible cross-platform builds.
+aria2-next is a maintained [aria2](https://github.com/aria2/aria2) fork focused on reliability fixes, current dependency baselines, and reproducible cross-platform releases.
+
+The project keeps aria2's proven autotools build flow while organizing release packaging, third-party source, maintenance records, and helper tools under explicit ownership boundaries.
 
 ## Supported Platforms
 
@@ -25,14 +27,25 @@ All builds include the full feature set:
 
 ## Usage
 
-Download the latest binary from [Releases](../../releases), extract, and run:
+Download the latest binary from the project release page, extract it, and run:
 
 ```bash
 chmod +x aria2c   # Linux/macOS only
 ./aria2c --version
 ```
 
-## Build Details
+## Build From Source
+
+```bash
+autoreconf -i
+./configure
+make
+make check
+```
+
+Release packaging and cross-compilation helpers live under `packaging/`. The authoritative release dependency versions are stored in `packaging/dependencies.env`.
+
+## Dependency Baseline
 
 | Dependency | Version | Platforms |
 |------------|---------|-----------|
@@ -48,17 +61,32 @@ chmod +x aria2c   # Linux/macOS only
 
 macOS binaries target `MACOSX_DEPLOYMENT_TARGET=11.0` (Big Sur+) for maximum compatibility.
 
-## Origin
-
-Built as part of the [Motrix Next](https://github.com/AnInsomniacy/motrix-next) project. Binaries are universal and can be used by any project or standalone.
-
 ## Repository Layout
 
-The project keeps core source code in `src/`, tests in `test/`, documentation sources in `doc/`, bundled third-party source in `third_party/`, packaging and release assets in `packaging/`, maintenance records in `maintenance/`, helper scripts in `tools/`, build macros in `m4/`, translations in `po/`, and library support code in `lib/`.
+| Path | Purpose |
+|------|---------|
+| `src/` | aria2 command-line client and core implementation |
+| `src/includes/aria2/` | public libaria2 headers |
+| `test/` | CppUnit test suite |
+| `doc/` | English manual, manpage, bash completion, and documentation tooling |
+| `packaging/` | maintained release, cross-build, Docker, and platform package assets |
+| `third_party/` | bundled third-party source with explicit ownership notes |
+| `tools/` | repository helper scripts that are not platform packaging |
+| `maintenance/` | issue review records, modernization notes, and historical archives |
+| `m4/` | checked-in autotools macros |
+| `po/` | translation files and gettext workflow notes |
+| `lib/` | libaria2 support build targets |
 
-Historical packaging files that are not part of the maintained release pipeline live under `packaging/legacy/`.
-Bundled third-party code is documented in `third_party/README.md`.
+`README.md` is the only root readme. Legacy GNU placeholder files and generated documentation outputs are intentionally not kept in the repository.
+
+See `packaging/README.md`, `tools/README.md`, `third_party/README.md`, and `maintenance/README.md` for directory-specific ownership rules.
+
+## Maintenance Policy
+
+New maintenance work should keep source behavior, packaging, dependency metadata, and documentation in sync. Dependency versions used by maintained release automation must be updated through `packaging/dependencies.env` first.
+
+Historical or unsupported packaging assets should be moved under `packaging/legacy/` instead of remaining in the root directory.
 
 ## License
 
-Same as [aria2](https://github.com/aria2/aria2) — [GPLv2](COPYING).
+Same as [aria2](https://github.com/aria2/aria2): [GPLv2](COPYING).

@@ -200,15 +200,16 @@ ARIA2_DOCDIR = $(ARIA2_PREFIX)/share/doc/aria2
 ARIA2_DOCS = \
 	     $(ARIA2_DOCDIR)/AUTHORS \
 	     $(ARIA2_DOCDIR)/COPYING \
-	     $(ARIA2_DOCDIR)/NEWS
-ARIA2_CHANGELOG = $(ARIA2_DOCDIR)/Changelog
+	     $(ARIA2_DOCDIR)/LICENSE.OpenSSL \
+	     $(ARIA2_DOCDIR)/README.md \
+	     $(ARIA2_DOCDIR)/welcome.html
 
 # Yeah, inlined XML, go figure :p
 define ARIA2_DISTXML
 <?xml version="1.0" encoding="utf-8" standalone="no"?>
 <installer-gui-script minSpecVersion="1">
 	<title>aria1 $(VERSION)</title>
-	<welcome file="README.html"/>
+	<welcome file="welcome.html"/>
 	<pkg-ref id="aria2"/>
 	<pkg-ref id="aria2.paths"/>
 	<options customize="never" require-scripts="false" rootVolumeOnly="true"/>
@@ -377,19 +378,20 @@ aria2.build: aria2.x86_64.build
 	arch -64 $(ARIA2_PREFIX)/bin/aria2c -v
 	touch $@
 
-$(ARIA2_CHANGELOG): aria2.x86_64.build
-	git log --pretty=fuller --date=short $(PREV_TAG)..HEAD > $@
-
 $(ARIA2_DOCS): aria2.x86_64.build
-	cp -av $(SRCDIR)/$(@F) $@
+	if test "$(@F)" = "welcome.html"; then \
+		cp -av $(SRCDIR)/packaging/macos/welcome.html $@; \
+	else \
+		cp -av $(SRCDIR)/$(@F) $@; \
+	fi
 
-$(ARIA2_DIST).tar.bz2: aria2.build $(ARIA2_DOCS) $(ARIA2_CHANGELOG)
+$(ARIA2_DIST).tar.bz2: aria2.build $(ARIA2_DOCS)
 	find $(ARIA2_PREFIX) -exec touch "{}" \;
 	gtar -cf $@ \
 		--use-compress-program="bzip2 -9" \
 		$(ARIA2)
 
-$(ARIA2_DIST).pkg: aria2.build $(ARIA2_DOCS) $(ARIA2_CHANGELOG)
+$(ARIA2_DIST).pkg: aria2.build $(ARIA2_DOCS)
 	find $(ARIA2_PREFIX) -exec touch "{}" \;
 	pkgbuild \
 		--root $(ARIA2) \
@@ -417,7 +419,6 @@ $(ARIA2_DIST).dmg: $(ARIA2_DIST).pkg
 	mkdir -p dmg/Docs
 	cp -av $(ARIA2_DIST).pkg dmg/aria2.pkg
 	find $(ARIA2_PREFIX)/share/doc/aria2 -maxdepth 1 -type f -exec cp -av "{}" dmg/Docs \;
-	rm -rf dmg/Docs/README dmg/Docs/README.rst
 	cp $(SRCDIR)/packaging/macos/DS_Store dmg/.DS_Store
 	hdiutil create $@.uncompressed \
 		-srcfolder dmg \

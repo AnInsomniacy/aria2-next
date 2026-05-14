@@ -44,7 +44,7 @@ fi
 
 DIST_DIR=aria2-$VERSION-aarch64-linux-android-build1
 mkdir "$DIST_DIR"
-cp AUTHORS COPYING ChangeLog LICENSE.OpenSSL NEWS README.html README.android \
+cp AUTHORS COPYING LICENSE.OpenSSL README.md packaging/docs/ANDROID.md \
     android-out/aria2c "$DIST_DIR"
 zip -9 -r "$DIST_DIR.zip" "$DIST_DIR"
 rm -rf "$DIST_DIR"

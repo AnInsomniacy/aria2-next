@@ -7,7 +7,7 @@ AC_INIT([aria2],[1.37.0],[https://github.com/aria2/aria2/issues],[aria2],[https:
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([foreign subdir-objects])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 AC_USE_SYSTEM_EXTENSIONS
@@ -126,10 +126,6 @@ AC_SUBST([AR])
 AC_PATH_PROGS([SPHINXBUILD], [sphinx-build])
 AC_SUBST([SPHINXBUILD])
 AM_CONDITIONAL([HAVE_SPHINXBUILD], [ test "x$SPHINXBUILD" != "x" ])
-
-AC_PATH_PROGS([RST2HTML], [rst2html.py rst2html])
-AC_SUBST([RST2HTML])
-AM_CONDITIONAL([HAVE_RST2HTML], [ test "x$RST2HTML" != "x" ])
 
 # Setting language choice
 AC_LANG([C++])
@@ -1060,10 +1056,6 @@ AC_CONFIG_FILES([Makefile
                 doc/manual-src/Makefile
                 doc/manual-src/en/Makefile
                 doc/manual-src/en/conf.py
-                doc/manual-src/ru/Makefile
-                doc/manual-src/ru/conf.py
-                doc/manual-src/pt/Makefile
-                doc/manual-src/pt/conf.py
                 third_party/Makefile])
 AC_OUTPUT
 

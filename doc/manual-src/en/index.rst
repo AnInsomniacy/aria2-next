@@ -12,6 +12,6 @@ Contents:
    :maxdepth: 2
 
    aria2c
-   README
+   overview
    libaria2
    technical-notes

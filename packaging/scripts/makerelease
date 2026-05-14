@@ -8,7 +8,6 @@ cd "$TOP_SRCDIR"
 . ./packaging/dependencies.env
 
 git checkout refs/tags/release-$VERSION
-git log --pretty=fuller --date=short refs/tags/release-$PREV_VERSION..HEAD > ChangeLog
 
 autoreconf -i
 

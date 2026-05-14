@@ -1,6 +1,9 @@
 aria2 for Android devices
 =========================
 
+This file is copied into Android release packages. Development and release
+automation for Android lives under ``packaging/`` in the source tree.
+
 aria2 is a lightweight multi-protocol & multi-source download utility
 operated in command-line. It supports HTTP/HTTPS, FTP, BitTorrent and
 Metalink.
@@ -38,7 +41,8 @@ See `the online manual
 Notes
 -----
 
-aria2c executable was generated using Android NDK r29.
+aria2c executable was generated using Android NDK r29. Maintained dependency
+versions are defined in ``packaging/dependencies.env`` in the source tree.
 
 The following libraries were statically linked.
 

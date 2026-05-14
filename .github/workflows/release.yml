@@ -119,7 +119,7 @@ jobs:
           DIRNAME="aria2-${VERSION}-linux-x86_64"
           mkdir -p "${DIRNAME}"
           cp src/aria2c "${DIRNAME}/"
-          cp COPYING README.rst "${DIRNAME}/"
+          cp COPYING README.md "${DIRNAME}/"
           cp doc/bash_completion/aria2c "${DIRNAME}/aria2c.bash_completion" || true
           tar cJf "${DIRNAME}.tar.xz" "${DIRNAME}"
 
@@ -233,7 +233,7 @@ jobs:
           DIRNAME="aria2-${VERSION}-linux-aarch64"
           mkdir -p "${DIRNAME}"
           cp src/aria2c "${DIRNAME}/"
-          cp COPYING README.rst "${DIRNAME}/"
+          cp COPYING README.md "${DIRNAME}/"
           cp doc/bash_completion/aria2c "${DIRNAME}/aria2c.bash_completion" || true
           tar cJf "${DIRNAME}.tar.xz" "${DIRNAME}"
 
@@ -373,7 +373,7 @@ jobs:
           DIRNAME="aria2-${VERSION}-macos-arm64"
           mkdir -p "${DIRNAME}"
           cp src/aria2c "${DIRNAME}/"
-          cp COPYING README.rst "${DIRNAME}/"
+          cp COPYING README.md "${DIRNAME}/"
           tar cjf "${DIRNAME}.tar.bz2" "${DIRNAME}"
 
       - uses: actions/upload-artifact@v4
@@ -512,7 +512,7 @@ jobs:
           DIRNAME="aria2-${VERSION}-macos-x86_64"
           mkdir -p "${DIRNAME}"
           cp src/aria2c "${DIRNAME}/"
-          cp COPYING README.rst "${DIRNAME}/"
+          cp COPYING README.md "${DIRNAME}/"
           tar cjf "${DIRNAME}.tar.bz2" "${DIRNAME}"
 
       - uses: actions/upload-artifact@v4
@@ -658,7 +658,7 @@ jobs:
           DIRNAME="aria2-${VERSION}-windows-x86_64"
           mkdir -p "${DIRNAME}"
           cp src/aria2c.exe "${DIRNAME}/"
-          cp COPYING README.rst "${DIRNAME}/"
+          cp COPYING README.md "${DIRNAME}/"
           zip -r "${DIRNAME}.zip" "${DIRNAME}"
 
       - uses: actions/upload-artifact@v4
@@ -816,7 +816,7 @@ jobs:
           DIRNAME="aria2-${VERSION}-windows-arm64"
           mkdir -p "${DIRNAME}"
           cp src/aria2c.exe "${DIRNAME}/"
-          cp COPYING README.rst "${DIRNAME}/"
+          cp COPYING README.md "${DIRNAME}/"
           zip -r "${DIRNAME}.zip" "${DIRNAME}"
 
       - uses: actions/upload-artifact@v4

@@ -1,6 +1,15 @@
 aria2 - The ultra fast download utility
 =======================================
 
+aria2-next maintenance note
+---------------------------
+
+aria2-next is a maintained aria2 fork focused on reliability fixes, current
+dependency baselines, and reproducible cross-platform releases. It keeps the
+traditional autotools build flow used by aria2 while organizing release
+packaging, helper scripts, third-party source, and maintenance records under
+explicit repository directories.
+
 Disclaimer
 ----------
 This program comes with no warranty.
@@ -21,10 +30,7 @@ chunks of data while downloading a file like BitTorrent.
 The project page is located at https://aria2.github.io/.
 
 See the `aria2 Online Manual
-<https://aria2.github.io/manual/en/html/>`_ (`Russian translation
-<https://aria2.github.io/manual/ru/html/>`_, `Portuguese
-translation <https://aria2.github.io/manual/pt/html/>`_) to learn
-how to use aria2.
+<https://aria2.github.io/manual/en/html/>`_ to learn how to use aria2.
 
 Features
 --------
@@ -95,15 +101,13 @@ The MAJOR version will stay at 1 for the time being.
 How to get source code
 ----------------------
 
-We maintain the source code at Github:
-https://github.com/aria2/aria2
+The canonical source location for this maintained fork is the aria2-next
+repository that contains this file. The original upstream project is hosted at
+https://github.com/aria2/aria2.
 
-To get the latest source code, run the following command::
-
-    $ git clone https://github.com/aria2/aria2.git
-
-This will create an aria2 directory in your current directory and source
-files are stored there.
+Clone this repository and build from the checkout root. The generated
+``configure`` script is not committed, so git checkouts must run
+``autoreconf -i`` before ``./configure``.
 
 Dependency
 ----------
@@ -402,9 +406,7 @@ aria2 man pages will be built when you run ``make`` if they are not
 up-to-date.  You can also build an HTML version of the aria2 man page by
 ``make html`` from the relevant ``doc/manual-src/<language>`` directory.
 The HTML version manual is also available
-`online <https://aria2.github.io/manual/en/html/>`_ (`Russian
-translation <https://aria2.github.io/manual/ru/html/>`_, `Portuguese
-translation <https://aria2.github.io/manual/pt/html/>`_).
+`online <https://aria2.github.io/manual/en/html/>`_.
 
 BitTorrent
 -----------

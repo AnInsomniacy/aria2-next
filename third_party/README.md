@@ -1,6 +1,8 @@
 # Third-Party Source
 
 This directory contains source code that is bundled into aria2-next builds.
+Files here keep their upstream layout and coding style unless a local build fix
+is required.
 
 ## wslay
 
@@ -10,6 +12,8 @@ still the current upstream release and the existing autotools build integrates i
 as a subproject.
 
 aria2-next does not apply aria2 formatting rules to files under `third_party/`.
+Changes in this directory should be limited to build integration, security fixes,
+or compatibility fixes that cannot reasonably wait for upstream.
 
 Future work may add `--with-system-wslay` support so distributions can link
 against a system-provided wslay package. That is intentionally not part of the

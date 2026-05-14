@@ -9,7 +9,7 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Local build directories and package outputs
+# Local build directories and release artifacts
 build/
 build-*/
 _build/
@@ -54,6 +54,7 @@ stamp-h1
 test-driver
 
 # Autopoint, gettext, and pkg-config macro copies
+intl/
 /m4/codeset.m4
 /m4/extern-inline.m4
 /m4/fcntl-o.m4
@@ -95,7 +96,6 @@ test-driver
 /m4/xsize.m4
 
 # Gettext generated files
-intl/
 po/Makefile.in.in
 po/Makevars.template
 po/POTFILES
@@ -126,7 +126,7 @@ po/stamp-po
 *.so.*
 *.dSYM/
 
-# CMake, Ninja, Meson, and compilation database outputs
+# Optional non-autotools build metadata
 CMakeCache.txt
 CMakeFiles/
 CTestTestfile.cmake
@@ -149,6 +149,49 @@ compile_commands.json
 /lib/libaria2api
 /lib/libaria2ex
 /lib/libaria2wx
+
+# Generated documentation
+/aria2c.1
+/aria2c.1.html
+/doc/Makefile
+/doc/Makefile.in
+/doc/manual-src/Makefile
+/doc/manual-src/Makefile.in
+/doc/manual-src/*/Makefile
+/doc/manual-src/*/Makefile.in
+/doc/manual-src/*/conf.py
+/doc/manual-src/*/_build/
+
+# Test binaries, logs, and runtime output
+/test/aria2c
+/test/aria2c.exe
+/test/*.log
+/test/*.trs
+/test/test-suite.log
+/test/test_outdir/
+/test_outdir/
+
+# Runtime sidecars
+*.aria2
+!/test/load*.aria2
+*.sqlite-shm
+*.sqlite-wal
+
+# Coverage, profiling, and local analysis indexes
+*.gcda
+*.gcno
+*.gcov
+*.lcov
+*.profraw
+*.profdata
+coverage/
+htmlcov/
+tags
+TAGS
+GPATH
+GRTAGS
+GTAGS
+cscope.*
 
 # Bundled wslay generated files
 /third_party/wslay/INSTALL
@@ -193,47 +236,3 @@ compile_commands.json
 /third_party/wslay/tests/test-suite.log
 /third_party/wslay/wslay-config.cmake
 /third_party/wslay/wslay.cmake
-
-# Generated documentation
-/README.html
-/aria2c.1
-/aria2c.1.html
-/doc/Makefile
-/doc/Makefile.in
-/doc/manual-src/Makefile
-/doc/manual-src/Makefile.in
-/doc/manual-src/*/Makefile
-/doc/manual-src/*/Makefile.in
-/doc/manual-src/*/conf.py
-/doc/manual-src/*/_build/
-
-# Test binaries, logs, and runtime output
-/test/aria2c
-/test/aria2c.exe
-/test/*.log
-/test/*.trs
-/test/test-suite.log
-/test/test_outdir/
-/test_outdir/
-
-# Runtime sidecars
-*.aria2
-!/test/load*.aria2
-*.sqlite-shm
-*.sqlite-wal
-
-# Coverage, profiling, and local analysis indexes
-*.gcda
-*.gcno
-*.gcov
-*.lcov
-*.profraw
-*.profdata
-coverage/
-htmlcov/
-tags
-TAGS
-GPATH
-GRTAGS
-GTAGS
-cscope.*

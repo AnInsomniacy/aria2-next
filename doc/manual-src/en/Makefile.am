@@ -13,7 +13,7 @@ ALLSPHINXOPTS   = -d $(BUILDDIR)/doctrees $(PAPEROPT_$(PAPER)) $(SPHINXOPTS) -c 
 
 # Configurations for aria2.
 man_MANS = $(BUILDDIR)/man/aria2c.1
-EXTRA_DIST = $(man_MANS) aria2c.rst libaria2.rst index.rst README.rst\
+EXTRA_DIST = $(man_MANS) aria2c.rst libaria2.rst index.rst overview.rst \
 	technical-notes.rst mkapiref.py
 
 if HAVE_SPHINXBUILD

@@ -1,12 +1,16 @@
 aria2 Windows build
 ===================
 
+This file is copied into Windows release packages. Development and release
+automation for Windows lives under ``packaging/`` in the source tree.
+
 aria2 Windows build is provided in 2 flavors: 32bit version and 64bit
 version. The executable was compiled using mingw-w64 cross compiler on
 Ubuntu Linux.
 
 The executable is statically linked, so no extra DLLs are
-necessary. The linked libraries are:
+necessary. Maintained dependency versions are defined in
+``packaging/dependencies.env`` in the source tree. The linked libraries are:
 
 * gmp 6.3.0
 * expat 2.8.1
