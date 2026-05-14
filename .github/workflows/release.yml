@@ -23,7 +23,7 @@ jobs:
     env:
       PREFIX: /usr/local
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install build tools
         run: |
@@ -142,7 +142,7 @@ jobs:
     env:
       PREFIX: /usr/local
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install build tools
         run: |
@@ -262,7 +262,7 @@ jobs:
       PREFIX: ${{ github.workspace }}/packaging/build-deps
       MACOSX_VERSION_MIN: "11.0"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install build tools
         run: brew install cmake ninja pkg-config
@@ -407,7 +407,7 @@ jobs:
       PREFIX: ${{ github.workspace }}/packaging/build-deps
       MACOSX_VERSION_MIN: "11.0"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install build tools
         run: brew install cmake ninja pkg-config
@@ -552,7 +552,7 @@ jobs:
       HOST: x86_64-w64-mingw32
       PREFIX: /usr/local/x86_64-w64-mingw32
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install cross-compilation toolchain
         run: |
@@ -713,7 +713,7 @@ jobs:
       RANLIB: aarch64-w64-mingw32-ranlib
       STRIP: aarch64-w64-mingw32-strip
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install llvm-mingw toolchain
         run: |
@@ -879,7 +879,7 @@ jobs:
       - build-windows-arm64
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/download-artifact@v4
         with:
