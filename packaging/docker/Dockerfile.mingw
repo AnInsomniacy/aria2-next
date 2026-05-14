@@ -1,17 +1,18 @@
 # Dockerfile to build aria2 Windows binary using ubuntu mingw-w64
 # cross compiler chain.
 #
-# $ sudo docker build -f packaging/docker/Dockerfile.mingw -t aria2-mingw .
+# $ docker build -f packaging/docker/Dockerfile.mingw -t aria2-mingw .
 #
 # After successful build, windows binary is located at
-# /aria2/src/aria2c.exe.  You can copy the binary using following
+# /aria2/build/release/aria2c.exe.  You can copy the binary using following
 # commands:
 #
-# $ sudo docker run --rm -it -v /path/to/dest:/out aria2-mingw cp /aria2/src/aria2c.exe /out
+# $ docker run --rm -it -v /path/to/dest:/out aria2-mingw cp /aria2/build/release/aria2c.exe /out
 
 FROM ubuntu:22.04
 
-MAINTAINER Tatsuhiro Tsujikawa
+LABEL org.opencontainers.image.title="aria2-next Windows cross-build image"
+LABEL org.opencontainers.image.description="Builds aria2-next for Windows with CMake, Ninja, and MinGW-w64."
 
 # Change HOST to i686-w64-mingw32 to build a 32-bit binary.
 ARG HOST=x86_64-w64-mingw32
@@ -32,11 +33,10 @@ ARG GMP_VERSION=6.3.0
 RUN apt-get update && \
     DEBIAN_FRONTEND="noninteractive" \
     apt-get install -y --no-install-recommends \
-        make binutils autoconf automake autotools-dev libtool \
+        make binutils cmake ninja-build \
         patch ca-certificates \
         pkg-config git curl dpkg-dev gcc-mingw-w64 g++-mingw-w64 \
-        autopoint libcppunit-dev libxml2-dev libgcrypt20-dev lzip \
-        python3-docutils
+        lzip
 
 RUN curl --fail --show-error -L -O https://gmplib.org/download/gmp/gmp-$GMP_VERSION.tar.xz && \
     curl --fail --show-error -L -O https://github.com/libexpat/libexpat/releases/download/$EXPAT_TAG/expat-$EXPAT_VERSION.tar.bz2 && \
@@ -116,5 +116,26 @@ RUN tar xf libssh2-$LIBSSH2_VERSION.tar.bz2 && \
 
 COPY . /aria2
 WORKDIR /aria2
-RUN autoreconf -i && ./packaging/scripts/mingw-config && make -j$(nproc) && \
-    $HOST-strip src/aria2c.exe
+RUN PKG_CONFIG_LIBDIR=/usr/local/$HOST/lib/pkgconfig \
+    cmake -S . -B build/release -G Ninja \
+        -DCMAKE_SYSTEM_NAME=Windows \
+        -DCMAKE_C_COMPILER=$HOST-gcc \
+        -DCMAKE_CXX_COMPILER=$HOST-g++ \
+        -DCMAKE_RC_COMPILER=$HOST-windres \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DARIA2_ENABLE_STATIC=ON \
+        -DARIA2_WITH_CARES=ON \
+        -DARIA2_WITH_GNUTLS=OFF \
+        -DARIA2_WITH_OPENSSL=OFF \
+        -DARIA2_WITH_WINTLS=ON \
+        -DARIA2_WITH_SQLITE3=ON \
+        -DARIA2_WITH_LIBXML2=OFF \
+        -DARIA2_WITH_EXPAT=ON \
+        -DARIA2_WITH_ZLIB=ON \
+        -DARIA2_WITH_GMP=ON \
+        -DARIA2_WITH_LIBSSH2=ON \
+        -DARIA2_WITH_LIBGCRYPT=OFF \
+        -DARIA2_WITH_LIBNETTLE=OFF \
+        -DCMAKE_PREFIX_PATH=/usr/local/$HOST && \
+    cmake --build build/release -j$(nproc) && \
+    $HOST-strip build/release/aria2c.exe

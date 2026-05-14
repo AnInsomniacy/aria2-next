@@ -9,7 +9,7 @@ stewardship but are not part of the build, test, or release execution path.
 |------|---------|
 | `open-issue-review.md` | Human-readable summary of the upstream open issue review |
 | `issue-review-matrix.csv` | Complete issue-by-issue review matrix |
-| `modernization-progress.md` | Checkpoint log for repository modernization work |
+| `cmake-migration-progress.md` | Checkpoint log for the CMake migration |
 
 Maintenance records should be durable and compact. Temporary API payloads,
 scratch research files, generated reports, and local caches should not be

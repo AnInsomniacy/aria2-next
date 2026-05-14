@@ -37,8 +37,6 @@
 #include <stdlib.h> /* _fmode */
 #include <fcntl.h>  /*  _O_BINARY */
 
-#include <locale.h> // For setlocale, LC_*
-
 #include <iostream>
 
 #ifdef HAVE_OPENSSL
@@ -110,13 +108,6 @@ bool Platform::setUp()
 #ifdef HAVE_LIBGMP
   global::initGmp();
 #endif // HAVE_LIBGMP
-#ifdef ENABLE_NLS
-  setlocale(LC_CTYPE, "");
-  setlocale(LC_MESSAGES, "");
-  bindtextdomain(PACKAGE, LOCALEDIR);
-  textdomain(PACKAGE);
-#endif // ENABLE_NLS
-
 #ifdef HAVE_OPENSSL
 #  if OPENSSL_VERSION_NUMBER >= 0x30000000L
   // RC4 is in the legacy provider.

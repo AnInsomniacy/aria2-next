@@ -18,12 +18,6 @@ int main(int argc, char* argv[])
   aria2::global::initConsole(false);
   aria2::Platform platform;
 
-#ifdef ENABLE_NLS
-  // Set locale to C to prevent the messages to be localized.
-  setlocale(LC_CTYPE, "C");
-  setlocale(LC_MESSAGES, "C");
-#endif // ENABLE_NLS
-
   // By default, SocketCore uses AF_UNSPEC for getaddrinfo hints to
   // resolve address. Sometime SocketCore::bind() and
   // SocketCore::establishConnection() use difference protocol family

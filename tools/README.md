@@ -6,7 +6,6 @@ release packaging.
 | Script | Purpose |
 |--------|---------|
 | `build_test.sh` | Local build and test helper used by maintainers |
-| `import-po` | Translation import helper for Launchpad export archives |
 | `script-helper` | Shared shell helper functions sourced by packaging scripts |
 
 Platform release scripts belong under `packaging/scripts/`. General developer

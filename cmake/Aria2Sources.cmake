@@ -1,0 +1,1084 @@
+# Generated from the legacy source inventory. Keep groups conditional.
+
+set(ARIA2_SOURCES_BASE
+  src/a2algo.h
+  src/a2functional.h
+  src/a2io.h
+  src/a2iterator.h
+  src/a2netcompat.h
+  src/A2STR.cc
+  src/A2STR.h
+  src/a2time.h
+  src/AbstractAuthResolver.cc
+  src/AbstractAuthResolver.h
+  src/AbstractCommand.cc
+  src/AbstractCommand.h
+  src/AbstractDiskWriter.cc
+  src/AbstractDiskWriter.h
+  src/AbstractHttpServerResponseCommand.cc
+  src/AbstractHttpServerResponseCommand.h
+  src/AbstractOptionHandler.cc
+  src/AbstractOptionHandler.h
+  src/AbstractProxyRequestCommand.cc
+  src/AbstractProxyRequestCommand.h
+  src/AbstractProxyResponseCommand.cc
+  src/AbstractProxyResponseCommand.h
+  src/AbstractSingleDiskAdaptor.cc
+  src/AbstractSingleDiskAdaptor.h
+  src/AdaptiveFileAllocationIterator.cc
+  src/AdaptiveFileAllocationIterator.h
+  src/AdaptiveURISelector.cc
+  src/AdaptiveURISelector.h
+  src/AnonDiskWriterFactory.h
+  src/array_fun.h
+  src/AuthConfig.cc
+  src/AuthConfig.h
+  src/AuthConfigFactory.cc
+  src/AuthConfigFactory.h
+  src/AuthResolver.h
+  src/AutoSaveCommand.cc
+  src/AutoSaveCommand.h
+  src/BackupIPv4ConnectCommand.h
+  src/BackupIPv4ConnectCommand.cc
+  src/base32.cc
+  src/base32.h
+  src/base64.h
+  src/BinaryStream.h
+  src/bitfield.cc
+  src/bitfield.h
+  src/BitfieldMan.cc
+  src/BitfieldMan.h
+  src/BtProgressInfoFile.h
+  src/BufferedFile.cc
+  src/BufferedFile.h
+  src/ByteArrayDiskWriter.cc
+  src/ByteArrayDiskWriter.h
+  src/ByteArrayDiskWriterFactory.h
+  src/CheckIntegrityCommand.cc
+  src/CheckIntegrityCommand.h
+  src/CheckIntegrityDispatcherCommand.cc
+  src/CheckIntegrityDispatcherCommand.h
+  src/CheckIntegrityEntry.cc
+  src/CheckIntegrityEntry.h
+  src/CheckIntegrityMan.h
+  src/Checksum.cc
+  src/Checksum.h
+  src/ChecksumCheckIntegrityEntry.cc
+  src/ChecksumCheckIntegrityEntry.h
+  src/ChunkChecksum.cc
+  src/ChunkChecksum.h
+  src/ChunkedDecodingStreamFilter.cc
+  src/ChunkedDecodingStreamFilter.h
+  src/ColorizedStream.cc
+  src/ColorizedStream.h
+  src/Command.cc
+  src/Command.h
+  src/common.h
+  src/ConnectCommand.cc
+  src/ConnectCommand.h
+  src/console.cc
+  src/console.h
+  src/ConsoleStatCalc.cc
+  src/ConsoleStatCalc.h
+  src/ContentTypeRequestGroupCriteria.cc
+  src/ContentTypeRequestGroupCriteria.h
+  src/Context.cc
+  src/Context.h
+  src/ContextAttribute.cc
+  src/ContextAttribute.h
+  src/ControlChain.h
+  src/Cookie.cc
+  src/Cookie.h
+  src/CookieStorage.cc
+  src/CookieStorage.h
+  src/cookie_helper.cc
+  src/cookie_helper.h
+  src/CreateRequestCommand.cc
+  src/CreateRequestCommand.h
+  src/crypto_endian.h
+  src/CUIDCounter.cc
+  src/CUIDCounter.h
+  src/DefaultAuthResolver.cc
+  src/DefaultAuthResolver.h
+  src/DefaultBtProgressInfoFile.cc
+  src/DefaultBtProgressInfoFile.h
+  src/DefaultDiskWriter.cc
+  src/DefaultDiskWriter.h
+  src/DefaultDiskWriterFactory.cc
+  src/DefaultDiskWriterFactory.h
+  src/DefaultPieceStorage.cc
+  src/DefaultPieceStorage.h
+  src/DefaultStreamPieceSelector.cc
+  src/DefaultStreamPieceSelector.h
+  src/DelayedCommand.h
+  src/Dependency.h
+  src/DirectDiskAdaptor.cc
+  src/DirectDiskAdaptor.h
+  src/DiskAdaptor.cc
+  src/DiskAdaptor.h
+  src/DiskWriter.h
+  src/DiskWriterFactory.h
+  src/DlAbortEx.cc
+  src/DlAbortEx.h
+  src/DlRetryEx.cc
+  src/DlRetryEx.h
+  src/DNSCache.cc
+  src/DNSCache.h
+  src/DownloadCommand.cc
+  src/DownloadCommand.h
+  src/DownloadContext.cc
+  src/DownloadContext.h
+  src/DownloadEngine.cc
+  src/DownloadEngine.h
+  src/DownloadEngineFactory.cc
+  src/DownloadEngineFactory.h
+  src/DownloadFailureException.cc
+  src/DownloadFailureException.h
+  src/DownloadHandler.cc
+  src/DownloadHandler.h
+  src/DownloadHandlerConstants.cc
+  src/DownloadHandlerConstants.h
+  src/DownloadResult.cc
+  src/DownloadResult.h
+  src/download_handlers.cc
+  src/download_handlers.h
+  src/download_helper.cc
+  src/download_helper.h
+  src/error_code.h
+  src/Event.h
+  src/EventPoll.h
+  src/Exception.cc
+  src/Exception.h
+  src/FatalException.cc
+  src/FatalException.h
+  src/FeatureConfig.cc
+  src/FeatureConfig.h
+  src/FeedbackURISelector.cc
+  src/FeedbackURISelector.h
+  src/File.cc
+  src/File.h
+  src/FileAllocationCommand.cc
+  src/FileAllocationCommand.h
+  src/FileAllocationDispatcherCommand.cc
+  src/FileAllocationDispatcherCommand.h
+  src/FileAllocationEntry.cc
+  src/FileAllocationEntry.h
+  src/FileAllocationIterator.h
+  src/FileAllocationMan.h
+  src/FileEntry.cc
+  src/FileEntry.h
+  src/FillRequestGroupCommand.cc
+  src/FillRequestGroupCommand.h
+  src/fmt.cc
+  src/fmt.h
+  src/FtpConnection.cc
+  src/FtpConnection.h
+  src/FtpDownloadCommand.cc
+  src/FtpDownloadCommand.h
+  src/FtpFinishDownloadCommand.cc
+  src/FtpFinishDownloadCommand.h
+  src/FtpInitiateConnectionCommand.cc
+  src/FtpInitiateConnectionCommand.h
+  src/FtpNegotiationCommand.cc
+  src/FtpNegotiationCommand.h
+  src/FtpNegotiationConnectChain.h
+  src/FtpTunnelRequestCommand.cc
+  src/FtpTunnelRequestCommand.h
+  src/FtpTunnelRequestConnectChain.h
+  src/FtpTunnelResponseCommand.cc
+  src/FtpTunnelResponseCommand.h
+  src/GenericParser.h
+  src/GeomStreamPieceSelector.cc
+  src/GeomStreamPieceSelector.h
+  src/GroupId.cc
+  src/GroupId.h
+  src/GrowSegment.cc
+  src/GrowSegment.h
+  src/HashFuncEntry.h
+  src/HaveEraseCommand.cc
+  src/HaveEraseCommand.h
+  src/help_tags.cc
+  src/help_tags.h
+  src/HttpConnection.cc
+  src/HttpConnection.h
+  src/HttpDownloadCommand.cc
+  src/HttpDownloadCommand.h
+  src/HttpHeader.cc
+  src/HttpHeader.h
+  src/HttpHeaderProcessor.cc
+  src/HttpHeaderProcessor.h
+  src/HttpInitiateConnectionCommand.cc
+  src/HttpInitiateConnectionCommand.h
+  src/HttpListenCommand.cc
+  src/HttpListenCommand.h
+  src/HttpProxyRequestCommand.cc
+  src/HttpProxyRequestCommand.h
+  src/HttpProxyRequestConnectChain.h
+  src/HttpProxyResponseCommand.cc
+  src/HttpProxyResponseCommand.h
+  src/HttpRequest.cc
+  src/HttpRequest.h
+  src/HttpRequestCommand.cc
+  src/HttpRequestCommand.h
+  src/HttpRequestConnectChain.h
+  src/HttpResponse.cc
+  src/HttpResponse.h
+  src/HttpResponseCommand.cc
+  src/HttpResponseCommand.h
+  src/HttpServer.cc
+  src/HttpServer.h
+  src/HttpServerBodyCommand.cc
+  src/HttpServerBodyCommand.h
+  src/HttpServerCommand.cc
+  src/HttpServerCommand.h
+  src/HttpServerResponseCommand.cc
+  src/HttpServerResponseCommand.h
+  src/HttpSkipResponseCommand.cc
+  src/HttpSkipResponseCommand.h
+  src/IndexedList.h
+  src/InitiateConnectionCommand.cc
+  src/InitiateConnectionCommand.h
+  src/InitiateConnectionCommandFactory.cc
+  src/InitiateConnectionCommandFactory.h
+  src/InorderStreamPieceSelector.cc
+  src/InorderStreamPieceSelector.h
+  src/RandomStreamPieceSelector.cc
+  src/RandomStreamPieceSelector.h
+  src/InorderURISelector.cc
+  src/InorderURISelector.h
+  src/IOFile.cc
+  src/IOFile.h
+  src/IteratableChecksumValidator.cc
+  src/IteratableChecksumValidator.h
+  src/IteratableChunkChecksumValidator.cc
+  src/IteratableChunkChecksumValidator.h
+  src/IteratableValidator.h
+  src/json.cc
+  src/json.h
+  src/JsonDiskWriter.h
+  src/JsonParser.cc
+  src/JsonParser.h
+  src/Lock.h
+  src/LogFactory.cc
+  src/LogFactory.h
+  src/Logger.cc
+  src/Logger.h
+  src/LongestSequencePieceSelector.cc
+  src/LongestSequencePieceSelector.h
+  src/MemoryBufferPreDownloadHandler.h
+  src/MemoryPreDownloadHandler.h
+  src/message.h
+  src/MessageDigest.cc
+  src/MessageDigest.h
+  src/MessageDigestImpl.h
+  src/message_digest_helper.cc
+  src/message_digest_helper.h
+  src/MetadataInfo.cc
+  src/MetadataInfo.h
+  src/MetalinkHttpEntry.cc
+  src/MetalinkHttpEntry.h
+  src/MultiDiskAdaptor.cc
+  src/MultiDiskAdaptor.h
+  src/MultiFileAllocationIterator.cc
+  src/MultiFileAllocationIterator.h
+  src/MultiUrlRequestInfo.cc
+  src/MultiUrlRequestInfo.h
+  src/NameResolver.cc
+  src/NameResolver.h
+  src/Netrc.cc
+  src/Netrc.h
+  src/NetrcAuthResolver.cc
+  src/NetrcAuthResolver.h
+  src/NetStat.cc
+  src/NetStat.h
+  src/Notifier.cc
+  src/Notifier.h
+  src/NsCookieParser.cc
+  src/NsCookieParser.h
+  src/NullHandle.h
+  src/NullOutputFile.h
+  src/NullProgressInfoFile.h
+  src/NullSinkStreamFilter.cc
+  src/NullSinkStreamFilter.h
+  src/NullStatCalc.h
+  src/Option.cc
+  src/Option.h
+  src/OptionHandler.cc
+  src/OptionHandler.h
+  src/OptionHandlerException.cc
+  src/OptionHandlerException.h
+  src/OptionHandlerFactory.cc
+  src/OptionHandlerFactory.h
+  src/OptionHandlerImpl.cc
+  src/OptionHandlerImpl.h
+  src/OptionParser.cc
+  src/OptionParser.h
+  src/option_processing.cc
+  src/OutputFile.h
+  src/paramed_string.cc
+  src/paramed_string.h
+  src/PeerStat.cc
+  src/PeerStat.h
+  src/Piece.cc
+  src/Piece.h
+  src/PiecedSegment.cc
+  src/PiecedSegment.h
+  src/PieceHashCheckIntegrityEntry.cc
+  src/PieceHashCheckIntegrityEntry.h
+  src/PieceSelector.h
+  src/PieceStatMan.cc
+  src/PieceStatMan.h
+  src/PieceStorage.h
+  src/Platform.cc
+  src/Platform.h
+  src/PostDownloadHandler.h
+  src/PreDownloadHandler.h
+  src/prefs.cc
+  src/prefs.h
+  src/ProgressAwareEntry.h
+  src/ProtocolDetector.cc
+  src/ProtocolDetector.h
+  src/Randomizer.h
+  src/Range.cc
+  src/Range.h
+  src/RarestPieceSelector.cc
+  src/RarestPieceSelector.h
+  src/RealtimeCommand.cc
+  src/RealtimeCommand.h
+  src/RecoverableException.cc
+  src/RecoverableException.h
+  src/Request.cc
+  src/Request.h
+  src/RequestGroup.cc
+  src/RequestGroup.h
+  src/RequestGroupCriteria.h
+  src/RequestGroupEntry.cc
+  src/RequestGroupEntry.h
+  src/RequestGroupMan.cc
+  src/RequestGroupMan.h
+  src/RpcMethod.cc
+  src/RpcMethod.h
+  src/RpcMethodFactory.cc
+  src/RpcMethodFactory.h
+  src/RpcMethodImpl.cc
+  src/RpcMethodImpl.h
+  src/RpcRequest.cc
+  src/RpcRequest.h
+  src/RpcResponse.cc
+  src/RpcResponse.h
+  src/rpc_helper.cc
+  src/rpc_helper.h
+  src/SaveSessionCommand.h
+  src/SaveSessionCommand.cc
+  src/SegList.h
+  src/Segment.h
+  src/SegmentMan.cc
+  src/SegmentMan.h
+  src/SelectEventPoll.cc
+  src/SelectEventPoll.h
+  src/SequentialDispatcherCommand.h
+  src/SequentialPicker.h
+  src/ServerStat.cc
+  src/ServerStat.h
+  src/ServerStatMan.cc
+  src/ServerStatMan.h
+  src/SessionSerializer.cc
+  src/SessionSerializer.h
+  src/Signature.cc
+  src/Signature.h
+  src/SimpleRandomizer.cc
+  src/SimpleRandomizer.h
+  src/SingleFileAllocationIterator.cc
+  src/SingleFileAllocationIterator.h
+  src/SingletonHolder.h
+  src/SinkStreamFilter.cc
+  src/SinkStreamFilter.h
+  src/SocketBuffer.cc
+  src/SocketBuffer.h
+  src/SocketCore.cc
+  src/SocketCore.h
+  src/SocketRecvBuffer.cc
+  src/SocketRecvBuffer.h
+  src/SpeedCalc.cc
+  src/SpeedCalc.h
+  src/StatCalc.h
+  src/StreamCheckIntegrityEntry.cc
+  src/StreamCheckIntegrityEntry.h
+  src/StreamFileAllocationEntry.cc
+  src/StreamFileAllocationEntry.h
+  src/StreamFilter.cc
+  src/StreamFilter.h
+  src/StreamPieceSelector.h
+  src/StructParserStateMachine.h
+  src/TimeA2.cc
+  src/TimeA2.h
+  src/TimeBasedCommand.cc
+  src/TimeBasedCommand.h
+  src/TimedHaltCommand.cc
+  src/TimedHaltCommand.h
+  src/TimerA2.cc
+  src/TimerA2.h
+  src/timespec.h
+  src/TorrentAttribute.cc
+  src/TorrentAttribute.h
+  src/TransferStat.cc
+  src/TransferStat.h
+  src/TruncFileAllocationIterator.cc
+  src/TruncFileAllocationIterator.h
+  src/UnknownLengthPieceStorage.cc
+  src/UnknownLengthPieceStorage.h
+  src/UnknownOptionException.cc
+  src/UnknownOptionException.h
+  src/uri.cc
+  src/uri.h
+  src/UriListParser.cc
+  src/UriListParser.h
+  src/URIResult.cc
+  src/URIResult.h
+  src/URISelector.h
+  src/uri_split.c
+  src/uri_split.h
+  src/usage_text.h
+  src/util.cc
+  src/util.h
+  src/util_security.cc
+  src/util_security.h
+  src/ValueBase.cc
+  src/ValueBase.h
+  src/ValueBaseDiskWriter.h
+  src/ValueBaseJsonParser.h
+  src/ValueBaseStructParserState.h
+  src/ValueBaseStructParserStateImpl.cc
+  src/ValueBaseStructParserStateImpl.h
+  src/ValueBaseStructParserStateMachine.cc
+  src/ValueBaseStructParserStateMachine.h
+  src/version_usage.cc
+  src/wallclock.cc
+  src/wallclock.h
+  src/WatchProcessCommand.cc
+  src/WatchProcessCommand.h
+  src/WrDiskCache.cc
+  src/WrDiskCache.h
+  src/WrDiskCacheEntry.cc
+  src/WrDiskCacheEntry.h
+  src/XmlRpcRequestParserController.cc
+  src/XmlRpcRequestParserController.h
+  src/OpenedFileCounter.cc
+  src/OpenedFileCounter.h
+  src/SHA1IOFile.cc
+  src/SHA1IOFile.h
+  src/EvictSocketPoolCommand.cc
+  src/EvictSocketPoolCommand.h
+  src/libssl_compat.h
+)
+
+set(ARIA2_SOURCES_MINGW_BUILD
+  src/WinConsoleFile.cc
+  src/WinConsoleFile.h
+)
+
+set(ARIA2_SOURCES_ENABLE_WEBSOCKET
+  src/WebSocketInteractionCommand.cc
+  src/WebSocketInteractionCommand.h
+  src/WebSocketResponseCommand.cc
+  src/WebSocketResponseCommand.h
+  src/WebSocketSession.cc
+  src/WebSocketSession.h
+  src/WebSocketSessionMan.cc
+  src/WebSocketSessionMan.h
+)
+
+set(ARIA2_SOURCES_NOT_ENABLE_WEBSOCKET
+  src/NullWebSocketSessionMan.h
+)
+
+set(ARIA2_SOURCES_HAVE_SOME_XMLLIB
+  src/ParserStateMachine.h
+  src/XmlAttr.cc
+  src/XmlAttr.h
+  src/XmlParser.cc
+  src/XmlParser.h
+)
+
+set(ARIA2_SOURCES_HAVE_LIBXML2
+  src/Xml2XmlParser.cc
+  src/Xml2XmlParser.h
+)
+
+set(ARIA2_SOURCES_HAVE_LIBEXPAT
+  src/ExpatXmlParser.cc
+  src/ExpatXmlParser.h
+)
+
+set(ARIA2_SOURCES_ENABLE_XML_RPC
+  src/XmlRpcDiskWriter.cc
+  src/XmlRpcDiskWriter.h
+  src/XmlRpcRequestParserState.h
+  src/XmlRpcRequestParserStateImpl.cc
+  src/XmlRpcRequestParserStateImpl.h
+  src/XmlRpcRequestParserStateMachine.cc
+  src/XmlRpcRequestParserStateMachine.h
+)
+
+set(ARIA2_SOURCES_HAVE_SOME_FALLOCATE
+  src/FallocFileAllocationIterator.cc
+  src/FallocFileAllocationIterator.h
+)
+
+set(ARIA2_SOURCES_HAVE_EPOLL
+  src/EpollEventPoll.cc
+  src/EpollEventPoll.h
+)
+
+set(ARIA2_SOURCES_ENABLE_SSL
+  src/TLSContext.h
+  src/TLSSession.h
+)
+
+set(ARIA2_SOURCES_USE_APPLE_MD
+  src/AppleMessageDigestImpl.cc
+)
+
+set(ARIA2_SOURCES_HAVE_APPLETLS
+  src/AppleTLSContext.cc
+  src/AppleTLSContext.h
+  src/AppleTLSSession.cc
+  src/AppleTLSSession.h
+)
+
+set(ARIA2_SOURCES_HAVE_WINTLS
+  src/WinTLSContext.cc
+  src/WinTLSContext.h
+  src/WinTLSSession.cc
+  src/WinTLSSession.h
+)
+
+set(ARIA2_SOURCES_USE_INTERNAL_MD
+  src/InternalMessageDigestImpl.cc
+  src/crypto_hash.cc
+  src/crypto_hash.h
+)
+
+set(ARIA2_SOURCES_HAVE_LIBGNUTLS
+  src/LibgnutlsTLSContext.cc
+  src/LibgnutlsTLSContext.h
+  src/LibgnutlsTLSSession.cc
+  src/LibgnutlsTLSSession.h
+)
+
+set(ARIA2_SOURCES_HAVE_LIBGCRYPT
+  src/LibgcryptARC4Encryptor.cc
+  src/LibgcryptARC4Encryptor.h
+  src/LibgcryptDHKeyExchange.cc
+  src/LibgcryptDHKeyExchange.h
+)
+
+set(ARIA2_SOURCES_HAVE_LIBGCRYPT__USE_LIBGCRYPT_MD
+  src/LibgcryptMessageDigestImpl.cc
+)
+
+set(ARIA2_SOURCES_HAVE_LIBNETTLE
+  src/LibnettleARC4Encryptor.cc
+  src/LibnettleARC4Encryptor.h
+)
+
+set(ARIA2_SOURCES_HAVE_LIBNETTLE__USE_LIBNETTLE_MD
+  src/LibnettleMessageDigestImpl.cc
+)
+
+set(ARIA2_SOURCES_HAVE_LIBGMP
+  src/a2gmp.cc
+  src/a2gmp.h
+  src/LibgmpDHKeyExchange.cc
+  src/LibgmpDHKeyExchange.h
+)
+
+set(ARIA2_SOURCES_HAVE_OPENSSL
+  src/LibsslARC4Encryptor.cc
+  src/LibsslARC4Encryptor.h
+  src/LibsslDHKeyExchange.cc
+  src/LibsslDHKeyExchange.h
+)
+
+set(ARIA2_SOURCES_HAVE_OPENSSL__NOT_HAVE_APPLETLS
+  src/LibsslTLSContext.cc
+  src/LibsslTLSContext.h
+  src/LibsslTLSSession.cc
+  src/LibsslTLSSession.h
+)
+
+set(ARIA2_SOURCES_HAVE_OPENSSL__USE_OPENSSL_MD
+  src/LibsslMessageDigestImpl.cc
+)
+
+set(ARIA2_SOURCES_HAVE_ZLIB
+  src/GZipDecodingStreamFilter.cc
+  src/GZipDecodingStreamFilter.h
+  src/GZipEncoder.cc
+  src/GZipEncoder.h
+  src/GZipFile.cc
+  src/GZipFile.h
+  src/Adler32MessageDigestImpl.cc
+  src/Adler32MessageDigestImpl.h
+)
+
+set(ARIA2_SOURCES_HAVE_SQLITE3
+  src/Sqlite3CookieParser.cc
+  src/Sqlite3CookieParser.h
+  src/Sqlite3CookieParserImpl.cc
+  src/Sqlite3CookieParserImpl.h
+)
+
+set(ARIA2_SOURCES_HAVE_LIBSSH2
+  src/SSHSession.cc
+  src/SSHSession.h
+  src/SftpNegotiationCommand.cc
+  src/SftpNegotiationCommand.h
+  src/SftpNegotiationConnectChain.h
+  src/SftpDownloadCommand.cc
+  src/SftpDownloadCommand.h
+  src/SftpFinishDownloadCommand.cc
+  src/SftpFinishDownloadCommand.h
+)
+
+set(ARIA2_SOURCES_ENABLE_ASYNC_DNS
+  src/AsyncNameResolver.cc
+  src/AsyncNameResolver.h
+  src/AsyncNameResolverMan.cc
+  src/AsyncNameResolverMan.h
+)
+
+set(ARIA2_SOURCES_ENABLE_BITTORRENT
+  src/AbstractBtMessage.cc
+  src/AbstractBtMessage.h
+  src/ActivePeerConnectionCommand.cc
+  src/ActivePeerConnectionCommand.h
+  src/AnnounceList.h
+  src/AnnounceList.cc
+  src/AnnounceTier.cc
+  src/AnnounceTier.h
+  src/ARC4Encryptor.h
+  src/bencode2.cc
+  src/bencode2.h
+  src/BencodeDiskWriter.h
+  src/BencodeDiskWriterFactory.h
+  src/BencodeParser.cc
+  src/BencodeParser.h
+  src/bittorrent_helper.cc
+  src/bittorrent_helper.h
+  src/BtAbortOutstandingRequestEvent.cc
+  src/BtAbortOutstandingRequestEvent.h
+  src/BtAllowedFastMessage.cc
+  src/BtAllowedFastMessage.h
+  src/BtAnnounce.cc
+  src/BtAnnounce.h
+  src/BtBitfieldMessage.cc
+  src/BtBitfieldMessage.h
+  src/BtBitfieldMessageValidator.cc
+  src/BtBitfieldMessageValidator.h
+  src/BtCancelMessage.cc
+  src/BtCancelMessage.h
+  src/BtCancelSendingPieceEvent.h
+  src/BtCheckIntegrityEntry.cc
+  src/BtCheckIntegrityEntry.h
+  src/BtChokeMessage.cc
+  src/BtChokeMessage.h
+  src/BtChokingEvent.h
+  src/BtConstants.h
+  src/BtDependency.cc
+  src/BtDependency.h
+  src/BtExtendedMessage.cc
+  src/BtExtendedMessage.h
+  src/BtFileAllocationEntry.cc
+  src/BtFileAllocationEntry.h
+  src/BtHandshakeMessage.cc
+  src/BtHandshakeMessage.h
+  src/BtHandshakeMessageValidator.cc
+  src/BtHandshakeMessageValidator.h
+  src/BtHaveAllMessage.cc
+  src/BtHaveAllMessage.h
+  src/BtHaveMessage.cc
+  src/BtHaveMessage.h
+  src/BtHaveNoneMessage.cc
+  src/BtHaveNoneMessage.h
+  src/BtInteractive.h
+  src/BtInterestedMessage.cc
+  src/BtInterestedMessage.h
+  src/BtKeepAliveMessage.cc
+  src/BtKeepAliveMessage.h
+  src/BtLeecherStateChoke.cc
+  src/BtLeecherStateChoke.h
+  src/BtMessage.h
+  src/BtMessageDispatcher.h
+  src/BtMessageFactory.h
+  src/BtMessageReceiver.h
+  src/BtMessageValidator.h
+  src/BtNotInterestedMessage.cc
+  src/BtNotInterestedMessage.h
+  src/BtPieceMessage.cc
+  src/BtPieceMessage.h
+  src/BtPieceMessageValidator.cc
+  src/BtPieceMessageValidator.h
+  src/BtPortMessage.cc
+  src/BtPortMessage.h
+  src/BtPostDownloadHandler.cc
+  src/BtPostDownloadHandler.h
+  src/BtRegistry.cc
+  src/BtRegistry.h
+  src/BtRejectMessage.cc
+  src/BtRejectMessage.h
+  src/BtRequestFactory.h
+  src/BtRequestMessage.cc
+  src/BtRequestMessage.h
+  src/BtRuntime.cc
+  src/BtRuntime.h
+  src/BtSeederStateChoke.cc
+  src/BtSeederStateChoke.h
+  src/BtSetup.cc
+  src/BtSetup.h
+  src/BtStopDownloadCommand.cc
+  src/BtStopDownloadCommand.h
+  src/BtSuggestPieceMessage.cc
+  src/BtSuggestPieceMessage.h
+  src/BtUnchokeMessage.cc
+  src/BtUnchokeMessage.h
+  src/DefaultBtAnnounce.cc
+  src/DefaultBtAnnounce.h
+  src/DefaultBtInteractive.cc
+  src/DefaultBtInteractive.h
+  src/DefaultBtMessageDispatcher.cc
+  src/DefaultBtMessageDispatcher.h
+  src/DefaultBtMessageFactory.cc
+  src/DefaultBtMessageFactory.h
+  src/DefaultBtMessageReceiver.cc
+  src/DefaultBtMessageReceiver.h
+  src/DefaultBtRequestFactory.cc
+  src/DefaultBtRequestFactory.h
+  src/DefaultExtensionMessageFactory.cc
+  src/DefaultExtensionMessageFactory.h
+  src/DefaultPeerStorage.cc
+  src/DefaultPeerStorage.h
+  src/DHKeyExchange.h
+  src/DHTAbstractMessage.cc
+  src/DHTAbstractMessage.h
+  src/DHTAbstractNodeLookupTask.h
+  src/DHTAbstractTask.cc
+  src/DHTAbstractTask.h
+  src/DHTAnnouncePeerMessage.cc
+  src/DHTAnnouncePeerMessage.h
+  src/DHTAnnouncePeerReplyMessage.cc
+  src/DHTAnnouncePeerReplyMessage.h
+  src/DHTAutoSaveCommand.cc
+  src/DHTAutoSaveCommand.h
+  src/DHTBucket.cc
+  src/DHTBucket.h
+  src/DHTBucketRefreshCommand.cc
+  src/DHTBucketRefreshCommand.h
+  src/DHTBucketRefreshTask.cc
+  src/DHTBucketRefreshTask.h
+  src/DHTBucketTree.cc
+  src/DHTBucketTree.h
+  src/DHTConnection.h
+  src/DHTConnectionImpl.cc
+  src/DHTConnectionImpl.h
+  src/DHTConstants.h
+  src/DHTEntryPointNameResolveCommand.cc
+  src/DHTEntryPointNameResolveCommand.h
+  src/DHTFindNodeMessage.cc
+  src/DHTFindNodeMessage.h
+  src/DHTFindNodeReplyMessage.cc
+  src/DHTFindNodeReplyMessage.h
+  src/DHTGetPeersCommand.cc
+  src/DHTGetPeersCommand.h
+  src/DHTGetPeersMessage.cc
+  src/DHTGetPeersMessage.h
+  src/DHTGetPeersReplyMessage.cc
+  src/DHTGetPeersReplyMessage.h
+  src/DHTIDCloser.h
+  src/DHTInteractionCommand.cc
+  src/DHTInteractionCommand.h
+  src/DHTMessage.cc
+  src/DHTMessage.h
+  src/DHTMessageCallback.h
+  src/DHTMessageDispatcher.h
+  src/DHTMessageDispatcherImpl.cc
+  src/DHTMessageDispatcherImpl.h
+  src/DHTMessageEntry.cc
+  src/DHTMessageEntry.h
+  src/DHTMessageFactory.h
+  src/DHTMessageFactoryImpl.cc
+  src/DHTMessageFactoryImpl.h
+  src/DHTMessageReceiver.cc
+  src/DHTMessageReceiver.h
+  src/DHTMessageTracker.cc
+  src/DHTMessageTracker.h
+  src/DHTMessageTrackerEntry.cc
+  src/DHTMessageTrackerEntry.h
+  src/DHTNode.cc
+  src/DHTNode.h
+  src/DHTNodeLookupEntry.cc
+  src/DHTNodeLookupEntry.h
+  src/DHTNodeLookupTask.cc
+  src/DHTNodeLookupTask.h
+  src/DHTNodeLookupTaskCallback.cc
+  src/DHTNodeLookupTaskCallback.h
+  src/DHTPeerAnnounceCommand.cc
+  src/DHTPeerAnnounceCommand.h
+  src/DHTPeerAnnounceEntry.cc
+  src/DHTPeerAnnounceEntry.h
+  src/DHTPeerAnnounceStorage.cc
+  src/DHTPeerAnnounceStorage.h
+  src/DHTPeerLookupTask.cc
+  src/DHTPeerLookupTask.h
+  src/DHTPeerLookupTaskCallback.cc
+  src/DHTPeerLookupTaskCallback.h
+  src/DHTPingMessage.cc
+  src/DHTPingMessage.h
+  src/DHTPingReplyMessage.cc
+  src/DHTPingReplyMessage.h
+  src/DHTPingReplyMessageCallback.h
+  src/DHTPingTask.cc
+  src/DHTPingTask.h
+  src/DHTQueryMessage.cc
+  src/DHTQueryMessage.h
+  src/DHTRegistry.cc
+  src/DHTRegistry.h
+  src/DHTReplaceNodeTask.cc
+  src/DHTReplaceNodeTask.h
+  src/DHTResponseMessage.cc
+  src/DHTResponseMessage.h
+  src/DHTRoutingTable.cc
+  src/DHTRoutingTable.h
+  src/DHTRoutingTableDeserializer.cc
+  src/DHTRoutingTableDeserializer.h
+  src/DHTRoutingTableSerializer.cc
+  src/DHTRoutingTableSerializer.h
+  src/DHTSetup.cc
+  src/DHTSetup.h
+  src/DHTTask.h
+  src/DHTTaskExecutor.cc
+  src/DHTTaskExecutor.h
+  src/DHTTaskFactory.h
+  src/DHTTaskFactoryImpl.cc
+  src/DHTTaskFactoryImpl.h
+  src/DHTTaskQueue.h
+  src/DHTTaskQueueImpl.cc
+  src/DHTTaskQueueImpl.h
+  src/DHTTokenTracker.cc
+  src/DHTTokenTracker.h
+  src/DHTTokenUpdateCommand.cc
+  src/DHTTokenUpdateCommand.h
+  src/DHTUnknownMessage.cc
+  src/DHTUnknownMessage.h
+  src/ExtensionMessage.h
+  src/ExtensionMessageFactory.h
+  src/ExtensionMessageRegistry.cc
+  src/ExtensionMessageRegistry.h
+  src/HandshakeExtensionMessage.cc
+  src/HandshakeExtensionMessage.h
+  src/IndexBtMessage.cc
+  src/IndexBtMessage.h
+  src/IndexBtMessageValidator.cc
+  src/IndexBtMessageValidator.h
+  src/InitiatorMSEHandshakeCommand.cc
+  src/InitiatorMSEHandshakeCommand.h
+  src/LpdDispatchMessageCommand.cc
+  src/LpdDispatchMessageCommand.h
+  src/LpdMessage.cc
+  src/LpdMessage.h
+  src/LpdMessageDispatcher.cc
+  src/LpdMessageDispatcher.h
+  src/LpdMessageReceiver.cc
+  src/LpdMessageReceiver.h
+  src/LpdReceiveMessageCommand.cc
+  src/LpdReceiveMessageCommand.h
+  src/magnet.cc
+  src/magnet.h
+  src/MemoryBencodePreDownloadHandler.h
+  src/MSEHandshake.cc
+  src/MSEHandshake.h
+  src/NameResolveCommand.cc
+  src/NameResolveCommand.h
+  src/Peer.cc
+  src/Peer.h
+  src/PeerAbstractCommand.cc
+  src/PeerAbstractCommand.h
+  src/PeerAddrEntry.cc
+  src/PeerAddrEntry.h
+  src/PeerChokeCommand.cc
+  src/PeerChokeCommand.h
+  src/PeerConnection.cc
+  src/PeerConnection.h
+  src/PeerInitiateConnectionCommand.cc
+  src/PeerInitiateConnectionCommand.h
+  src/PeerInteractionCommand.cc
+  src/PeerInteractionCommand.h
+  src/PeerListenCommand.cc
+  src/PeerListenCommand.h
+  src/PeerReceiveHandshakeCommand.cc
+  src/PeerReceiveHandshakeCommand.h
+  src/PeerSessionResource.cc
+  src/PeerSessionResource.h
+  src/PeerStorage.h
+  src/PriorityPieceSelector.cc
+  src/PriorityPieceSelector.h
+  src/RangeBtMessage.cc
+  src/RangeBtMessage.h
+  src/RangeBtMessageValidator.cc
+  src/RangeBtMessageValidator.h
+  src/ReceiverMSEHandshakeCommand.cc
+  src/ReceiverMSEHandshakeCommand.h
+  src/RequestSlot.cc
+  src/RequestSlot.h
+  src/SeedCheckCommand.cc
+  src/SeedCheckCommand.h
+  src/SeedCriteria.h
+  src/ShareRatioSeedCriteria.cc
+  src/ShareRatioSeedCriteria.h
+  src/SimpleBtMessage.cc
+  src/SimpleBtMessage.h
+  src/TimeSeedCriteria.cc
+  src/TimeSeedCriteria.h
+  src/TrackerWatcherCommand.cc
+  src/TrackerWatcherCommand.h
+  src/UDPTrackerClient.cc
+  src/UDPTrackerClient.h
+  src/UDPTrackerRequest.cc
+  src/UDPTrackerRequest.h
+  src/UnionSeedCriteria.cc
+  src/UnionSeedCriteria.h
+  src/UTMetadataDataExtensionMessage.cc
+  src/UTMetadataDataExtensionMessage.h
+  src/UTMetadataExtensionMessage.cc
+  src/UTMetadataExtensionMessage.h
+  src/UTMetadataPostDownloadHandler.cc
+  src/UTMetadataPostDownloadHandler.h
+  src/UTMetadataRejectExtensionMessage.cc
+  src/UTMetadataRejectExtensionMessage.h
+  src/UTMetadataRequestExtensionMessage.cc
+  src/UTMetadataRequestExtensionMessage.h
+  src/UTMetadataRequestFactory.cc
+  src/UTMetadataRequestFactory.h
+  src/UTMetadataRequestTracker.cc
+  src/UTMetadataRequestTracker.h
+  src/UTPexExtensionMessage.cc
+  src/UTPexExtensionMessage.h
+  src/ValueBaseBencodeParser.h
+  src/XORCloser.h
+  src/ZeroBtMessage.cc
+  src/ZeroBtMessage.h
+)
+
+set(ARIA2_SOURCES_ENABLE_BITTORRENT__USE_INTERNAL_BIGNUM
+  src/bignum.h
+  src/InternalDHKeyExchange.cc
+  src/InternalDHKeyExchange.h
+)
+
+set(ARIA2_SOURCES_ENABLE_BITTORRENT__USE_INTERNAL_ARC4
+  src/InternalARC4Encryptor.cc
+  src/InternalARC4Encryptor.h
+)
+
+set(ARIA2_SOURCES_ENABLE_METALINK
+  src/Metalink2RequestGroup.cc
+  src/Metalink2RequestGroup.h
+  src/MetalinkEntry.cc
+  src/MetalinkEntry.h
+  src/Metalinker.cc
+  src/Metalinker.h
+  src/MetalinkMetaurl.cc
+  src/MetalinkMetaurl.h
+  src/MetalinkParserController.cc
+  src/MetalinkParserController.h
+  src/MetalinkParserState.cc
+  src/MetalinkParserState.h
+  src/MetalinkParserStateImpl.cc
+  src/MetalinkParserStateImpl.h
+  src/MetalinkParserStateMachine.cc
+  src/MetalinkParserStateMachine.h
+  src/MetalinkParserStateV3Impl.cc
+  src/MetalinkParserStateV3Impl.h
+  src/MetalinkParserStateV4Impl.cc
+  src/MetalinkParserStateV4Impl.h
+  src/MetalinkPostDownloadHandler.cc
+  src/MetalinkPostDownloadHandler.h
+  src/MetalinkResource.cc
+  src/MetalinkResource.h
+  src/metalink_helper.cc
+  src/metalink_helper.h
+)
+
+set(ARIA2_SOURCES_NOT_HAVE_ASCTIME_R
+  src/asctime_r.c
+  src/asctime_r.h
+)
+
+set(ARIA2_SOURCES_NOT_HAVE_BASENAME
+  src/libgen.c
+  src/libgen.h
+)
+
+set(ARIA2_SOURCES_NOT_HAVE_GETADDRINFO
+  src/getaddrinfo.c
+  src/getaddrinfo.h
+)
+
+set(ARIA2_SOURCES_NOT_HAVE_GAI_STRERROR
+  src/gai_strerror.c
+  src/gai_strerror.h
+)
+
+set(ARIA2_SOURCES_NOT_HAVE_GETTIMEOFDAY
+  src/gettimeofday.c
+  src/gettimeofday.h
+)
+
+set(ARIA2_SOURCES_NOT_HAVE_LOCALTIME_R
+  src/localtime_r.c
+  src/localtime_r.h
+)
+
+set(ARIA2_SOURCES_NOT_HAVE_STRPTIME
+  src/strptime.c
+  src/strptime.h
+)
+
+set(ARIA2_SOURCES_NOT_HAVE_TIMEGM
+  src/timegm.c
+  src/timegm.h
+)
+
+set(ARIA2_SOURCES_NOT_HAVE_DAEMON
+  src/daemon.cc
+  src/daemon.h
+)
+
+set(ARIA2_SOURCES_HAVE_POLL
+  src/PollEventPoll.cc
+  src/PollEventPoll.h
+)
+
+set(ARIA2_SOURCES_HAVE_PORT_ASSOCIATE
+  src/PortEventPoll.cc
+  src/PortEventPoll.h
+)
+
+set(ARIA2_SOURCES_HAVE_KQUEUE
+  src/KqueueEventPoll.cc
+  src/KqueueEventPoll.h
+)
+
+set(ARIA2_SOURCES_HAVE_LIBUV
+  src/LibuvEventPoll.cc
+  src/LibuvEventPoll.h
+)
+
+set(ARIA2_SOURCES_ENABLE_LIBARIA2
+  src/ApiCallbackDownloadEventListener.cc
+  src/ApiCallbackDownloadEventListener.h
+  src/aria2api.cc
+  src/aria2api.h
+  src/KeepRunningCommand.cc
+  src/KeepRunningCommand.h
+)

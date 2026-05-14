@@ -1,4 +1,4 @@
-# Local editor, IDE, and OS files
+# Local editors, IDEs, and OS metadata
 *~
 *.swp
 *.swo
@@ -9,13 +9,75 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Local build directories and release artifacts
+# Local build trees
 build/
 build-*/
-_build/
-dist/
+cmake-build-*/
 out/
+dist/
+_build/
 *-out/
+
+# CMake, Ninja, CTest, and CPack outputs
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+DartConfiguration.tcl
+Testing/
+cmake_install.cmake
+install_manifest.txt
+build.ninja
+.ninja_deps
+.ninja_log
+compile_commands.json
+CPackConfig.cmake
+CPackSourceConfig.cmake
+_CPack_Packages/
+
+# Compiler and linker outputs
+*.a
+*.dll
+*.dylib
+*.exe
+*.ilk
+*.lib
+*.o
+*.obj
+*.pdb
+*.so
+*.so.*
+*.dSYM/
+
+# Generated project binaries and metadata
+/aria2c
+/aria2c.exe
+/src/aria2c
+/src/aria2c.exe
+/src/libaria2.pc
+/src/includes/aria2/aria2.h
+
+# Documentation outputs
+/aria2c.1
+/aria2c.1.html
+/doc/manual-src/*/conf.py
+/doc/manual-src/*/_build/
+/third_party/wslay/doc/man/
+/third_party/wslay/doc/sphinx/_build/
+
+# Tests and runtime side effects
+/test/aria2c
+/test/aria2c.exe
+/test/*.log
+/test/*.trs
+/test/test-suite.log
+/test/test_outdir/
+/test_outdir/
+*.aria2
+!/test/load*.aria2
+*.sqlite-shm
+*.sqlite-wal
+
+# Release and packaging outputs
 packaging/out/
 packaging/dist/
 *.tar
@@ -27,155 +89,6 @@ packaging/dist/
 *.msi
 *.deb
 *.rpm
-
-# Autotools, automake, libtool, and configure outputs
-ABOUT-NLS
-INSTALL
-Makefile
-Makefile.in
-aclocal.m4
-autom4te.cache/
-compile
-config.cache
-config.guess
-config.h
-config.h.in
-config.log
-config.rpath
-config.status
-config.sub
-configure
-depcomp
-install-sh
-libtool
-ltmain.sh
-missing
-stamp-h1
-test-driver
-
-# Autopoint, gettext, and pkg-config macro copies
-intl/
-/m4/codeset.m4
-/m4/extern-inline.m4
-/m4/fcntl-o.m4
-/m4/gettext.m4
-/m4/glibc2.m4
-/m4/glibc21.m4
-/m4/iconv.m4
-/m4/intdiv0.m4
-/m4/intl.m4
-/m4/intldir.m4
-/m4/intlmacosx.m4
-/m4/intmax.m4
-/m4/inttypes-pri.m4
-/m4/inttypes_h.m4
-/m4/lcmessage.m4
-/m4/lib-ld.m4
-/m4/lib-link.m4
-/m4/lib-prefix.m4
-/m4/libgcrypt.m4
-/m4/libtool.m4
-/m4/lock.m4
-/m4/longlong.m4
-/m4/ltoptions.m4
-/m4/ltsugar.m4
-/m4/ltversion.m4
-/m4/lt~obsolete.m4
-/m4/nls.m4
-/m4/pkg.m4
-/m4/po.m4
-/m4/printf-posix.m4
-/m4/progtest.m4
-/m4/size_max.m4
-/m4/stdint_h.m4
-/m4/threadlib.m4
-/m4/uintmax_t.m4
-/m4/visibility.m4
-/m4/wchar_t.m4
-/m4/wint_t.m4
-/m4/xsize.m4
-
-# Gettext generated files
-po/Makefile.in.in
-po/Makevars.template
-po/POTFILES
-po/Rules-quot
-po/*.gmo
-po/*.pot
-po/*.sed
-po/*.sin
-po/*.header
-po/*.po~
-po/stamp-po
-
-# Compiler, linker, and libtool outputs
-.deps/
-.libs/
-.dirstamp
-*.a
-*.dll
-*.dylib
-*.exe
-*.la
-*.lai
-*.lo
-*.loT
-*.o
-*.o.tmp
-*.so
-*.so.*
-*.dSYM/
-
-# Optional non-autotools build metadata
-CMakeCache.txt
-CMakeFiles/
-CTestTestfile.cmake
-Testing/
-cmake_install.cmake
-install_manifest.txt
-build.ninja
-.ninja_deps
-.ninja_log
-meson-info/
-meson-logs/
-meson-private/
-compile_commands.json
-
-# Generated aria2 binaries and metadata
-/src/aria2c
-/src/aria2c.exe
-/src/libaria2.pc
-/src/libaria2c.a
-/lib/libaria2api
-/lib/libaria2ex
-/lib/libaria2wx
-
-# Generated documentation
-/aria2c.1
-/aria2c.1.html
-/doc/Makefile
-/doc/Makefile.in
-/doc/manual-src/Makefile
-/doc/manual-src/Makefile.in
-/doc/manual-src/*/Makefile
-/doc/manual-src/*/Makefile.in
-/doc/manual-src/*/conf.py
-/doc/manual-src/*/_build/
-
-# Test binaries, logs, and runtime output
-/test/aria2c
-/test/aria2c.exe
-/test/*.log
-/test/*.trs
-/test/test-suite.log
-/test/test_outdir/
-/test_outdir/
-
-# Runtime sidecars
-*.aria2
-!/test/load*.aria2
-*.sqlite-shm
-*.sqlite-wal
 
 # Coverage, profiling, and local analysis indexes
 *.gcda
@@ -193,46 +106,5 @@ GRTAGS
 GTAGS
 cscope.*
 
-# Bundled wslay generated files
-/third_party/wslay/INSTALL
-/third_party/wslay/Makefile
-/third_party/wslay/Makefile.in
-/third_party/wslay/aclocal.m4
-/third_party/wslay/autom4te.cache/
-/third_party/wslay/build.*/
-/third_party/wslay/cmake_install.cmake
-/third_party/wslay/compile
-/third_party/wslay/config.guess
-/third_party/wslay/config.h
-/third_party/wslay/config.h.in
-/third_party/wslay/config.log
-/third_party/wslay/config.status
-/third_party/wslay/config.sub
-/third_party/wslay/configure
-/third_party/wslay/depcomp
-/third_party/wslay/doc/man/
-/third_party/wslay/doc/sphinx/_build/
-/third_party/wslay/install-sh
-/third_party/wslay/lib/Makefile
-/third_party/wslay/lib/Makefile.in
-/third_party/wslay/lib/cmake_install.cmake
-/third_party/wslay/lib/includes/Makefile
-/third_party/wslay/lib/includes/Makefile.in
-/third_party/wslay/lib/includes/wslay/wslayver.h
-/third_party/wslay/lib/libwslay.a
-/third_party/wslay/lib/libwslay.la
-/third_party/wslay/lib/libwslay.pc
-/third_party/wslay/libtool
-/third_party/wslay/ltmain.sh
-/third_party/wslay/m4/*.m4
-/third_party/wslay/missing
-/third_party/wslay/stamp-h1
-/third_party/wslay/test-driver
-/third_party/wslay/tests/Makefile
-/third_party/wslay/tests/Makefile.in
-/third_party/wslay/tests/main
-/third_party/wslay/tests/main.log
-/third_party/wslay/tests/main.trs
-/third_party/wslay/tests/test-suite.log
-/third_party/wslay/wslay-config.cmake
-/third_party/wslay/wslay.cmake
+# Local issue analysis exports
+github-open-issues/

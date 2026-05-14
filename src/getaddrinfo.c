@@ -58,23 +58,6 @@
  *   safe, unless the cpp macro ENABLE_PTHREAD is defined.
  */
 
-/*
- * Add the following code to your configure.ac (or configure.in).
- *   AC_C_CONST
- *   AC_HEADER_STDC
- *   AC_CHECK_HEADERS(string.h memory.h stdlib.h)
- *   AC_CHECK_FUNCS(memcpy)
- *   AC_REPLACE_FUNCS(memset)
- *   AC_TYPE_SOCKLEN_T
- *   AC_TYPE_IN_PORT_T
- *   AC_DECL_H_ERRNO
- *
- *   AC_CHECK_FUNCS(getaddrinfo getnameinfo)
- *   if test "$ac_cv_func_getaddrinfo$ac_cv_func_getnameinfo" != yesyes ; then
- *       LIBOBJS="$LIBOBJS getaddrinfo.$ac_objext"
- *   fi
- */
-
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
 #endif
@@ -118,10 +101,6 @@
 #  include <pthread.h>
 #endif
 
-#ifdef ENABLE_NLS
-#  include <libintl.h>
-#endif
-
 #ifndef HAVE_MEMCPY
 #  define memcpy(d, s, n) bcopy((s), (d), (n))
 #  ifdef __STDC__
@@ -143,18 +122,7 @@ extern int h_errno;
 
 #include "getaddrinfo.h"
 
-#ifdef ENABLE_NLS
-#  define _(string) gettext(string)
-#  ifdef gettext_noop
-#    define N_(string) gettext_noop(string)
-#  else
-#    define N_(string) (string)
-#  endif
-#else
-#  define gettext(string) (string)
-#  define _(string) (string)
-#  define N_(string) (string)
-#endif
+#define N_(string) (string)
 
 /*
  * Error messages for gai_strerror().
@@ -228,9 +196,9 @@ const char* gai_strerror(ecode)
 int ecode;
 {
   if (ecode < 0 || ecode > EAI_SYSTEM)
-    return _("Unknown error");
+    return "Unknown error";
 
-  return gettext(eai_errlist[ecode]);
+  return eai_errlist[ecode];
 }
 
 /*

@@ -29,8 +29,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            autoconf automake autotools-dev autopoint libtool pkg-config \
-            gettext
+            cmake ninja-build pkg-config
 
       - name: Download dependency sources
         run: |
@@ -97,28 +96,34 @@ jobs:
 
       - name: Build aria2
         run: |
-          autoreconf -i
-          ./configure \
-            --without-gnutls --with-openssl \
-            --without-libxml2 --with-libexpat \
-            --with-libcares --with-libz --with-sqlite3 --with-libssh2 \
-            --disable-nls \
-            ARIA2_STATIC=yes \
-            CXXFLAGS="-O2" CFLAGS="-O2" \
-            LDFLAGS="-L$PREFIX/lib -static-libgcc -static-libstdc++" \
-            CPPFLAGS="-I$PREFIX/include" \
-            PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
-          make -j$(nproc)
-          strip src/aria2c
-          # Verify static linkage
-          ldd src/aria2c || true
+          PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
+          cmake -S . -B build/release -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DARIA2_ENABLE_STATIC=ON \
+            -DARIA2_WITH_GNUTLS=OFF \
+            -DARIA2_WITH_OPENSSL=ON \
+            -DARIA2_WITH_LIBXML2=OFF \
+            -DARIA2_WITH_EXPAT=ON \
+            -DARIA2_WITH_CARES=ON \
+            -DARIA2_WITH_ZLIB=ON \
+            -DARIA2_WITH_SQLITE3=ON \
+            -DARIA2_WITH_LIBSSH2=ON \
+            -DCMAKE_C_FLAGS="-O2" \
+            -DCMAKE_CXX_FLAGS="-O2" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib -static-libgcc -static-libstdc++" \
+            -DCMAKE_PREFIX_PATH="$PREFIX" \
+            -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
+          cmake --build build/release -j$(nproc)
+          strip build/release/aria2c
+          ctest --test-dir build/release --output-on-failure || true
+          ldd build/release/aria2c || true
 
       - name: Package
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           DIRNAME="aria2-${VERSION}-linux-x86_64"
           mkdir -p "${DIRNAME}"
-          cp src/aria2c "${DIRNAME}/"
+          cp build/release/aria2c "${DIRNAME}/"
           cp COPYING README.md "${DIRNAME}/"
           cp doc/bash_completion/aria2c "${DIRNAME}/aria2c.bash_completion" || true
           tar cJf "${DIRNAME}.tar.xz" "${DIRNAME}"
@@ -143,8 +148,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            autoconf automake autotools-dev autopoint libtool pkg-config \
-            gettext
+            cmake ninja-build pkg-config
 
       - name: Download dependency sources
         run: |
@@ -211,28 +215,34 @@ jobs:
 
       - name: Build aria2
         run: |
-          autoreconf -i
-          ./configure \
-            --without-gnutls --with-openssl \
-            --without-libxml2 --with-libexpat \
-            --with-libcares --with-libz --with-sqlite3 --with-libssh2 \
-            --disable-nls \
-            ARIA2_STATIC=yes \
-            CXXFLAGS="-O2" CFLAGS="-O2" \
-            LDFLAGS="-L$PREFIX/lib -static-libgcc -static-libstdc++" \
-            CPPFLAGS="-I$PREFIX/include" \
-            PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
-          make -j$(nproc)
-          strip src/aria2c
-          # Verify static linkage
-          ldd src/aria2c || true
+          PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
+          cmake -S . -B build/release -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DARIA2_ENABLE_STATIC=ON \
+            -DARIA2_WITH_GNUTLS=OFF \
+            -DARIA2_WITH_OPENSSL=ON \
+            -DARIA2_WITH_LIBXML2=OFF \
+            -DARIA2_WITH_EXPAT=ON \
+            -DARIA2_WITH_CARES=ON \
+            -DARIA2_WITH_ZLIB=ON \
+            -DARIA2_WITH_SQLITE3=ON \
+            -DARIA2_WITH_LIBSSH2=ON \
+            -DCMAKE_C_FLAGS="-O2" \
+            -DCMAKE_CXX_FLAGS="-O2" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib -static-libgcc -static-libstdc++" \
+            -DCMAKE_PREFIX_PATH="$PREFIX" \
+            -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
+          cmake --build build/release -j$(nproc)
+          strip build/release/aria2c
+          ctest --test-dir build/release --output-on-failure || true
+          ldd build/release/aria2c || true
 
       - name: Package
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           DIRNAME="aria2-${VERSION}-linux-aarch64"
           mkdir -p "${DIRNAME}"
-          cp src/aria2c "${DIRNAME}/"
+          cp build/release/aria2c "${DIRNAME}/"
           cp COPYING README.md "${DIRNAME}/"
           cp doc/bash_completion/aria2c "${DIRNAME}/aria2c.bash_completion" || true
           tar cJf "${DIRNAME}.tar.xz" "${DIRNAME}"
@@ -255,7 +265,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install build tools
-        run: brew install autoconf automake libtool pkg-config gettext
+        run: brew install cmake ninja pkg-config
 
       - name: Download dependency sources
         run: |
@@ -348,31 +358,37 @@ jobs:
 
       - name: Build aria2
         run: |
-          autoreconf -i
-          ./configure \
-            --without-openssl --without-gnutls --with-appletls \
-            --without-libxml2 --with-libexpat \
-            --with-libcares --with-libz --with-sqlite3 --with-libssh2 \
-            --with-libgmp --with-libgcrypt \
-            --without-libnettle \
-            --disable-nls \
-            ARIA2_STATIC=yes \
-            CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
-            CXXFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
-            LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip" \
-            CPPFLAGS="-I$PREFIX/include" \
-            PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
-          make -j$(sysctl -n hw.ncpu)
-          strip src/aria2c
-          # Verify only system frameworks are linked
-          otool -L src/aria2c
+          PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
+          cmake -S . -B build/release -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DARIA2_ENABLE_STATIC=ON \
+            -DARIA2_WITH_OPENSSL=OFF \
+            -DARIA2_WITH_GNUTLS=OFF \
+            -DARIA2_WITH_APPLETLS=ON \
+            -DARIA2_WITH_LIBXML2=OFF \
+            -DARIA2_WITH_EXPAT=ON \
+            -DARIA2_WITH_CARES=ON \
+            -DARIA2_WITH_ZLIB=ON \
+            -DARIA2_WITH_SQLITE3=ON \
+            -DARIA2_WITH_LIBSSH2=ON \
+            -DARIA2_WITH_GMP=ON \
+            -DARIA2_WITH_LIBGCRYPT=ON \
+            -DARIA2_WITH_LIBNETTLE=OFF \
+            -DCMAKE_C_FLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
+            -DCMAKE_CXX_FLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib -Wl,-dead_strip" \
+            -DCMAKE_PREFIX_PATH="$PREFIX"
+          cmake --build build/release -j$(sysctl -n hw.ncpu)
+          strip build/release/aria2c
+          ctest --test-dir build/release --output-on-failure
+          otool -L build/release/aria2c
 
       - name: Package
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           DIRNAME="aria2-${VERSION}-macos-arm64"
           mkdir -p "${DIRNAME}"
-          cp src/aria2c "${DIRNAME}/"
+          cp build/release/aria2c "${DIRNAME}/"
           cp COPYING README.md "${DIRNAME}/"
           tar cjf "${DIRNAME}.tar.bz2" "${DIRNAME}"
 
@@ -394,7 +410,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install build tools
-        run: brew install autoconf automake libtool pkg-config gettext
+        run: brew install cmake ninja pkg-config
 
       - name: Download dependency sources
         run: |
@@ -487,31 +503,37 @@ jobs:
 
       - name: Build aria2
         run: |
-          autoreconf -i
-          ./configure \
-            --without-openssl --without-gnutls --with-appletls \
-            --without-libxml2 --with-libexpat \
-            --with-libcares --with-libz --with-sqlite3 --with-libssh2 \
-            --with-libgmp --with-libgcrypt \
-            --without-libnettle \
-            --disable-nls \
-            ARIA2_STATIC=yes \
-            CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
-            CXXFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
-            LDFLAGS="-L$PREFIX/lib -Wl,-dead_strip" \
-            CPPFLAGS="-I$PREFIX/include" \
-            PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
-          make -j$(sysctl -n hw.ncpu)
-          strip src/aria2c
-          # Verify only system frameworks are linked
-          otool -L src/aria2c
+          PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
+          cmake -S . -B build/release -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DARIA2_ENABLE_STATIC=ON \
+            -DARIA2_WITH_OPENSSL=OFF \
+            -DARIA2_WITH_GNUTLS=OFF \
+            -DARIA2_WITH_APPLETLS=ON \
+            -DARIA2_WITH_LIBXML2=OFF \
+            -DARIA2_WITH_EXPAT=ON \
+            -DARIA2_WITH_CARES=ON \
+            -DARIA2_WITH_ZLIB=ON \
+            -DARIA2_WITH_SQLITE3=ON \
+            -DARIA2_WITH_LIBSSH2=ON \
+            -DARIA2_WITH_GMP=ON \
+            -DARIA2_WITH_LIBGCRYPT=ON \
+            -DARIA2_WITH_LIBNETTLE=OFF \
+            -DCMAKE_C_FLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
+            -DCMAKE_CXX_FLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib -Wl,-dead_strip" \
+            -DCMAKE_PREFIX_PATH="$PREFIX"
+          cmake --build build/release -j$(sysctl -n hw.ncpu)
+          strip build/release/aria2c
+          ctest --test-dir build/release --output-on-failure
+          otool -L build/release/aria2c
 
       - name: Package
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           DIRNAME="aria2-${VERSION}-macos-x86_64"
           mkdir -p "${DIRNAME}"
-          cp src/aria2c "${DIRNAME}/"
+          cp build/release/aria2c "${DIRNAME}/"
           cp COPYING README.md "${DIRNAME}/"
           tar cjf "${DIRNAME}.tar.bz2" "${DIRNAME}"
 
@@ -536,8 +558,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            make binutils autoconf automake autotools-dev autopoint libtool \
-            patch ca-certificates pkg-config curl dpkg-dev lzip gettext \
+            make binutils cmake ninja-build \
+            patch ca-certificates pkg-config curl dpkg-dev lzip \
             gcc-mingw-w64-x86-64 g++-mingw-w64-x86-64
 
       - name: Download dependencies
@@ -635,29 +657,38 @@ jobs:
 
       - name: Build aria2
         run: |
-          autoreconf -i
-          ./configure \
-            --host=$HOST --prefix=$PREFIX \
-            --without-included-gettext --disable-nls \
-            --with-libcares --without-gnutls --with-openssl --without-wintls \
-            --with-sqlite3 --without-libxml2 --with-libexpat \
-            --with-libz --with-libgmp --with-libssh2 \
-            --without-libgcrypt --without-libnettle \
-            ARIA2_STATIC=yes \
-            CPPFLAGS="-I$PREFIX/include" \
-            LDFLAGS="-L$PREFIX/lib" \
-            PKG_CONFIG="/usr/bin/pkg-config" \
-            PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
-            LIBS="-lcrypt32"
-          make -j$(nproc)
-          $HOST-strip src/aria2c.exe
+          PKG_CONFIG_LIBDIR="$PREFIX/lib/pkgconfig" \
+          cmake -S . -B build/release -G Ninja \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_C_COMPILER=$HOST-gcc \
+            -DCMAKE_CXX_COMPILER=$HOST-g++ \
+            -DCMAKE_RC_COMPILER=$HOST-windres \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DARIA2_ENABLE_STATIC=ON \
+            -DARIA2_WITH_CARES=ON \
+            -DARIA2_WITH_GNUTLS=OFF \
+            -DARIA2_WITH_OPENSSL=ON \
+            -DARIA2_WITH_WINTLS=OFF \
+            -DARIA2_WITH_SQLITE3=ON \
+            -DARIA2_WITH_LIBXML2=OFF \
+            -DARIA2_WITH_EXPAT=ON \
+            -DARIA2_WITH_ZLIB=ON \
+            -DARIA2_WITH_GMP=ON \
+            -DARIA2_WITH_LIBSSH2=ON \
+            -DARIA2_WITH_LIBGCRYPT=OFF \
+            -DARIA2_WITH_LIBNETTLE=OFF \
+            -DCMAKE_PREFIX_PATH="$PREFIX" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib -lcrypt32" \
+            -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
+          cmake --build build/release -j$(nproc)
+          $HOST-strip build/release/aria2c.exe
 
       - name: Package
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           DIRNAME="aria2-${VERSION}-windows-x86_64"
           mkdir -p "${DIRNAME}"
-          cp src/aria2c.exe "${DIRNAME}/"
+          cp build/release/aria2c.exe "${DIRNAME}/"
           cp COPYING README.md "${DIRNAME}/"
           zip -r "${DIRNAME}.zip" "${DIRNAME}"
 
@@ -688,8 +719,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            make binutils autoconf automake autotools-dev autopoint libtool \
-            patch ca-certificates pkg-config curl dpkg-dev lzip gettext
+            make binutils cmake ninja-build \
+            patch ca-certificates pkg-config curl dpkg-dev lzip
           curl --fail --show-error -L --retry 5 --connect-timeout 15 -O https://github.com/mstorsjo/llvm-mingw/releases/download/$LLVM_MINGW_VER/llvm-mingw-$LLVM_MINGW_VER-ucrt-ubuntu-20.04-x86_64.tar.xz
           tar xf llvm-mingw-$LLVM_MINGW_VER-ucrt-ubuntu-20.04-x86_64.tar.xz
           echo "$PWD/llvm-mingw-$LLVM_MINGW_VER-ucrt-ubuntu-20.04-x86_64/bin" >> $GITHUB_PATH
@@ -792,30 +823,39 @@ jobs:
 
       - name: Build aria2
         run: |
-          autoreconf -i
-          ./configure \
-            --host=$HOST --prefix=$PREFIX \
-            --without-included-gettext --disable-nls \
-            --with-libcares --without-gnutls --with-openssl --without-wintls \
-            --with-sqlite3 --without-libxml2 --with-libexpat \
-            --with-libz --with-libgmp --with-libssh2 \
-            --without-libgcrypt --without-libnettle \
-            ARIA2_STATIC=yes \
-            CC="$CC" CXX="$CXX" \
-            CPPFLAGS="-I$PREFIX/include" \
-            LDFLAGS="-L$PREFIX/lib" \
-            PKG_CONFIG="/usr/bin/pkg-config" \
-            PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
-            LIBS="-lcrypt32"
-          make -j$(nproc)
-          $STRIP src/aria2c.exe
+          PKG_CONFIG_LIBDIR="$PREFIX/lib/pkgconfig" \
+          cmake -S . -B build/release -G Ninja \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_C_COMPILER=$CC \
+            -DCMAKE_CXX_COMPILER=$CXX \
+            -DCMAKE_AR=$AR \
+            -DCMAKE_RANLIB=$RANLIB \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DARIA2_ENABLE_STATIC=ON \
+            -DARIA2_WITH_CARES=ON \
+            -DARIA2_WITH_GNUTLS=OFF \
+            -DARIA2_WITH_OPENSSL=ON \
+            -DARIA2_WITH_WINTLS=OFF \
+            -DARIA2_WITH_SQLITE3=ON \
+            -DARIA2_WITH_LIBXML2=OFF \
+            -DARIA2_WITH_EXPAT=ON \
+            -DARIA2_WITH_ZLIB=ON \
+            -DARIA2_WITH_GMP=ON \
+            -DARIA2_WITH_LIBSSH2=ON \
+            -DARIA2_WITH_LIBGCRYPT=OFF \
+            -DARIA2_WITH_LIBNETTLE=OFF \
+            -DCMAKE_PREFIX_PATH="$PREFIX" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib -lcrypt32" \
+            -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
+          cmake --build build/release -j$(nproc)
+          $STRIP build/release/aria2c.exe
 
       - name: Package
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
           DIRNAME="aria2-${VERSION}-windows-arm64"
           mkdir -p "${DIRNAME}"
-          cp src/aria2c.exe "${DIRNAME}/"
+          cp build/release/aria2c.exe "${DIRNAME}/"
           cp COPYING README.md "${DIRNAME}/"
           zip -r "${DIRNAME}.zip" "${DIRNAME}"
 

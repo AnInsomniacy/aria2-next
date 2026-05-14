@@ -8,10 +8,6 @@ cross-build flow. It is not maintained because it is based on Ubuntu Trusty,
 downloads obsolete dependency releases, and does not match the current
 aria2-next dependency baseline.
 
-`travis.yml` preserves the retired Travis CI configuration. It is not active
-because it targets Ubuntu Trusty and Xcode 8.3, both of which are outside the
-maintained CI surface.
-
 Maintained release packaging lives in:
 
 - `packaging/docker/`

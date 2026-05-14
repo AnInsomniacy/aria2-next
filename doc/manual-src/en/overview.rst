@@ -5,10 +5,9 @@ aria2-next maintenance note
 ---------------------------
 
 aria2-next is a maintained aria2 fork focused on reliability fixes, current
-dependency baselines, and reproducible cross-platform releases. It keeps the
-traditional autotools build flow used by aria2 while organizing release
-packaging, helper scripts, third-party source, and maintenance records under
-explicit repository directories.
+dependency baselines, and reproducible cross-platform releases. CMake is the
+only supported build system for this repository. Ninja is the default generator
+used by local development and release automation.
 
 Disclaimer
 ----------
@@ -105,9 +104,7 @@ The canonical source location for this maintained fork is the aria2-next
 repository that contains this file. The original upstream project is hosted at
 https://github.com/aria2/aria2.
 
-Clone this repository and build from the checkout root. The generated
-``configure`` script is not committed, so git checkouts must run
-``autoreconf -i`` before ``./configure``.
+Clone this repository and build from the checkout root with CMake.
 
 Dependency
 ----------
@@ -134,41 +131,39 @@ JSON-RPC over WebSocket  libnettle or libgcrypt or OpenSSL
 .. note::
 
   libxml2 has precedence over Expat if both libraries are installed.
-  If you prefer Expat, run configure with ``--without-libxml2``.
+  If you prefer Expat, configure CMake with ``-DARIA2_WITH_LIBXML2=OFF -DARIA2_WITH_EXPAT=ON``.
 
 .. note::
 
   On Apple OSX, OS-level SSL/TLS support will be preferred. Hence
-  neither GnuTLS nor OpenSSL is required on that platform. If you'd
-  like to disable this behavior, run configure with
-  ``--without-appletls``.
+  neither GnuTLS nor OpenSSL is required on that platform. If you would like to disable this behavior, configure CMake with
+  ``-DARIA2_WITH_APPLETLS=OFF``.
 
   GnuTLS has precedence over OpenSSL if both libraries are installed.
-  If you prefer OpenSSL, run configure with ``--without-gnutls``
-  ``--with-openssl``.
+  If you prefer OpenSSL, configure CMake with
+  ``-DARIA2_WITH_GNUTLS=OFF -DARIA2_WITH_OPENSSL=ON``.
 
   On Windows, there is SSL implementation available that is based on
   the native Windows SSL capabilities (Schannel) and it will be
   preferred.  Hence neither GnuTLS nor OpenSSL is required on that
-  platform.  If you'd like to disable this behavior, run configure
-  with ``--without-wintls``.
+  platform.  If you would like to disable this behavior, configure CMake with
+  ``-DARIA2_WITH_WINTLS=OFF``.
 
 .. note::
 
   On Apple OSX, the OS-level checksum support will be preferred,
-  unless aria2 is configured with ``--without-appletls``.
+  unless aria2 is configured with ``-DARIA2_WITH_APPLETLS=OFF``.
 
   libnettle has precedence over libgcrypt if both libraries are
-  installed.  If you prefer libgcrypt, run configure with
-  ``--without-libnettle --with-libgcrypt``. If OpenSSL is selected over
+  installed.  If you prefer libgcrypt, configure CMake with
+  ``-DARIA2_WITH_LIBNETTLE=OFF -DARIA2_WITH_LIBGCRYPT=ON``. If OpenSSL is selected over
   GnuTLS, neither libnettle nor libgcrypt will be used.
 
   If none of the optional dependencies are installed, an internal
   implementation that only supports md5 and sha1 will be used.
 
   On Windows, there is SSL implementation available that is based on
-  the native Windows capabilities and it will be preferred, unless
-  aria2 is configured with ``--without-wintls``.
+  the native Windows capabilities and it will be preferred, unless aria2 is configured with ``-DARIA2_WITH_WINTLS=OFF``.
 
 A user can have one of the following configurations for SSL and crypto
 libraries:
@@ -179,9 +174,8 @@ libraries:
 * Apple TLS (OSX only)
 * Windows TLS (Windows only)
 
-You can disable BitTorrent and Metalink support by providing
-``--disable-bittorrent`` and ``--disable-metalink`` to the configure
-script respectively.
+You can disable BitTorrent and Metalink support with
+``-DARIA2_ENABLE_BITTORRENT=OFF`` and ``-DARIA2_ENABLE_METALINK=OFF``.
 
 To enable async DNS support, you need c-ares.
 
@@ -225,87 +219,55 @@ You can use libexpat1-dev instead of libxml2-dev:
 * libexpat1-dev    (Required for Metalink support)
 
 On Fedora you need the following packages: gcc, gcc-c++, kernel-devel,
-libgcrypt-devel, libxml2-devel, openssl-devel, gettext-devel, cppunit
+libgcrypt-devel, libxml2-devel, openssl-devel, cppunit
 
-If you downloaded source code from a git repository, you have to install
-the following packages to get autoconf macros:
-
-* libxml2-dev
-* libcppunit-dev
-* autoconf
-* automake
-* autotools-dev
-* autopoint
-* libtool
-
-And run the following command to generate configure script and other files
-necessary to build the program::
-
-    $ autoreconf -i
-
-Also, install the pinned documentation toolchain to build the man page::
+Source builds require CMake, Ninja, pkg-config, a C++11 compiler, and the
+development packages for the features you want to enable. Install the pinned
+documentation toolchain if you want to build the manual and man page::
 
     $ python3 -m pip install -r doc/requirements.txt
 
-If you are building aria2 for macOS, take a look at
-the ``packaging/macos/makerelease-osx.mk`` GNU Make makefile.
+The quickest local build uses the default preset::
 
-The quickest way to build aria2 is first to run configure script::
+    $ cmake --preset default
+    $ cmake --build --preset default
+    $ ctest --preset default
 
-    $ ./configure
+A plain CMake invocation is also supported::
 
-To build statically linked aria2, use ``ARIA2_STATIC=yes``
-command-line option::
+    $ cmake -S . -B build/default -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    $ cmake --build build/default
+    $ ctest --test-dir build/default --output-on-failure
 
-    $ ./configure ARIA2_STATIC=yes
+To request a static release-style build, use::
 
-After configuration is done, run ``make`` to compile the program::
+    $ cmake -S . -B build/static -G Ninja -DARIA2_ENABLE_STATIC=ON
+    $ cmake --build build/static
 
-    $ make
+The executable is located at ``build/default/aria2c`` when using the default
+preset.
+
+The CMake configure step checks available libraries and enables as many
+features as possible except experimental features not enabled by default.
+
+Since 1.1.0, aria2 checks the certificate of HTTPS servers by default. If you
+build with OpenSSL or a recent GnuTLS version that has
+``gnutls_certificate_set_x509_system_trust()``, and the library is properly
+configured to locate the system-wide CA certificate store, aria2 loads those
+certificates at startup. If not, pass the CA bundle path with
+``-DARIA2_CA_BUNDLE=/path/to/ca-bundle``.
+
+Using native AppleTLS or WinTLS automatically uses the system certificate store,
+so an explicit CA bundle is not necessary for those backends.
+
+By default, the bash completion file named ``aria2c`` is installed to the
+default documentation directory. To change that directory, set
+``-DARIA2_BASH_COMPLETION_DIR=/path/to/directory``.
+
+aria2 uses CppUnit for automated unit testing. CTest runs the test executable.
 
 See `Cross-compiling Windows binary`_ to create a Windows binary.
 See `Cross-compiling Android binary`_ to create an Android binary.
-
-The configure script checks available libraries and enables as many
-features as possible except for experimental features not enabled by
-default.
-
-Since 1.1.0, aria2 checks the certificate of HTTPS servers by default.
-If you build with OpenSSL or the recent version of GnuTLS which has
-``gnutls_certificate_set_x509_system_trust()`` function and the
-library is properly configured to locate the system-wide CA
-certificates store, aria2 will automatically load those certificates
-at the startup. If it is not the case, I recommend supplying the path
-to the CA bundle file. For example, in Debian the path to CA bundle
-file is '/etc/ssl/certs/ca-certificates.crt' (in ca-certificates
-package). This may vary depending on your distribution. You can give
-it to configure script using ``--with-ca-bundle option``::
-
-    $ ./configure --with-ca-bundle='/etc/ssl/certs/ca-certificates.crt'
-    $ make
-
-Without ``--with-ca-bundle`` option, you will encounter the error when
-accessing HTTPS servers because the certificate cannot be verified
-without the CA bundle. In such a case, you can specify the CA bundle file
-using aria2's ``--ca-certificate`` option.  If you don't have the CA bundle
-file installed, then the last resort is to disable the certificate
-validation using ``--check-certificate=false``.
-
-Using the native OSX (AppleTLS) and/or Windows (WinTLS) implementation
-will automatically use the system certificate store, so
-``--with-ca-bundle`` is not necessary and will be ignored when using
-these implementations.
-
-By default, the bash_completion file named ``aria2c`` is installed to
-the directory ``$prefix/share/doc/aria2/bash_completion``.  To change
-the install directory of the file, use ``--with-bashcompletiondir``
-option.
-
-After a ``make``, the executable is located at ``src/aria2c``.
-
-aria2 uses CppUnit for automated unit testing. To run the unit test::
-
-    $ make check
 
 Cross-compiling Windows binary
 ------------------------------
@@ -319,16 +281,11 @@ The easiest way to build a Windows binary is using
 ``packaging/docker/Dockerfile.mingw``. If you cannot use Dockerfile, then
 continue to read the following paragraphs.
 
-Basically, after compiling and installing depended libraries, you can
-do cross-compile just passing appropriate ``--host`` option and
-specifying ``CPPFLAGS``, ``LDFLAGS``, and ``PKG_CONFIG_LIBDIR``
-variables to configure. For convenience and to lower our own
-development cost, we provide an easier way to configure the build
-settings.
-
-``packaging/scripts/mingw-config`` script is a configure script wrapper for mingw-w64.
-We use it to create official Windows build.  This script assumes
-the following libraries have been built for cross-compile:
+After compiling and installing dependency libraries, cross-compile with a CMake
+toolchain file or explicit ``CMAKE_SYSTEM_NAME``, compiler, prefix, and
+``PKG_CONFIG_LIBDIR`` settings. The maintained release workflow is the reference
+Windows cross-build implementation. It assumes the following libraries have been
+built for cross-compilation:
 
 * c-ares
 * expat
@@ -351,13 +308,10 @@ Some environment variables can be adjusted to change build settings:
   ``LDFLAGS``. ``$PREFIX/lib/pkgconfig`` will be set to
   ``PKG_CONFIG_LIBDIR``.
 
-For example, to build a 64bit binary do this::
-
-    $ HOST=x86_64-w64-mingw32 ./packaging/scripts/mingw-config
-
-If you want libaria2 dll with ``--enable-libaria2``, then don't use
-``ARIA2_STATIC=yes`` and prepare the DLL version of external
-libraries.
+For example, a 64-bit Windows build uses ``-DCMAKE_SYSTEM_NAME=Windows`` with
+``x86_64-w64-mingw32-gcc`` and ``x86_64-w64-mingw32-g++``. If you want an
+installable libaria2 build, enable ``-DARIA2_ENABLE_LIBARIA2=ON`` and prepare
+matching shared or static external libraries.
 
 Cross-compiling Android binary
 ------------------------------
@@ -368,9 +322,9 @@ NDK cross-compiler on Debian Linux.
 At the time of this writing, Android NDK r29 should compile aria2
 without errors.
 
-``packaging/scripts/android-config`` script is a configure script wrapper for Android
-build.  We use it to create an official Android build.  This script
-assumes the following libraries have been built for cross-compile:
+The maintained release workflow and Android Dockerfile are the reference Android
+cross-build implementations. They assume the following libraries have been built
+for cross-compilation:
 
 * c-ares
 * openssl
@@ -378,21 +332,12 @@ assumes the following libraries have been built for cross-compile:
 * zlib
 * libssh2
 
-When building the above libraries, make sure that disable shared
-library and enable only static library. We are going to link those
-libraries statically.
-
-``packaging/scripts/android-config`` assumes that ``$ANDROID_HOME`` and ``$NDK``
-environment variables are defined.
-
-We currently use Android NDK r29.  ``$NDK`` should point to the
-directory to Android NDK.  The build tools will be found under
-``$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/``.
-
-All the dependent libraries must be installed under
-``$ANDROID_HOME/usr/local``.
-
-After ``packaging/scripts/android-config``, run ``make`` to compile sources.
+Build the dependency libraries as static libraries and install them under a
+single Android prefix. Then configure aria2 with CMake using the Android NDK
+toolchain variables. The maintained Dockerfile uses Android NDK r29 and passes
+``CMAKE_SYSTEM_NAME=Android``, ``CMAKE_ANDROID_NDK``,
+``CMAKE_ANDROID_ARCH_ABI=arm64-v8a``, ``CMAKE_SYSTEM_VERSION``,
+``CMAKE_PREFIX_PATH``, and ``PKG_CONFIG_LIBDIR``.
 
 Building documentation
 ----------------------
@@ -534,9 +479,9 @@ libaria2
 
 The libaria2 is a C++ library that offers aria2 functionality to the
 client code. Currently, libaria2 is not built by default. To enable
-libaria2, use ``--enable-libaria2`` configure option.  By default,
+libaria2, use ``-DARIA2_ENABLE_LIBARIA2=ON`` CMake option.  By default,
 only the shared library is built. To build a static library, use
-``--enable-static`` configure option as well. See libaria2
+``-DARIA2_ENABLE_STATIC=ON`` CMake option as well. See libaria2
 documentation to know how to use API.
 
 References
