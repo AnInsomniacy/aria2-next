@@ -4,11 +4,11 @@
 [![Release](https://img.shields.io/github/v/release/AnInsomniacy/aria2-next.svg)](https://github.com/AnInsomniacy/aria2-next/releases)
 [![License: GPLv2](https://img.shields.io/badge/license-GPLv2-blue.svg)](COPYING)
 
-aria2-next is a maintained fork of [aria2](https://github.com/aria2/aria2), built specifically as the `aria2c` sidecar engine for [Motrix Next](https://github.com/AnInsomniacy/motrix-next).
+aria2-next is a maintained fork of [aria2](https://github.com/aria2/aria2), developed specifically as the `aria2c` sidecar engine for [Motrix Next](https://github.com/AnInsomniacy/motrix-next) while keeping the original aria2 format intact.
 
-It stays compatible with the original aria2 runtime surface. The binary is still `aria2c`; existing CLI options, configuration files, session files, JSON-RPC methods, package metadata, and public libaria2 headers keep the aria2 format so other aria2 users and integrations can use these builds directly.
+The protocols and integration surfaces have not been reinvented. The binary is still `aria2c`; existing CLI options, configuration files, session files, JSON-RPC methods, package metadata, and public libaria2 headers remain aria2-compatible, so other applications can use these builds directly.
 
-This fork also carries a large maintenance pass over upstream aria2. The review started from the upstream issue backlog of 1,000+ issues, was cleaned and triaged into a bug-focused set, and is preserved in [`maintenance/issue-review-matrix.csv`](maintenance/issue-review-matrix.csv). The maintained build path was also migrated from Autotools to CMake with reproducible release automation for macOS, Windows, Linux, and Android.
+This fork keeps that compatibility while carrying a large maintenance pass over upstream aria2. The review started from the upstream issue backlog of 1,000+ issues, was cleaned and triaged into a bug-focused set, and is preserved in [`maintenance/issue-review-matrix.csv`](maintenance/issue-review-matrix.csv). The maintained build path was also migrated from Autotools to CMake with reproducible release automation for macOS, Windows, Linux, and Android.
 
 ## What aria2-next Is
 
