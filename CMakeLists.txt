@@ -124,7 +124,6 @@ if(ARIA2_DEFAULT_DISK_CACHE)
 endif()
 
 if(WIN32)
-  add_compile_definitions(_POSIX_C_SOURCE=1)
   set(SECURITY_WIN32 1)
 endif()
 
