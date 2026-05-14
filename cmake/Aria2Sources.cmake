@@ -1,4 +1,4 @@
-# Generated from the legacy source inventory. Keep groups conditional.
+# Source inventory for conditional aria2 CMake targets.
 
 set(ARIA2_SOURCES_BASE
   src/a2algo.h

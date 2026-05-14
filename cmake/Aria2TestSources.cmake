@@ -1,4 +1,4 @@
-# Generated from the legacy source inventory. Keep groups conditional.
+# Source inventory for conditional aria2 CTest targets.
 
 set(ARIA2_TEST_SOURCES_BASE
   test/AllTest.cc

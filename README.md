@@ -71,7 +71,6 @@ Release packaging and cross-compilation assets live under `packaging/`. The auth
 | `third_party/` | bundled third-party source with explicit ownership notes |
 | `tools/` | repository helper scripts that are not platform packaging |
 | `maintenance/` | issue review records and migration notes |
-| `lib/` | source support files used by the build |
 
 See `packaging/README.md`, `tools/README.md`, `third_party/README.md`, and `maintenance/README.md` for directory-specific ownership rules.
 
@@ -79,7 +78,7 @@ See `packaging/README.md`, `tools/README.md`, `third_party/README.md`, and `main
 
 New maintenance work should keep source behavior, CMake options, packaging, dependency metadata, and documentation in sync. Dependency versions used by maintained release automation must be updated through `packaging/dependencies.env` first.
 
-Historical or unsupported packaging assets belong under `packaging/legacy/` with an explicit unsupported note.
+Unsupported packaging assets should be removed unless they have a current maintainer and a verified CMake release path.
 
 ## License
 

@@ -86,7 +86,7 @@ Changed:
 - Removed bundled `wslay` Autotools files and kept it as a small CMake static library target with source, headers, and license/readme material.
 - Removed the unsupported gettext catalog workflow, including `po/`, `tools/import-po`, and the unused `lib/gettext.h` compatibility header.
 - Removed inactive NLS code paths from maintained source files because the catalog workflow is no longer present.
-- Removed the retired Travis CI configuration from `packaging/legacy/`.
+- Removed retired Travis CI and Raspberry Pi Trusty packaging instead of retaining unsupported legacy paths.
 - Updated `.gitignore` for CMake, Ninja, CTest, CPack, compiler products, documentation outputs, test side effects, release archives, local IDE files, and local issue-analysis exports.
 
 Verified:

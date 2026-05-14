@@ -10,7 +10,6 @@ This directory owns release packaging, cross-compilation helpers, Docker build c
 |------|---------|
 | `docs/` | Platform-specific notes copied into binary packages |
 | `docker/` | Maintained Dockerfiles for reproducible cross-platform build images |
-| `legacy/` | Unsupported historical packaging retained only for reference |
 | `macos/` | macOS package resources |
 | `scripts/` | Maintained release packaging helpers |
 
@@ -18,6 +17,6 @@ Supported packaging paths must build this repository checkout through CMake. The
 
 Third-party dependencies may use their own upstream build systems while they are being built as release dependencies. That does not make those build systems supported for aria2-next itself.
 
-Unsupported platform experiments belong in `legacy/` with an explicit note describing why they are not part of the maintained release surface.
+Unsupported platform experiments should be deleted instead of retained in the maintained tree.
 
 Binary packages should include `README.md`, license files, and the relevant platform note from `docs/`. They should not include generated changelog snapshots; release history lives in git and GitHub Releases.
