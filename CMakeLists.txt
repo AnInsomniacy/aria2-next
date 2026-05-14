@@ -176,9 +176,22 @@ aria2_check_include("utime.h" HAVE_UTIME_H)
 aria2_check_include("vfork.h" HAVE_VFORK_H)
 aria2_check_include("wchar.h" HAVE_WCHAR_H)
 aria2_check_include("windows.h" HAVE_WINDOWS_H)
-aria2_check_include("winioctl.h" HAVE_WINIOCTL_H)
 aria2_check_include("winsock2.h" HAVE_WINSOCK2_H)
 aria2_check_include("ws2tcpip.h" HAVE_WS2TCPIP_H)
+
+if(WIN32)
+  check_cxx_source_compiles("
+#include <winsock2.h>
+#include <windows.h>
+#include <winioctl.h>
+int main() {
+  DWORD bytesReturned = 0;
+  (void)bytesReturned;
+  return FSCTL_SET_SPARSE == 0;
+}" HAVE_WINIOCTL_H)
+else()
+  aria2_check_include("winioctl.h" HAVE_WINIOCTL_H)
+endif()
 
 check_type_size("ptrdiff_t" PTRDIFF_T LANGUAGE CXX)
 if(HAVE_PTRDIFF_T)
