@@ -1,5 +1,7 @@
 #include "common.h"
 
+#include <signal.h>
+
 #include <iostream>
 
 #include <cppunit/CompilerOutputter.h>
@@ -17,6 +19,16 @@ int main(int argc, char* argv[])
 {
   aria2::global::initConsole(false);
   aria2::Platform platform;
+
+#ifdef SIGPIPE
+  sigset_t signalMask;
+#  ifdef HAVE_SIGACTION
+  sigemptyset(&signalMask);
+#  else  // !HAVE_SIGACTION
+  signalMask = 0;
+#  endif // !HAVE_SIGACTION
+  aria2::util::setGlobalSignalHandler(SIGPIPE, &signalMask, SIG_IGN, 0);
+#endif // SIGPIPE
 
   // By default, SocketCore uses AF_UNSPEC for getaddrinfo hints to
   // resolve address. Sometime SocketCore::bind() and
