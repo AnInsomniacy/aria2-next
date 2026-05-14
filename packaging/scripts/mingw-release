@@ -49,7 +49,8 @@ fi
 DIST_DIR=aria2-${VERSION}-${LABEL}-build${BUILD_VER}
 
 mkdir "$DIST_DIR"
-cp AUTHORS COPYING LICENSE.OpenSSL README.md packaging/notes/WINDOWS.md \
+cp AUTHORS COPYING README.md packaging/notes/WINDOWS.md \
     mingw-out/aria2c.exe "$DIST_DIR"
+cp docs/licenses/OPENSSL.md "$DIST_DIR/LICENSE.OpenSSL"
 zip -9 -r "$DIST_DIR.zip" "$DIST_DIR"
 rm -rf "$DIST_DIR"

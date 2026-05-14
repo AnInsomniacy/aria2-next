@@ -121,4 +121,4 @@ Release dependency versions are tracked in [`packaging/dependencies.env`](packag
 
 ## License
 
-Same as [aria2](https://github.com/aria2/aria2): [GPLv2](COPYING).
+Same as [aria2](https://github.com/aria2/aria2): [GPLv2](COPYING). The OpenSSL linking exception text is preserved in [`docs/licenses/OPENSSL.md`](docs/licenses/OPENSSL.md).
