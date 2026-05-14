@@ -10,36 +10,6 @@ It is maintained from the upstream aria2 codebase with a large issue-review pass
 
 The runtime surface stays aria2-compatible for non-Motrix users. The executable name, CLI options, configuration files, session files, JSON-RPC API, and libaria2 headers keep the original aria2 format unless a change is explicitly documented.
 
-## What This Repository Provides
-
-- An aria2-compatible `aria2c` binary for Motrix Next and other integrations.
-- Six desktop release targets: macOS, Windows, and Linux on x64 and ARM64.
-- Android ARM64 packaging support for aria2-compatible mobile use.
-- A maintained CMake 3.25+ build system with Ninja as the default generator.
-- A documented release dependency baseline for reproducible packaging.
-- A preserved maintenance audit of upstream issue review and fix decisions.
-
-## Downloads
-
-Prebuilt artifacts are published on the [GitHub Releases](https://github.com/AnInsomniacy/aria2-next/releases) page.
-
-| Platform | Architecture | Artifact |
-| --- | --- | --- |
-| Linux | x86_64 | `aria2-<version>-linux-x86_64.tar.xz` |
-| Linux | ARM64 | `aria2-<version>-linux-aarch64.tar.xz` |
-| macOS | Apple Silicon | `aria2-<version>-macos-arm64.tar.bz2` |
-| macOS | Intel | `aria2-<version>-macos-x86_64.tar.bz2` |
-| Windows | x86_64 | `aria2-<version>-windows-x86_64.zip` |
-| Windows | ARM64 | `aria2-<version>-windows-arm64.zip` |
-| Checksums | all release assets | `aria2-<version>-checksums.sha256` |
-
-Use the downloaded binary as a normal aria2 binary:
-
-```bash
-aria2c https://example.com/file.iso
-aria2c --enable-rpc --rpc-listen-all=false --rpc-listen-port=6800
-```
-
 ## Relationship to Motrix Next
 
 [Motrix Next](https://github.com/AnInsomniacy/motrix-next) runs aria2 as a native Tauri sidecar process. This repository supplies that engine.
@@ -101,6 +71,36 @@ ctest --test-dir build/default --output-on-failure
 ```
 
 Useful CMake options include `ARIA2_ENABLE_BITTORRENT`, `ARIA2_ENABLE_METALINK`, `ARIA2_ENABLE_WEBSOCKET`, `ARIA2_ENABLE_LIBARIA2`, `ARIA2_ENABLE_STATIC`, `ARIA2_WITH_APPLETLS`, `ARIA2_WITH_WINTLS`, `ARIA2_WITH_OPENSSL`, `ARIA2_WITH_GNUTLS`, `ARIA2_WITH_LIBXML2`, `ARIA2_WITH_EXPAT`, `ARIA2_WITH_CARES`, `ARIA2_WITH_ZLIB`, `ARIA2_WITH_SQLITE3`, and `ARIA2_WITH_LIBSSH2`.
+
+## What This Repository Provides
+
+- An aria2-compatible `aria2c` binary for Motrix Next and other integrations.
+- Six desktop release targets: macOS, Windows, and Linux on x64 and ARM64.
+- Android ARM64 packaging support for aria2-compatible mobile use.
+- A maintained CMake 3.25+ build system with Ninja as the default generator.
+- A documented release dependency baseline for reproducible packaging.
+- A preserved maintenance audit of upstream issue review and fix decisions.
+
+## Downloads
+
+Prebuilt artifacts are published on the [GitHub Releases](https://github.com/AnInsomniacy/aria2-next/releases) page.
+
+| Platform | Architecture | Artifact |
+| --- | --- | --- |
+| Linux | x86_64 | `aria2-<version>-linux-x86_64.tar.xz` |
+| Linux | ARM64 | `aria2-<version>-linux-aarch64.tar.xz` |
+| macOS | Apple Silicon | `aria2-<version>-macos-arm64.tar.bz2` |
+| macOS | Intel | `aria2-<version>-macos-x86_64.tar.bz2` |
+| Windows | x86_64 | `aria2-<version>-windows-x86_64.zip` |
+| Windows | ARM64 | `aria2-<version>-windows-arm64.zip` |
+| Checksums | all release assets | `aria2-<version>-checksums.sha256` |
+
+Use the downloaded binary as a normal aria2 binary:
+
+```bash
+aria2c https://example.com/file.iso
+aria2c --enable-rpc --rpc-listen-all=false --rpc-listen-port=6800
+```
 
 ## Release and Versioning
 
