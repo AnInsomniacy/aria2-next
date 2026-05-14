@@ -4,11 +4,11 @@
 [![Release](https://img.shields.io/github/v/release/AnInsomniacy/aria2-next.svg)](https://github.com/AnInsomniacy/aria2-next/releases)
 [![License: GPLv2](https://img.shields.io/badge/license-GPLv2-blue.svg)](COPYING)
 
-aria2-next is a maintained fork of [aria2](https://github.com/aria2/aria2) built for [Motrix Next](https://github.com/AnInsomniacy/motrix-next).
+aria2-next is the maintained [aria2](https://github.com/aria2/aria2) fork used as the `aria2c` sidecar engine for [Motrix Next](https://github.com/AnInsomniacy/motrix-next).
 
-It provides the `aria2c` sidecar engine used by Motrix Next while preserving the standard aria2 interface for everyone else. The executable name, CLI options, configuration files, session files, JSON-RPC API, and libaria2 headers remain aria2-compatible unless a change is explicitly documented.
+It is maintained from the upstream aria2 codebase with a large issue-review pass, targeted reliability fixes, a CMake-only build, current release dependencies, and reproducible binaries for macOS, Windows, Linux, and Android.
 
-The project keeps aria2's download engine format and behavior, then adds the maintenance work needed for modern desktop distribution: reviewed issue fixes, a CMake-only build, current release dependencies, and reproducible binaries for macOS, Windows, Linux, and Android.
+The runtime surface stays aria2-compatible for non-Motrix users. The executable name, CLI options, configuration files, session files, JSON-RPC API, and libaria2 headers keep the original aria2 format unless a change is explicitly documented.
 
 ## What This Repository Provides
 
