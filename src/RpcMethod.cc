@@ -105,6 +105,23 @@ RpcResponse RpcMethod::execute(RpcRequest req, DownloadEngine* e)
 }
 
 namespace {
+bool getOptionValueString(std::string& dest, const ValueBase* value)
+{
+  if (const auto v = downcast<String>(value)) {
+    dest = v->s();
+    return true;
+  }
+  if (const auto v = downcast<Bool>(value)) {
+    dest = v->val() ? A2_V_TRUE : A2_V_FALSE;
+    return true;
+  }
+  if (const auto v = downcast<Integer>(value)) {
+    dest = util::itos(v->i());
+    return true;
+  }
+  return false;
+}
+
 template <typename InputIterator, typename Pred>
 void gatherOption(InputIterator first, InputIterator last, Pred pred,
                   Option* option,
@@ -118,9 +135,9 @@ void gatherOption(InputIterator first, InputIterator last, Pred pred,
       // Just ignore the unacceptable options in this context.
       continue;
     }
-    const String* opval = downcast<String>((*first).second);
-    if (opval) {
-      handler->parse(*option, opval->s());
+    std::string opval;
+    if (getOptionValueString(opval, (*first).second.get())) {
+      handler->parse(*option, opval);
     }
     else if (handler->getCumulative()) {
       // header and index-out option can take array as value
@@ -178,9 +195,9 @@ void RpcMethod::gatherChangeableOption(Option* option, Option* pendingOption,
       continue;
     }
 
-    const auto opval = downcast<String>((*first).second);
-    if (opval) {
-      handler->parse(*dst, opval->s());
+    std::string opval;
+    if (getOptionValueString(opval, (*first).second.get())) {
+      handler->parse(*dst, opval);
     }
     else if (handler->getCumulative()) {
       // header and index-out option can take array as value

@@ -77,6 +77,8 @@ public:
 
   virtual bool isValidationReady() = 0;
 
+  virtual bool shouldReportIncompleteAsError() const;
+
   virtual void initValidator() = 0;
 
   virtual void

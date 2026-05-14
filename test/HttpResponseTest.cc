@@ -48,6 +48,7 @@ class HttpResponseTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testValidateResponse_good_range);
   CPPUNIT_TEST(testValidateResponse_bad_range);
   CPPUNIT_TEST(testValidateResponse_chunked);
+  CPPUNIT_TEST(testValidateResponse_rejectsTransferEncodedRange);
   CPPUNIT_TEST(testValidateResponse_withIfModifiedSince);
   CPPUNIT_TEST(testProcessRedirect);
   CPPUNIT_TEST(testRetrieveCookie);
@@ -80,6 +81,7 @@ public:
   void testValidateResponse_good_range();
   void testValidateResponse_bad_range();
   void testValidateResponse_chunked();
+  void testValidateResponse_rejectsTransferEncodedRange();
   void testValidateResponse_withIfModifiedSince();
   void testProcessRedirect();
   void testRetrieveCookie();
@@ -458,6 +460,27 @@ void HttpResponseTest::testValidateResponse_chunked()
   catch (Exception& e) {
     CPPUNIT_FAIL("exception must not be thrown.");
   }
+}
+
+void HttpResponseTest::testValidateResponse_rejectsTransferEncodedRange()
+{
+  HttpResponse httpResponse;
+  httpResponse.setHttpHeader(make_unique<HttpHeader>());
+
+  auto httpRequest = make_unique<HttpRequest>();
+  auto p = std::make_shared<Piece>(1, 1_m);
+  auto segment = std::make_shared<PiecedSegment>(1_m, p);
+  httpRequest->setSegment(segment);
+  auto fileEntry = std::make_shared<FileEntry>("file", 10_m, 0);
+  httpRequest->setFileEntry(fileEntry);
+  auto request = std::make_shared<Request>();
+  request->setUri("http://localhost/archives/aria2-1.0.0.tar.bz2");
+  httpRequest->setRequest(request);
+  httpResponse.setHttpRequest(std::move(httpRequest));
+  httpResponse.getHttpHeader()->setStatusCode(206);
+  httpResponse.getHttpHeader()->put(HttpHeader::TRANSFER_ENCODING, "chunked");
+
+  CPPUNIT_ASSERT_THROW(httpResponse.validateResponse(), Exception);
 }
 
 void HttpResponseTest::testValidateResponse_withIfModifiedSince()

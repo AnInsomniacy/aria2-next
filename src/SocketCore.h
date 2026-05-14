@@ -85,7 +85,7 @@ private:
   bool wantRead_;
   bool wantWrite_;
 
-#if ENABLE_SSL
+#ifdef ENABLE_SSL
   // TLS context for client side
   static std::shared_ptr<TLSContext> clTlsContext_;
   // TLS context for server side

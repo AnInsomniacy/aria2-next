@@ -33,7 +33,11 @@ void ProtocolDetectorTest::testIsStreamProtocol()
 {
   ProtocolDetector detector;
   CPPUNIT_ASSERT(detector.isStreamProtocol("http://localhost/index.html"));
+  CPPUNIT_ASSERT(detector.isStreamProtocol("https://localhost/index.html"));
   CPPUNIT_ASSERT(detector.isStreamProtocol("ftp://localhost/index.html"));
+  CPPUNIT_ASSERT(detector.isStreamProtocol("sftp://localhost/index.html"));
+  CPPUNIT_ASSERT(!detector.isStreamProtocol("magnet:?xt=urn:btih:abc"));
+  CPPUNIT_ASSERT(!detector.isStreamProtocol("E://downloads/file.torrent"));
   CPPUNIT_ASSERT(!detector.isStreamProtocol("/home/web/localhost/index.html"));
 }
 

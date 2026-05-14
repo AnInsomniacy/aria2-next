@@ -12,10 +12,12 @@ class BufferedFileTest : public CppUnit::TestFixture {
 
   CPPUNIT_TEST_SUITE(BufferedFileTest);
   CPPUNIT_TEST(testOpen);
+  CPPUNIT_TEST(testTransferWithClosedFile);
   CPPUNIT_TEST_SUITE_END();
 
 public:
   void testOpen();
+  void testTransferWithClosedFile();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(BufferedFileTest);
@@ -53,6 +55,18 @@ void BufferedFileTest::testOpen()
   CPPUNIT_ASSERT_EQUAL(std::string("charlie"), std::string(buf));
 
   CPPUNIT_ASSERT(rd.eof());
+}
+
+void BufferedFileTest::testTransferWithClosedFile()
+{
+  File f(A2_TEST_OUT_DIR "/aria2_BufferedFileTest_testTransferWithClosedFile");
+  f.remove();
+  BufferedFile fail(f.getPath().c_str(), IOFile::READ);
+  CPPUNIT_ASSERT(!fail);
+
+  std::stringstream out;
+  CPPUNIT_ASSERT_EQUAL((size_t)0, fail.transfer(out));
+  CPPUNIT_ASSERT(out.str().empty());
 }
 
 } // namespace aria2

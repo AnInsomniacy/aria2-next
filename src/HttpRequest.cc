@@ -123,13 +123,31 @@ bool HttpRequest::isRangeSatisfied(const Range& range) const
   if (!segment_) {
     return true;
   }
-  return getStartByte() == range.startByte &&
-         (getEndByte() == 0 || getEndByte() == range.endByte) &&
-         (fileEntry_->getLength() == 0 ||
-          fileEntry_->getLength() == range.entityLength);
+  auto startByte = getStartByte();
+  auto endByte = getEndByte();
+  auto entityLength = fileEntry_->getLength();
+
+  if (startByte != range.startByte) {
+    return false;
+  }
+  if (endByte == 0) {
+    return entityLength == 0 || entityLength == range.entityLength;
+  }
+  return endByte <= range.endByte && entityLength != 0 &&
+         range.entityLength != 0 && entityLength <= range.entityLength;
 }
 
 namespace {
+std::string getHeaderValue(const std::string& hd, size_t fieldNameSize)
+{
+  auto valueBegin = std::begin(hd) + fieldNameSize;
+  while (valueBegin != std::end(hd) &&
+         (*valueBegin == ' ' || *valueBegin == '\t')) {
+    ++valueBegin;
+  }
+  return std::string(valueBegin, std::end(hd));
+}
+
 std::string getHostText(const std::string& host, uint16_t port)
 {
   auto hosttext = host;
@@ -168,7 +186,6 @@ std::string HttpRequest::createRequest()
 
   std::vector<std::pair<std::string, std::string>> builtinHds;
   builtinHds.reserve(20);
-  builtinHds.emplace_back("User-Agent:", userAgent_);
   std::string acceptTypes = "*/*";
   if (acceptMetalink_) {
     // The mime types of Metalink are used for "transparent metalink".
@@ -179,6 +196,20 @@ std::string HttpRequest::createRequest()
     }
   }
   builtinHds.emplace_back("Accept:", acceptTypes);
+  builtinHds.emplace_back("Host:", getHostText(getURIHost(), getPort()));
+  auto userAgentHeader = std::find_if(std::begin(headers_), std::end(headers_),
+                                      [](const std::string& hd) {
+                                        return util::istartsWith(hd,
+                                                                 "User-Agent:");
+                                      });
+  if (userAgentHeader == std::end(headers_)) {
+    builtinHds.emplace_back("User-Agent:", userAgent_);
+  }
+  else {
+    builtinHds.emplace_back("User-Agent:",
+                            getHeaderValue(*userAgentHeader,
+                                           sizeof("User-Agent:") - 1));
+  }
   if (contentEncodingEnabled_) {
     std::string acceptableEncodings;
 #ifdef HAVE_ZLIB
@@ -190,7 +221,6 @@ std::string HttpRequest::createRequest()
       builtinHds.emplace_back("Accept-Encoding:", acceptableEncodings);
     }
   }
-  builtinHds.emplace_back("Host:", getHostText(getURIHost(), getPort()));
   if (noCache_) {
     builtinHds.emplace_back("Pragma:", "no-cache");
     builtinHds.emplace_back("Cache-Control:", "no-cache");
@@ -270,7 +300,8 @@ std::string HttpRequest::createRequest()
                            [&builtinHd](const std::string& hd) {
                              return util::istartsWith(hd, builtinHd.first);
                            });
-    if (it == std::end(headers_)) {
+    if (it == std::end(headers_) ||
+        util::strieq(builtinHd.first, "User-Agent:")) {
       requestLine += builtinHd.first;
       requestLine += ' ';
       requestLine += builtinHd.second;
@@ -279,6 +310,9 @@ std::string HttpRequest::createRequest()
   }
   // append additional headers given by user.
   for (const auto& hd : headers_) {
+    if (util::istartsWith(hd, "User-Agent:")) {
+      continue;
+    }
     requestLine += hd;
     requestLine += "\r\n";
   }

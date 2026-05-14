@@ -407,6 +407,8 @@ void UriSplitTest::testUriSplit_fail()
   CPPUNIT_ASSERT_EQUAL(-1, uri_split(nullptr, "http://user@"));
   CPPUNIT_ASSERT_EQUAL(-1, uri_split(nullptr, "http://[]"));
   CPPUNIT_ASSERT_EQUAL(-1, uri_split(nullptr, "http://[::"));
+  CPPUNIT_ASSERT_EQUAL(
+      -1, uri_split(nullptr, "https://U@[7:7A:EC6f:::4:Cc6:dDe:75]"));
   CPPUNIT_ASSERT_EQUAL(-1, uri_split(nullptr, "http://user[::1]"));
   CPPUNIT_ASSERT_EQUAL(-1, uri_split(nullptr, "http://user[::1]x"));
   CPPUNIT_ASSERT_EQUAL(-1, uri_split(nullptr, "http://user:pass[::1]"));

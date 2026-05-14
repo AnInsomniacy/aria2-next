@@ -1659,6 +1659,7 @@ void changeGlobalOption(const Option& option, DownloadEngine* e)
   if (option.defined(PREF_MAX_CONCURRENT_DOWNLOADS)) {
     e->getRequestGroupMan()->setMaxConcurrentDownloads(
         option.getAsInt(PREF_MAX_CONCURRENT_DOWNLOADS));
+    e->getRequestGroupMan()->reduceActiveDownloadsToLimit(e);
     e->getRequestGroupMan()->requestQueueCheck();
   }
   if (option.defined(PREF_OPTIMIZE_CONCURRENT_DOWNLOADS)) {

@@ -391,6 +391,7 @@ bool AbstractCommand::execute()
       wakeTime.advance(
           std::chrono::seconds(getOption()->getAsInt(PREF_RETRY_WAIT)));
       req_->setWakeTime(wakeTime);
+      req_->setResetTryCountAfterWake(true);
     }
 
     return prepareForRetry(0);

@@ -175,6 +175,16 @@ OutputIterator createUri(InputIterator first, InputIterator last,
 } // namespace
 
 namespace {
+bool isEmptyDirectoryEntry(const Integer* fileLengthData, const List* pathList)
+{
+  if (fileLengthData->i() != 0 || pathList->empty()) {
+    return false;
+  }
+
+  const String* lastElem = downcast<String>(pathList->get(pathList->size() - 1));
+  return lastElem && lastElem->s().empty();
+}
+
 void extractFileEntries(const std::shared_ptr<DownloadContext>& ctx,
                         TorrentAttribute* torrent, const Dict* infoDict,
                         const std::shared_ptr<Option>& option,
@@ -254,6 +264,9 @@ void extractFileEntries(const std::shared_ptr<DownloadContext>& ctx,
       if (!pathList || pathList->empty()) {
         throw DL_ABORT_EX2("Path is empty.",
                            error_code::BITTORRENT_PARSE_ERROR);
+      }
+      if (isEmptyDirectoryEntry(fileLengthData, pathList)) {
+        continue;
       }
 
       std::vector<std::string> pathelem(pathList->size() + 1);

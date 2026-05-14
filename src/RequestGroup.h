@@ -78,6 +78,7 @@ class PeerStorage;
 class RequestGroup {
 public:
   enum HaltReason { NONE, SHUTDOWN_SIGNAL, USER_REQUEST };
+  enum FileOpenMode { DEFAULT_FILE_OPEN, RESTART_FROM_SCRATCH };
   enum State {
     // Waiting in the reserved queue
     STATE_WAITING,
@@ -224,7 +225,8 @@ public:
     return segmentMan_;
   }
 
-  std::unique_ptr<CheckIntegrityEntry> createCheckIntegrityEntry();
+  std::unique_ptr<CheckIntegrityEntry> createCheckIntegrityEntry(
+      FileOpenMode fileOpenMode = DEFAULT_FILE_OPEN);
 
   // Returns first bootstrap commands to initiate a download.
   // If this is HTTP/FTP download and file size is unknown, only 1 command
@@ -390,8 +392,9 @@ public:
 
   bool downloadFinishedByFileLength();
 
-  void
-  loadAndOpenFile(const std::shared_ptr<BtProgressInfoFile>& progressInfoFile);
+  void loadAndOpenFile(
+      const std::shared_ptr<BtProgressInfoFile>& progressInfoFile,
+      FileOpenMode fileOpenMode = DEFAULT_FILE_OPEN);
 
   void shouldCancelDownloadForSafety();
 

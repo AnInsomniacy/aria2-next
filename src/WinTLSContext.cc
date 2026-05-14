@@ -57,7 +57,6 @@
 #ifndef SP_PROT_TLS1_2_SERVER
 #  define SP_PROT_TLS1_2_SERVER 0x00000400
 #endif
-
 #ifndef SCH_USE_STRONG_CRYPTO
 #  define SCH_USE_STRONG_CRYPTO 0x00400000
 #endif
@@ -71,15 +70,40 @@ WinTLSContext::WinTLSContext(TLSSessionSide side, TLSVersion ver)
     : side_(side), store_(0)
 {
   memset(&credentials_, 0, sizeof(credentials_));
+#if defined(SCH_CREDENTIALS_VERSION)
+  memset(&tlsParams_, 0, sizeof(tlsParams_));
+  credentials_.dwVersion = SCH_CREDENTIALS_VERSION;
+  credentials_.cTlsParameters = 1;
+  credentials_.pTlsParameters = &tlsParams_;
+  tlsParams_.grbitDisabledProtocols = 0;
+#else  // !SCH_CREDENTIALS_VERSION
   credentials_.dwVersion = SCHANNEL_CRED_VERSION;
   credentials_.grbitEnabledProtocols = 0;
+#endif // !SCH_CREDENTIALS_VERSION
   if (side_ == TLS_CLIENT) {
     switch (ver) {
     case TLS_PROTO_TLS11:
+#if defined(SCH_CREDENTIALS_VERSION)
+      tlsParams_.grbitDisabledProtocols &= ~SP_PROT_TLS1_1_CLIENT;
+#else  // !SCH_CREDENTIALS_VERSION
       credentials_.grbitEnabledProtocols |= SP_PROT_TLS1_1_CLIENT;
+#endif // !SCH_CREDENTIALS_VERSION
     // fall through
     case TLS_PROTO_TLS12:
+#if defined(SCH_CREDENTIALS_VERSION)
+      tlsParams_.grbitDisabledProtocols &= ~SP_PROT_TLS1_2_CLIENT;
+#else  // !SCH_CREDENTIALS_VERSION
       credentials_.grbitEnabledProtocols |= SP_PROT_TLS1_2_CLIENT;
+#endif // !SCH_CREDENTIALS_VERSION
+    // fall through
+    case TLS_PROTO_TLS13:
+#if defined(SCH_CREDENTIALS_VERSION) && defined(SP_PROT_TLS1_3_CLIENT)
+      tlsParams_.grbitDisabledProtocols &= ~SP_PROT_TLS1_3_CLIENT;
+#elif defined(SP_PROT_TLS1_3_CLIENT)
+      credentials_.grbitEnabledProtocols |= SP_PROT_TLS1_3_CLIENT;
+#else  // !SP_PROT_TLS1_3_CLIENT
+      throw DL_ABORT_EX("WinTLS backend does not support TLSv1.3");
+#endif // !SP_PROT_TLS1_3_CLIENT
       break;
     default:
       assert(0);
@@ -89,10 +113,27 @@ WinTLSContext::WinTLSContext(TLSSessionSide side, TLSVersion ver)
   else {
     switch (ver) {
     case TLS_PROTO_TLS11:
+#if defined(SCH_CREDENTIALS_VERSION)
+      tlsParams_.grbitDisabledProtocols &= ~SP_PROT_TLS1_1_SERVER;
+#else  // !SCH_CREDENTIALS_VERSION
       credentials_.grbitEnabledProtocols |= SP_PROT_TLS1_1_SERVER;
+#endif // !SCH_CREDENTIALS_VERSION
     // fall through
     case TLS_PROTO_TLS12:
+#if defined(SCH_CREDENTIALS_VERSION)
+      tlsParams_.grbitDisabledProtocols &= ~SP_PROT_TLS1_2_SERVER;
+#else  // !SCH_CREDENTIALS_VERSION
       credentials_.grbitEnabledProtocols |= SP_PROT_TLS1_2_SERVER;
+#endif // !SCH_CREDENTIALS_VERSION
+    // fall through
+    case TLS_PROTO_TLS13:
+#if defined(SCH_CREDENTIALS_VERSION) && defined(SP_PROT_TLS1_3_SERVER)
+      tlsParams_.grbitDisabledProtocols &= ~SP_PROT_TLS1_3_SERVER;
+#elif defined(SP_PROT_TLS1_3_SERVER)
+      credentials_.grbitEnabledProtocols |= SP_PROT_TLS1_3_SERVER;
+#else  // !SP_PROT_TLS1_3_SERVER
+      throw DL_ABORT_EX("WinTLS backend does not support TLSv1.3");
+#endif // !SP_PROT_TLS1_3_SERVER
       break;
     default:
       assert(0);
@@ -102,7 +143,11 @@ WinTLSContext::WinTLSContext(TLSSessionSide side, TLSVersion ver)
 
   // Strong protocol versions: Use a minimum strength, which might be later
   // refined using SCH_USE_STRONG_CRYPTO in the flags.
+#if defined(SCH_CREDENTIALS_VERSION)
+  credentials_.dwFlags |= SCH_USE_STRONG_CRYPTO;
+#else  // !SCH_CREDENTIALS_VERSION
   credentials_.dwMinimumCipherStrength = STRONG_CIPHER_BITS;
+#endif // !SCH_CREDENTIALS_VERSION
 
   setVerifyPeer(side_ == TLS_CLIENT);
 }
@@ -133,12 +178,14 @@ void WinTLSContext::setVerifyPeer(bool verify)
   // ourselves.
   credentials_.dwFlags = SCH_CRED_NO_DEFAULT_CREDS;
 
+#if !defined(SCH_CREDENTIALS_VERSION)
   if (credentials_.dwMinimumCipherStrength > WEAK_CIPHER_BITS) {
     // Enable strong crypto if we already set a minimum cipher streams.
     // This might actually require even stronger algorithms, which is a good
     // thing.
     credentials_.dwFlags |= SCH_USE_STRONG_CRYPTO;
   }
+#endif // !SCH_CREDENTIALS_VERSION
 
   if (side_ != TLS_CLIENT || !verify) {
     // No verification for servers and if user explicitly requested it

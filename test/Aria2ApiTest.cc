@@ -25,6 +25,7 @@ class Aria2ApiTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testChangeOption);
   CPPUNIT_TEST(testChangeGlobalOption);
   CPPUNIT_TEST(testDownloadResultDH);
+  CPPUNIT_TEST(testGetFilesOutlivesDownloadHandle);
   CPPUNIT_TEST_SUITE_END();
 
   Session* session_;
@@ -47,6 +48,7 @@ public:
   void testChangeOption();
   void testChangeGlobalOption();
   void testDownloadResultDH();
+  void testGetFilesOutlivesDownloadHandle();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(Aria2ApiTest);
@@ -246,6 +248,28 @@ void Aria2ApiTest::testDownloadResultDH()
                            KeyVals::value_type(PREF_DIR->k, "mydownload")) !=
                  retopts.end());
   deleteDownloadHandle(hd);
+}
+
+void Aria2ApiTest::testGetFilesOutlivesDownloadHandle()
+{
+  A2Gid gid;
+  std::vector<std::string> uris(1);
+  KeyVals options;
+  uris[0] = "http://localhost/1";
+  CPPUNIT_ASSERT_EQUAL(0, addUri(session_, &gid, uris, options));
+
+  DownloadHandle* hd = getDownloadHandle(session_, gid);
+  CPPUNIT_ASSERT(hd);
+
+  std::vector<FileData> files = hd->getFiles();
+  deleteDownloadHandle(hd);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, files.size());
+  CPPUNIT_ASSERT_EQUAL(1, files[0].index);
+  CPPUNIT_ASSERT_EQUAL((size_t)1, files[0].uris.size());
+  CPPUNIT_ASSERT_EQUAL(uris[0], files[0].uris[0].uri);
+
+  std::vector<FileData>().swap(files);
 }
 
 } // namespace aria2

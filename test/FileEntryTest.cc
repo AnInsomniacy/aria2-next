@@ -16,6 +16,7 @@ class FileEntryTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGetRequest_withoutUriReuse);
   CPPUNIT_TEST(testGetRequest_withUniqueProtocol);
   CPPUNIT_TEST(testGetRequest_withReferer);
+  CPPUNIT_TEST(testGetRequest_resetsTryCountAfterWake);
   CPPUNIT_TEST(testReuseUri);
   CPPUNIT_TEST(testAddUri);
   CPPUNIT_TEST(testAddUris);
@@ -33,6 +34,7 @@ public:
   void testGetRequest_withoutUriReuse();
   void testGetRequest_withUniqueProtocol();
   void testGetRequest_withReferer();
+  void testGetRequest_resetsTryCountAfterWake();
   void testReuseUri();
   void testAddUri();
   void testAddUris();
@@ -182,6 +184,26 @@ void FileEntryTest::testGetRequest_withReferer()
   // URI is used as referer if "*" is given.
   req = fileEntry->getRequest(&selector, true, usedHosts, "*");
   CPPUNIT_ASSERT_EQUAL(req->getUri(), req->getReferer());
+}
+
+void FileEntryTest::testGetRequest_resetsTryCountAfterWake()
+{
+  FileEntry fileEntry;
+  fileEntry.addUri("http://example.org/file");
+  InorderURISelector selector{};
+  std::vector<std::pair<size_t, std::string>> usedHosts;
+
+  auto req = fileEntry.getRequest(&selector, true, usedHosts);
+  req->addTryCount();
+  req->setResetTryCountAfterWake(true);
+  req->setWakeTime(Timer::zero());
+  fileEntry.poolRequest(req);
+
+  auto reused = fileEntry.getRequest(&selector, true, usedHosts);
+
+  CPPUNIT_ASSERT_EQUAL(std::string("http://example.org/file"),
+                       reused->getUri());
+  CPPUNIT_ASSERT_EQUAL(0, reused->getTryCount());
 }
 
 void FileEntryTest::testReuseUri()

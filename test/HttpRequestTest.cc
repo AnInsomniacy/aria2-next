@@ -36,6 +36,7 @@ class HttpRequestTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCreateProxyRequest);
   CPPUNIT_TEST(testIsRangeSatisfied);
   CPPUNIT_TEST(testUserAgent);
+  CPPUNIT_TEST(testUserAgentHeaderOrder);
   CPPUNIT_TEST(testAddHeader);
   CPPUNIT_TEST(testAcceptMetalink);
   CPPUNIT_TEST(testEnableAcceptEncoding);
@@ -67,6 +68,7 @@ public:
   void testCreateProxyRequest();
   void testIsRangeSatisfied();
   void testUserAgent();
+  void testUserAgentHeaderOrder();
   void testAddHeader();
   void testAcceptMetalink();
   void testEnableAcceptEncoding();
@@ -151,9 +153,9 @@ void HttpRequestTest::testCreateRequest()
   request->setPipeliningHint(true);
 
   std::string expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                             "User-Agent: aria2\r\n"
                              "Accept: */*\r\n"
                              "Host: localhost:8080\r\n"
+                             "User-Agent: aria2\r\n"
                              "Pragma: no-cache\r\n"
                              "Cache-Control: no-cache\r\n"
                              "Range: bytes=0-1023\r\n"
@@ -164,9 +166,9 @@ void HttpRequestTest::testCreateRequest()
   request->setPipeliningHint(false);
 
   expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: localhost:8080\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Connection: close\r\n"
@@ -179,9 +181,9 @@ void HttpRequestTest::testCreateRequest()
   httpRequest.setSegment(segment);
 
   expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: localhost:8080\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Connection: close\r\n"
@@ -193,9 +195,9 @@ void HttpRequestTest::testCreateRequest()
   request->setPipeliningHint(true);
 
   expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: localhost:8080\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Range: bytes=1048576-2097151\r\n"
@@ -208,9 +210,9 @@ void HttpRequestTest::testCreateRequest()
       "http://localhost:8080/archives/download/aria2-1.0.0.tar.bz2");
 
   expectedText = "GET /archives/download/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: localhost:8080\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Range: bytes=1048576-2097151\r\n"
@@ -225,9 +227,9 @@ void HttpRequestTest::testCreateRequest()
   request->setKeepAliveHint(true);
 
   expectedText = "GET /archives/download/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: localhost:8080\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Range: bytes=1048576-\r\n"
@@ -251,9 +253,9 @@ void HttpRequestTest::testCreateRequest()
                                                        option_.get()));
 
   expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: localhost:8080\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Connection: close\r\n"
@@ -270,9 +272,9 @@ void HttpRequestTest::testCreateRequest()
 
   expectedText =
       "GET http://localhost:8080/archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-      "User-Agent: aria2\r\n"
       "Accept: */*\r\n"
       "Host: localhost:8080\r\n"
+      "User-Agent: aria2\r\n"
       "Pragma: no-cache\r\n"
       "Cache-Control: no-cache\r\n"
       "Connection: close\r\n"
@@ -287,9 +289,9 @@ void HttpRequestTest::testCreateRequest()
 
   expectedText =
       "GET http://localhost:8080/archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-      "User-Agent: aria2\r\n"
       "Accept: */*\r\n"
       "Host: localhost:8080\r\n"
+      "User-Agent: aria2\r\n"
       "Pragma: no-cache\r\n"
       "Cache-Control: no-cache\r\n"
       "Range: bytes=0-1048575\r\n"
@@ -308,9 +310,9 @@ void HttpRequestTest::testCreateRequest()
 
   expectedText =
       "GET http://localhost:8080/archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-      "User-Agent: aria2\r\n"
       "Accept: */*\r\n"
       "Host: localhost:8080\r\n"
+      "User-Agent: aria2\r\n"
       "Pragma: no-cache\r\n"
       "Cache-Control: no-cache\r\n"
       "Connection: close\r\n"
@@ -348,9 +350,9 @@ void HttpRequestTest::testCreateRequest_ftp()
   std::string expectedText =
       "GET ftp://aria2user@localhost:8080/archives/aria2-1.0.0.tar.bz2"
       " HTTP/1.1\r\n"
-      "User-Agent: aria2\r\n"
       "Accept: */*\r\n"
       "Host: localhost:8080\r\n"
+      "User-Agent: aria2\r\n"
       "Pragma: no-cache\r\n"
       "Cache-Control: no-cache\r\n"
       "Connection: close\r\n"
@@ -366,9 +368,9 @@ void HttpRequestTest::testCreateRequest_ftp()
   expectedText =
       "GET ftp://aria2user@localhost:8080/archives/aria2-1.0.0.tar.bz2"
       " HTTP/1.1\r\n"
-      "User-Agent: aria2\r\n"
       "Accept: */*\r\n"
       "Host: localhost:8080\r\n"
+      "User-Agent: aria2\r\n"
       "Pragma: no-cache\r\n"
       "Cache-Control: no-cache\r\n"
       "Connection: close\r\n"
@@ -423,9 +425,9 @@ void HttpRequestTest::testCreateRequest_with_cookie()
   httpRequest.setNoWantDigest(true);
 
   std::string expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                             "User-Agent: aria2\r\n"
                              "Accept: */*\r\n"
                              "Host: localhost\r\n"
+                             "User-Agent: aria2\r\n"
                              "Pragma: no-cache\r\n"
                              "Cache-Control: no-cache\r\n"
                              "Connection: close\r\n"
@@ -437,9 +439,9 @@ void HttpRequestTest::testCreateRequest_with_cookie()
   request->setUri("http://localhost/archives/download/aria2-1.0.0.tar.bz2");
 
   expectedText = "GET /archives/download/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: localhost\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Connection: close\r\n"
@@ -451,9 +453,9 @@ void HttpRequestTest::testCreateRequest_with_cookie()
   request->setUri("http://www.aria2.org/archives/download/aria2-1.0.0.tar.bz2");
 
   expectedText = "GET /archives/download/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: www.aria2.org\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Connection: close\r\n"
@@ -466,9 +468,9 @@ void HttpRequestTest::testCreateRequest_with_cookie()
                   "aria2-1.0.0.tar.bz2");
 
   expectedText = "GET /archives/download/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: www.aria2.org\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Connection: close\r\n"
@@ -481,9 +483,9 @@ void HttpRequestTest::testCreateRequest_with_cookie()
   request->setUri("https://www.aria2.org/archives/aria2-1.0.0.tar.bz2");
 
   expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: www.aria2.org\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Connection: close\r\n"
@@ -495,9 +497,9 @@ void HttpRequestTest::testCreateRequest_with_cookie()
   request->setUri("http://example.org/aria2-1.0.0.tar.bz2");
 
   expectedText = "GET /aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: example.org\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Connection: close\r\n"
@@ -521,9 +523,9 @@ void HttpRequestTest::testCreateRequest_query()
 
   std::string expectedText =
       "GET /wiki?id=9ad5109a-b8a5-4edf-9373-56a1c34ae138 HTTP/1.1\r\n"
-      "User-Agent: aria2\r\n"
       "Accept: */*\r\n"
       "Host: localhost\r\n"
+      "User-Agent: aria2\r\n"
       "Pragma: no-cache\r\n"
       "Cache-Control: no-cache\r\n"
       "Connection: close\r\n"
@@ -568,9 +570,9 @@ void HttpRequestTest::testCreateRequest_endOffsetOverride()
   httpRequest.setFileEntry(fileEntry);
   // End byte is passed if it is not 0
   std::string expectedText = "GET /myfile HTTP/1.1\r\n"
-                             "User-Agent: aria2\r\n"
                              "Accept: */*\r\n"
                              "Host: localhost\r\n"
+                             "User-Agent: aria2\r\n"
                              "Pragma: no-cache\r\n"
                              "Cache-Control: no-cache\r\n"
                              "Connection: close\r\n"
@@ -582,9 +584,9 @@ void HttpRequestTest::testCreateRequest_endOffsetOverride()
   segment->updateWrittenLength(1);
 
   expectedText = "GET /myfile HTTP/1.1\r\n"
-                 "User-Agent: aria2\r\n"
                  "Accept: */*\r\n"
                  "Host: localhost\r\n"
+                 "User-Agent: aria2\r\n"
                  "Pragma: no-cache\r\n"
                  "Cache-Control: no-cache\r\n"
                  "Connection: close\r\n"
@@ -618,9 +620,9 @@ void HttpRequestTest::testCreateRequest_wantDigest()
   }
 
   std::string expectedText = "GET / HTTP/1.1\r\n"
-                             "User-Agent: aria2\r\n"
                              "Accept: */*\r\n"
                              "Host: localhost\r\n"
+                             "User-Agent: aria2\r\n"
                              "Pragma: no-cache\r\n"
                              "Cache-Control: no-cache\r\n"
                              "Connection: close\r\n"
@@ -755,6 +757,12 @@ void HttpRequestTest::testIsRangeSatisfied()
       Range(0, segment->getPosition() + segment->getLength() - 1, entityLength);
 
   CPPUNIT_ASSERT(!httpRequest.isRangeSatisfied(range));
+
+  range = Range(segment->getPosition(),
+                segment->getPosition() + segment->getLength() - 1,
+                entityLength + 1);
+
+  CPPUNIT_ASSERT(httpRequest.isRangeSatisfied(range));
 }
 
 void HttpRequestTest::testUserAgent()
@@ -775,9 +783,9 @@ void HttpRequestTest::testUserAgent()
   httpRequest.setNoWantDigest(true);
 
   std::string expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                             "User-Agent: aria2 (Linux)\r\n"
                              "Accept: */*\r\n"
                              "Host: localhost:8080\r\n"
+                             "User-Agent: aria2 (Linux)\r\n"
                              "Pragma: no-cache\r\n"
                              "Cache-Control: no-cache\r\n"
                              "Connection: close\r\n"
@@ -799,6 +807,35 @@ void HttpRequestTest::testUserAgent()
   CPPUNIT_ASSERT_EQUAL(expectedTextForProxy, httpRequest.createProxyRequest());
 }
 
+void HttpRequestTest::testUserAgentHeaderOrder()
+{
+  auto request = std::make_shared<Request>();
+  request->setUri("http://localhost/archives/aria2-1.0.0.tar.bz2");
+
+  HttpRequest httpRequest;
+  httpRequest.disableContentEncoding();
+  httpRequest.setRequest(request);
+  httpRequest.setUserAgent("CustomAgent");
+  httpRequest.setAuthConfigFactory(authConfigFactory_.get());
+  httpRequest.setOption(option_.get());
+  httpRequest.setNoWantDigest(true);
+
+  std::string expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
+                             "Accept: */*\r\n"
+                             "Host: localhost\r\n"
+                             "User-Agent: CustomAgent\r\n"
+                             "Pragma: no-cache\r\n"
+                             "Cache-Control: no-cache\r\n"
+                             "Connection: close\r\n"
+                             "\r\n";
+
+  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+
+  httpRequest.addHeader("User-Agent: CustomAgent");
+
+  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+}
+
 void HttpRequestTest::testAddHeader()
 {
   auto request = std::make_shared<Request>();
@@ -813,8 +850,8 @@ void HttpRequestTest::testAddHeader()
   httpRequest.addHeader("Accept: text/html");
   httpRequest.setNoWantDigest(true);
   std::string expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-                             "User-Agent: aria2\r\n"
                              "Host: localhost\r\n"
+                             "User-Agent: aria2\r\n"
                              "Pragma: no-cache\r\n"
                              "Cache-Control: no-cache\r\n"
                              "Connection: close\r\n"
@@ -841,9 +878,9 @@ void HttpRequestTest::testAcceptMetalink()
 
   std::string expectedText =
       "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-      "User-Agent: aria2\r\n"
       "Accept: */*,application/metalink4+xml,application/metalink+xml\r\n"
       "Host: localhost\r\n"
+      "User-Agent: aria2\r\n"
       "Pragma: no-cache\r\n"
       "Cache-Control: no-cache\r\n"
       "Connection: close\r\n"
@@ -870,27 +907,40 @@ void HttpRequestTest::testEnableAcceptEncoding()
 
   std::string expectedTextHead =
       "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
-      "User-Agent: aria2\r\n"
       "Accept: */*\r\n";
-  std::string expectedTextTail = "Host: localhost\r\n"
+  std::string expectedTextTail = "User-Agent: aria2\r\n"
                                  "Pragma: no-cache\r\n"
                                  "Cache-Control: no-cache\r\n"
                                  "Connection: close\r\n"
                                  "\r\n";
 
   std::string expectedText = expectedTextHead;
+  expectedText += "Host: localhost\r\n";
   expectedText += expectedTextTail;
   CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
 
   expectedText = expectedTextHead;
+  expectedText += "Host: localhost\r\n";
+  expectedText += expectedTextTail;
+  httpRequest.enableAcceptGZip();
+  if (acceptEncodings.empty()) {
+    CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+    return;
+  }
+
+  expectedText = expectedTextHead;
+  expectedText += "Host: localhost\r\n";
+  expectedText += "User-Agent: aria2\r\n";
   if (!acceptEncodings.empty()) {
     expectedText += "Accept-Encoding: ";
     expectedText += acceptEncodings;
     expectedText += "\r\n";
   }
-  expectedText += expectedTextTail;
+  expectedText += "Pragma: no-cache\r\n"
+                  "Cache-Control: no-cache\r\n"
+                  "Connection: close\r\n"
+                  "\r\n";
 
-  httpRequest.enableAcceptGZip();
   CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
 }
 

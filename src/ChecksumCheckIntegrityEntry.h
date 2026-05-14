@@ -39,9 +39,12 @@
 
 namespace aria2 {
 
+class FileAllocationEntry;
+
 class ChecksumCheckIntegrityEntry : public CheckIntegrityEntry {
 private:
   bool redownload_;
+  std::unique_ptr<FileAllocationEntry> nextFileAllocationEntry_;
 
 public:
   ChecksumCheckIntegrityEntry(
@@ -63,6 +66,8 @@ public:
                        DownloadEngine* e) CXX11_OVERRIDE;
 
   void setRedownload(bool redownload) { redownload_ = redownload; }
+
+  void setNextFileAllocationEntry(std::unique_ptr<FileAllocationEntry> entry);
 };
 
 } // namespace aria2

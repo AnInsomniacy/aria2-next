@@ -39,6 +39,7 @@
 #include "IteratableChecksumValidator.h"
 #include "DownloadEngine.h"
 #include "PieceStorage.h"
+#include "Command.h"
 #include "FileAllocationEntry.h"
 #include "StreamFileAllocationEntry.h"
 
@@ -72,6 +73,15 @@ void ChecksumCheckIntegrityEntry::initValidator()
 void ChecksumCheckIntegrityEntry::onDownloadFinished(
     std::vector<std::unique_ptr<Command>>& commands, DownloadEngine* e)
 {
+  if (nextFileAllocationEntry_) {
+    proceedFileAllocation(commands, std::move(nextFileAllocationEntry_), e);
+    return;
+  }
+  if (getNextCommand()) {
+    getNextCommand()->setStatus(Command::STATUS_ONESHOT_REALTIME);
+    commands.push_back(popNextCommand());
+    e->setNoWait(true);
+  }
 }
 
 void ChecksumCheckIntegrityEntry::onDownloadIncomplete(
@@ -87,6 +97,12 @@ void ChecksumCheckIntegrityEntry::onDownloadIncomplete(
 
   // If we don't redownload, set error code to indicate checksum error
   getRequestGroup()->setLastErrorCode(error_code::CHECKSUM_ERROR);
+}
+
+void ChecksumCheckIntegrityEntry::setNextFileAllocationEntry(
+    std::unique_ptr<FileAllocationEntry> entry)
+{
+  nextFileAllocationEntry_ = std::move(entry);
 }
 
 } // namespace aria2

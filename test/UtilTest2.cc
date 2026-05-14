@@ -784,6 +784,13 @@ void UtilTest2::testApplyDir()
   CPPUNIT_ASSERT_EQUAL(std::string("/pred"), util::applyDir("/", "pred"));
   CPPUNIT_ASSERT_EQUAL(std::string("./pred"), util::applyDir(".", "pred"));
   CPPUNIT_ASSERT_EQUAL(std::string("/dl/pred"), util::applyDir("/dl", "pred"));
+#ifndef __MINGW32__
+  CPPUNIT_ASSERT_EQUAL(std::string("/dev/null"),
+                       util::applyDir(".", "/dev/null"));
+#else  // __MINGW32__
+  CPPUNIT_ASSERT_EQUAL(std::string("C:/download/file"),
+                       util::applyDir("D:/aria2", "C:/download/file"));
+#endif // __MINGW32__
 }
 
 void UtilTest2::testFixTaintedBasename()

@@ -93,6 +93,9 @@ bool BtDependency::resolve()
     std::shared_ptr<RequestGroup> dependee = dependee_;
     // cut reference here
     dependee_.reset();
+    const auto& dependantContext = dependant_->getDownloadContext();
+    const auto& hashType = dependantContext->getHashType();
+    const auto& digest = dependantContext->getDigest();
     auto context = std::make_shared<DownloadContext>();
     try {
       std::shared_ptr<DiskAdaptor> diskAdaptor =
@@ -164,6 +167,9 @@ bool BtDependency::resolve()
     }
     A2_LOG_INFO(fmt("Dependency resolved for GID#%s",
                     GroupId::toHex(dependant_->getGID()).c_str()));
+    if (!hashType.empty() && !digest.empty()) {
+      context->setDigest(hashType, digest);
+    }
     dependant_->setDownloadContext(context);
     return true;
   }

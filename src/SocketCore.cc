@@ -985,8 +985,7 @@ bool SocketCore::tlsHandshake(TLSContext* tlsctx, const std::string& hostname)
         tlsVersion = A2_V_TLS13;
         break;
       default:
-        assert(0);
-        abort();
+        tlsVersion = "Unknown";
       }
 
       auto peerInfo = ss.str();
@@ -1015,11 +1014,14 @@ bool SocketCore::tlsHandshake(TLSContext* tlsctx, const std::string& hostname)
     }
 
     if (rv == TLS_ERR_ERROR) {
-      // Damn those error.
-      throw DL_ABORT_EX(fmt("SSL/TLS handshake failure: %s",
-                            handshakeError.empty()
-                                ? tlsSession_->getLastErrorString().c_str()
-                                : handshakeError.c_str()));
+      auto error = fmt("SSL/TLS handshake failure: %s",
+                       handshakeError.empty()
+                           ? tlsSession_->getLastErrorString().c_str()
+                           : handshakeError.c_str());
+      if (tlsctx->getSide() == TLS_CLIENT) {
+        throw DL_RETRY_EX(error);
+      }
+      throw DL_ABORT_EX(error);
     }
 
     // Some implementation passed back an invalid result.

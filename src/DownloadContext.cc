@@ -268,6 +268,11 @@ bool DownloadContext::isChecksumVerificationAvailable() const
   return !digest_.empty() && !hashType_.empty();
 }
 
+bool DownloadContext::isChecksumVerificationPending() const
+{
+  return isChecksumVerificationAvailable() && !checksumVerified_;
+}
+
 bool DownloadContext::isPieceHashVerificationAvailable() const
 {
   return !pieceHashType_.empty() && pieceHashes_.size() > 0 &&

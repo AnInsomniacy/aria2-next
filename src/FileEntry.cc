@@ -222,6 +222,11 @@ std::shared_ptr<Request> FileEntry::getRequest(
   if (i != std::end(requestPool_)) {
     req = *i;
     requestPool_.erase(i);
+    if (req->resetTryCountAfterWake() &&
+        req->getWakeTime() <= global::wallclock()) {
+      req->resetTryCount();
+      req->setResetTryCountAfterWake(false);
+    }
     A2_LOG_DEBUG(fmt("Picked up from pool: %s", req->getUri().c_str()));
   }
 

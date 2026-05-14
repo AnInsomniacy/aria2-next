@@ -33,12 +33,24 @@ void ExceptionTest::testStackTrace()
   DownloadFailureException e =
       DOWNLOAD_FAILURE_EXCEPTION2("exception thrown", c2);
 
-  CPPUNIT_ASSERT_EQUAL(
-      std::string(
-          "Exception: [ExceptionTest.cc:34] errorCode=2 exception thrown\n"
-          "  -> [ExceptionTest.cc:32] errorCode=2 cause2\n"
-          "  -> [ExceptionTest.cc:31] errorCode=2 cause1\n"),
-      util::replace(e.stackTrace(), std::string(A2_TEST_DIR) + "/", ""));
+  auto stackTrace = util::replace(e.stackTrace(), std::string(A2_TEST_DIR) + "/",
+                                  "");
+  stackTrace =
+      util::replace(stackTrace, std::string(__FILE__), "ExceptionTest.cc");
+
+  CPPUNIT_ASSERT(stackTrace.find(
+                     "Exception: [ExceptionTest.cc:") != std::string::npos);
+  CPPUNIT_ASSERT(stackTrace.find("] errorCode=2 exception thrown\n") !=
+                 std::string::npos);
+  CPPUNIT_ASSERT(stackTrace.find(
+                     "  -> [ExceptionTest.cc:") != std::string::npos);
+  CPPUNIT_ASSERT(stackTrace.find("] errorCode=2 cause2\n") !=
+                 std::string::npos);
+  CPPUNIT_ASSERT(stackTrace.find("] errorCode=2 cause1\n") !=
+                 std::string::npos);
+  CPPUNIT_ASSERT(stackTrace.find("exception thrown\n  ->") <
+                 stackTrace.find("cause2\n  ->"));
+  CPPUNIT_ASSERT(stackTrace.find("cause2\n  ->") < stackTrace.find("cause1\n"));
 }
 
 } // namespace aria2

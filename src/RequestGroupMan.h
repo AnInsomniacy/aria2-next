@@ -167,6 +167,8 @@ public:
 
   void fillRequestGroupFromReserver(DownloadEngine* e);
 
+  void reduceActiveDownloadsToLimit(DownloadEngine* e);
+
   // Note that this method does not call addRequestGroupIndex(). This
   // method should be considered as private, but exposed for unit
   // testing purpose.

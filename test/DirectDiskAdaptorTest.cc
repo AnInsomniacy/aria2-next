@@ -4,6 +4,7 @@
 
 #include "FileEntry.h"
 #include "DefaultDiskWriter.h"
+#include "DiskWriter.h"
 #include "Exception.h"
 #include "util.h"
 #include "TestUtil.h"
@@ -17,6 +18,7 @@ class DirectDiskAdaptorTest : public CppUnit::TestFixture {
   CPPUNIT_TEST_SUITE(DirectDiskAdaptorTest);
   CPPUNIT_TEST(testCutTrailingGarbage);
   CPPUNIT_TEST(testWriteCache);
+  CPPUNIT_TEST(testWriteCache_mergesContiguousCells);
   CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -26,6 +28,7 @@ public:
 
   void testCutTrailingGarbage();
   void testWriteCache();
+  void testWriteCache_mergesContiguousCells();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(DirectDiskAdaptorTest);
@@ -77,6 +80,56 @@ void DirectDiskAdaptorTest::testWriteCache()
   cache.cacheData(createDataCell(4, "efg"));
   adaptor->writeCache(&cache);
   CPPUNIT_ASSERT_EQUAL(std::string("abc?efg"), dw->getString());
+}
+
+namespace {
+class RecordingDiskWriter : public DiskWriter {
+public:
+  virtual void initAndOpenFile(int64_t totalLength = 0) CXX11_OVERRIDE {}
+  virtual void openFile(int64_t totalLength = 0) CXX11_OVERRIDE {}
+  virtual void closeFile() CXX11_OVERRIDE {}
+  virtual void openExistingFile(int64_t totalLength = 0) CXX11_OVERRIDE {}
+
+  virtual void writeData(const unsigned char* data, size_t len,
+                         int64_t offset) CXX11_OVERRIDE
+  {
+    writes.emplace_back(offset,
+                        std::string(reinterpret_cast<const char*>(data), len));
+  }
+
+  virtual ssize_t readData(unsigned char* data, size_t len,
+                           int64_t offset) CXX11_OVERRIDE
+  {
+    return 0;
+  }
+
+  virtual int64_t size() CXX11_OVERRIDE { return 0; }
+
+  std::vector<std::pair<int64_t, std::string>> writes;
+};
+} // namespace
+
+void DirectDiskAdaptorTest::testWriteCache_mergesContiguousCells()
+{
+  auto adaptor = std::make_shared<DirectDiskAdaptor>();
+  RecordingDiskWriter* dw;
+  {
+    auto sdw = make_unique<RecordingDiskWriter>();
+    dw = sdw.get();
+    adaptor->setDiskWriter(std::move(sdw));
+  }
+  WrDiskCacheEntry cache{adaptor};
+  cache.cacheData(createDataCell(10, "abc"));
+  cache.cacheData(createDataCell(13, "def"));
+  cache.cacheData(createDataCell(20, "ghi"));
+
+  adaptor->writeCache(&cache);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)2, dw->writes.size());
+  CPPUNIT_ASSERT_EQUAL((int64_t)10, dw->writes[0].first);
+  CPPUNIT_ASSERT_EQUAL(std::string("abcdef"), dw->writes[0].second);
+  CPPUNIT_ASSERT_EQUAL((int64_t)20, dw->writes[1].first);
+  CPPUNIT_ASSERT_EQUAL(std::string("ghi"), dw->writes[1].second);
 }
 
 } // namespace aria2

@@ -6,6 +6,8 @@
 
 #include "a2functional.h"
 #include "Exception.h"
+#include "DlRetryEx.h"
+#include "TLSContext.h"
 
 namespace aria2 {
 
@@ -18,6 +20,12 @@ class SocketCoreTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testInetPton);
   CPPUNIT_TEST(testGetBinAddr);
   CPPUNIT_TEST(testVerifyHostname);
+#ifdef ENABLE_SSL
+  CPPUNIT_TEST(testClientTlsHandshakeRemoteCloseIsRetriable);
+#ifdef HAVE_WINTLS
+  CPPUNIT_TEST(testWinTlsContextAllowsTls13Minimum);
+#endif // HAVE_WINTLS
+#endif // ENABLE_SSL
   CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -31,6 +39,12 @@ public:
   void testInetPton();
   void testGetBinAddr();
   void testVerifyHostname();
+#ifdef ENABLE_SSL
+  void testClientTlsHandshakeRemoteCloseIsRetriable();
+#ifdef HAVE_WINTLS
+  void testWinTlsContextAllowsTls13Minimum();
+#endif // HAVE_WINTLS
+#endif // ENABLE_SSL
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SocketCoreTest);
@@ -238,5 +252,43 @@ void SocketCoreTest::testVerifyHostname()
         !net::verifyHostname("192.168.0.1", dnsNames, ipAddrs, commonName));
   }
 }
+
+#ifdef ENABLE_SSL
+void SocketCoreTest::testClientTlsHandshakeRemoteCloseIsRetriable()
+{
+  auto tlsContext = std::shared_ptr<TLSContext>(TLSContext::make(
+      TLS_CLIENT, TLS_PROTO_TLS12));
+  tlsContext->setVerifyPeer(false);
+  SocketCore::setClientTLSContext(tlsContext);
+
+  SocketCore listener;
+  listener.bind("127.0.0.1", 0, AF_INET);
+  listener.beginListen();
+  auto serverEndpoint = listener.getAddrInfo();
+
+  SocketCore client;
+  client.establishConnection("127.0.0.1", serverEndpoint.port);
+  while (!listener.isReadable(1))
+    ;
+
+  auto accepted = listener.acceptConnection();
+  accepted->closeConnection();
+
+  while (!client.isReadable(1) && !client.isWritable(1))
+    ;
+
+  CPPUNIT_ASSERT_THROW(client.tlsConnect("example.org"), DlRetryEx);
+}
+
+#ifdef HAVE_WINTLS
+void SocketCoreTest::testWinTlsContextAllowsTls13Minimum()
+{
+  std::shared_ptr<TLSContext> tlsContext(
+      TLSContext::make(TLS_CLIENT, TLS_PROTO_TLS13));
+
+  CPPUNIT_ASSERT(tlsContext->good());
+}
+#endif // HAVE_WINTLS
+#endif // ENABLE_SSL
 
 } // namespace aria2

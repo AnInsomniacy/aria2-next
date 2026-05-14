@@ -54,6 +54,11 @@ std::unique_ptr<Dict> parse(const std::string& magnet)
        i != eoi; ++i) {
     auto p = util::divide((*i).first, (*i).second, '=');
     std::string name(p.first.first, p.first.second);
+    if (name.size() > 3 && util::startsWith(name, "tr.") &&
+        std::all_of(name.begin() + 3, name.end(),
+                    [](unsigned char c) { return std::isdigit(c); })) {
+      name = "tr";
+    }
     std::string value(util::percentDecode(p.second.first, p.second.second));
     List* l = downcast<List>(dict->get(name));
     if (l) {

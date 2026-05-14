@@ -18,6 +18,7 @@ class PieceTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGetCompletedLength);
   CPPUNIT_TEST(testFlushWrCache);
   CPPUNIT_TEST(testAppendWrCache);
+  CPPUNIT_TEST(testUpdateWrCacheRestoresMissingCacheEntry);
 
   CPPUNIT_TEST(testGetDigestWithWrCache);
   CPPUNIT_TEST(testUpdateHash);
@@ -41,6 +42,7 @@ public:
   void testGetCompletedLength();
   void testFlushWrCache();
   void testAppendWrCache();
+  void testUpdateWrCacheRestoresMissingCacheEntry();
 
   void testGetDigestWithWrCache();
   void testUpdateHash();
@@ -111,6 +113,29 @@ void PieceTest::testAppendWrCache()
   size_t alen = p.appendWrCache(
       &dc, 3, reinterpret_cast<const unsigned char*>("barbaz"), 6);
   CPPUNIT_ASSERT_EQUAL((size_t)3, alen);
+  p.flushWrCache(&dc);
+  CPPUNIT_ASSERT_EQUAL(std::string("foobar"), writer_->getString());
+}
+
+void PieceTest::testUpdateWrCacheRestoresMissingCacheEntry()
+{
+  unsigned char* data;
+  Piece p(0, 1_k);
+  WrDiskCache dc(64);
+  p.initWrCache(&dc, adaptor_);
+
+  data = new unsigned char[3];
+  memcpy(data, "foo", 3);
+  p.updateWrCache(&dc, data, 0, 3, 0);
+
+  CPPUNIT_ASSERT(dc.remove(p.getWrDiskCacheEntry()));
+  CPPUNIT_ASSERT_EQUAL((size_t)0, dc.getSize());
+
+  data = new unsigned char[3];
+  memcpy(data, "bar", 3);
+  p.updateWrCache(&dc, data, 0, 3, 3);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)6, dc.getSize());
   p.flushWrCache(&dc);
   CPPUNIT_ASSERT_EQUAL(std::string("foobar"), writer_->getString());
 }

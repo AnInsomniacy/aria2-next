@@ -592,6 +592,35 @@ void RequestGroupMan::fillRequestGroupFromReserver(DownloadEngine* e)
   }
 }
 
+void RequestGroupMan::reduceActiveDownloadsToLimit(DownloadEngine* e)
+{
+  removeStoppedGroup(e);
+
+  int maxConcurrentDownloads = optimizeConcurrentDownloads_
+                                   ? optimizeConcurrentDownloads()
+                                   : maxConcurrentDownloads_;
+  if (maxConcurrentDownloads < 0 ||
+      numActive_ <= static_cast<size_t>(maxConcurrentDownloads)) {
+    return;
+  }
+
+  size_t num = numActive_ - static_cast<size_t>(maxConcurrentDownloads);
+  auto i = requestGroups_.end();
+  while (num > 0 && i != requestGroups_.begin()) {
+    --i;
+    auto& group = *i;
+    if (group->isSeedOnlyEnabled() || group->isHaltRequested() ||
+        group->isPauseRequested()) {
+      continue;
+    }
+    group->setHaltRequested(true, RequestGroup::NONE);
+    group->setPauseRequested(true);
+    group->setRestartRequested(true);
+    e->setRefreshInterval(std::chrono::milliseconds(0));
+    --num;
+  }
+}
+
 void RequestGroupMan::save()
 {
   for (auto& rg : requestGroups_) {

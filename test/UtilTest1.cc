@@ -754,6 +754,14 @@ void UtilTest1::testGetContentDispositionFilename()
   CPPUNIT_ASSERT_EQUAL(std::string("aria2.tar.bz2"),
                        util::getContentDispositionFilename(val, false));
 
+  val = "attachment; filename=\"aria2.tar.bz2\";";
+  CPPUNIT_ASSERT_EQUAL(std::string("aria2.tar.bz2"),
+                       util::getContentDispositionFilename(val, false));
+
+  val = "attachment; filename=aria2.tar.bz2;";
+  CPPUNIT_ASSERT_EQUAL(std::string("aria2.tar.bz2"),
+                       util::getContentDispositionFilename(val, false));
+
   val = "attachment; filename=\"\"";
   CPPUNIT_ASSERT_EQUAL(std::string(""),
                        util::getContentDispositionFilename(val, false));

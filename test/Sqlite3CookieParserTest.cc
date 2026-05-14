@@ -15,6 +15,7 @@ class Sqlite3CookieParserTest : public CppUnit::TestFixture {
 
   CPPUNIT_TEST_SUITE(Sqlite3CookieParserTest);
   CPPUNIT_TEST(testMozParse);
+  CPPUNIT_TEST(testMozParse_readOnlyWalSnapshot);
   CPPUNIT_TEST(testMozParse_fileNotFound);
   CPPUNIT_TEST(testMozParse_badfile);
   CPPUNIT_TEST(testChromumParse);
@@ -26,6 +27,7 @@ public:
   void tearDown() {}
 
   void testMozParse();
+  void testMozParse_readOnlyWalSnapshot();
   void testMozParse_fileNotFound();
   void testMozParse_badfile();
   void testChromumParse();
@@ -75,6 +77,19 @@ void Sqlite3CookieParserTest::testMozParse()
   CPPUNIT_ASSERT(!overflowTime->getSecure());
 
   // See row id=5 has bad path, so it is skipped.
+}
+
+void Sqlite3CookieParserTest::testMozParse_readOnlyWalSnapshot()
+{
+  auto parser =
+      Sqlite3MozCookieParser{A2_TEST_DIR "/cookies-readonly-wal.sqlite"};
+  auto cookies = parser.parse();
+  CPPUNIT_ASSERT_EQUAL((size_t)1, cookies.size());
+
+  auto& cookie = cookies[0];
+  CPPUNIT_ASSERT_EQUAL(std::string("sid"), cookie->getName());
+  CPPUNIT_ASSERT_EQUAL(std::string("value"), cookie->getValue());
+  CPPUNIT_ASSERT_EQUAL(std::string("example.org"), cookie->getDomain());
 }
 
 void Sqlite3CookieParserTest::testMozParse_fileNotFound()

@@ -34,6 +34,7 @@
 /* copyright --> */
 #include "WrDiskCache.h"
 
+#include <algorithm>
 #include <cassert>
 
 #include "WrDiskCacheEntry.h"
@@ -90,7 +91,24 @@ bool WrDiskCache::remove(WrDiskCacheEntry* ent)
 bool WrDiskCache::update(WrDiskCacheEntry* ent, ssize_t delta)
 {
   if (!set_.erase(ent)) {
-    return false;
+    auto i = std::find(set_.begin(), set_.end(), ent);
+    if (i == set_.end()) {
+      A2_LOG_WARN(fmt("Restoring missing write cache entry size=%lu, delta=%ld",
+                      static_cast<unsigned long>(ent->getSize()),
+                      static_cast<long>(delta)));
+      ent->setSizeKey(ent->getSize());
+      ent->setLastUpdate(++clock_);
+      if (!set_.insert(ent).second) {
+        return false;
+      }
+      total_ += ent->getSize();
+      ensureLimit();
+      return true;
+    }
+    A2_LOG_WARN(fmt("Reindexing write cache entry size=%lu, delta=%ld",
+                    static_cast<unsigned long>(ent->getSize()),
+                    static_cast<long>(delta)));
+    set_.erase(i);
   }
   A2_LOG_DEBUG(fmt("Update cache entry size=%lu, delta=%ld, clock=%" PRId64,
                    static_cast<unsigned long>(ent->getSize()),

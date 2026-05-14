@@ -1215,7 +1215,9 @@ typedef enum {
 
 typedef enum {
   CD_FILENAME_FOUND = 1,
-  CD_EXT_FILENAME_FOUND = 1 << 1
+  CD_EXT_FILENAME_FOUND = 1 << 1,
+  CD_VALUE_COMPLETE = 1 << 2,
+  CD_FINAL_EMPTY_PARAMETER_ALLOWED = 1 << 3
 } content_disposition_parse_flag;
 
 typedef enum {
@@ -1314,6 +1316,7 @@ ssize_t parse_content_disposition(char* dest, size_t destlen,
           dp = dest;
           dlen = destlen;
         }
+        flags &= ~(CD_VALUE_COMPLETE | CD_FINAL_EMPTY_PARAMETER_ALLOWED);
       }
       else if (isLws(*p)) {
         mark_last = p;
@@ -1351,10 +1354,16 @@ ssize_t parse_content_disposition(char* dest, size_t destlen,
       break;
     case CD_AFTER_VALUE:
       if (*p == ';') {
+        if (flags & CD_VALUE_COMPLETE) {
+          flags |= CD_FINAL_EMPTY_PARAMETER_ALLOWED;
+        }
         state = CD_BEFORE_DISPOSITION_PARM_NAME;
       }
-      else if (!isLws(*p)) {
-        return -1;
+      else {
+        flags &= ~CD_VALUE_COMPLETE;
+        if (!isLws(*p)) {
+          return -1;
+        }
       }
       break;
     case CD_QUOTED_STRING:
@@ -1368,6 +1377,7 @@ ssize_t parse_content_disposition(char* dest, size_t destlen,
         if (in_file_parm) {
           flags |= CD_FILENAME_FOUND;
         }
+        flags |= CD_VALUE_COMPLETE;
         state = CD_AFTER_VALUE;
       }
       else {
@@ -1410,6 +1420,7 @@ ssize_t parse_content_disposition(char* dest, size_t destlen,
         if (in_file_parm) {
           flags |= CD_FILENAME_FOUND;
         }
+        flags |= CD_FINAL_EMPTY_PARAMETER_ALLOWED;
         state = CD_BEFORE_DISPOSITION_PARM_NAME;
       }
       else if (isLws(*p)) {
@@ -1504,6 +1515,7 @@ ssize_t parse_content_disposition(char* dest, size_t destlen,
           flags |= CD_EXT_FILENAME_FOUND;
         }
         if (*p == ';') {
+          flags |= CD_FINAL_EMPTY_PARAMETER_ALLOWED;
           state = CD_BEFORE_DISPOSITION_PARM_NAME;
         }
         else {
@@ -1555,6 +1567,12 @@ ssize_t parse_content_disposition(char* dest, size_t destlen,
   case CD_AFTER_VALUE:
   case CD_TOKEN:
     return destlen - dlen;
+  case CD_BEFORE_DISPOSITION_PARM_NAME:
+    if ((flags & CD_FINAL_EMPTY_PARAMETER_ALLOWED) &&
+        (flags & (CD_FILENAME_FOUND | CD_EXT_FILENAME_FOUND))) {
+      return destlen - dlen;
+    }
+    return -1;
   case CD_VALUE_CHARS:
     if (charset == CD_ENC_UTF8 && dfa_state != UTF8_ACCEPT) {
       return -1;
@@ -1889,7 +1907,7 @@ void sleep(long seconds)
 {
 #if defined(HAVE_WINSOCK2_H)
   ::Sleep(seconds * 1000);
-#elif HAVE_SLEEP
+#elif defined(HAVE_SLEEP)
   ::sleep(seconds);
 #elif defined(HAVE_USLEEP)
   ::usleep(seconds * 1000000);
@@ -2098,7 +2116,21 @@ bool saveAs(const std::string& filename, const std::string& data,
 std::string applyDir(const std::string& dir, const std::string& relPath)
 {
   std::string s;
-  if (dir.empty()) {
+  if (!relPath.empty() && relPath[0] == '/') {
+    s = relPath;
+  }
+#ifdef __MINGW32__
+  else if (relPath.size() >= 3 && util::isAlpha(relPath[0]) &&
+           relPath[1] == ':' && (relPath[2] == '/' || relPath[2] == '\\')) {
+    s = relPath;
+  }
+  else if (relPath.size() >= 2 &&
+           ((relPath[0] == '/' && relPath[1] == '/') ||
+            (relPath[0] == '\\' && relPath[1] == '\\'))) {
+    s = relPath;
+  }
+#endif // __MINGW32__
+  else if (dir.empty()) {
     s = "./";
     s += relPath;
   }

@@ -10,10 +10,14 @@ class ParamedStringTest : public CppUnit::TestFixture {
 
   CPPUNIT_TEST_SUITE(ParamedStringTest);
   CPPUNIT_TEST(testExpand);
+  CPPUNIT_TEST(testExpandAcceptsWideNumericRangeValues);
+  CPPUNIT_TEST(testExpandReportsNumericRangeOverflow);
   CPPUNIT_TEST_SUITE_END();
 
 public:
   void testExpand();
+  void testExpandAcceptsWideNumericRangeValues();
+  void testExpandReportsNumericRangeOverflow();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(ParamedStringTest);
@@ -106,7 +110,7 @@ void ParamedStringTest::testExpand()
   }
 
   // Range overflow
-  s = "alpha:[0-65536]:bravo";
+  s = "alpha:[0-2147483648]:bravo";
   try {
     paramed_string::expand(s.begin(), s.end(), std::back_inserter(res));
     CPPUNIT_FAIL("Exception must be thrown.");
@@ -115,7 +119,7 @@ void ParamedStringTest::testExpand()
   }
 
   // Step overflow
-  s = "alpha:[0-1:65536]:bravo";
+  s = "alpha:[0-1:2147483648]:bravo";
   try {
     paramed_string::expand(s.begin(), s.end(), std::back_inserter(res));
     CPPUNIT_FAIL("Exception must be thrown.");
@@ -177,7 +181,7 @@ void ParamedStringTest::testExpand()
   res.clear();
 
   // Range overflow
-  s = "alpha:[dsyo-dsyq]:bravo";
+  s = "alpha:[gytisyx-gytisyy]:bravo";
   try {
     paramed_string::expand(s.begin(), s.end(), std::back_inserter(res));
     CPPUNIT_FAIL("Exception must be thrown.");
@@ -203,6 +207,34 @@ void ParamedStringTest::testExpand()
   CPPUNIT_ASSERT_EQUAL(std::string("http://us.mirror/image_cd000.iso"), res[2]);
   CPPUNIT_ASSERT_EQUAL(std::string("http://us.mirror/image_cd001.iso"), res[3]);
   res.clear();
+}
+
+void ParamedStringTest::testExpandAcceptsWideNumericRangeValues()
+{
+  std::vector<std::string> res;
+  std::string s = "alpha:[1234567890-1234567892]:bravo";
+
+  paramed_string::expand(s.begin(), s.end(), std::back_inserter(res));
+
+  CPPUNIT_ASSERT_EQUAL((size_t)3, res.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("alpha:1234567890:bravo"), res[0]);
+  CPPUNIT_ASSERT_EQUAL(std::string("alpha:1234567891:bravo"), res[1]);
+  CPPUNIT_ASSERT_EQUAL(std::string("alpha:1234567892:bravo"), res[2]);
+}
+
+void ParamedStringTest::testExpandReportsNumericRangeOverflow()
+{
+  std::vector<std::string> res;
+  std::string s = "alpha:[1234567890-9876543210]:bravo";
+
+  try {
+    paramed_string::expand(s.begin(), s.end(), std::back_inserter(res));
+    CPPUNIT_FAIL("Exception must be thrown.");
+  }
+  catch (const Exception& e) {
+    CPPUNIT_ASSERT_EQUAL(std::string("Loop range overflow."),
+                         std::string(e.what()));
+  }
 }
 
 } // namespace aria2

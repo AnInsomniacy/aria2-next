@@ -106,6 +106,25 @@ void AsyncNameResolverMan::getResolvedAddress(
   return;
 }
 
+int evaluateAsyncNameResolverStatus(size_t numResolver, size_t success,
+                                    size_t error, bool ipv4Success)
+{
+  // Keep the original fast path: if A lookup succeeds, do not wait for AAAA
+  // lookup because some DNS servers silently drop AAAA queries. If no A lookup
+  // has succeeded, wait until every resolver has completed. This lets
+  // IPv6-only hosts proceed as soon as the A lookup returns an error, without
+  // waiting for the outer DNS timeout.
+  if ((success && ipv4Success) || (success && success + error == numResolver)) {
+    return 1;
+  }
+  else if (error == numResolver) {
+    return -1;
+  }
+  else {
+    return 0;
+  }
+}
+
 void AsyncNameResolverMan::setNameResolverCheck(DownloadEngine* e,
                                                 Command* command)
 {
@@ -162,20 +181,8 @@ int AsyncNameResolverMan::getStatus() const
       break;
     }
   }
-  // If we got a IPv4 lookup response, we don't wait for a IPv6 lookup
-  // response. This is because DNS servers may drop AAAA queries and we
-  // have to wait for a long time before timeout. We don't do the
-  // inverse, because, based on today's deployment of DNS servers,
-  // almost all of them can respond to A queries just fine.
-  if ((success && ipv4Success) || success == numResolver_) {
-    return 1;
-  }
-  else if (error == numResolver_) {
-    return -1;
-  }
-  else {
-    return 0;
-  }
+  return evaluateAsyncNameResolverStatus(numResolver_, success, error,
+                                         ipv4Success);
 }
 
 const std::string& AsyncNameResolverMan::getLastError() const

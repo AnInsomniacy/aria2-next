@@ -12,10 +12,12 @@ class MagnetTest : public CppUnit::TestFixture {
 
   CPPUNIT_TEST_SUITE(MagnetTest);
   CPPUNIT_TEST(testParse);
+  CPPUNIT_TEST(testParseNumberedTracker);
   CPPUNIT_TEST_SUITE_END();
 
 public:
   void testParse();
+  void testParseNumberedTracker();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(MagnetTest);
@@ -39,6 +41,15 @@ void MagnetTest::testParse()
   CPPUNIT_ASSERT_EQUAL(std::string("http://tracker1"), nthStr(r->get("tr"), 0));
   CPPUNIT_ASSERT_EQUAL(std::string("http://tracker2"), nthStr(r->get("tr"), 1));
   CPPUNIT_ASSERT(!parse("http://localhost"));
+}
+
+void MagnetTest::testParseNumberedTracker()
+{
+  auto r = parse("magnet:?xt=urn:btih:248d0a1cd08284299de78d5c1ed359bb46717d8c"
+                 "&tr.1=http://tracker1&tr.2=http://tracker2");
+
+  CPPUNIT_ASSERT_EQUAL(std::string("http://tracker1"), nthStr(r->get("tr"), 0));
+  CPPUNIT_ASSERT_EQUAL(std::string("http://tracker2"), nthStr(r->get("tr"), 1));
 }
 
 } // namespace magnet

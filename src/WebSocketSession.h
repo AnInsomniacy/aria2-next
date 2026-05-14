@@ -101,11 +101,16 @@ public:
 
   void setIgnorePayload(bool flag) { ignorePayload_ = flag; }
 
+  bool isAuthorized() const { return authorized_; }
+
+  void markAuthorized() { authorized_ = true; }
+
 private:
   std::shared_ptr<SocketCore> socket_;
   DownloadEngine* e_;
   wslay_event_context_ptr wsctx_;
   bool ignorePayload_;
+  bool authorized_;
   int32_t receivedLength_;
   json::ValueBaseJsonParser parser_;
   WebSocketInteractionCommand* command_;

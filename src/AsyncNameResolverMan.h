@@ -97,6 +97,10 @@ private:
   bool ipv6_;
 };
 
+// Returns status value: 0 for in-progress, 1 for success and -1 for failure.
+int evaluateAsyncNameResolverStatus(size_t numResolver, size_t success,
+                                    size_t error, bool ipv4Success);
+
 void configureAsyncNameResolverMan(AsyncNameResolverMan* asyncNameResolverMan,
                                    Option* option);
 

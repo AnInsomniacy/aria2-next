@@ -36,6 +36,7 @@ class RpcMethodTest : public CppUnit::TestFixture {
   CPPUNIT_TEST_SUITE(RpcMethodTest);
   CPPUNIT_TEST(testAuthorize);
   CPPUNIT_TEST(testAddUri);
+  CPPUNIT_TEST(testAddUri_acceptsJsonBoolOption);
   CPPUNIT_TEST(testAddUri_withoutUri);
   CPPUNIT_TEST(testAddUri_notUri);
   CPPUNIT_TEST(testAddUri_withBadOption);
@@ -106,6 +107,7 @@ public:
 
   void testAuthorize();
   void testAddUri();
+  void testAddUri_acceptsJsonBoolOption();
   void testAddUri_withoutUri();
   void testAddUri_notUri();
   void testAddUri_withBadOption();
@@ -251,6 +253,27 @@ void RpcMethodTest::testAddUri()
                              ->getOption()
                              ->get(PREF_DIR));
   }
+}
+
+void RpcMethodTest::testAddUri_acceptsJsonBoolOption()
+{
+  option_->put(PREF_ENABLE_RPC, A2_V_TRUE);
+
+  AddUriRpcMethod m;
+  auto req = createReq(AddUriRpcMethod::getMethodName());
+  auto urisParam = List::g();
+  urisParam->append("http://localhost/");
+  req.params->append(std::move(urisParam));
+  auto opt = Dict::g();
+  opt->put(PREF_PAUSE->k, Bool::gTrue());
+  req.params->append(std::move(opt));
+
+  auto res = m.execute(std::move(req), e_.get());
+
+  CPPUNIT_ASSERT_EQUAL(0, res.code);
+  const RequestGroupList& rgs = e_->getRequestGroupMan()->getReservedGroups();
+  CPPUNIT_ASSERT_EQUAL((size_t)1, rgs.size());
+  CPPUNIT_ASSERT((*rgs.begin())->isPauseRequested());
 }
 
 void RpcMethodTest::testAddUri_withoutUri()

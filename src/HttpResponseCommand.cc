@@ -361,7 +361,10 @@ bool HttpResponseCommand::handleDefaultEncoding(
     return true;
   }
 
-  auto checkEntry = getRequestGroup()->createCheckIntegrityEntry();
+  auto checkEntry = getRequestGroup()->createCheckIntegrityEntry(
+      httpResponse->getHttpRequest()->conditionalRequest()
+          ? RequestGroup::RESTART_FROM_SCRATCH
+          : RequestGroup::DEFAULT_FILE_OPEN);
   if (!checkEntry) {
     return true;
   }

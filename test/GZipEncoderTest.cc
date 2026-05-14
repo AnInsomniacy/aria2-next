@@ -11,10 +11,12 @@ class GZipEncoderTest : public CppUnit::TestFixture {
 
   CPPUNIT_TEST_SUITE(GZipEncoderTest);
   CPPUNIT_TEST(testEncode);
+  CPPUNIT_TEST(testEncodeBinaryChunk);
   CPPUNIT_TEST_SUITE_END();
 
 public:
   void testEncode();
+  void testEncodeBinaryChunk();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(GZipEncoderTest);
@@ -43,6 +45,28 @@ void GZipEncoderTest::testEncode()
   CPPUNIT_ASSERT(decoder.finished());
   CPPUNIT_ASSERT_EQUAL(strjoin(inputs.begin(), inputs.end(), ""),
                        gunzippedData);
+}
+
+void GZipEncoderTest::testEncodeBinaryChunk()
+{
+  GZipEncoder encoder;
+  encoder.init();
+
+  std::string input;
+  for (int i = 0; i < 16_k; ++i) {
+    input.push_back(static_cast<char>(i & 0xff));
+  }
+
+  encoder.write(input.data(), input.size());
+  std::string gzippedData = encoder.str();
+
+  GZipDecoder decoder;
+  decoder.init();
+  std::string gunzippedData =
+      decoder.decode(reinterpret_cast<const unsigned char*>(gzippedData.data()),
+                     gzippedData.size());
+  CPPUNIT_ASSERT(decoder.finished());
+  CPPUNIT_ASSERT_EQUAL(input, gunzippedData);
 }
 
 } // namespace aria2

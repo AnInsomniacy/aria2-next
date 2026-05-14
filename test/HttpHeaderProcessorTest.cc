@@ -20,6 +20,7 @@ class HttpHeaderProcessorTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGetLastBytesProcessed_nullChar);
   CPPUNIT_TEST(testGetHttpResponseHeader);
   CPPUNIT_TEST(testGetHttpResponseHeader_statusOnly);
+  CPPUNIT_TEST(testGetHttpResponseHeader_ignoresEmptyFieldWithoutColon);
   CPPUNIT_TEST(testGetHttpResponseHeader_insufficientStatusLength);
   CPPUNIT_TEST(testGetHttpResponseHeader_nameStartsWs);
   CPPUNIT_TEST(testGetHttpResponseHeader_teAndCl);
@@ -36,6 +37,7 @@ public:
   void testGetLastBytesProcessed_nullChar();
   void testGetHttpResponseHeader();
   void testGetHttpResponseHeader_statusOnly();
+  void testGetHttpResponseHeader_ignoresEmptyFieldWithoutColon();
   void testGetHttpResponseHeader_insufficientStatusLength();
   void testGetHttpResponseHeader_nameStartsWs();
   void testGetHttpResponseHeader_teAndCl();
@@ -151,6 +153,22 @@ void HttpHeaderProcessorTest::testGetHttpResponseHeader_statusOnly()
   CPPUNIT_ASSERT(proc.parse(hd));
   auto header = proc.getResult();
   CPPUNIT_ASSERT_EQUAL(200, header->getStatusCode());
+}
+
+void HttpHeaderProcessorTest::testGetHttpResponseHeader_ignoresEmptyFieldWithoutColon()
+{
+  HttpHeaderProcessor proc(HttpHeaderProcessor::CLIENT_PARSER);
+
+  std::string hd = "HTTP/1.1 200 OK\r\n"
+                   "X-Empty-Header\r\n"
+                   "Content-Length: 10\r\n"
+                   "\r\n";
+  CPPUNIT_ASSERT(proc.parse(hd));
+
+  auto header = proc.getResult();
+  CPPUNIT_ASSERT_EQUAL(200, header->getStatusCode());
+  CPPUNIT_ASSERT_EQUAL(std::string("10"),
+                       header->find(HttpHeader::CONTENT_LENGTH));
 }
 
 void HttpHeaderProcessorTest::

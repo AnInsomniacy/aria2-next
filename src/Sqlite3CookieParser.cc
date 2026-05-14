@@ -48,12 +48,26 @@
 
 namespace aria2 {
 
+namespace {
+std::string getImmutableSqliteUri(const std::string& filename)
+{
+  return "file:" + util::percentEncode(filename) + "?mode=ro&immutable=1";
+}
+} // namespace
+
 Sqlite3CookieParser::Sqlite3CookieParser(const std::string& filename)
     : db_(nullptr)
 {
   int ret;
 #ifdef HAVE_SQLITE3_OPEN_V2
   ret = sqlite3_open_v2(filename.c_str(), &db_, SQLITE_OPEN_READONLY, nullptr);
+  if (SQLITE_OK != ret) {
+    sqlite3_close(db_);
+    db_ = nullptr;
+    auto uri = getImmutableSqliteUri(filename);
+    ret = sqlite3_open_v2(uri.c_str(), &db_,
+                          SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, nullptr);
+  }
 #else  // !HAVE_SQLITE3_OPEN_V2
   if (!File(filename).isFile()) {
     return;

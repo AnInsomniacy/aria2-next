@@ -34,6 +34,7 @@
 /* copyright --> */
 #include "WebSocketSessionMan.h"
 
+#include <algorithm>
 #include <cassert>
 
 #include "WebSocketSession.h"
@@ -65,6 +66,14 @@ void WebSocketSessionMan::removeSession(
   sessions_.erase(wsSession);
 }
 
+size_t WebSocketSessionMan::countNotificationRecipients() const
+{
+  return std::count_if(sessions_.begin(), sessions_.end(),
+                       [](const std::shared_ptr<WebSocketSession>& session) {
+                         return session->isAuthorized();
+                       });
+}
+
 void WebSocketSessionMan::addNotification(const std::string& method,
                                           const RequestGroup* group)
 {
@@ -78,6 +87,9 @@ void WebSocketSessionMan::addNotification(const std::string& method,
   dict->put("params", std::move(params));
   std::string msg = json::encode(dict.get());
   for (auto& session : sessions_) {
+    if (!session->isAuthorized()) {
+      continue;
+    }
     session->addTextMessage(msg, false);
     session->getCommand()->updateWriteCheck();
   }

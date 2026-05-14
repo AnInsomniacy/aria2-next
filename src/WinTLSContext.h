@@ -61,6 +61,12 @@ struct cred_deleter {
   }
 };
 typedef std::unique_ptr<CredHandle, cred_deleter> CredPtr;
+
+#if defined(SCH_CREDENTIALS_VERSION)
+typedef SCH_CREDENTIALS Credentials;
+#else  // !SCH_CREDENTIALS_VERSION
+typedef SCHANNEL_CRED Credentials;
+#endif // !SCH_CREDENTIALS_VERSION
 } // namespace wintls
 
 class WinTLSContext : public TLSContext {
@@ -90,7 +96,10 @@ public:
 
 private:
   TLSSessionSide side_;
-  SCHANNEL_CRED credentials_;
+  wintls::Credentials credentials_;
+#if defined(SCH_CREDENTIALS_VERSION)
+  TLS_PARAMETERS tlsParams_;
+#endif // SCH_CREDENTIALS_VERSION
   HCERTSTORE store_;
   wintls::CredPtr cred_;
 };

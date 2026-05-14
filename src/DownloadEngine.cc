@@ -344,6 +344,13 @@ std::string createSockPoolKey(const std::string& host, uint16_t port,
   }
   return key;
 }
+
+std::string createSockPoolKeyForHostname(const std::string& ipaddr,
+                                         uint16_t port,
+                                         const std::string& hostname)
+{
+  return createSockPoolKey(ipaddr, port, hostname, A2STR::NIL, 0);
+}
 } // namespace
 
 void DownloadEngine::poolSocket(const std::string& ipaddr, uint16_t port,
@@ -368,6 +375,14 @@ void DownloadEngine::poolSocket(const std::string& ipaddr, uint16_t port,
   SocketPoolEntry e(sock, std::move(timeout));
   poolSocket(createSockPoolKey(ipaddr, port, A2STR::NIL, proxyhost, proxyport),
              e);
+}
+
+void DownloadEngine::poolSocketForHostname(
+    const std::string& ipaddr, uint16_t port, const std::string& hostname,
+    const std::shared_ptr<SocketCore>& sock, std::chrono::seconds timeout)
+{
+  SocketPoolEntry e(sock, std::move(timeout));
+  poolSocket(createSockPoolKeyForHostname(ipaddr, port, hostname), e);
 }
 
 namespace {
@@ -400,8 +415,8 @@ void DownloadEngine::poolSocket(const std::shared_ptr<Request>& request,
 
   Endpoint peerInfo;
   if (getPeerInfo(peerInfo, socket)) {
-    poolSocket(peerInfo.addr, peerInfo.port, A2STR::NIL, 0, socket,
-               std::move(timeout));
+    poolSocketForHostname(peerInfo.addr, peerInfo.port, request->getHost(),
+                          socket, std::move(timeout));
   }
 }
 
@@ -460,6 +475,19 @@ DownloadEngine::popPooledSocket(const std::string& ipaddr, uint16_t port,
   return s;
 }
 
+std::shared_ptr<SocketCore> DownloadEngine::popPooledSocketForHostname(
+    const std::string& ipaddr, uint16_t port, const std::string& hostname)
+{
+  std::shared_ptr<SocketCore> s;
+  auto i =
+      findSocketPoolEntry(createSockPoolKeyForHostname(ipaddr, port, hostname));
+  if (i != socketPool_.end()) {
+    s = (*i).second.getSocket();
+    socketPool_.erase(i);
+  }
+  return s;
+}
+
 std::shared_ptr<SocketCore>
 DownloadEngine::popPooledSocket(std::string& options, const std::string& ipaddr,
                                 uint16_t port, const std::string& username,
@@ -484,6 +512,20 @@ DownloadEngine::popPooledSocket(const std::vector<std::string>& ipaddrs,
   std::shared_ptr<SocketCore> s;
   for (const auto& ipaddr : ipaddrs) {
     s = popPooledSocket(ipaddr, port, A2STR::NIL, 0);
+    if (s) {
+      break;
+    }
+  }
+  return s;
+}
+
+std::shared_ptr<SocketCore> DownloadEngine::popPooledSocketForHostname(
+    const std::vector<std::string>& ipaddrs, uint16_t port,
+    const std::string& hostname)
+{
+  std::shared_ptr<SocketCore> s;
+  for (const auto& ipaddr : ipaddrs) {
+    s = popPooledSocketForHostname(ipaddr, port, hostname);
     if (s) {
       break;
     }

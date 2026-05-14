@@ -361,8 +361,14 @@ bool HttpHeaderProcessor::parse(const unsigned char* data, size_t length)
       break;
 
     case FIELD_NAME:
-      if (util::isLws(c) || util::isCRLF(c)) {
+      if (util::isLws(c)) {
         throw DL_ABORT_EX("Bad HTTP header: missing ':'");
+      }
+
+      if (util::isCRLF(c)) {
+        lastFieldName_.clear();
+        state_ = c == '\n' ? PREV_FIELD_NAME : PREV_EOL;
+        break;
       }
 
       if (c == ':') {

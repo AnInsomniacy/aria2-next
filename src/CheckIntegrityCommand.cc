@@ -81,9 +81,11 @@ bool CheckIntegrityCommand::executeInternal()
       getDownloadEngine()->addCommand(std::move(commands));
     }
     else {
-      A2_LOG_ERROR(
-          fmt(MSG_VERIFICATION_FAILED,
-              getRequestGroup()->getDownloadContext()->getBasePath().c_str()));
+      if (entry_->shouldReportIncompleteAsError()) {
+        A2_LOG_ERROR(fmt(
+            MSG_VERIFICATION_FAILED,
+            getRequestGroup()->getDownloadContext()->getBasePath().c_str()));
+      }
       std::vector<std::unique_ptr<Command>> commands;
       entry_->onDownloadIncomplete(commands, getDownloadEngine());
       getDownloadEngine()->addCommand(std::move(commands));

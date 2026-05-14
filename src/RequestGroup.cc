@@ -218,7 +218,8 @@ void RequestGroup::closeFile()
 
 // TODO The function name is not intuitive at all.. it does not convey
 // that this function open file.
-std::unique_ptr<CheckIntegrityEntry> RequestGroup::createCheckIntegrityEntry()
+std::unique_ptr<CheckIntegrityEntry>
+RequestGroup::createCheckIntegrityEntry(FileOpenMode fileOpenMode)
 {
   auto infoFile = std::make_shared<DefaultBtProgressInfoFile>(
       downloadContext_, pieceStorage_, option_.get());
@@ -231,7 +232,7 @@ std::unique_ptr<CheckIntegrityEntry> RequestGroup::createCheckIntegrityEntry()
     return make_unique<StreamCheckIntegrityEntry>(this);
   }
 
-  if (isPreLocalFileCheckEnabled() &&
+  if (fileOpenMode == DEFAULT_FILE_OPEN && isPreLocalFileCheckEnabled() &&
       (infoFile->exists() || (File(getFirstFilePath()).exists() &&
                               option_->getAsBool(PREF_CONTINUE)))) {
     // If infoFile exists or -c option is given, we need to check
@@ -729,7 +730,8 @@ void RequestGroup::removeDefunctControlFile(
 }
 
 void RequestGroup::loadAndOpenFile(
-    const std::shared_ptr<BtProgressInfoFile>& progressInfoFile)
+    const std::shared_ptr<BtProgressInfoFile>& progressInfoFile,
+    FileOpenMode fileOpenMode)
 {
   try {
     if (!isPreLocalFileCheckEnabled()) {
@@ -737,7 +739,10 @@ void RequestGroup::loadAndOpenFile(
       return;
     }
     removeDefunctControlFile(progressInfoFile);
-    if (progressInfoFile->exists()) {
+    if (fileOpenMode == RESTART_FROM_SCRATCH) {
+      pieceStorage_->getDiskAdaptor()->initAndOpenFile();
+    }
+    else if (progressInfoFile->exists()) {
       progressInfoFile->load();
       pieceStorage_->getDiskAdaptor()->openExistingFile();
     }

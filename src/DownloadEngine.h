@@ -261,6 +261,11 @@ public:
                   const std::shared_ptr<SocketCore>& sock,
                   std::chrono::seconds timeout = 15_s);
 
+  void poolSocketForHostname(const std::string& ipaddr, uint16_t port,
+                             const std::string& hostname,
+                             const std::shared_ptr<SocketCore>& sock,
+                             std::chrono::seconds timeout = 15_s);
+
   void poolSocket(const std::shared_ptr<Request>& request,
                   const std::shared_ptr<Request>& proxyRequest,
                   const std::shared_ptr<SocketCore>& socket,
@@ -272,12 +277,20 @@ public:
                                               uint16_t proxyport);
 
   std::shared_ptr<SocketCore>
+  popPooledSocketForHostname(const std::string& ipaddr, uint16_t port,
+                             const std::string& hostname);
+
+  std::shared_ptr<SocketCore>
   popPooledSocket(std::string& options, const std::string& ipaddr,
                   uint16_t port, const std::string& username,
                   const std::string& proxyhost, uint16_t proxyport);
 
   std::shared_ptr<SocketCore>
   popPooledSocket(const std::vector<std::string>& ipaddrs, uint16_t port);
+
+  std::shared_ptr<SocketCore>
+  popPooledSocketForHostname(const std::vector<std::string>& ipaddrs,
+                             uint16_t port, const std::string& hostname);
 
   std::shared_ptr<SocketCore>
   popPooledSocket(std::string& options, const std::vector<std::string>& ipaddrs,

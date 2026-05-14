@@ -52,6 +52,7 @@ class BittorrentHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testLoadFromMemory_overrideName);
   CPPUNIT_TEST(testLoadFromMemory_multiFileDirTraversal);
   CPPUNIT_TEST(testLoadFromMemory_singleFileDirTraversal);
+  CPPUNIT_TEST(testLoadFromMemory_skipsEmptyDirectoryEntry);
   CPPUNIT_TEST(testLoadFromMemory_multiFileNonUtf8Path);
   CPPUNIT_TEST(testLoadFromMemory_singleFileNonUtf8Path);
   CPPUNIT_TEST(testGetNodes);
@@ -111,6 +112,7 @@ public:
   void testLoadFromMemory_overrideName();
   void testLoadFromMemory_multiFileDirTraversal();
   void testLoadFromMemory_singleFileDirTraversal();
+  void testLoadFromMemory_skipsEmptyDirectoryEntry();
   void testLoadFromMemory_multiFileNonUtf8Path();
   void testLoadFromMemory_singleFileNonUtf8Path();
   void testGetNodes();
@@ -577,6 +579,23 @@ void BittorrentHelperTest::testLoadFromMemory_singleFileDirTraversal()
   catch (RecoverableException& e) {
     // success
   }
+}
+
+void BittorrentHelperTest::testLoadFromMemory_skipsEmptyDirectoryEntry()
+{
+  std::string memory = "d8:announce27:http://example.com/"
+                       "announce4:infod5:filesld6:lengthi0e4:pathl3:bad0:ee"
+                       "d6:lengthi4e4:pathl8:file.txteee4:name7:content12:"
+                       "piece lengthi4e6:pieces20:00000000000000000000ee";
+
+  std::shared_ptr<DownloadContext> dctx(new DownloadContext());
+  loadFromMemory(memory, dctx, option_, "default");
+
+  auto fileEntries = dctx->getFileEntries();
+  CPPUNIT_ASSERT_EQUAL((size_t)1, fileEntries.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("./content/file.txt"),
+                       fileEntries[0]->getPath());
+  CPPUNIT_ASSERT_EQUAL((int64_t)4, dctx->getTotalLength());
 }
 
 void BittorrentHelperTest::testGetNodes()

@@ -55,7 +55,14 @@ ProtocolDetector::~ProtocolDetector() = default;
 
 bool ProtocolDetector::isStreamProtocol(const std::string& uri) const
 {
-  return uri_split(nullptr, uri.c_str()) == 0;
+  uri_split_result us;
+  if (uri_split(&us, uri.c_str()) != 0) {
+    return false;
+  }
+
+  auto protocol = uri::getFieldString(us, USR_SCHEME, uri.c_str());
+  return util::strieq(protocol, "http") || util::strieq(protocol, "https") ||
+         util::strieq(protocol, "ftp") || util::strieq(protocol, "sftp");
 }
 
 bool ProtocolDetector::guessTorrentFile(const std::string& uri) const

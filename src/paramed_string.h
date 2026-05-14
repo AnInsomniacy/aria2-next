@@ -40,6 +40,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <limits>
 
 #include "util.h"
 #include "DlAbortEx.h"
@@ -48,6 +49,18 @@
 namespace aria2 {
 
 namespace paramed_string {
+
+namespace {
+template <typename T>
+void checkLoopSize(std::vector<std::string>& res, T start, T end, int64_t step)
+{
+  auto n = (end - start) / step + 1;
+  if (static_cast<uint64_t>(n) >
+      std::numeric_limits<size_t>::max() / res.size()) {
+    throw DL_ABORT_EX("Loop range overflow.");
+  }
+}
+} // namespace
 
 template <typename InputIterator>
 InputIterator expandChoice(std::vector<std::string>& res, InputIterator first,
@@ -81,11 +94,11 @@ int32_t fromBase26(InputIterator first, InputIterator last, char zero)
 {
   int32_t res = 0;
   for (; first != last; ++first) {
-    res *= 26;
-    res += *first - zero;
-    if (res > static_cast<int32_t>(UINT16_MAX)) {
+    if (res > (std::numeric_limits<int32_t>::max() - (*first - zero)) / 26) {
       throw DL_ABORT_EX("Loop range overflow.");
     }
+    res *= 26;
+    res += *first - zero;
   }
   return res;
 }
@@ -102,15 +115,16 @@ InputIterator expandLoop(std::vector<std::string>& res, InputIterator first,
     throw DL_ABORT_EX("Missing ']' in the parameterized string.");
   }
   InputIterator colon = std::find(first, i, ':');
-  uint32_t step;
+  int64_t step;
   if (colon == i) {
     step = 1;
   }
   else {
-    if (!util::parseUIntNoThrow(step, std::string(colon + 1, i))) {
+    if (!util::parseLLIntNoThrow(step, std::string(colon + 1, i)) ||
+        step <= 0) {
       throw DL_ABORT_EX("A step count must be a positive number.");
     }
-    if (step > UINT16_MAX) {
+    if (step > std::numeric_limits<int32_t>::max()) {
       throw DL_ABORT_EX("Loop step overflow.");
     }
   }
@@ -119,15 +133,16 @@ InputIterator expandLoop(std::vector<std::string>& res, InputIterator first,
     throw DL_ABORT_EX("Loop range missing.");
   }
   if (util::isNumber(first, minus) && util::isNumber(minus + 1, colon)) {
-    uint32_t start, end;
-    if (!util::parseUIntNoThrow(start, std::string(first, minus)) ||
-        !util::parseUIntNoThrow(end, std::string(minus + 1, colon))) {
-      throw DL_ABORT_EX("Loop range missing.");
-    }
-    if (start > UINT16_MAX || end > UINT16_MAX) {
+    int64_t start, end;
+    if (!util::parseLLIntNoThrow(start, std::string(first, minus)) ||
+        !util::parseLLIntNoThrow(end, std::string(minus + 1, colon)) ||
+        start < 0 || end < 0 ||
+        start > std::numeric_limits<int32_t>::max() ||
+        end > std::numeric_limits<int32_t>::max()) {
       throw DL_ABORT_EX("Loop range overflow.");
     }
     if (start <= end) {
+      checkLoopSize(res, start, end, step);
       std::string format;
       if (minus - first == colon - minus - 1) {
         format = fmt("%%0%lud", static_cast<unsigned long>(minus - first));
@@ -136,11 +151,11 @@ InputIterator expandLoop(std::vector<std::string>& res, InputIterator first,
         format = "%d";
       }
       std::vector<std::string> res2;
-      res2.reserve(res.size() * ((end + 1 - start) / step));
+      res2.reserve(res.size() * ((end - start) / step + 1));
       for (std::vector<std::string>::const_iterator i = res.begin(),
                                                     eoi = res.end();
            i != eoi; ++i) {
-        for (uint32_t j = start; j <= end; j += step) {
+        for (int64_t j = start; j <= end; j += step) {
           res2.push_back(*i);
           res2.back() += fmt(format.c_str(), j);
         }
@@ -157,6 +172,7 @@ InputIterator expandLoop(std::vector<std::string>& res, InputIterator first,
     start = fromBase26(first, minus, zero);
     end = fromBase26(minus + 1, colon, zero);
     if (start <= end) {
+      checkLoopSize(res, start, end, step);
       size_t width;
       if (minus - first == colon - minus - 1) {
         width = minus - first;
@@ -165,13 +181,13 @@ InputIterator expandLoop(std::vector<std::string>& res, InputIterator first,
         width = 0;
       }
       std::vector<std::string> res2;
-      res2.reserve(res.size() * ((end + 1 - start) / step));
+      res2.reserve(res.size() * ((end - start) / step + 1));
       for (std::vector<std::string>::const_iterator i = res.begin(),
                                                     eoi = res.end();
            i != eoi; ++i) {
-        for (int32_t j = start; j <= end; j += step) {
+        for (int64_t j = start; j <= end; j += step) {
           res2.push_back(*i);
-          res2.back() += toBase26(j, zero, width);
+          res2.back() += toBase26(static_cast<int32_t>(j), zero, width);
         }
       }
       res.swap(res2);
@@ -207,7 +223,7 @@ InputIterator expandLoop(std::vector<std::string>& res, InputIterator first,
 // STEP is decimal number and it is used as loop step.  STEP can be
 // omitted. If omitted, preceding ':' also must be omitted.
 //
-// START, END and STEP must be less than or equal to 65535 in decimal.
+// START, END and STEP must be less than or equal to INT32_MAX in decimal.
 //
 // Examples:
 // "alpha:[1-2]:bravo" -> ["alpha:1:bravo", "alpha:2:bravo"]

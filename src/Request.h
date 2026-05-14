@@ -73,6 +73,7 @@ private:
   bool removalRequested_;
   uint16_t connectedPort_;
   Timer wakeTime_;
+  bool resetTryCountAfterWake_;
 
   bool parseUri(const std::string& uri);
 
@@ -168,6 +169,10 @@ public:
   void setWakeTime(Timer timer) { wakeTime_ = timer; }
 
   const Timer& getWakeTime() { return wakeTime_; }
+
+  void setResetTryCountAfterWake(bool f) { resetTryCountAfterWake_ = f; }
+
+  bool resetTryCountAfterWake() const { return resetTryCountAfterWake_; }
 
   static const std::string METHOD_GET;
   static const std::string METHOD_HEAD;

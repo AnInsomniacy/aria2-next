@@ -86,6 +86,16 @@ void HttpResponse::validateResponse() const
             error_code::CANNOT_RESUME);
       }
     }
+    else if (statusCode == 206 &&
+             !httpHeader_->defined(HttpHeader::CONTENT_RANGE)) {
+      auto responseRange = httpHeader_->getRange();
+      throw DL_ABORT_EX2(
+          fmt(EX_INVALID_RANGE_HEADER, httpRequest_->getStartByte(),
+              httpRequest_->getEndByte(), httpRequest_->getEntityLength(),
+              responseRange.startByte, responseRange.endByte,
+              responseRange.entityLength),
+          error_code::CANNOT_RESUME);
+    }
     return;
   case 304: // Not Modified
     if (!httpRequest_->conditionalRequest()) {

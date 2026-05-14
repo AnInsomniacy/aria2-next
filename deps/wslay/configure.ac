@@ -77,15 +77,7 @@ case "$target" in
 esac
 
 # Checks for header files.
-AC_CHECK_HEADERS([ \
-  arpa/inet.h \
-  netinet/in.h \
-  stddef.h \
-  stdint.h \
-  stdlib.h \
-  string.h \
-  unistd.h \
-])
+AC_CHECK_HEADERS([arpa/inet.h netinet/in.h stddef.h stdint.h stdlib.h string.h unistd.h])
 
 # Need winsock2.h for ntoh*/hton* functions.
 case "$target" in
@@ -105,13 +97,7 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_C_BIGENDIAN
 
 # Checks for library functions.
-AC_CHECK_FUNCS([ \
-  memmove \
-  memset \
-  ntohl \
-  ntohs \
-  htons
-])
+AC_CHECK_FUNCS([memmove memset ntohl ntohs htons])
 
 build_examples=no
 if test "x${have_nettle}" = "xyes"; then

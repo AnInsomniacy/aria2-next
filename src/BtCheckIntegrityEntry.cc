@@ -34,10 +34,13 @@
 /* copyright --> */
 #include "BtCheckIntegrityEntry.h"
 #include "BtFileAllocationEntry.h"
+#include "ChecksumCheckIntegrityEntry.h"
 #include "RequestGroup.h"
+#include "DownloadContext.h"
 #include "PieceStorage.h"
 #include "DownloadEngine.h"
 #include "DiskAdaptor.h"
+#include "CheckIntegrityMan.h"
 #include "prefs.h"
 #include "Option.h"
 #include "util.h"
@@ -52,6 +55,11 @@ BtCheckIntegrityEntry::BtCheckIntegrityEntry(RequestGroup* requestGroup)
 }
 
 BtCheckIntegrityEntry::~BtCheckIntegrityEntry() = default;
+
+bool BtCheckIntegrityEntry::shouldReportIncompleteAsError() const
+{
+  return getRequestGroup()->getOption()->getAsBool(PREF_HASH_CHECK_ONLY);
+}
 
 void BtCheckIntegrityEntry::onDownloadIncomplete(
     std::vector<std::unique_ptr<Command>>& commands, DownloadEngine* e)
@@ -87,6 +95,17 @@ void BtCheckIntegrityEntry::onDownloadFinished(
   // are valid, then aria2 goes to seeding mode. Sometimes it is better
   // to exit rather than doing seeding. So, it would be good to toggle this
   // behavior.
+  if (group->getDownloadContext()->isChecksumVerificationPending()) {
+    auto entry = make_unique<ChecksumCheckIntegrityEntry>(group);
+    if (!option->getAsBool(PREF_HASH_CHECK_ONLY) &&
+        option->getAsBool(PREF_BT_HASH_CHECK_SEED)) {
+      entry->setNextFileAllocationEntry(
+          make_unique<BtFileAllocationEntry>(group));
+    }
+    entry->initValidator();
+    e->getCheckIntegrityMan()->pushEntry(std::move(entry));
+    return;
+  }
   if (!option->getAsBool(PREF_HASH_CHECK_ONLY) &&
       option->getAsBool(PREF_BT_HASH_CHECK_SEED)) {
     proceedFileAllocation(

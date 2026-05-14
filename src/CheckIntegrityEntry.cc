@@ -76,6 +76,8 @@ int64_t CheckIntegrityEntry::getCurrentLength()
 
 bool CheckIntegrityEntry::finished() { return validator_->finished(); }
 
+bool CheckIntegrityEntry::shouldReportIncompleteAsError() const { return true; }
+
 void CheckIntegrityEntry::cutTrailingGarbage()
 {
   getRequestGroup()->getPieceStorage()->getDiskAdaptor()->cutTrailingGarbage();

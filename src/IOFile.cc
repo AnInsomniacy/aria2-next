@@ -105,6 +105,10 @@ bool IOFile::eof() { return !isOpen() || isEOF(); }
 
 size_t IOFile::transfer(std::ostream& out)
 {
+  if (!*this) {
+    return 0;
+  }
+
   size_t count = 0;
   std::array<char, 4_k> buf;
   while (1) {

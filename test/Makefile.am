@@ -45,6 +45,7 @@ aria2c_SOURCES = AllTest.cc\
 	ExceptionTest.cc\
 	FmtTest.cc\
 	DownloadHandlersTest.cc\
+	DownloadEngineTest.cc\
 	SignatureTest.cc\
 	ServerStatManTest.cc\
 	FeedbackURISelectorTest.cc\
@@ -78,6 +79,7 @@ aria2c_SOURCES = AllTest.cc\
 	ValueBaseJsonParserTest.cc\
 	RpcResponseTest.cc\
 	RpcMethodTest.cc\
+	WebSocketSessionManTest.cc\
 	HttpServerTest.cc\
 	BufferedFileTest.cc\
 	GeomStreamPieceSelectorTest.cc\
@@ -230,7 +232,8 @@ aria2c_SOURCES += MetalinkerTest.cc\
 endif # ENABLE_METALINK
 
 if ENABLE_ASYNC_DNS
-aria2c_SOURCES += AsyncNameResolverTest.cc
+aria2c_SOURCES += AsyncNameResolverTest.cc\
+	AsyncNameResolverManTest.cc
 endif # ENABLE_ASYNC_DNS
 
 if !HAVE_TIMEGM
@@ -299,6 +302,7 @@ AM_CXXFLAGS = @WARNCXXFLAGS@ @CXX1XCXXFLAGS@ @EXTRACXXFLAGS@
 
 EXTRA_DIST = 4096chunk.txt\
 	chunkChecksumTestFile250.txt\
+	cookies-readonly-wal.sqlite\
 	cookies.sqlite\
 	chromium_cookies.sqlite\
 	emptyfile\

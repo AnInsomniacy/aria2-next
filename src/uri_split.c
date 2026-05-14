@@ -71,6 +71,125 @@ static void uri_set_field(uri_split_result* res, int field, const char* first,
 
 static int is_digit(char c) { return '0' <= c && c <= '9'; }
 
+static int is_hex_digit(char c)
+{
+  return ('0' <= c && c <= '9') || ('A' <= c && c <= 'F') ||
+         ('a' <= c && c <= 'f');
+}
+
+static int is_ipv4_literal(const char* first, const char* last)
+{
+  const char* p = first;
+  int octets = 0;
+
+  while (p < last) {
+    int value = 0;
+    int digits = 0;
+
+    if (!is_digit(*p)) {
+      return 0;
+    }
+
+    do {
+      value *= 10;
+      value += *p - '0';
+      if (value > 255) {
+        return 0;
+      }
+      ++p;
+      ++digits;
+    } while (p < last && is_digit(*p));
+
+    if (digits > 1 && *(p - digits) == '0') {
+      return 0;
+    }
+
+    ++octets;
+    if (octets == 4) {
+      return p == last;
+    }
+    if (p == last || *p != '.') {
+      return 0;
+    }
+    ++p;
+  }
+
+  return 0;
+}
+
+static int is_ipv6_literal(const char* first, const char* last)
+{
+  const char* p = first;
+  int groups = 0;
+  int has_double_colon = 0;
+
+  if (first == last) {
+    return 0;
+  }
+
+  if (*p == ':') {
+    if (p + 1 == last || *(p + 1) != ':') {
+      return 0;
+    }
+    has_double_colon = 1;
+    p += 2;
+    if (p == last) {
+      return 1;
+    }
+  }
+
+  while (p < last) {
+    const char* group_first = p;
+    int hex_digits = 0;
+
+    while (p < last && is_hex_digit(*p) && hex_digits < 4) {
+      ++p;
+      ++hex_digits;
+    }
+
+    if (p < last && *p == '.') {
+      if (!is_ipv4_literal(group_first, last)) {
+        return 0;
+      }
+      groups += 2;
+      if (groups > 8) {
+        return 0;
+      }
+      return has_double_colon ? groups < 8 : groups == 8;
+    }
+
+    if (hex_digits == 0 || (p < last && *p != ':')) {
+      return 0;
+    }
+
+    ++groups;
+    if (groups > 8) {
+      return 0;
+    }
+
+    if (p == last) {
+      break;
+    }
+
+    ++p;
+    if (p == last) {
+      return 0;
+    }
+    if (*p == ':') {
+      if (has_double_colon) {
+        return 0;
+      }
+      has_double_colon = 1;
+      ++p;
+      if (p == last) {
+        break;
+      }
+    }
+  }
+
+  return has_double_colon ? groups < 8 : groups == 8;
+}
+
 int uri_split(uri_split_result* res, const char* uri)
 {
   int state = URI_BEFORE_SCHEME;
@@ -290,6 +409,9 @@ int uri_split(uri_split_result* res, const char* uri)
       break;
     case URI_IPV6HOST:
       if (*p == ']') {
+        if (!is_ipv6_literal(host_first, p)) {
+          return -1;
+        }
         flags |= USF_IPV6ADDR;
         host_last = p;
         state = URI_AFTER_IPV6HOST;
