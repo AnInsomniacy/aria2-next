@@ -54,7 +54,10 @@ void showVersion()
 {
   std::cout
       << PACKAGE << _(" version ") << PACKAGE_VERSION << "\n"
-      << "Copyright (C) 2006, 2019 Tatsuhiro Tsujikawa"
+      << "Maintained since 2026 by AnInsomniacy for Motrix Next and "
+         "aria2-compatible users."
+      << "\n"
+      << "Original aria2 copyright: 2006, 2019 Tatsuhiro Tsujikawa."
       << "\n"
       << "\n"
       << _("This program is free software; you can redistribute it and/or "

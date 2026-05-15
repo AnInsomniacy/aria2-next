@@ -38,6 +38,7 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/OptionTest.cc
   tests/DefaultDiskWriterTest.cc
   tests/FeatureConfigTest.cc
+  tests/VersionUsageTest.cc
   tests/SpeedCalcTest.cc
   tests/MultiDiskAdaptorTest.cc
   tests/MultiFileAllocationIteratorTest.cc

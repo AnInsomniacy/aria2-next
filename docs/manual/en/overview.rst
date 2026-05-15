@@ -4,10 +4,12 @@ aria2 - The ultra fast download utility
 aria2-next maintenance note
 ---------------------------
 
-aria2-next is a maintained aria2 fork focused on reliability fixes, current
-dependency baselines, and reproducible cross-platform releases. CMake is the
-only supported build system for this repository. Ninja is the default generator
-used by local development and release automation.
+aria2-next is maintained by AnInsomniacy since 2026 as the aria2-compatible
+``aria2c`` engine for Motrix Next and other consumers. Maintenance focuses on
+reliability fixes, current dependency baselines, and reproducible
+cross-platform releases. CMake is the only supported build system for this
+repository. Ninja is the default generator used by local development and
+release automation.
 
 Disclaimer
 ----------
@@ -27,6 +29,8 @@ swarm. Using Metalink's chunk checksums, aria2 automatically validates
 chunks of data while downloading a file like BitTorrent.
 
 The maintained fork is located at https://github.com/AnInsomniacy/aria2-next.
+It preserves aria2 command-line, configuration, session, JSON-RPC, and
+libaria2 compatibility.
 
 See the upstream `aria2 Online Manual
 <https://aria2.github.io/manual/en/html/>`_ to learn how to use aria2.

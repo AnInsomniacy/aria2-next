@@ -4,9 +4,9 @@
 [![Release](https://img.shields.io/github/v/release/AnInsomniacy/aria2-next.svg)](https://github.com/AnInsomniacy/aria2-next/releases)
 [![License: GPLv2](https://img.shields.io/badge/license-GPLv2-blue.svg)](COPYING)
 
-aria2-next is a maintained fork of [aria2](https://github.com/aria2/aria2) and the `aria2c` sidecar engine used by [Motrix Next](https://github.com/AnInsomniacy/motrix-next). It keeps the original aria2 command, configuration, session, JSON-RPC, and libaria2 interfaces intact, so other aria2-compatible applications can use these builds directly.
+aria2-next is the maintained `aria2c` engine for [Motrix Next](https://github.com/AnInsomniacy/motrix-next) and other aria2-compatible consumers. It keeps the original aria2 command, configuration, session, JSON-RPC, and libaria2 interfaces intact while publishing current, reproducible, portable builds.
 
-The fork modernizes the project around a CMake-only build, reproducible multi-platform releases, and a preserved maintenance audit. The audit worked through the upstream issue history, cleaned it into an actionable bug set, and records the reviewed decisions in [`docs/maintenance/issue-review-matrix.csv`](docs/maintenance/issue-review-matrix.csv).
+AnInsomniacy has maintained this fork since 2026. Maintenance focuses on cross-platform release reliability, dependency baselines, compatibility fixes, and a preserved audit of upstream issue history in [`docs/maintenance/issue-review-matrix.csv`](docs/maintenance/issue-review-matrix.csv).
 
 ## What This Repository Provides
 
@@ -18,6 +18,7 @@ The fork modernizes the project around a CMake-only build, reproducible multi-pl
 | Build system | CMake 3.25+ with Ninja presets |
 | Release targets | macOS, Windows, and Linux on x64 and ARM64 |
 | Additional packaging | Android ARM64 |
+| Maintenance | Maintained by AnInsomniacy since 2026 |
 | Maintenance record | Preserved upstream issue review matrix |
 
 ## Compatibility
@@ -58,13 +59,15 @@ Prebuilt artifacts are published on the [GitHub Releases](https://github.com/AnI
 
 | Platform | Architecture | Artifact |
 | --- | --- | --- |
-| Linux | x86_64 | `aria2-<version>-linux-x86_64.tar.xz` |
-| Linux | ARM64 | `aria2-<version>-linux-aarch64.tar.xz` |
-| macOS | Apple Silicon | `aria2-<version>-macos-arm64.tar.bz2` |
-| macOS | Intel | `aria2-<version>-macos-x86_64.tar.bz2` |
-| Windows | x86_64 | `aria2-<version>-windows-x86_64.zip` |
-| Windows | ARM64 | `aria2-<version>-windows-arm64.zip` |
-| Checksums | all release assets | `aria2-<version>-checksums.sha256` |
+| Linux | x86_64 | `aria2c-<version>-linux-x86_64` |
+| Linux | ARM64 | `aria2c-<version>-linux-aarch64` |
+| macOS | Apple Silicon | `aria2c-<version>-macos-arm64` |
+| macOS | Intel | `aria2c-<version>-macos-x86_64` |
+| Windows | x86_64 | `aria2c-<version>-windows-x86_64.exe` |
+| Windows | ARM64 | `aria2c-<version>-windows-arm64.exe` |
+| Checksums | all release assets | `aria2c-<version>-checksums.sha256` |
+
+Linux and macOS downloads are executable files. If your browser clears the executable bit, run `chmod +x ./aria2c-<version>-<platform>`.
 
 Use the binary like aria2:
 
@@ -83,7 +86,7 @@ The audit separates confirmed fixes, already-fixed reports, documented behavior,
 
 `CMakeLists.txt` is the project version source of truth. Release tags use `v{PROJECT_VERSION}`.
 
-The release workflow runs when a matching GitHub Release is published. It validates the tag against `CMakeLists.txt`, builds all maintained platform artifacts, generates SHA-256 checksums, and uploads assets to the published release.
+The release workflow runs when a matching GitHub Release is published. It validates the tag against `CMakeLists.txt`, builds all maintained platform binaries, generates SHA-256 checksums, and uploads the standalone executables to the published release. Source code is provided by the GitHub release tag source archives.
 
 Tag pushes alone do not publish release builds. `workflow_dispatch` remains available for release-path validation of the current workflow commit and uploads artifacts only to the workflow run. Published GitHub Releases must use a `v{PROJECT_VERSION}` tag that matches `CMakeLists.txt`.
 

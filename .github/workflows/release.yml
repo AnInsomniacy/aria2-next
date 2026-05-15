@@ -161,17 +161,13 @@ jobs:
       - name: Package
         run: |
           VERSION="${{ needs.resolve-release.outputs.version }}"
-          DIRNAME="aria2-${VERSION}-linux-x86_64"
-          mkdir -p "${DIRNAME}"
-          cp build/release/aria2c "${DIRNAME}/"
-          cp COPYING README.md "${DIRNAME}/"
-          cp docs/completion/aria2c "${DIRNAME}/aria2c.bash_completion" || true
-          tar cJf "${DIRNAME}.tar.xz" "${DIRNAME}"
+          cp build/release/aria2c "aria2c-${VERSION}-linux-x86_64"
 
       - uses: actions/upload-artifact@v7
         with:
           name: linux-x86_64
-          path: aria2-*-linux-x86_64.tar.xz
+          path: aria2c-${{ needs.resolve-release.outputs.version }}-linux-x86_64
+          archive: false
 
   # ---------------------------------------------------------------------------
   # Linux ARM64 (static)
@@ -282,17 +278,13 @@ jobs:
       - name: Package
         run: |
           VERSION="${{ needs.resolve-release.outputs.version }}"
-          DIRNAME="aria2-${VERSION}-linux-aarch64"
-          mkdir -p "${DIRNAME}"
-          cp build/release/aria2c "${DIRNAME}/"
-          cp COPYING README.md "${DIRNAME}/"
-          cp docs/completion/aria2c "${DIRNAME}/aria2c.bash_completion" || true
-          tar cJf "${DIRNAME}.tar.xz" "${DIRNAME}"
+          cp build/release/aria2c "aria2c-${VERSION}-linux-aarch64"
 
       - uses: actions/upload-artifact@v7
         with:
           name: linux-aarch64
-          path: aria2-*-linux-aarch64.tar.xz
+          path: aria2c-${{ needs.resolve-release.outputs.version }}-linux-aarch64
+          archive: false
 
   # ---------------------------------------------------------------------------
   # macOS ARM64 (Apple Silicon, static)
@@ -408,16 +400,13 @@ jobs:
       - name: Package
         run: |
           VERSION="${{ needs.resolve-release.outputs.version }}"
-          DIRNAME="aria2-${VERSION}-macos-arm64"
-          mkdir -p "${DIRNAME}"
-          cp build/release/aria2c "${DIRNAME}/"
-          cp COPYING README.md "${DIRNAME}/"
-          tar cjf "${DIRNAME}.tar.bz2" "${DIRNAME}"
+          cp build/release/aria2c "aria2c-${VERSION}-macos-arm64"
 
       - uses: actions/upload-artifact@v7
         with:
           name: macos-arm64
-          path: aria2-*-macos-arm64.tar.bz2
+          path: aria2c-${{ needs.resolve-release.outputs.version }}-macos-arm64
+          archive: false
 
   # ---------------------------------------------------------------------------
   # macOS Intel (x86_64, static)
@@ -533,16 +522,13 @@ jobs:
       - name: Package
         run: |
           VERSION="${{ needs.resolve-release.outputs.version }}"
-          DIRNAME="aria2-${VERSION}-macos-x86_64"
-          mkdir -p "${DIRNAME}"
-          cp build/release/aria2c "${DIRNAME}/"
-          cp COPYING README.md "${DIRNAME}/"
-          tar cjf "${DIRNAME}.tar.bz2" "${DIRNAME}"
+          cp build/release/aria2c "aria2c-${VERSION}-macos-x86_64"
 
       - uses: actions/upload-artifact@v7
         with:
           name: macos-x86_64
-          path: aria2-*-macos-x86_64.tar.bz2
+          path: aria2c-${{ needs.resolve-release.outputs.version }}-macos-x86_64
+          archive: false
 
   # ---------------------------------------------------------------------------
   # Windows x86_64 (cross-compiled on Ubuntu, following packaging/docker/Dockerfile.mingw)
@@ -679,16 +665,13 @@ jobs:
       - name: Package
         run: |
           VERSION="${{ needs.resolve-release.outputs.version }}"
-          DIRNAME="aria2-${VERSION}-windows-x86_64"
-          mkdir -p "${DIRNAME}"
-          cp build/release/aria2c.exe "${DIRNAME}/"
-          cp COPYING README.md "${DIRNAME}/"
-          zip -r "${DIRNAME}.zip" "${DIRNAME}"
+          cp build/release/aria2c.exe "aria2c-${VERSION}-windows-x86_64.exe"
 
       - uses: actions/upload-artifact@v7
         with:
           name: windows-x86_64
-          path: aria2-*-windows-x86_64.zip
+          path: aria2c-${{ needs.resolve-release.outputs.version }}-windows-x86_64.exe
+          archive: false
 
   # ---------------------------------------------------------------------------
   # Windows ARM64 (cross-compiled on Ubuntu with llvm-mingw)
@@ -838,16 +821,13 @@ jobs:
       - name: Package
         run: |
           VERSION="${{ needs.resolve-release.outputs.version }}"
-          DIRNAME="aria2-${VERSION}-windows-arm64"
-          mkdir -p "${DIRNAME}"
-          cp build/release/aria2c.exe "${DIRNAME}/"
-          cp COPYING README.md "${DIRNAME}/"
-          zip -r "${DIRNAME}.zip" "${DIRNAME}"
+          cp build/release/aria2c.exe "aria2c-${VERSION}-windows-arm64.exe"
 
       - uses: actions/upload-artifact@v7
         with:
           name: windows-arm64
-          path: aria2-*-windows-arm64.zip
+          path: aria2c-${{ needs.resolve-release.outputs.version }}-windows-arm64.exe
+          archive: false
 
   # ---------------------------------------------------------------------------
   # Create GitHub Release
@@ -877,9 +857,9 @@ jobs:
       - name: Generate checksums
         run: |
           cd artifacts
-          sha256sum aria2-* > ../checksums.sha256
+          sha256sum aria2c-* > ../checksums.sha256
           cd ..
-          mv checksums.sha256 "artifacts/aria2-${VERSION}-checksums.sha256"
+          mv checksums.sha256 "artifacts/aria2c-${VERSION}-checksums.sha256"
 
       - name: List release assets
         run: ls -lhR artifacts/
@@ -894,7 +874,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
-          name: aria2-${{ needs.resolve-release.outputs.version }}-release-assets
+          name: aria2c-${{ needs.resolve-release.outputs.version }}-release-assets
           path: artifacts/*
           if-no-files-found: error
           retention-days: 7

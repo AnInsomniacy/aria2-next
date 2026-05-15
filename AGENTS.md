@@ -71,7 +71,7 @@ Do not add automated dependency PR systems, scheduled dependency update workflow
 
 The release workflow is `.github/workflows/release.yml`. It runs on `release: published` and on manual `workflow_dispatch` validation. Tag pushes do not publish release builds directly.
 
-Maintained release artifacts are Linux x86_64, Linux ARM64, macOS ARM64, macOS x86_64, Windows x86_64, Windows ARM64, and `aria2-<version>-checksums.sha256`.
+Maintained release artifacts are standalone executable assets named `aria2c-<version>-linux-x86_64`, `aria2c-<version>-linux-aarch64`, `aria2c-<version>-macos-arm64`, `aria2c-<version>-macos-x86_64`, `aria2c-<version>-windows-x86_64.exe`, `aria2c-<version>-windows-arm64.exe`, and `aria2c-<version>-checksums.sha256`.
 
 Manual workflow runs are for release-path validation. Official release assets are uploaded only when a GitHub Release is published.
 
@@ -110,7 +110,7 @@ One short paragraph covering the release scope and operational impact.
 - Any incompatible change, removed behavior, migration requirement, or manual action.
 
 ### Downloads
-Release assets are built by GitHub Actions after this GitHub Release is published.
+Release assets are built by GitHub Actions after this GitHub Release is published. Source code is available from the GitHub release tag.
 ```
 
 Omit empty sections. Put `Breaking Changes` before `What's Changed` if users must act before upgrading. Put `Security` before `What's Changed` if the release contains a security fix. Keep bullets specific and outcome-focused. Avoid internal-only chores unless they affect consumers, packaging, reproducibility, maintainability, or the release process. Do not include unchecked claims, future promises, or raw commit hashes unless a maintainer asks for them.

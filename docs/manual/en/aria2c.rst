@@ -4426,7 +4426,10 @@ The Metalink Download Description Format: :rfc:`5854`
 
 COPYRIGHT
 ---------
-Copyright (C) 2006, 2015 Tatsuhiro Tsujikawa
+aria2-next is maintained since 2026 by AnInsomniacy for Motrix Next and
+aria2-compatible users.
+
+Original aria2 copyright: 2006, 2015 Tatsuhiro Tsujikawa.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
