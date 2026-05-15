@@ -48,7 +48,7 @@ Feature probes must match the source they guard. Prefer `check_symbol_exists`, `
 ```cmake
 project(
   aria2
-  VERSION 2.0.1
+  VERSION 2.0.2
   ...
 )
 ```
@@ -78,6 +78,42 @@ Manual workflow runs are for release-path validation. Official release assets ar
 Use `./scripts/release.sh` for releases. This script verifies the local build, stages changes, commits if needed, creates an annotated tag, and pushes the commit and tag. It does not create the GitHub Release, generate release notes, or trigger GitHub Actions manually.
 
 After `release.sh` succeeds, generate an English release title and release notes from the commits included in the release, show them to the maintainer, and wait for approval before creating the GitHub Release. Releases must not be marked as pre-releases. Creating the GitHub Release triggers the official release workflow and asset upload.
+
+Release title format:
+
+```text
+v{VERSION} - {Concise Release Theme}
+```
+
+Use a concrete theme, not a generic label. Good examples are `v2.0.2 - Release Automation and Packaging Refinements` and `v2.1.0 - Transport Stability Improvements`.
+
+Release notes must be written for users and integrators, not as a raw commit dump. Start with a short summary paragraph, then group changes by impact. Use these headings only when they contain real content:
+
+```markdown
+## What's Changed
+
+One short paragraph covering the release scope and operational impact.
+
+### Added
+- New user-visible capabilities, build targets, or supported workflows.
+
+### Changed
+- Behavior changes, packaging updates, dependency baseline changes, or workflow changes.
+
+### Fixed
+- Bugs, regressions, compatibility issues, and reliability fixes.
+
+### Security
+- Security fixes or dependency updates with security impact.
+
+### Breaking Changes
+- Any incompatible change, removed behavior, migration requirement, or manual action.
+
+### Downloads
+Release assets are built by GitHub Actions after this GitHub Release is published.
+```
+
+Omit empty sections. Put `Breaking Changes` before `What's Changed` if users must act before upgrading. Put `Security` before `What's Changed` if the release contains a security fix. Keep bullets specific and outcome-focused. Avoid internal-only chores unless they affect consumers, packaging, reproducibility, maintainability, or the release process. Do not include unchecked claims, future promises, or raw commit hashes unless a maintainer asks for them.
 
 Before publishing a GitHub Release, verify locally:
 
