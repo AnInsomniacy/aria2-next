@@ -155,7 +155,7 @@ jobs:
           cmake --build build/release -j$(nproc)
           strip build/release/aria2c
           ctest --test-dir build/release --output-on-failure
-          ldd build/release/aria2c || true
+          packaging/scripts/check-runtime-deps linux build/release/aria2c
 
       - name: Package
         run: |
@@ -279,7 +279,7 @@ jobs:
           cmake --build build/release -j$(nproc)
           strip build/release/aria2c
           ctest --test-dir build/release --output-on-failure
-          ldd build/release/aria2c || true
+          packaging/scripts/check-runtime-deps linux build/release/aria2c
 
       - name: Package
         run: |
@@ -408,7 +408,7 @@ jobs:
           cmake --build build/release -j$(sysctl -n hw.ncpu)
           strip build/release/aria2c
           ctest --test-dir build/release --output-on-failure
-          otool -L build/release/aria2c
+          packaging/scripts/check-runtime-deps macos build/release/aria2c
 
       - name: Package
         run: |
@@ -536,7 +536,7 @@ jobs:
           cmake --build build/release -j$(sysctl -n hw.ncpu)
           strip build/release/aria2c
           ctest --test-dir build/release --output-on-failure
-          otool -L build/release/aria2c
+          packaging/scripts/check-runtime-deps macos build/release/aria2c
 
       - name: Package
         run: |
@@ -681,10 +681,11 @@ jobs:
             -DARIA2_WITH_LIBGCRYPT=OFF \
             -DARIA2_WITH_LIBNETTLE=OFF \
             -DCMAKE_PREFIX_PATH="$PREFIX" \
-            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib -lcrypt32" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib" \
             -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
           cmake --build build/release -j$(nproc)
           $HOST-strip build/release/aria2c.exe
+          packaging/scripts/check-runtime-deps windows-x86_64 build/release/aria2c.exe
 
       - name: Package
         run: |
@@ -842,10 +843,11 @@ jobs:
             -DARIA2_WITH_LIBGCRYPT=OFF \
             -DARIA2_WITH_LIBNETTLE=OFF \
             -DCMAKE_PREFIX_PATH="$PREFIX" \
-            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib -lcrypt32" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib" \
             -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
           cmake --build build/release -j$(nproc)
           $STRIP build/release/aria2c.exe
+          packaging/scripts/check-runtime-deps windows-arm64 build/release/aria2c.exe
 
       - name: Package
         run: |

@@ -229,6 +229,10 @@ endif()
 add_executable(aria2c src/main.cc)
 target_link_libraries(aria2c PRIVATE aria2_core)
 
+if(WIN32 AND ARIA2_ENABLE_STATIC)
+  target_link_options(aria2c PRIVATE -static -static-libgcc -static-libstdc++)
+endif()
+
 install(TARGETS aria2c RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 if(ENABLE_LIBARIA2)
   install(TARGETS aria2_core

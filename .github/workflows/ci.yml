@@ -54,5 +54,6 @@ jobs:
           bash -n scripts/bump-version.sh
           bash -n scripts/release.sh
           bash -n packaging/scripts/common.sh
+          bash -n packaging/scripts/check-runtime-deps
           bash -n packaging/scripts/mingw-release
           bash -n packaging/scripts/android-release

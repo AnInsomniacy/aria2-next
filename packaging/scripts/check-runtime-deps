@@ -1,0 +1,116 @@
+#!/bin/sh
+set -eu
+
+usage() {
+  echo "Usage: $0 <platform> <binary>" >&2
+  echo "Platforms: linux, macos, windows-x86_64, windows-arm64, android-arm64" >&2
+  exit 2
+}
+
+test $# -eq 2 || usage
+
+platform=$1
+binary=$2
+
+if [ ! -f "$binary" ]; then
+  echo "Runtime dependency check failed: binary not found: $binary" >&2
+  exit 1
+fi
+
+tmp=${TMPDIR:-/tmp}/aria2-runtime-deps.$$
+trap 'rm -f "$tmp"' EXIT HUP INT TERM
+
+fail_unexpected() {
+  dep=$1
+  echo "Unexpected runtime dependency for $platform: $dep" >&2
+  exit 1
+}
+
+check_windows() {
+  command -v objdump >/dev/null 2>&1 || {
+    echo "Runtime dependency check failed: objdump is required for Windows binaries" >&2
+    exit 1
+  }
+
+  objdump -p "$binary" |
+    sed -n 's/^[[:space:]]*DLL Name: //p' |
+    sort -fu > "$tmp"
+
+  while IFS= read -r dep; do
+    dep_lc=$(printf '%s\n' "$dep" | tr '[:upper:]' '[:lower:]')
+    case "$dep_lc" in
+      api-ms-win-*.dll|advapi32.dll|bcrypt.dll|cfgmgr32.dll|crypt32.dll|dnsapi.dll|gdi32.dll|iphlpapi.dll|kernel32.dll|msvcrt.dll|normaliz.dll|ntdll.dll|ole32.dll|oleaut32.dll|psapi.dll|rpcrt4.dll|secur32.dll|shell32.dll|ucrtbase.dll|user32.dll|version.dll|winmm.dll|ws2_32.dll|wsock32.dll)
+        ;;
+      *)
+        fail_unexpected "$dep"
+        ;;
+    esac
+  done < "$tmp"
+}
+
+check_elf() {
+  reader=${READELF:-readelf}
+  command -v "$reader" >/dev/null 2>&1 || {
+    echo "Runtime dependency check failed: $reader is required for ELF binaries" >&2
+    exit 1
+  }
+
+  "$reader" -d "$binary" |
+    sed -n 's/.*Shared library: \[\([^]]*\)\].*/\1/p' |
+    sort -fu > "$tmp"
+
+  while IFS= read -r dep; do
+    case "$platform:$dep" in
+      linux:ld-linux-*.so.*|linux:libc.so.*|linux:libdl.so.*|linux:libgcc_s.so.*|linux:libm.so.*|linux:libpthread.so.*|linux:librt.so.*|linux:linux-vdso.so.*)
+        ;;
+      linux:libresolv.so.*)
+        ;;
+      android-arm64:libc.so|android-arm64:libdl.so|android-arm64:liblog.so|android-arm64:libm.so)
+        ;;
+      *)
+        fail_unexpected "$dep"
+        ;;
+    esac
+  done < "$tmp"
+}
+
+check_macos() {
+  command -v otool >/dev/null 2>&1 || {
+    echo "Runtime dependency check failed: otool is required for macOS binaries" >&2
+    exit 1
+  }
+
+  otool -L "$binary" |
+    sed '1d; s/^[[:space:]]*//; s/[[:space:]].*$//' |
+    sort -fu > "$tmp"
+
+  while IFS= read -r dep; do
+    case "$dep" in
+      /System/Library/Frameworks/*|/usr/lib/*)
+        ;;
+      *)
+        fail_unexpected "$dep"
+        ;;
+    esac
+  done < "$tmp"
+}
+
+case "$platform" in
+  windows-x86_64|windows-arm64)
+    check_windows
+    ;;
+  linux)
+    check_elf
+    ;;
+  android-arm64)
+    check_elf
+    ;;
+  macos)
+    check_macos
+    ;;
+  *)
+    usage
+    ;;
+esac
+
+echo "Runtime dependency check passed for $platform: $binary"
