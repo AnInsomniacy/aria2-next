@@ -85,7 +85,7 @@ The audit separates confirmed fixes, already-fixed reports, documented behavior,
 
 The release workflow runs when a matching GitHub Release is published. It validates the tag against `CMakeLists.txt`, builds all maintained platform artifacts, generates SHA-256 checksums, and uploads assets to the published release.
 
-Tag pushes alone do not publish release builds. `workflow_dispatch` remains available for release-path validation and uploads artifacts only to the workflow run. Its default `latest` input validates the workflow commit that started the run. Use an explicit `v{PROJECT_VERSION}` tag only when validating an already tagged release ref.
+Tag pushes alone do not publish release builds. `workflow_dispatch` remains available for release-path validation of the current workflow commit and uploads artifacts only to the workflow run. Published GitHub Releases must use a `v{PROJECT_VERSION}` tag that matches `CMakeLists.txt`.
 
 ## Dependency Baseline
 

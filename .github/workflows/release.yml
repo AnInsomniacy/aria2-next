@@ -4,14 +4,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      tag:
-        description: >-
-          Release ref to build. Use latest to validate the current workflow
-          commit. Use vX.Y.Z to validate a published tag.
-        required: true
-        default: latest
-        type: string
 
 permissions:
   contents: write
@@ -21,24 +13,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validate-release:
-    name: Resolve Release Context
+  resolve-release:
+    name: Resolve Release Version
     runs-on: ubuntu-latest
     outputs:
-      release_tag: ${{ steps.resolve.outputs.release_tag }}
-      release_ref: ${{ steps.resolve.outputs.release_ref }}
       version: ${{ steps.resolve.outputs.version }}
-    env:
-      EVENT_NAME: ${{ github.event_name }}
-      REQUESTED_REF: ${{ github.event.release.tag_name || github.event.inputs.tag || 'latest' }}
-      WORKFLOW_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.event.release.tag_name || (github.event.inputs.tag != '' && github.event.inputs.tag != 'latest' && github.event.inputs.tag) || github.sha }}
+          ref: ${{ github.event.release.tag_name || github.sha }}
 
-      - name: Resolve Release Context
+      - name: Resolve Release Version
         id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
           VERSION=$(sed -n 's/^  VERSION \([0-9][0-9.]*\).*/\1/p' CMakeLists.txt | head -n 1)
 
@@ -47,19 +36,7 @@ jobs:
             exit 1
           fi
 
-          RELEASE_TAG=""
-
           if [ "$EVENT_NAME" = "release" ]; then
-            RELEASE_REF="$REQUESTED_REF"
-            RELEASE_TAG="$REQUESTED_REF"
-          elif [ -z "$REQUESTED_REF" ] || [ "$REQUESTED_REF" = "latest" ]; then
-            RELEASE_REF="$WORKFLOW_SHA"
-          else
-            RELEASE_REF="$REQUESTED_REF"
-            RELEASE_TAG="$REQUESTED_REF"
-          fi
-
-          if [ -n "$RELEASE_TAG" ]; then
             TAG_VERSION="${RELEASE_TAG#v}"
 
             if ! printf '%s\n' "$TAG_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
@@ -73,8 +50,6 @@ jobs:
             fi
           fi
 
-          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-          echo "release_ref=$RELEASE_REF" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
   # ---------------------------------------------------------------------------
@@ -82,15 +57,12 @@ jobs:
   # ---------------------------------------------------------------------------
   build-linux-x64:
     name: Linux x86_64
-    needs: validate-release
+    needs: resolve-release
     runs-on: ubuntu-22.04
     env:
       PREFIX: /usr/local
-      RELEASE_TAG: ${{ needs.validate-release.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.validate-release.outputs.release_ref }}
 
       - name: Install build tools
         run: |
@@ -188,7 +160,7 @@ jobs:
 
       - name: Package
         run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
+          VERSION="${{ needs.resolve-release.outputs.version }}"
           DIRNAME="aria2-${VERSION}-linux-x86_64"
           mkdir -p "${DIRNAME}"
           cp build/release/aria2c "${DIRNAME}/"
@@ -206,15 +178,12 @@ jobs:
   # ---------------------------------------------------------------------------
   build-linux-arm64:
     name: Linux ARM64
-    needs: validate-release
+    needs: resolve-release
     runs-on: ubuntu-22.04-arm
     env:
       PREFIX: /usr/local
-      RELEASE_TAG: ${{ needs.validate-release.outputs.release_tag }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.validate-release.outputs.release_ref }}
 
       - name: Install build tools
         run: |
@@ -312,7 +281,7 @@ jobs:
 
       - name: Package
         run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
+          VERSION="${{ needs.resolve-release.outputs.version }}"
           DIRNAME="aria2-${VERSION}-linux-aarch64"
           mkdir -p "${DIRNAME}"
           cp build/release/aria2c "${DIRNAME}/"
@@ -330,16 +299,13 @@ jobs:
   # ---------------------------------------------------------------------------
   build-macos-arm64:
     name: macOS ARM64
-    needs: validate-release
+    needs: resolve-release
     runs-on: macos-15
     env:
       PREFIX: ${{ github.workspace }}/packaging/build-deps
-      RELEASE_TAG: ${{ needs.validate-release.outputs.release_tag }}
       MACOSX_VERSION_MIN: "11.0"
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.validate-release.outputs.release_ref }}
 
       - name: Install build tools
         run: brew install cmake ninja pkg-config
@@ -441,7 +407,7 @@ jobs:
 
       - name: Package
         run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
+          VERSION="${{ needs.resolve-release.outputs.version }}"
           DIRNAME="aria2-${VERSION}-macos-arm64"
           mkdir -p "${DIRNAME}"
           cp build/release/aria2c "${DIRNAME}/"
@@ -458,16 +424,13 @@ jobs:
   # ---------------------------------------------------------------------------
   build-macos-intel:
     name: macOS Intel
-    needs: validate-release
+    needs: resolve-release
     runs-on: macos-15-intel
     env:
       PREFIX: ${{ github.workspace }}/packaging/build-deps
-      RELEASE_TAG: ${{ needs.validate-release.outputs.release_tag }}
       MACOSX_VERSION_MIN: "11.0"
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.validate-release.outputs.release_ref }}
 
       - name: Install build tools
         run: brew install cmake ninja pkg-config
@@ -569,7 +532,7 @@ jobs:
 
       - name: Package
         run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
+          VERSION="${{ needs.resolve-release.outputs.version }}"
           DIRNAME="aria2-${VERSION}-macos-x86_64"
           mkdir -p "${DIRNAME}"
           cp build/release/aria2c "${DIRNAME}/"
@@ -586,16 +549,13 @@ jobs:
   # ---------------------------------------------------------------------------
   build-windows-x64:
     name: Windows x86_64
-    needs: validate-release
+    needs: resolve-release
     runs-on: ubuntu-24.04
     env:
       HOST: x86_64-w64-mingw32
-      RELEASE_TAG: ${{ needs.validate-release.outputs.release_tag }}
       PREFIX: /usr/local/x86_64-w64-mingw32
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.validate-release.outputs.release_ref }}
 
       - name: Install cross-compilation toolchain
         run: |
@@ -718,7 +678,7 @@ jobs:
 
       - name: Package
         run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
+          VERSION="${{ needs.resolve-release.outputs.version }}"
           DIRNAME="aria2-${VERSION}-windows-x86_64"
           mkdir -p "${DIRNAME}"
           cp build/release/aria2c.exe "${DIRNAME}/"
@@ -735,11 +695,10 @@ jobs:
   # ---------------------------------------------------------------------------
   build-windows-arm64:
     name: Windows ARM64
-    needs: validate-release
+    needs: resolve-release
     runs-on: ubuntu-24.04
     env:
       HOST: aarch64-w64-mingw32
-      RELEASE_TAG: ${{ needs.validate-release.outputs.release_tag }}
       PREFIX: /usr/local/aarch64-w64-mingw32
       CC: aarch64-w64-mingw32-clang
       CXX: aarch64-w64-mingw32-clang++
@@ -748,8 +707,6 @@ jobs:
       STRIP: aarch64-w64-mingw32-strip
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.validate-release.outputs.release_ref }}
 
       - name: Install llvm-mingw toolchain
         run: |
@@ -880,7 +837,7 @@ jobs:
 
       - name: Package
         run: |
-          VERSION="${{ needs.validate-release.outputs.version }}"
+          VERSION="${{ needs.resolve-release.outputs.version }}"
           DIRNAME="aria2-${VERSION}-windows-arm64"
           mkdir -p "${DIRNAME}"
           cp build/release/aria2c.exe "${DIRNAME}/"
@@ -898,7 +855,7 @@ jobs:
   upload-release-assets:
     name: Upload Release Assets
     needs:
-      - validate-release
+      - resolve-release
       - build-linux-x64
       - build-linux-arm64
       - build-macos-arm64
@@ -907,12 +864,10 @@ jobs:
       - build-windows-arm64
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: ${{ needs.validate-release.outputs.release_tag }}
-      VERSION: ${{ needs.validate-release.outputs.version }}
+      RELEASE_TAG: ${{ github.event.release.tag_name }}
+      VERSION: ${{ needs.resolve-release.outputs.version }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          ref: ${{ needs.validate-release.outputs.release_ref }}
 
       - uses: actions/download-artifact@v8
         with:
@@ -939,7 +894,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v7
         with:
-          name: aria2-${{ needs.validate-release.outputs.version }}-release-assets
+          name: aria2-${{ needs.resolve-release.outputs.version }}-release-assets
           path: artifacts/*
           if-no-files-found: error
           retention-days: 7
