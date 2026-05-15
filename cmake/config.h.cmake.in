@@ -45,9 +45,6 @@
 /* Define to 1 if <alloca.h> works. */
 #cmakedefine HAVE_ALLOCA_H @HAVE_ALLOCA_H@
 
-/* Define to 1 if you have Apple TLS */
-#cmakedefine HAVE_APPLETLS @HAVE_APPLETLS@
-
 /* Define to 1 if you have the <argz.h> header file. */
 #cmakedefine HAVE_ARGZ_H @HAVE_ARGZ_H@
 
@@ -571,9 +568,6 @@
 
 /* Define to 1 if your <sys/time.h> declares 'struct tm'. */
 #cmakedefine TM_IN_SYS_TIME @TM_IN_SYS_TIME@
-
-/* What message digest implementation to use */
-#cmakedefine USE_APPLE_MD @USE_APPLE_MD@
 
 /* Define to 1 if using gnutls system wide crypto policy . */
 #cmakedefine USE_GNUTLS_SYSTEM_CRYPTO_POLICY @USE_GNUTLS_SYSTEM_CRYPTO_POLICY@

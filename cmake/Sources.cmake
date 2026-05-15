@@ -534,17 +534,6 @@ set(ARIA2_SOURCES_ENABLE_SSL
   src/TLSSession.h
 )
 
-set(ARIA2_SOURCES_USE_APPLE_MD
-  src/AppleMessageDigestImpl.cc
-)
-
-set(ARIA2_SOURCES_HAVE_APPLETLS
-  src/AppleTLSContext.cc
-  src/AppleTLSContext.h
-  src/AppleTLSSession.cc
-  src/AppleTLSSession.h
-)
-
 set(ARIA2_SOURCES_HAVE_WINTLS
   src/WinTLSContext.cc
   src/WinTLSContext.h
@@ -599,7 +588,7 @@ set(ARIA2_SOURCES_HAVE_OPENSSL
   src/LibsslDHKeyExchange.h
 )
 
-set(ARIA2_SOURCES_HAVE_OPENSSL__NOT_HAVE_APPLETLS
+set(ARIA2_SOURCES_HAVE_OPENSSL_TLS
   src/LibsslTLSContext.cc
   src/LibsslTLSContext.h
   src/LibsslTLSSession.cc

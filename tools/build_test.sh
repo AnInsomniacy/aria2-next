@@ -23,7 +23,7 @@ case "$1" in
     ;;
   *)
     build default
-    build openssl -DARIA2_WITH_APPLETLS=OFF -DARIA2_WITH_OPENSSL=ON
+    build openssl -DARIA2_WITH_OPENSSL=ON
     build nossl -DARIA2_ENABLE_SSL=OFF
     build nocares -DARIA2_WITH_CARES=OFF
     build expat -DARIA2_WITH_LIBXML2=OFF -DARIA2_WITH_EXPAT=ON

@@ -323,10 +323,8 @@ jobs:
           curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256"
           curl_fetch "$SQLITE_URL" "$SQLITE_ARCHIVE" "$SQLITE_SHA256"
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
-          curl_fetch "$GMP_URL" "$GMP_ARCHIVE" "$GMP_SHA256"
-          curl_fetch "$LIBGPG_ERROR_URL" "$LIBGPG_ERROR_ARCHIVE" "$LIBGPG_ERROR_SHA256"
-          curl_fetch "$LIBGCRYPT_URL" "$LIBGCRYPT_ARCHIVE" "$LIBGCRYPT_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
+          curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
 
       - name: Build zlib
         run: |
@@ -364,43 +362,24 @@ jobs:
           make -j$(sysctl -n hw.ncpu)
           make install
 
-      - name: Build gmp
+      - name: Build OpenSSL
         run: |
           source packaging/dependencies.env
-          tar xf "$GMP_ARCHIVE" && cd "gmp-$GMP_VERSION"
-          ./configure --disable-shared --enable-static --prefix=$PREFIX \
-            --disable-cxx --with-pic \
-            CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2"
+          tar xf "$OPENSSL_ARCHIVE" && cd "openssl-$OPENSSL_VERSION"
+          ./Configure darwin64-arm64-cc no-shared no-module no-tests \
+            --prefix=$PREFIX --libdir=lib \
+            -mmacosx-version-min=$MACOSX_VERSION_MIN -O2
           make -j$(sysctl -n hw.ncpu)
-          make install
-
-      - name: Build libgpg-error
-        run: |
-          source packaging/dependencies.env
-          tar xf "$LIBGPG_ERROR_ARCHIVE" && cd "libgpg-error-$LIBGPG_ERROR_VERSION"
-          ./configure --disable-shared --enable-static --prefix=$PREFIX \
-            --with-pic --disable-languages --disable-doc --disable-nls \
-            CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2"
-          make -j$(sysctl -n hw.ncpu)
-          make install
-
-      - name: Build libgcrypt
-        run: |
-          source packaging/dependencies.env
-          tar xf "$LIBGCRYPT_ARCHIVE" && cd "libgcrypt-$LIBGCRYPT_VERSION"
-          ./configure --disable-shared --enable-static --prefix=$PREFIX \
-            --with-gpg-error-prefix=$PREFIX --disable-asm \
-            CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2"
-          make -j$(sysctl -n hw.ncpu)
-          make install
+          make install_sw
 
       - name: Build libssh2
         run: |
           source packaging/dependencies.env
           tar xf "$LIBSSH2_ARCHIVE" && cd "libssh2-$LIBSSH2_VERSION"
           ./configure --disable-shared --enable-static --prefix=$PREFIX \
-            --with-crypto=libgcrypt --with-libgcrypt-prefix=$PREFIX \
+            --with-crypto=openssl --with-libssl-prefix=$PREFIX \
             CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
+            CPPFLAGS="-I$PREFIX/include" LDFLAGS="-L$PREFIX/lib" \
             PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
           make -j$(sysctl -n hw.ncpu)
           make install
@@ -411,17 +390,16 @@ jobs:
           cmake -S . -B build/release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARIA2_ENABLE_STATIC=ON \
-            -DARIA2_WITH_OPENSSL=OFF \
+            -DARIA2_WITH_OPENSSL=ON \
             -DARIA2_WITH_GNUTLS=OFF \
-            -DARIA2_WITH_APPLETLS=ON \
             -DARIA2_WITH_LIBXML2=OFF \
             -DARIA2_WITH_EXPAT=ON \
             -DARIA2_WITH_CARES=ON \
             -DARIA2_WITH_ZLIB=ON \
             -DARIA2_WITH_SQLITE3=ON \
             -DARIA2_WITH_LIBSSH2=ON \
-            -DARIA2_WITH_GMP=ON \
-            -DARIA2_WITH_LIBGCRYPT=ON \
+            -DARIA2_WITH_GMP=OFF \
+            -DARIA2_WITH_LIBGCRYPT=OFF \
             -DARIA2_WITH_LIBNETTLE=OFF \
             -DCMAKE_C_FLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
             -DCMAKE_CXX_FLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
@@ -473,10 +451,8 @@ jobs:
           curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256"
           curl_fetch "$SQLITE_URL" "$SQLITE_ARCHIVE" "$SQLITE_SHA256"
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
-          curl_fetch "$GMP_URL" "$GMP_ARCHIVE" "$GMP_SHA256"
-          curl_fetch "$LIBGPG_ERROR_URL" "$LIBGPG_ERROR_ARCHIVE" "$LIBGPG_ERROR_SHA256"
-          curl_fetch "$LIBGCRYPT_URL" "$LIBGCRYPT_ARCHIVE" "$LIBGCRYPT_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
+          curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
 
       - name: Build zlib
         run: |
@@ -514,43 +490,24 @@ jobs:
           make -j$(sysctl -n hw.ncpu)
           make install
 
-      - name: Build gmp
+      - name: Build OpenSSL
         run: |
           source packaging/dependencies.env
-          tar xf "$GMP_ARCHIVE" && cd "gmp-$GMP_VERSION"
-          ./configure --disable-shared --enable-static --prefix=$PREFIX \
-            --disable-cxx --with-pic \
-            CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2"
+          tar xf "$OPENSSL_ARCHIVE" && cd "openssl-$OPENSSL_VERSION"
+          ./Configure darwin64-x86_64-cc no-shared no-module no-tests \
+            --prefix=$PREFIX --libdir=lib \
+            -mmacosx-version-min=$MACOSX_VERSION_MIN -O2
           make -j$(sysctl -n hw.ncpu)
-          make install
-
-      - name: Build libgpg-error
-        run: |
-          source packaging/dependencies.env
-          tar xf "$LIBGPG_ERROR_ARCHIVE" && cd "libgpg-error-$LIBGPG_ERROR_VERSION"
-          ./configure --disable-shared --enable-static --prefix=$PREFIX \
-            --with-pic --disable-languages --disable-doc --disable-nls \
-            CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2"
-          make -j$(sysctl -n hw.ncpu)
-          make install
-
-      - name: Build libgcrypt
-        run: |
-          source packaging/dependencies.env
-          tar xf "$LIBGCRYPT_ARCHIVE" && cd "libgcrypt-$LIBGCRYPT_VERSION"
-          ./configure --disable-shared --enable-static --prefix=$PREFIX \
-            --with-gpg-error-prefix=$PREFIX --disable-asm \
-            CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2"
-          make -j$(sysctl -n hw.ncpu)
-          make install
+          make install_sw
 
       - name: Build libssh2
         run: |
           source packaging/dependencies.env
           tar xf "$LIBSSH2_ARCHIVE" && cd "libssh2-$LIBSSH2_VERSION"
           ./configure --disable-shared --enable-static --prefix=$PREFIX \
-            --with-crypto=libgcrypt --with-libgcrypt-prefix=$PREFIX \
+            --with-crypto=openssl --with-libssl-prefix=$PREFIX \
             CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
+            CPPFLAGS="-I$PREFIX/include" LDFLAGS="-L$PREFIX/lib" \
             PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
           make -j$(sysctl -n hw.ncpu)
           make install
@@ -561,17 +518,16 @@ jobs:
           cmake -S . -B build/release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARIA2_ENABLE_STATIC=ON \
-            -DARIA2_WITH_OPENSSL=OFF \
+            -DARIA2_WITH_OPENSSL=ON \
             -DARIA2_WITH_GNUTLS=OFF \
-            -DARIA2_WITH_APPLETLS=ON \
             -DARIA2_WITH_LIBXML2=OFF \
             -DARIA2_WITH_EXPAT=ON \
             -DARIA2_WITH_CARES=ON \
             -DARIA2_WITH_ZLIB=ON \
             -DARIA2_WITH_SQLITE3=ON \
             -DARIA2_WITH_LIBSSH2=ON \
-            -DARIA2_WITH_GMP=ON \
-            -DARIA2_WITH_LIBGCRYPT=ON \
+            -DARIA2_WITH_GMP=OFF \
+            -DARIA2_WITH_LIBGCRYPT=OFF \
             -DARIA2_WITH_LIBNETTLE=OFF \
             -DCMAKE_C_FLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
             -DCMAKE_CXX_FLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN -O2" \
@@ -624,24 +580,12 @@ jobs:
         run: |
           . packaging/dependencies.env
           . packaging/scripts/common.sh
-          curl_fetch "$GMP_URL" "$GMP_ARCHIVE" "$GMP_SHA256"
           curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256"
           curl_fetch "$SQLITE_URL" "$SQLITE_ARCHIVE" "$SQLITE_SHA256"
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
-
-      - name: Build gmp
-        run: |
-          source packaging/dependencies.env
-          tar xf "$GMP_ARCHIVE" && cd "gmp-$GMP_VERSION"
-          ./configure \
-            --disable-shared --enable-static \
-            --prefix=$PREFIX --host=$HOST \
-            --disable-cxx --enable-fat \
-            CFLAGS="-mtune=generic -O2 -g0"
-          sudo make -j$(nproc) install
 
       - name: Build expat
         run: |
@@ -732,7 +676,7 @@ jobs:
             -DARIA2_WITH_LIBXML2=OFF \
             -DARIA2_WITH_EXPAT=ON \
             -DARIA2_WITH_ZLIB=ON \
-            -DARIA2_WITH_GMP=ON \
+            -DARIA2_WITH_GMP=OFF \
             -DARIA2_WITH_LIBSSH2=ON \
             -DARIA2_WITH_LIBGCRYPT=OFF \
             -DARIA2_WITH_LIBNETTLE=OFF \
@@ -793,24 +737,12 @@ jobs:
         run: |
           . packaging/dependencies.env
           . packaging/scripts/common.sh
-          curl_fetch "$GMP_URL" "$GMP_ARCHIVE" "$GMP_SHA256"
           curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256"
           curl_fetch "$SQLITE_URL" "$SQLITE_ARCHIVE" "$SQLITE_SHA256"
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
-
-      - name: Build gmp
-        run: |
-          source packaging/dependencies.env
-          tar xf "$GMP_ARCHIVE" && cd "gmp-$GMP_VERSION"
-          ./configure \
-            --disable-shared --enable-static \
-            --prefix=$PREFIX --host=$HOST \
-            --disable-cxx --disable-assembly \
-            CC="$CC" CFLAGS="-O2 -g0"
-          sudo env "PATH=$PATH" make -j$(nproc) install
 
       - name: Build expat
         run: |
@@ -905,7 +837,7 @@ jobs:
             -DARIA2_WITH_LIBXML2=OFF \
             -DARIA2_WITH_EXPAT=ON \
             -DARIA2_WITH_ZLIB=ON \
-            -DARIA2_WITH_GMP=ON \
+            -DARIA2_WITH_GMP=OFF \
             -DARIA2_WITH_LIBSSH2=ON \
             -DARIA2_WITH_LIBGCRYPT=OFF \
             -DARIA2_WITH_LIBNETTLE=OFF \

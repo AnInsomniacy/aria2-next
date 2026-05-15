@@ -143,8 +143,15 @@ int SSHSession::checkDirection()
 
 ssize_t SSHSession::writeData(const void* data, size_t len)
 {
-  // not implemented yet
-  assert(0);
+  auto nwritten =
+      libssh2_sftp_write(sftph_, static_cast<const char*>(data), len);
+  if (nwritten == LIBSSH2_ERROR_EAGAIN) {
+    return SSH_ERR_WOULDBLOCK;
+  }
+  if (nwritten < 0) {
+    return SSH_ERR_ERROR;
+  }
+  return nwritten;
 }
 
 ssize_t SSHSession::readData(void* data, size_t len)

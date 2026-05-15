@@ -204,9 +204,6 @@ std::string usedLibs()
 #ifdef HAVE_SQLITE3
   res += "sqlite3/" SQLITE_VERSION " ";
 #endif // HAVE_SQLITE3
-#ifdef HAVE_APPLETLS
-  res += "AppleTLS ";
-#endif // HAVE_APPLETLS
 #ifdef HAVE_WINTLS
   res += "WinTLS ";
 #endif // HAVE_WINTLS
@@ -214,13 +211,7 @@ std::string usedLibs()
   res += "GnuTLS/" GNUTLS_VERSION " ";
 #endif // HAVE_LIBGNUTLS
 #ifdef HAVE_OPENSSL
-  res += fmt("OpenSSL/%ld.%ld.%ld", OPENSSL_VERSION_NUMBER >> 28,
-             (OPENSSL_VERSION_NUMBER >> 20) & 0xff,
-             (OPENSSL_VERSION_NUMBER >> 12) & 0xff);
-  if ((OPENSSL_VERSION_NUMBER >> 4) & 0xff) {
-    res += 'a' + ((OPENSSL_VERSION_NUMBER >> 4) & 0xff) - 1;
-  }
-  res += " ";
+  res += "OpenSSL/" OPENSSL_VERSION_STR " ";
 #endif // HAVE_OPENSSL
 #ifdef HAVE_LIBNETTLE
   // No library version in header files.

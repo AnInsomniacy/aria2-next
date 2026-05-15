@@ -106,13 +106,13 @@ Dependency
 ======================== ========================================
 features                  dependency
 ======================== ========================================
-HTTPS                    OSX or GnuTLS or OpenSSL or Windows
+HTTPS                    OpenSSL or GnuTLS or Windows
 SFTP                     libssh2
 BitTorrent               None. Optional: libnettle+libgmp or libgcrypt
                          or OpenSSL (see note)
 Metalink                 libxml2 or Expat.
-Checksum                 None. Optional: OSX or libnettle or libgcrypt
-                         or OpenSSL or Windows (see note)
+Checksum                 None. Optional: OpenSSL or libnettle or libgcrypt
+                         or Windows (see note)
 gzip, deflate in HTTP    zlib
 Async DNS                C-Ares
 Firefox3/Chromium cookie libsqlite3
@@ -128,13 +128,9 @@ JSON-RPC over WebSocket  libnettle or libgcrypt or OpenSSL
 
 .. note::
 
-  On Apple OSX, OS-level SSL/TLS support will be preferred. Hence
-  neither GnuTLS nor OpenSSL is required on that platform. If you would like to disable this behavior, configure CMake with
-  ``-DARIA2_WITH_APPLETLS=OFF``.
-
-  GnuTLS has precedence over OpenSSL if both libraries are installed.
-  If you prefer OpenSSL, configure CMake with
-  ``-DARIA2_WITH_GNUTLS=OFF -DARIA2_WITH_OPENSSL=ON``.
+  OpenSSL has precedence over GnuTLS if both libraries are installed.
+  If you prefer GnuTLS, configure CMake with
+  ``-DARIA2_WITH_OPENSSL=OFF -DARIA2_WITH_GNUTLS=ON``.
 
   On Windows, there is SSL implementation available that is based on
   the native Windows SSL capabilities (Schannel) and it will be
@@ -143,9 +139,6 @@ JSON-RPC over WebSocket  libnettle or libgcrypt or OpenSSL
   ``-DARIA2_WITH_WINTLS=OFF``.
 
 .. note::
-
-  On Apple OSX, the OS-level checksum support will be preferred,
-  unless aria2 is configured with ``-DARIA2_WITH_APPLETLS=OFF``.
 
   libnettle has precedence over libgcrypt if both libraries are
   installed.  If you prefer libgcrypt, configure CMake with
@@ -164,7 +157,6 @@ libraries:
 * OpenSSL
 * GnuTLS + libgcrypt
 * GnuTLS + libnettle
-* Apple TLS (OSX only)
 * Windows TLS (Windows only)
 
 You can disable BitTorrent and Metalink support with
@@ -216,7 +208,7 @@ libgcrypt-devel, libxml2-devel, openssl-devel, cppunit
 
 Source builds require CMake, Ninja, pkg-config, a C++11 compiler, and the
 development packages for the features you want to enable. Modern maintained
-builds require OpenSSL 3.0 or newer when the OpenSSL backend is selected.
+builds require OpenSSL 4.0 or newer when the OpenSSL backend is selected.
 Install the pinned documentation toolchain if you want to build the manual and
 man page::
 
@@ -252,8 +244,8 @@ configured to locate the system-wide CA certificate store, aria2 loads those
 certificates at startup. If not, pass the CA bundle path with
 ``-DARIA2_CA_BUNDLE=/path/to/ca-bundle``.
 
-Using native AppleTLS or WinTLS automatically uses the system certificate store,
-so an explicit CA bundle is not necessary for those backends.
+Using WinTLS automatically uses the system certificate store, so an explicit CA
+bundle is not necessary for that backend.
 
 By default, the bash completion file named ``aria2c`` is installed to the
 default documentation directory. To change that directory, set
