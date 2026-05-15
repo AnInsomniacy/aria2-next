@@ -26,11 +26,29 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             cmake ninja-build pkg-config \
-            libcppunit-dev libssl-dev libc-ares-dev libsqlite3-dev \
+            libcppunit-dev libssl-dev libsqlite3-dev \
             libxml2-dev zlib1g-dev libssh2-1-dev
 
+      - name: Build c-ares
+        run: |
+          . packaging/dependencies.env
+          . packaging/scripts/common.sh
+          curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
+          tar xf "$CARES_ARCHIVE"
+          cmake -S "c-ares-$CARES_VERSION" -B build/ci-cares -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCARES_STATIC=ON \
+            -DCARES_SHARED=OFF \
+            -DCARES_BUILD_TESTS=OFF \
+            -DCARES_BUILD_TOOLS=OFF \
+            -DCMAKE_INSTALL_PREFIX="$PWD/build/ci-deps"
+          cmake --build build/ci-cares
+          cmake --install build/ci-cares
+
       - name: Configure
-        run: cmake --preset default
+        run: |
+          PKG_CONFIG_PATH="$PWD/build/ci-deps/lib/pkgconfig" \
+          cmake --preset default -DCMAKE_PREFIX_PATH="$PWD/build/ci-deps"
 
       - name: Build
         run: cmake --build --preset default
