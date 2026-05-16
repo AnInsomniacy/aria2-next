@@ -30,7 +30,7 @@ void VersionUsageTest::testShowVersionDisplaysMaintainedForkIdentity()
   std::cout.rdbuf(old);
 
   const auto version = out.str();
-  CPPUNIT_ASSERT(version.find("aria2-next version " PACKAGE_VERSION) !=
+  CPPUNIT_ASSERT(version.find("Aria2 Next version " PACKAGE_VERSION) !=
                  std::string::npos);
   CPPUNIT_ASSERT(version.find("Maintained since 2026 by AnInsomniacy") !=
                  std::string::npos);

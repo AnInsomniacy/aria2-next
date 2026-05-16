@@ -87,12 +87,12 @@ void showVersion()
 void showUsage(const std::string& keyword,
                const std::shared_ptr<OptionParser>& oparser, const Console& out)
 {
-  out->printf(_("Usage: aria2c [OPTIONS] [URI | MAGNET | TORRENT_FILE |"
+  out->printf(_("Usage: aria2-next [OPTIONS] [URI | MAGNET | TORRENT_FILE |"
                 " METALINK_FILE]..."));
   out->printf("\n");
   if (keyword.empty()) {
     // Very short version of usage.
-    out->printf(_("See 'aria2c -h'."));
+    out->printf(_("See 'aria2-next -h'."));
     out->printf("\n");
     return;
   }
@@ -106,7 +106,7 @@ void showUsage(const std::string& keyword,
     else {
       out->printf(_("Printing options tagged with '%s'."), keyword.c_str());
       out->printf("\n");
-      out->printf(_("See 'aria2c -h#help' to know all available tags."));
+      out->printf(_("See 'aria2-next -h#help' to know all available tags."));
     }
     out->printf("\n");
     out->printf(_("Options:"));

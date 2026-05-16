@@ -88,7 +88,7 @@ const char C_COMMENT_UTF8[] = "comment.utf-8";
 const char C_CREATED_BY[] = "created by";
 
 const char DEFAULT_PEER_ID_PREFIX[] = "aria2-";
-const char DEFAULT_PEER_AGENT[] = "aria2/" PACKAGE_VERSION;
+const char DEFAULT_PEER_AGENT[] = "aria2-next/" PACKAGE_VERSION;
 } // namespace
 
 const std::string MULTI("multi");
@@ -748,7 +748,7 @@ const unsigned char* getStaticPeerId()
 }
 
 // If PeerAgent is not generated, it is created with default agent
-// aria2/PACKAGE_VERSION
+// aria2-next/PACKAGE_VERSION
 const std::string& getStaticPeerAgent()
 {
   if (peerAgent.empty()) {

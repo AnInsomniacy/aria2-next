@@ -2,7 +2,7 @@
 #
 #   docker build -f packaging/docker/Dockerfile.android -t aria2-android .
 #   docker run --rm -v /path/to/dest:/out aria2-android \
-#     cp /root/build/aria2/build/release/aria2c /out
+#     cp /root/build/aria2/build/release/aria2-next /out
 
 FROM ubuntu:22.04
 
@@ -119,5 +119,5 @@ RUN PKG_CONFIG_LIBDIR="$PREFIX/lib/pkgconfig" \
       -DARIA2_WITH_LIBSSH2=ON \
       -DCMAKE_PREFIX_PATH="$PREFIX" && \
     cmake --build build/release -j"$(nproc)" && \
-    "$STRIP" build/release/aria2c && \
-    READELF="$TOOLCHAIN/bin/llvm-readelf" packaging/scripts/check-runtime-deps android-arm64 build/release/aria2c
+    "$STRIP" build/release/aria2-next && \
+    READELF="$TOOLCHAIN/bin/llvm-readelf" packaging/scripts/check-runtime-deps android-arm64 build/release/aria2-next

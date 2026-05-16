@@ -1,10 +1,10 @@
-# aria2-next
+# Aria2 Next
 
 [![CI](https://github.com/AnInsomniacy/aria2-next/actions/workflows/ci.yml/badge.svg)](https://github.com/AnInsomniacy/aria2-next/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/AnInsomniacy/aria2-next.svg)](https://github.com/AnInsomniacy/aria2-next/releases)
 [![License: GPLv2](https://img.shields.io/badge/license-GPLv2-blue.svg)](COPYING)
 
-aria2-next is the maintained [aria2](https://github.com/aria2/aria2) engine for [Motrix Next](https://github.com/AnInsomniacy/motrix-next) and other aria2-compatible consumers. It keeps the original aria2 command, configuration, session, JSON-RPC, and libaria2 interfaces intact while publishing current, reproducible, portable builds.
+Aria2 Next is the maintained [aria2](https://github.com/aria2/aria2) engine for [Motrix Next](https://github.com/AnInsomniacy/motrix-next) and other aria2-compatible consumers. It keeps the original aria2 option, configuration, session, JSON-RPC, and libaria2 interfaces intact while publishing current, reproducible, portable builds.
 
 Maintenance focuses on cross-platform release reliability, dependency baselines, compatibility fixes, and a preserved audit of upstream issue history in [`docs/maintenance/issue-review-matrix.csv`](docs/maintenance/issue-review-matrix.csv).
 
@@ -12,7 +12,7 @@ Maintenance focuses on cross-platform release reliability, dependency baselines,
 
 | Area | Status |
 | --- | --- |
-| Engine | aria2-compatible `aria2c` binary |
+| Engine | aria2-compatible `aria2-next` binary |
 | Primary consumer | Motrix Next sidecar engine |
 | External consumers | Existing aria2 scripts, frontends, RPC clients, and automation |
 | Build system | CMake 3.25+ with Ninja presets |
@@ -25,7 +25,7 @@ Maintenance focuses on cross-platform release reliability, dependency baselines,
 
 | Surface | Compatibility target |
 | --- | --- |
-| Executable | `aria2c` |
+| Executable | `aria2-next` |
 | CLI | aria2 option names and behavior |
 | Configuration | aria2 config file format |
 | Sessions | aria2 session and input file conventions |
@@ -40,7 +40,7 @@ Motrix Next embeds this engine, but release artifacts are ordinary aria2-compati
 cmake --preset default
 cmake --build --preset default
 ctest --preset default
-build/default/aria2c --version
+build/default/aria2-next --version
 ```
 
 Plain Ninja builds are also supported:
@@ -61,23 +61,23 @@ Prebuilt artifacts are published on the [GitHub Releases](https://github.com/AnI
 
 | Platform | Architecture | Artifact |
 | --- | --- | --- |
-| Linux | x86_64 | `aria2c-<version>-linux-x86_64` |
-| Linux | ARM64 | `aria2c-<version>-linux-aarch64` |
-| macOS | Apple Silicon | `aria2c-<version>-macos-arm64` |
-| macOS | Intel | `aria2c-<version>-macos-x86_64` |
-| Windows | x86_64 | `aria2c-<version>-windows-x86_64.exe` |
-| Windows | ARM64 | `aria2c-<version>-windows-arm64.exe` |
-| Checksums | all release assets | `aria2c-<version>-checksums.sha256` |
+| Linux | x86_64 | `aria2-next-<version>-linux-x86_64` |
+| Linux | ARM64 | `aria2-next-<version>-linux-aarch64` |
+| macOS | Apple Silicon | `aria2-next-<version>-macos-arm64` |
+| macOS | Intel | `aria2-next-<version>-macos-x86_64` |
+| Windows | x86_64 | `aria2-next-<version>-windows-x86_64.exe` |
+| Windows | ARM64 | `aria2-next-<version>-windows-arm64.exe` |
+| Checksums | all release assets | `aria2-next-<version>-checksums.sha256` |
 
-Linux and macOS downloads are executable files. If your browser clears the executable bit, run `chmod +x ./aria2c-<version>-<platform>`.
+Linux and macOS downloads are executable files. If your browser clears the executable bit, run `chmod +x ./aria2-next-<version>-<platform>`.
 
 Release binaries verify HTTPS certificates by default. Windows releases use WinTLS and the Windows trust store. OpenSSL and GnuTLS builds use system CA loading first, then a detected or explicitly configured CA bundle fallback.
 
 Use the binary like aria2:
 
 ```bash
-aria2c https://example.com/file.iso
-aria2c --enable-rpc --rpc-listen-all=false --rpc-listen-port=6800
+aria2-next https://example.com/file.iso
+aria2-next --enable-rpc --rpc-listen-all=false --rpc-listen-port=6800
 ```
 
 ## Maintenance Audit

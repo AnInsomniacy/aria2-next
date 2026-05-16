@@ -1,11 +1,11 @@
 aria2 - The ultra fast download utility
 =======================================
 
-aria2-next maintenance note
+Aria2 Next maintenance note
 ---------------------------
 
-aria2-next is maintained by AnInsomniacy since 2026 as the aria2-compatible
-``aria2c`` engine for Motrix Next and other consumers. Maintenance focuses on
+Aria2 Next is maintained by AnInsomniacy since 2026 as the aria2-compatible
+``aria2-next`` engine for Motrix Next and other consumers. Maintenance focuses on
 reliability fixes, current dependency baselines, and reproducible
 cross-platform releases. CMake is the only supported build system for this
 repository. Ninja is the default generator used by local development and
@@ -89,7 +89,7 @@ Here is a list of features:
 Versioning
 ----------
 
-aria2-next uses semantic versions. ``CMakeLists.txt`` is the version source of
+Aria2 Next uses semantic versions. ``CMakeLists.txt`` is the version source of
 truth, and release tags use ``v{PROJECT_VERSION}``. Official release artifacts
 are built by the GitHub release workflow after a matching GitHub Release is
 published.
@@ -97,7 +97,7 @@ published.
 How to get source code
 ----------------------
 
-The canonical source location for this maintained fork is the aria2-next
+The canonical source location for this maintained fork is the Aria2 Next
 repository that contains this file. The original upstream project is hosted at
 https://github.com/aria2/aria2.
 
@@ -235,7 +235,7 @@ To request a static release-style build, use::
     $ cmake -S . -B build/static -G Ninja -DARIA2_ENABLE_STATIC=ON
     $ cmake --build build/static
 
-The executable is located at ``build/default/aria2c`` when using the default
+The executable is located at ``build/default/aria2-next`` when using the default
 preset.
 
 The CMake configure step checks available libraries and enables as many
@@ -252,7 +252,7 @@ bundle path as the backend fallback. Set
 Using WinTLS automatically uses the system certificate store, so an explicit CA
 bundle is not necessary for that backend.
 
-By default, the bash completion file named ``aria2c`` is installed to the
+By default, the bash completion file named ``aria2-next`` is installed to the
 default documentation directory. To change that directory, set
 ``-DARIA2_BASH_COMPLETION_DIR=/path/to/directory``.
 

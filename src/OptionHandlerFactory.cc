@@ -1195,7 +1195,7 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
   }
   {
     OptionHandler* op(new DefaultOptionHandler(
-        PREF_USER_AGENT, TEXT_USER_AGENT, "aria2/" PACKAGE_VERSION, A2STR::NIL,
+        PREF_USER_AGENT, TEXT_USER_AGENT, "aria2-next/" PACKAGE_VERSION, A2STR::NIL,
         OptionHandler::REQ_ARG, 'U'));
     op->addTag(TAG_HTTP);
     op->setInitialOption(true);
@@ -1843,7 +1843,7 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
   }
   {
     OptionHandler* op(new DefaultOptionHandler(PREF_PEER_AGENT, TEXT_PEER_AGENT,
-                                               "aria2/" PACKAGE_VERSION));
+                                               "aria2-next/" PACKAGE_VERSION));
     op->addTag(TAG_BITTORRENT);
     handlers.push_back(op);
   }

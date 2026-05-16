@@ -66,7 +66,7 @@ def output_value_case_dir_comp(out, key):
 
 def output_case(out, opts):
     out.write("""\
-_aria2c()
+_aria2_next()
 {
     local cur prev split=false
     COMPREPLY=()
@@ -154,13 +154,13 @@ _aria2c()
     esac
     return 0
 }
-complete -F _aria2c aria2c
+complete -F _aria2_next aria2-next
 """)
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print("Generates aria2c(1) bash_completion using `aria2c --help=#all'")
-        print("Usage: make_bash_completion.py /path/to/aria2c")
+        print("Generates aria2-next(1) bash_completion using `aria2-next --help=#all'")
+        print("Usage: make_bash_completion.py /path/to/aria2-next")
         exit(1)
     opts = get_all_options(sys.argv[1])
     output_case(sys.stdout, opts)

@@ -58,7 +58,7 @@ echo "Preparing $TAG"
 cmake --preset default
 cmake --build --preset default
 ctest --preset default
-build/default/aria2c --version
+build/default/aria2-next --version
 
 bash -n tools/build_test.sh
 bash -n packaging/scripts/common.sh

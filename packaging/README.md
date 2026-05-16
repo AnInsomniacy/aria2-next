@@ -16,7 +16,7 @@ This directory owns release packaging, cross-compilation helpers, Docker build c
 
 Supported packaging paths build this repository checkout through CMake. Third-party dependencies may use their own upstream build systems while they are being built as release dependencies.
 
-GitHub Release assets are standalone executable binaries named `aria2c-<version>-<platform>-<architecture>`, plus a SHA-256 checksum file. Source code and license material are provided by the GitHub release tag source archives.
+GitHub Release assets are standalone executable binaries named `aria2-next-<version>-<platform>-<architecture>`, plus a SHA-256 checksum file. Source code and license material are provided by the GitHub release tag source archives.
 
 Release jobs must verify runtime dependency closure before packaging. Use `packaging/scripts/check-runtime-deps` on the final stripped binary so compiler runtimes and third-party shared libraries cannot leak into portable artifacts.
 

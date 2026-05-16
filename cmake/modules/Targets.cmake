@@ -226,20 +226,20 @@ if(ARIA2_ENABLE_WERROR)
   target_compile_options(aria2_core PRIVATE -Werror)
 endif()
 
-add_executable(aria2c src/main.cc)
-target_link_libraries(aria2c PRIVATE aria2_core)
+add_executable(aria2-next src/main.cc)
+target_link_libraries(aria2-next PRIVATE aria2_core)
 
 if(ARIA2_ENABLE_STATIC)
   if(WIN32)
-    target_link_options(aria2c PRIVATE -static -static-libgcc -static-libstdc++)
+    target_link_options(aria2-next PRIVATE -static -static-libgcc -static-libstdc++)
   elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(Threads REQUIRED)
-    target_link_options(aria2c PRIVATE -static -static-libgcc -static-libstdc++)
-    target_link_libraries(aria2c PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt)
+    target_link_options(aria2-next PRIVATE -static -static-libgcc -static-libstdc++)
+    target_link_libraries(aria2-next PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt)
   endif()
 endif()
 
-install(TARGETS aria2c RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS aria2-next RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 if(ENABLE_LIBARIA2)
   install(TARGETS aria2_core
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

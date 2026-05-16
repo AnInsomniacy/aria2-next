@@ -445,7 +445,7 @@
   _(" --header=HEADER              Append HEADER to HTTP request header. You can use\n" \
     "                              this option repeatedly to specify more than one\n" \
     "                              header:\n"                           \
-    "                              aria2c --header=\"X-A: b78\" --header=\"X-B: 9J1\"\n" \
+    "                              aria2-next --header=\"X-A: b78\" --header=\"X-B: 9J1\"\n" \
     "                              http://host/file")
 #define TEXT_QUIET                                                      \
   _(" -q, --quiet[=true|false]     Make aria2 quiet(no console output).")
@@ -732,7 +732,7 @@
     "                              'Content-Encoding: deflate'.")
 #define TEXT_SAVE_SESSION                       \
   _(" --save-session=FILE          Save error/unfinished downloads to FILE on exit.\n" \
-    "                              You can pass this output file to aria2c with -i\n" \
+    "                              You can pass this output file to aria2-next with -i\n" \
     "                              option on restart. Please note that downloads\n" \
     "                              added by aria2.addTorrent and aria2.addMetalink\n" \
     "                              RPC method and whose metadata could not be saved\n" \
@@ -910,7 +910,7 @@
 #define TEXT_CHECKSUM                                                   \
   _(" --checksum=TYPE=DIGEST       Set checksum. TYPE is hash type. The supported\n" \
     "                              hash type is listed in \"Hash Algorithms\" in\n" \
-    "                              \"aria2c -v\". DIGEST is hex digest.\n" \
+    "                              \"aria2-next -v\". DIGEST is hex digest.\n" \
     "                              For example, setting sha-1 digest looks like\n" \
     "                              this:\n"                             \
     "                              sha-1=0192ba11326fe2298c8cb4de616f4d4140213838\n" \

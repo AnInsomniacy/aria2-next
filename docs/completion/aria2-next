@@ -1,4 +1,4 @@
-_aria2c()
+_aria2_next()
 {
     local cur prev split=false
     COMPREPLY=()
@@ -87,4 +87,4 @@ _aria2c()
     esac
     return 0
 }
-complete -F _aria2c aria2c
+complete -F _aria2_next aria2-next

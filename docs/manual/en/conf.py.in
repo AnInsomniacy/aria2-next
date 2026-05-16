@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-project = "aria2-next"
+project = "Aria2 Next"
 version = "@PACKAGE_VERSION@"
 release = "@PACKAGE_VERSION@"
 
@@ -16,9 +16,9 @@ html_show_copyright = False
 htmlhelp_basename = "aria2doc"
 
 latex_documents = [
-    ("index", "aria2.tex", "aria2-next Documentation", "AnInsomniacy", "manual"),
+    ("index", "aria2.tex", "Aria2 Next Documentation", "AnInsomniacy", "manual"),
 ]
 
 man_pages = [
-    ("aria2c", "aria2c", "The ultra fast download utility", [], 1),
+    ("aria2-next", "aria2-next", "The ultra fast download utility", [], 1),
 ]

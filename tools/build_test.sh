@@ -14,7 +14,7 @@ build() {
   cmake -S . -B "$dir" -G "$GENERATOR" -DCMAKE_BUILD_TYPE=Debug "$@"
   cmake --build "$dir" -j"$JOBS"
   ctest --test-dir "$dir" --output-on-failure
-  cp "$dir/aria2c" "$BUILDDIR/aria2c_$name" 2>/dev/null || true
+  cp "$dir/aria2-next" "$BUILDDIR/aria2-next_$name" 2>/dev/null || true
 }
 
 case "$1" in

@@ -11,7 +11,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   aria2c
+   aria2-next
    overview
    libaria2
    technical-notes

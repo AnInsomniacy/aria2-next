@@ -57,7 +57,7 @@ jobs:
         run: ctest --preset default
 
       - name: Verify binary version
-        run: build/default/aria2c --version
+        run: build/default/aria2-next --version
 
   script-syntax:
     name: Script Syntax

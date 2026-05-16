@@ -1,9 +1,9 @@
-aria2c(1)
-=========
+aria2-next(1)
+=============
 
 SYNOPSIS
 --------
-**aria2c** [<OPTIONS>] [<URI>|<MAGNET>|<TORRENT_FILE>|<METALINK_FILE>] ...
+**aria2-next** [<OPTIONS>] [<URI>|<MAGNET>|<TORRENT_FILE>|<METALINK_FILE>] ...
 
 DESCRIPTION
 -----------
@@ -152,7 +152,7 @@ HTTP/FTP/SFTP Options
 .. option:: --checksum=<TYPE>=<DIGEST>
 
   Set checksum. TYPE is hash type. The supported hash type is listed
-  in ``Hash Algorithms`` in ``aria2c -v``. DIGEST is hex digest.  For
+  in ``Hash Algorithms`` in ``aria2-next -v``. DIGEST is hex digest.  For
   example, setting sha-1 digest looks like this:
   ``sha-1=0192ba11326fe2298c8cb4de616f4d4140213838`` This option applies
   only to HTTP(S)/FTP downloads.
@@ -267,7 +267,7 @@ HTTP/FTP/SFTP Options
 
     .. code-block:: console
 
-      $ aria2c -o myfile.zip "http://mirror1/file.zip" "http://mirror2/file.zip"
+      $ aria2-next -o myfile.zip "http://mirror1/file.zip" "http://mirror2/file.zip"
 
 .. option:: --proxy-method=<METHOD>
 
@@ -525,7 +525,7 @@ HTTP Specific Options
 
   .. code-block:: console
 
-        $ aria2c --header="X-A: b78" --header="X-B: 9J1" "http://host/file"
+        $ aria2-next --header="X-A: b78" --header="X-B: 9J1" "http://host/file"
 
 .. option:: --load-cookies=<FILE>
 
@@ -558,7 +558,7 @@ HTTP Specific Options
 .. option:: -U, --user-agent=<USER_AGENT>
 
   Set user agent for HTTP(S) downloads.
-  Default: ``aria2/$VERSION``, $VERSION is replaced by package version.
+  Default: ``aria2-next/$VERSION``, $VERSION is replaced by package version.
 
 FTP/SFTP Specific Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -956,9 +956,9 @@ BitTorrent Specific Options
   Specify the string used during the bitorrent extended handshake
   for the peer's client version.
 
-  Default: ``aria2/$MAJOR.$MINOR.$PATCH``, $MAJOR, $MINOR and $PATCH are
+  Default: ``aria2-next/$MAJOR.$MINOR.$PATCH``, $MAJOR, $MINOR and $PATCH are
   replaced by major, minor and patch version number respectively.  For
-  instance, aria2 version 1.18.8 has peer agent ``aria2/1.18.8``.
+  instance, Aria2 Next version 2.0.5 has peer agent ``aria2-next/2.0.5``.
 
 .. option:: --seed-ratio=<RATIO>
 
@@ -1634,7 +1634,7 @@ Advanced Options
 .. option:: --save-session=<FILE>
 
   Save error/unfinished downloads to FILE on exit.  You can pass this
-  output file to aria2c with :option:`--input-file <-i>` option on
+  output file to aria2-next with :option:`--input-file <-i>` option on
   restart. If you like the output to be gzipped append a .gz extension to
   the file name.
   Please note that downloads added by
@@ -1757,7 +1757,7 @@ torrents, name and path are added to form a URI for each file.
 Resuming Download
 ~~~~~~~~~~~~~~~~~
 
-Usually, you can resume transfer by just issuing same command (aria2c
+Usually, you can resume transfer by just issuing same command (aria2-next
 URI) if the previous transfer is made by aria2.
 
 If the previous transfer is made by a browser or wget like sequential
@@ -1794,7 +1794,7 @@ Let's see an example of how arguments are passed to command:
   $ cat hook.sh
   #!/bin/sh
   echo "Called with [$1] [$2] [$3]"
-  $ aria2c --on-download-complete hook.sh http://example.org/file.iso
+  $ aria2-next --on-download-complete hook.sh http://example.org/file.iso
   Called with [1] [1] [/path/to/file.iso]
 
 .. _exit-status:
@@ -1973,7 +1973,7 @@ line. In each line, you can specify name-value pair in the format:
 ``--`` prefix. You can use same syntax for the command-line option. The
 lines beginning ``#`` are treated as comments::
 
-  # sample configuration file for aria2c
+  # sample configuration file for aria2-next
   listen-port=60000
   dht-listen-port=60000
   seed-ratio=1.0
@@ -2022,7 +2022,7 @@ user's home directory:
 
 Note that this expansion occurs even if the above options are used in
 the command-line.  This means that expansion may occur 2 times: first,
-shell and then aria2c.
+shell and then aria2-next.
 
 dht.dat
 ~~~~~~~~
@@ -2076,7 +2076,7 @@ file is not created.
 Normally if you lose a control file, you cannot resume download.  But
 if you have a torrent or metalink with chunk checksums for the file,
 you can resume the download without a control file by giving -V option
-to aria2c in command-line.
+to aria2-next in command-line.
 
 .. _input-file:
 
@@ -3875,7 +3875,7 @@ Sample XML-RPC Client Code
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following Ruby script adds ``http://localhost/aria2.tar.bz2`` to
-aria2c (running on localhost) with option :option:`--dir=/downloads <-d>` and
+aria2-next (running on localhost) with option :option:`--dir=/downloads <-d>` and
 prints the RPC response:
 
 .. code-block:: ruby
@@ -3965,27 +3965,27 @@ Download a file
 ^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c "http://host/file.zip"
+  $ aria2-next "http://host/file.zip"
 
 
 .. note::
 
   To stop a download, press :kbd:`Ctrl-C`. You can resume the transfer by
-  running aria2c with the same argument in the same directory. You can change
+  running aria2-next with the same argument in the same directory. You can change
   URIs as long as they are pointing to the same file.
 
 Download a file from two different HTTP servers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c "http://host/file.zip" "http://mirror/file.zip"
+  $ aria2-next "http://host/file.zip" "http://mirror/file.zip"
 
 
 Download a file from one host using multiple connections
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c -x2 -k1M "http://host/file.zip"
+  $ aria2-next -x2 -k1M "http://host/file.zip"
 
 .. note::
 
@@ -3997,14 +3997,14 @@ Download a file from HTTP and FTP servers at the same time
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c "http://host1/file.zip" "ftp://host2/file.zip"
+  $ aria2-next "http://host1/file.zip" "ftp://host2/file.zip"
 
 
 Download files listed in a text file concurrently
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c -ifiles.txt -j2
+  $ aria2-next -ifiles.txt -j2
 
 .. note::
 
@@ -4016,19 +4016,19 @@ For HTTP:
 
 .. code-block:: console
 
-  $ aria2c --http-proxy="http://proxy:8080" "http://host/file"
+  $ aria2-next --http-proxy="http://proxy:8080" "http://host/file"
 
 
 .. code-block:: console
 
-  $ aria2c --http-proxy="http://proxy:8080" --no-proxy="localhost,127.0.0.1,192.168.0.0/16" "http://host/file"
+  $ aria2-next --http-proxy="http://proxy:8080" --no-proxy="localhost,127.0.0.1,192.168.0.0/16" "http://host/file"
 
 
 For FTP:
 
 .. code-block:: console
 
-  $ aria2c --ftp-proxy="http://proxy:8080" "ftp://host/file"
+  $ aria2-next --ftp-proxy="http://proxy:8080" "ftp://host/file"
 
 .. note::
 
@@ -4040,11 +4040,11 @@ Using a Proxy with authorization
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --http-proxy="http://username:password@proxy:8080" "http://host/file"
+  $ aria2-next --http-proxy="http://username:password@proxy:8080" "http://host/file"
 
 .. code-block:: console
 
-  $ aria2c --http-proxy="http://proxy:8080" --http-proxy-user="username" --http-proxy-passwd="password" "http://host/file"
+  $ aria2-next --http-proxy="http://proxy:8080" --http-proxy-user="username" --http-proxy-passwd="password" "http://host/file"
 
 
 Metalink Download
@@ -4053,33 +4053,33 @@ Download files with remote Metalink
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --follow-metalink=mem "http://host/file.metalink"
+  $ aria2-next --follow-metalink=mem "http://host/file.metalink"
 
 
 Download using a local metalink file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c -p --lowest-speed-limit=4000 file.metalink
+  $ aria2-next -p --lowest-speed-limit=4000 file.metalink
 
 .. note::
 
   To stop a download, press :kbd:`Ctrl-C`.
-  You can resume the transfer by running aria2c with the same argument in the same
+  You can resume the transfer by running aria2-next with the same argument in the same
   directory.
 
 Download several local metalink files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c -j2 file1.metalink file2.metalink
+  $ aria2-next -j2 file1.metalink file2.metalink
 
 
 Download only selected files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --select-file=1-4,8 file.metalink
+  $ aria2-next --select-file=1-4,8 file.metalink
 
 .. note::
 
@@ -4089,7 +4089,7 @@ Download a file using a local metalink file with user preference
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --metalink-location=jp,us --metalink-version=1.1 --metalink-language=en-US file.metalink
+  $ aria2-next --metalink-location=jp,us --metalink-version=1.1 --metalink-language=en-US file.metalink
 
 
 BitTorrent Download
@@ -4098,14 +4098,14 @@ Download files using a remote BitTorrent file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --follow-torrent=mem "http://host/file.torrent"
+  $ aria2-next --follow-torrent=mem "http://host/file.torrent"
 
 
 Download using a local torrent file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --max-upload-limit=40K file.torrent
+  $ aria2-next --max-upload-limit=40K file.torrent
 
 .. note::
 
@@ -4114,13 +4114,13 @@ Download using a local torrent file
 .. note::
 
   To stop a download, press :kbd:`Ctrl-C`. You can resume the transfer later by
-  running aria2c with the same argument in the same directory.
+  running aria2-next with the same argument in the same directory.
 
 Download using BitTorrent Magnet URI
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c "magnet:?xt=urn:btih:248D0A1CD08284299DE78D5C1ED359BB46717D8C&dn=aria2"
+  $ aria2-next "magnet:?xt=urn:btih:248D0A1CD08284299DE78D5C1ED359BB46717D8C&dn=aria2"
 
 
 .. note::
@@ -4133,20 +4133,20 @@ Download 2 torrents
 ^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c -j2 file1.torrent file2.torrent
+  $ aria2-next -j2 file1.torrent file2.torrent
 
 
 Download a file via torrent and HTTP/FTP server in parallel
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c -Ttest.torrent "http://host1/file" "ftp://host2/file"
+  $ aria2-next -Ttest.torrent "http://host1/file" "ftp://host2/file"
 
 Only download specific files (usually called "selected download")
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --select-file=1-4,8 file.torrent
+  $ aria2-next --select-file=1-4,8 file.torrent
 
 .. note::
 
@@ -4156,7 +4156,7 @@ Download a .torrent file, but do not download the torrent
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --follow-torrent=false "http://host/file.torrent"
+  $ aria2-next --follow-torrent=false "http://host/file.torrent"
 
 Specify the output file name
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -4183,14 +4183,14 @@ command:
 
 .. code-block:: console
 
-  $ aria2c --dir=/tmp --index-out=1=mydir/base.iso --index-out=2=dir/driver.iso file.torrent
+  $ aria2-next --dir=/tmp --index-out=1=mydir/base.iso --index-out=2=dir/driver.iso file.torrent
 
 
 Change the listening ports for incoming peer connections
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --listen-port=7000-7001,8000 file.torrent
+  $ aria2-next --listen-port=7000-7001,8000 file.torrent
 
 .. note::
 
@@ -4201,7 +4201,7 @@ Specify conditions to stop seeding after torrent downloads finish
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --seed-time=120 --seed-ratio=1.0 file.torrent
+  $ aria2-next --seed-time=120 --seed-ratio=1.0 file.torrent
 
 .. note::
 
@@ -4212,13 +4212,13 @@ Throttle upload speed
 ^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --max-upload-limit=100K file.torrent
+  $ aria2-next --max-upload-limit=100K file.torrent
 
 Enable IPv4 DHT
 ^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --enable-dht --dht-listen-port=6881 file.torrent
+  $ aria2-next --enable-dht --dht-listen-port=6881 file.torrent
 
 .. note::
 
@@ -4229,7 +4229,7 @@ Enable IPv6 DHT
 ^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --enable-dht6 --dht-listen-port=6881 --dht-listen-addr6=YOUR_GLOBAL_UNICAST_IPV6_ADDR
+  $ aria2-next --enable-dht6 --dht-listen-port=6881 --dht-listen-addr6=YOUR_GLOBAL_UNICAST_IPV6_ADDR
 
 .. note::
 
@@ -4243,7 +4243,7 @@ Ignore all tracker announce URIs defined in file.torrent and use
 
 .. code-block:: console
 
-  $ aria2c --bt-exclude-tracker="*" --bt-tracker="http://tracker1/announce,http://tracker2/announce" file.torrent
+  $ aria2-next --bt-exclude-tracker="*" --bt-tracker="http://tracker1/announce,http://tracker2/announce" file.torrent
 
 
 More advanced HTTP features
@@ -4252,7 +4252,7 @@ Load cookies
 ^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --load-cookies=cookies.txt "http://host/file.zip"
+  $ aria2-next --load-cookies=cookies.txt "http://host/file.zip"
 
 .. note::
 
@@ -4262,7 +4262,7 @@ Resume download started by web browsers or other programs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c -c -s2 "http://host/partiallydownloadedfile.zip"
+  $ aria2-next -c -s2 "http://host/partiallydownloadedfile.zip"
 
 .. note::
 
@@ -4275,7 +4275,7 @@ Specify a PKCS12 file as follows:
 
 .. code-block:: console
 
-  $ aria2c --certificate=/path/to/mycert.p12
+  $ aria2-next --certificate=/path/to/mycert.p12
 
 .. note::
 
@@ -4286,7 +4286,7 @@ Alternatively, if PEM files are supported, use a command like the following:
 
 .. code-block:: console
 
-  $ aria2c --certificate=/path/to/mycert.pem --private-key=/path/to/mykey.pem https://host/file
+  $ aria2-next --certificate=/path/to/mycert.pem --private-key=/path/to/mykey.pem https://host/file
 
 .. note::
 
@@ -4297,7 +4297,7 @@ Verify SSL/TLS servers using given CA certificates
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --ca-certificate=/path/to/ca-certificates.crt --check-certificate https://host/file
+  $ aria2-next --ca-certificate=/path/to/ca-certificates.crt --check-certificate https://host/file
 
 .. note::
 
@@ -4316,7 +4316,7 @@ Specify a server PKC12 file:
 
 .. code-block:: console
 
-  $ aria2c --enable-rpc --rpc-certificate=/path/to/server.p12 --rpc-secure
+  $ aria2-next --enable-rpc --rpc-certificate=/path/to/server.p12 --rpc-secure
 
 .. note::
 
@@ -4328,7 +4328,7 @@ server certificate file and private key file as follows:
 
 .. code-block:: console
 
-  $ aria2c --enable-rpc --rpc-certificate=/path/to/server.crt --rpc-private-key=/path/to/server.key --rpc-secure
+  $ aria2-next --enable-rpc --rpc-certificate=/path/to/server.crt --rpc-private-key=/path/to/server.key --rpc-secure
 
 And more advanced features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -4339,20 +4339,20 @@ Per-download:
 
 .. code-block:: console
 
-  $ aria2c --max-download-limit=100K file.metalink
+  $ aria2-next --max-download-limit=100K file.metalink
 
 Overall:
 
 .. code-block:: console
 
-  $ aria2c --max-overall-download-limit=100K file.metalink
+  $ aria2-next --max-overall-download-limit=100K file.metalink
 
 
 Repair a damaged download
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c -V file.metalink
+  $ aria2-next -V file.metalink
 
 .. note::
 
@@ -4363,7 +4363,7 @@ Drop connections if download speed is lower than a specified limit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --lowest-speed-limit=10K file.metalink
+  $ aria2-next --lowest-speed-limit=10K file.metalink
 
 
 Parameterized URI support
@@ -4372,14 +4372,14 @@ You can specify set of parts:
 
 .. code-block:: console
 
-  $ aria2c -P "http://{host1,host2,host3}/file.iso"
+  $ aria2-next -P "http://{host1,host2,host3}/file.iso"
 
 
 You can specify numeric sequence:
 
 .. code-block:: console
 
-  $ aria2c -Z -P "http://host/image[000-100].png"
+  $ aria2-next -Z -P "http://host/image[000-100].png"
 
 
 .. note::
@@ -4391,21 +4391,21 @@ You can specify step counter:
 
 .. code-block:: console
 
-  $ aria2c -Z -P "http://host/image[A-Z:2].png"
+  $ aria2-next -Z -P "http://host/image[A-Z:2].png"
 
 
 Verifying checksums
 ^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c --checksum=sha-1=0192ba11326fe2298c8cb4de616f4d4140213837 http://example.org/file
+  $ aria2-next --checksum=sha-1=0192ba11326fe2298c8cb4de616f4d4140213837 http://example.org/file
 
 
 Parallel downloads of an arbitrary number of URIs, metalink, torrent
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
 
-  $ aria2c -j3 -Z "http://host/file1" file2.torrent file3.metalink
+  $ aria2-next -j3 -Z "http://host/file1" file2.torrent file3.metalink
 
 
 BitTorrent Encryption
@@ -4414,7 +4414,7 @@ Encrypt the whole payload using ARC4 (obfuscation):
 
 .. code-block:: console
 
-  $ aria2c --bt-min-crypto-level=arc4 --bt-require-crypto=true file.torrent
+  $ aria2-next --bt-min-crypto-level=arc4 --bt-require-crypto=true file.torrent
 
 
 SEE ALSO
@@ -4427,7 +4427,7 @@ The Metalink Download Description Format: :rfc:`5854`
 
 COPYRIGHT
 ---------
-aria2-next is maintained since 2026 by AnInsomniacy for Motrix Next and
+Aria2 Next is maintained since 2026 by AnInsomniacy for Motrix Next and
 aria2-compatible users.
 
 Original aria2 copyright: 2006, 2015 Tatsuhiro Tsujikawa.

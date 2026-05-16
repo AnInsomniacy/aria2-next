@@ -2,7 +2,7 @@
 #
 #   docker build -f packaging/docker/Dockerfile.mingw -t aria2-mingw .
 #   docker run --rm -v /path/to/dest:/out aria2-mingw \
-#     cp /aria2/build/release/aria2c.exe /out
+#     cp /aria2/build/release/aria2-next.exe /out
 
 FROM ubuntu:22.04
 
@@ -125,5 +125,5 @@ RUN PKG_CONFIG_LIBDIR="$PREFIX/lib/pkgconfig" \
       -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib" \
       -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config && \
     cmake --build build/release -j"$(nproc)" && \
-    "$HOST-strip" build/release/aria2c.exe && \
-    packaging/scripts/check-runtime-deps windows-x86_64 build/release/aria2c.exe
+    "$HOST-strip" build/release/aria2-next.exe && \
+    packaging/scripts/check-runtime-deps windows-x86_64 build/release/aria2-next.exe

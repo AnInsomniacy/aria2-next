@@ -199,7 +199,7 @@ struct SessionConfig {
  *
  * Creates new Session object using the |options| as additional
  * parameters. The |options| is treated as if they are specified in
- * command-line to :manpage:`aria2c(1)`. This function returns the
+ * command-line to :manpage:`aria2-next(1)`. This function returns the
  * pointer to the created Session object if it succeeds, or ``NULL``.
  *
  * Please note that only one Session object can be created per
@@ -213,7 +213,7 @@ Session* sessionNew(const KeyVals& options, const SessionConfig& config);
  * Performs post-download action, including saving sessions etc and
  * destroys the |session| object, releasing the allocated resources
  * for it. This function returns the last error code and it is the
- * equivalent to the :ref:`exit-status` of :manpage:`aria2c(1)`.
+ * equivalent to the :ref:`exit-status` of :manpage:`aria2-next(1)`.
  */
 int sessionFinal(Session* session);
 
@@ -794,7 +794,7 @@ public:
   /**
    * Returns the last error code occurred in this download. The error
    * codes are defined in :ref:`exit-status` section of
-   * :manpage:`aria2c(1)`. This value has its meaning only for
+   * :manpage:`aria2-next(1)`. This value has its meaning only for
    * stopped/completed downloads.
    */
   virtual int getErrorCode() = 0;

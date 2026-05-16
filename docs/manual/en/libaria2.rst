@@ -61,7 +61,7 @@ thread-safe.  :type:`SessionConfig` ``config`` holds configuration for
 the session object. The constructor initializes it with the default
 values. In this setup, :member:`SessionConfig::keepRunning` is
 ``false`` which means :func:`run()` returns when all downloads are
-processed, just like aria2c utility without RPC enabled.  And
+processed, just like aria2-next utility without RPC enabled.  And
 :member:`SessionConfig::useSignalHandler` is ``true``, which means
 libaria2 will setup signal handlers and catches certain signals to
 halt download process gracefully. We also setup event handler callback
@@ -101,7 +101,7 @@ representing aria2 options. For example, specify an option
     options.push_back(std::pair<std::string, std::string> ("file-allocation", "none"));
 
 The first argument of :func:`sessionNew()` is analogous to the
-command-line argument to aria2c program. In the example program, we
+command-line argument to aria2-next program. In the example program, we
 provide no options, so just pass empty vector.
 
 After the creation of session object, let's add downloads given in the
@@ -119,7 +119,7 @@ command-line::
 
 We iterate command-line arguments and add each of them as a separate
 download. :func:`addUri()` can take one or more URIs to download
-several sources, just like aria2c does, but in this example, we just
+several sources, just like aria2-next does, but in this example, we just
 give just one URI. We provide no particular option for the download,
 so pass the empty vector as options. The second argument of
 :func:`addUri()` takes a pointer to :type:`A2Gid`. If it is not
@@ -199,7 +199,7 @@ Calling :func:`sessionFinal()` is important because it performs
 post-download action, including saving sessions and destroys session
 object. So failing to call this function will lead to lose the
 download progress and memory leak. The :func:`sessionFinal()` returns
-the code defined in :ref:`exit-status`. aria2c program also returns
+the code defined in :ref:`exit-status`. aria2-next program also returns
 the same value as exist status, so do the same in this tiny example
 program.
 

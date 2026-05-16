@@ -71,7 +71,7 @@ Do not add automated dependency PR systems, scheduled dependency update workflow
 
 The release workflow is `.github/workflows/release.yml`. It runs on `release: published` and on manual `workflow_dispatch` validation. Tag pushes do not publish release builds directly.
 
-Maintained release artifacts are standalone executable assets named `aria2c-<version>-linux-x86_64`, `aria2c-<version>-linux-aarch64`, `aria2c-<version>-macos-arm64`, `aria2c-<version>-macos-x86_64`, `aria2c-<version>-windows-x86_64.exe`, `aria2c-<version>-windows-arm64.exe`, and `aria2c-<version>-checksums.sha256`.
+Maintained release artifacts are standalone executable assets named `aria2-next-<version>-linux-x86_64`, `aria2-next-<version>-linux-aarch64`, `aria2-next-<version>-macos-arm64`, `aria2-next-<version>-macos-x86_64`, `aria2-next-<version>-windows-x86_64.exe`, `aria2-next-<version>-windows-arm64.exe`, and `aria2-next-<version>-checksums.sha256`.
 
 Manual workflow runs are for release-path validation. Official release assets are uploaded only when a GitHub Release is published. Release jobs must check runtime dependency closure before assets are uploaded.
 
@@ -112,13 +112,13 @@ One short paragraph covering the release scope, supported artifacts, and operati
 ### Downloads
 | Platform | Download |
 | --- | --- |
-| Linux x86_64 | `aria2c-{VERSION}-linux-x86_64` |
-| Linux ARM64 | `aria2c-{VERSION}-linux-aarch64` |
-| macOS Apple Silicon | `aria2c-{VERSION}-macos-arm64` |
-| macOS Intel | `aria2c-{VERSION}-macos-x86_64` |
-| Windows x86_64 | `aria2c-{VERSION}-windows-x86_64.exe` |
-| Windows ARM64 | `aria2c-{VERSION}-windows-arm64.exe` |
-| Checksums | `aria2c-{VERSION}-checksums.sha256` |
+| Linux x86_64 | `aria2-next-{VERSION}-linux-x86_64` |
+| Linux ARM64 | `aria2-next-{VERSION}-linux-aarch64` |
+| macOS Apple Silicon | `aria2-next-{VERSION}-macos-arm64` |
+| macOS Intel | `aria2-next-{VERSION}-macos-x86_64` |
+| Windows x86_64 | `aria2-next-{VERSION}-windows-x86_64.exe` |
+| Windows ARM64 | `aria2-next-{VERSION}-windows-arm64.exe` |
+| Checksums | `aria2-next-{VERSION}-checksums.sha256` |
 ```
 
 Omit empty sections. Put `Breaking Changes` before `Summary` if users must act before upgrading. Put `Security` before `Summary` if the release contains a security fix. Use present or past tense consistently. Keep bullets specific, outcome-focused, and scoped to user-visible behavior, compatibility, packaging, reproducibility, maintainability, or the release process. Avoid internal-only chores, unchecked claims, future promises, raw commit hashes, and contributor callouts unless the maintainer asks for them. Once assets are uploaded, prefer the concrete `Downloads` list over saying assets will be built later.
@@ -129,7 +129,7 @@ Before publishing a GitHub Release, verify locally:
 cmake --preset default
 cmake --build --preset default
 ctest --preset default
-build/default/aria2c --version
+build/default/aria2-next --version
 ```
 
 For packaging changes, also run:
