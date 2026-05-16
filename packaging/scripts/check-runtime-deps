@@ -33,12 +33,18 @@ check_windows() {
   }
 
   objdump -p "$binary" |
-    sed -n 's/^[[:space:]]*DLL Name: //p' |
+    awk '/^[[:space:]]*DLL Name:/ {
+      sub(/^[[:space:]]*DLL Name:[[:space:]]*/, "")
+      print
+    }' |
     sort -fu > "$tmp"
 
   while IFS= read -r dep; do
     dep_lc=$(printf '%s\n' "$dep" | tr '[:upper:]' '[:lower:]')
     case "$dep_lc" in
+      api-ms-win-crt-private-*.dll)
+        fail_unexpected "$dep"
+        ;;
       api-ms-win-*.dll|advapi32.dll|bcrypt.dll|cfgmgr32.dll|crypt32.dll|dnsapi.dll|gdi32.dll|iphlpapi.dll|kernel32.dll|msvcrt.dll|normaliz.dll|ntdll.dll|ole32.dll|oleaut32.dll|psapi.dll|rpcrt4.dll|secur32.dll|shell32.dll|shlwapi.dll|ucrtbase.dll|user32.dll|version.dll|winmm.dll|ws2_32.dll|wsock32.dll)
         ;;
       *)
@@ -56,15 +62,37 @@ check_elf() {
   }
 
   "$reader" -d "$binary" |
-    sed -n 's/.*Shared library: \[\([^]]*\)\].*/\1/p' |
+    awk '
+      /Shared library:/ {
+        dep = $0
+        sub(/^.*Shared library: \[/, "", dep)
+        sub(/\].*$/, "", dep)
+        print dep
+      }
+      /\(NEEDED\)/ {
+        dep = $0
+        sub(/^.*\[/, "", dep)
+        sub(/\].*$/, "", dep)
+        print dep
+      }
+    ' |
     sort -fu > "$tmp"
+
+  if [ "$platform" = linux ]; then
+    if [ -s "$tmp" ]; then
+      dep=$(sed -n '1p' "$tmp")
+      fail_unexpected "$dep"
+    fi
+
+    if "$reader" -l "$binary" | grep -q 'Requesting program interpreter'; then
+      fail_unexpected "ELF interpreter"
+    fi
+
+    return
+  fi
 
   while IFS= read -r dep; do
     case "$platform:$dep" in
-      linux:ld-linux-*.so.*|linux:libc.so.*|linux:libdl.so.*|linux:libgcc_s.so.*|linux:libm.so.*|linux:libpthread.so.*|linux:librt.so.*|linux:linux-vdso.so.*)
-        ;;
-      linux:libresolv.so.*)
-        ;;
       android-arm64:libc.so|android-arm64:libdl.so|android-arm64:liblog.so|android-arm64:libm.so)
         ;;
       *)
@@ -81,7 +109,10 @@ check_macos() {
   }
 
   otool -L "$binary" |
-    sed '1d; s/^[[:space:]]*//; s/[[:space:]].*$//' |
+    awk 'NR > 1 {
+      dep = $1
+      print dep
+    }' |
     sort -fu > "$tmp"
 
   while IFS= read -r dep; do

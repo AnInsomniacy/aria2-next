@@ -153,7 +153,7 @@ jobs:
             -DARIA2_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
             -DCMAKE_C_FLAGS="-O2" \
             -DCMAKE_CXX_FLAGS="-O2" \
-            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib -static-libgcc -static-libstdc++" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib" \
             -DCMAKE_PREFIX_PATH="$PREFIX" \
             -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
           cmake --build build/release -j$(nproc)
@@ -274,7 +274,7 @@ jobs:
             -DARIA2_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt \
             -DCMAKE_C_FLAGS="-O2" \
             -DCMAKE_CXX_FLAGS="-O2" \
-            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib -static-libgcc -static-libstdc++" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib" \
             -DCMAKE_PREFIX_PATH="$PREFIX" \
             -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
           cmake --build build/release -j$(nproc)
