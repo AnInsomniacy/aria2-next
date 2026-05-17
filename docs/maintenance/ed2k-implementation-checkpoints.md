@@ -492,3 +492,19 @@ server.met, search, Kad, Source Exchange, compression, and AICH payload
 modules as their checkpoints require. CP4 still needs a final audit before it
 can be marked verified.
 Blocked: none.
+
+2026-05-18 CP3 partial
+Changed: Deleted the oversized `ed2k_helper.cc` implementation file and kept
+`ed2k_helper.h` as a compatibility aggregation header for opcode constants and
+focused ED2K protocol modules. Split binary endpoint helpers, server protocol
+payloads and persisted server state, server and Kad search conversion, Kad
+search/publish packets, peer file-status/hashset/part/Source Exchange/eMule
+info packets, compressed part decoding, AICH packet payloads, and Kad
+bootstrap/routing/nodes.dat handling into separate modules.
+Verified: `cmake --build --preset default --target aria2_tests` passed after
+the split. `ctest --preset default --output-on-failure -R aria2_tests` passed
+with `100% tests passed, 0 tests failed out of 1`. `git diff --check` passed.
+Remaining: CP3 still needs a later include-surface audit so callers can move
+from the aggregation header to the narrow protocol headers where practical.
+Avoid adding test volume for mechanical include cleanup.
+Blocked: none.

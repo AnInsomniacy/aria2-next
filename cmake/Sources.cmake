@@ -152,14 +152,29 @@ set(ARIA2_SOURCES_BASE
   src/Ed2kKadCommand.h
   src/Ed2kKadState.cc
   src/Ed2kKadState.h
+  src/ed2k_aich.cc
+  src/ed2k_aich.h
+  src/ed2k_compression.cc
+  src/ed2k_compression.h
+  src/ed2k_endpoint.cc
+  src/ed2k_endpoint.h
   src/ed2k_hash.cc
   src/ed2k_hash.h
-  src/ed2k_helper.cc
   src/ed2k_helper.h
+  src/ed2k_kad.cc
+  src/ed2k_kad.h
   src/ed2k_link.cc
   src/ed2k_link.h
+  src/ed2k_kad_search.cc
+  src/ed2k_kad_search.h
   src/ed2k_packet.cc
   src/ed2k_packet.h
+  src/ed2k_peer.cc
+  src/ed2k_peer.h
+  src/ed2k_search.cc
+  src/ed2k_search.h
+  src/ed2k_server.cc
+  src/ed2k_server.h
   src/error_code.h
   src/Event.h
   src/EventPoll.h
