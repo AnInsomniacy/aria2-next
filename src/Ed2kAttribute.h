@@ -49,6 +49,7 @@ struct Ed2kAttribute : public ContextAttribute {
   std::unique_ptr<ed2k::KadTraversal> kadSourceTraversal;
   std::unique_ptr<ed2k::KadTraversal> kadKeywordTraversal;
   int64_t lastKadFirewalledCheck = 0;
+  int64_t lastKadSourcePublish = 0;
   std::vector<std::string> kadObservedAddresses;
   bool kadFirewalled = true;
   size_t nextServerIndex = 0;

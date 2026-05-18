@@ -63,7 +63,12 @@ std::string packKadSearchEntry(const KadSearchEntry& entry)
       payload += createStringTag(tag.id, tag.stringValue);
     }
     else if (tag.valueType == TagValueType::UINT) {
-      payload += createUInt32Tag(tag.id, static_cast<uint32_t>(tag.intValue));
+      if (tag.intValue > std::numeric_limits<uint32_t>::max()) {
+        payload += createUInt64Tag(tag.id, tag.intValue);
+      }
+      else {
+        payload += createUInt32Tag(tag.id, static_cast<uint32_t>(tag.intValue));
+      }
     }
     else {
       throw DL_ABORT_EX("Unsupported Kad search tag.");
@@ -187,7 +192,8 @@ std::vector<Endpoint> extractKadSourceEndpoints(const KadSearchResult& result)
 
 std::string createKadPublishSourceRequestPayload(const std::string& fileId,
                                                  const Endpoint& source,
-                                                 const std::string& sourceId)
+                                                 const std::string& sourceId,
+                                                 uint64_t size)
 {
   validateHashLength(fileId);
   validateHashLength(sourceId);
@@ -211,6 +217,14 @@ std::string createKadPublishSourceRequestPayload(const std::string& fileId,
   sourcePort.valueType = TagValueType::UINT;
   sourcePort.intValue = source.port;
   entry.tags.push_back(sourcePort);
+
+  if (size != 0) {
+    Tag fileSize;
+    fileSize.id = 0xd3;
+    fileSize.valueType = TagValueType::UINT;
+    fileSize.intValue = size;
+    entry.tags.push_back(fileSize);
+  }
 
   return fileId + packKadSearchEntry(entry);
 }

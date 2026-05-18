@@ -186,6 +186,11 @@ std::string createUInt32Tag(uint8_t id, uint32_t value)
   return createTagHeader(0x03, id) + packUInt32(value);
 }
 
+std::string createUInt64Tag(uint8_t id, uint64_t value)
+{
+  return createTagHeader(0x0b, id) + packUInt64(value);
+}
+
 std::string createStringTag(uint8_t id, const std::string& value)
 {
   if (!value.empty() && value.size() <= 16) {

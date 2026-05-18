@@ -1,6 +1,7 @@
 #include "ed2k_helper.h"
 #include "Ed2kKadState.h"
 
+#include <algorithm>
 #include <cppunit/extensions/HelperMacros.h>
 #include <cstring>
 #include <zlib.h>
@@ -1002,6 +1003,15 @@ void Ed2kHelperTest::testKadSearchPublishAndFirewallPayloads()
   KadPublishSourceRequest parsedPublish;
   CPPUNIT_ASSERT(parseKadPublishSourceRequestPayload(parsedPublish, publish));
   CPPUNIT_ASSERT_EQUAL(fileId, parsedPublish.fileId);
+  auto largePublish = createKadPublishSourceRequestPayload(
+      fileId, source, sourceId, 0x100000001ULL);
+  CPPUNIT_ASSERT(parseKadPublishSourceRequestPayload(parsedPublish,
+                                                     largePublish));
+  auto sizeTag = std::find_if(parsedPublish.source.tags.begin(),
+                              parsedPublish.source.tags.end(),
+                              [](const Tag& tag) { return tag.id == 0xd3; });
+  CPPUNIT_ASSERT(sizeTag != parsedPublish.source.tags.end());
+  CPPUNIT_ASSERT_EQUAL((uint64_t)0x100000001ULL, sizeTag->intValue);
 
   auto searchRes = createKadSearchResultPayload(
       sourceId, fileId,

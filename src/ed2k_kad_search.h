@@ -67,7 +67,8 @@ bool extractKadSourceEndpoint(Endpoint& endpoint,
 std::vector<Endpoint> extractKadSourceEndpoints(const KadSearchResult& result);
 std::string createKadPublishSourceRequestPayload(const std::string& fileId,
                                                  const Endpoint& source,
-                                                 const std::string& sourceId);
+                                                 const std::string& sourceId,
+                                                 uint64_t size = 0);
 bool parseKadPublishSourceRequestPayload(KadPublishSourceRequest& request,
                                          const std::string& payload);
 

@@ -667,3 +667,20 @@ aria2_tests` passed with `100% tests passed, 0 tests failed out of 1`, and
 Remaining: CP12 still needs outbound source publish and durable operational
 state.
 Blocked: none.
+
+
+2026-05-18 CP12 partial
+Changed: Added outbound Kad source publish for completed ED2K downloads. The
+command now keeps the Kad UDP path alive long enough to publish a completed
+request group, uses observed non-private external IPv4 state plus
+`--ed2k-listen-port` for the advertised TCP endpoint, sends
+`KAD_PUBLISH_SOURCE_REQ` to close Kad contacts, stores the local published
+source in the request-level source index, and includes a 64-bit size tag when
+needed. Incomplete downloads are not published as shareable sources.
+Verified: `cmake --build --preset default --target aria2_tests` passed with
+the existing local Tcl/Tk search-path linker warning. `ctest --preset default
+--output-on-failure -R aria2_tests` passed with `100% tests passed, 0 tests
+failed out of 1`. `git diff --check` passed.
+Remaining: CP12 still needs durable operational state before it can be marked
+verified.
+Blocked: none.

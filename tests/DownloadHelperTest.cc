@@ -91,6 +91,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kKadCommandHandlesClientUdpReask);
   CPPUNIT_TEST(testEd2kKadCommandTraversesSourceSearch);
   CPPUNIT_TEST(testEd2kKadCommandIndexesPublishedSource);
+  CPPUNIT_TEST(testEd2kKadCommandPublishesCompletedSource);
   CPPUNIT_TEST(testEd2kKadCommandAnswersFirewalledCheck);
   CPPUNIT_TEST(testEd2kKadCommandProbesFirewalledState);
   CPPUNIT_TEST(testEd2kKadCommandRefreshesRoutingTable);
@@ -154,6 +155,7 @@ public:
   void testEd2kKadCommandHandlesClientUdpReask();
   void testEd2kKadCommandTraversesSourceSearch();
   void testEd2kKadCommandIndexesPublishedSource();
+  void testEd2kKadCommandPublishesCompletedSource();
   void testEd2kKadCommandAnswersFirewalledCheck();
   void testEd2kKadCommandProbesFirewalledState();
   void testEd2kKadCommandRefreshesRoutingTable();
@@ -2359,6 +2361,77 @@ void DownloadHelperTest::testEd2kKadCommandIndexesPublishedSource()
   CPPUNIT_ASSERT_EQUAL((size_t)1, endpoints.size());
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"), endpoints[0].host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4662, endpoints[0].port);
+}
+
+void DownloadHelperTest::testEd2kKadCommandPublishesCompletedSource()
+{
+  const std::string fileHashHex = "0123456789abcdef0123456789abcdef";
+  const auto fileHash = util::fromHex(fileHashHex.begin(), fileHashHex.end());
+  const std::string selfIdHex("ffffffffffffffffffffffffffffffff");
+  const auto selfId = util::fromHex(selfIdHex.begin(), selfIdHex.end());
+  const std::string nodeIdHex("11111111111111111111111111111111");
+  const auto nodeId = util::fromHex(nodeIdHex.begin(), nodeIdHex.end());
+
+  SocketCore nodeSocket(SOCK_DGRAM);
+  nodeSocket.bind(0);
+  nodeSocket.setNonBlockingMode();
+  auto nodeSocketEndpoint = nodeSocket.getAddrInfo();
+
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|" + fileHashHex + "|/"};
+  option_->put(PREF_DIR, A2_TEST_OUT_DIR "/ed2k-kad-publish");
+  option_->put(PREF_ED2K_LISTEN_PORT, "4662");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_TRUE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  group->initPieceStorage();
+  group->getPieceStorage()->markAllPiecesDone();
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+  attrs->kadRoutingTable = std::make_shared<ed2k::KadRoutingTable>(selfId);
+  attrs->kadObservedAddresses.push_back("203.0.113.55");
+  ed2k::KadContact node;
+  node.id = nodeId;
+  node.host = "127.0.0.1";
+  node.udpPort = nodeSocketEndpoint.port;
+  node.tcpPort = 4662;
+  node.version = 8;
+  attrs->kadRoutingTable->nodeSeen(node, 1);
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  engine.addRoutineCommand(
+      make_unique<Ed2kKadCommand>(engine.newCUID(), group.get(), &engine));
+
+  CPPUNIT_ASSERT_EQUAL(1, engine.run(true));
+  char data[512];
+  bool sawPublish = false;
+  for (size_t i = 0; i < 6 && nodeSocket.isReadable(1); ++i) {
+    size_t len = sizeof(data);
+    nodeSocket.readData(data, len);
+    ed2k::PacketHeader header;
+    CPPUNIT_ASSERT(ed2k::readPacketHeader(header, data, len));
+    if (header.protocol != ed2k::KAD_PROTOCOL ||
+        header.opcode != ed2k::KAD_PUBLISH_SOURCE_REQ) {
+      continue;
+    }
+    ed2k::KadPublishSourceRequest request;
+    CPPUNIT_ASSERT(ed2k::parseKadPublishSourceRequestPayload(
+        request, std::string(data + 6, data + len)));
+    CPPUNIT_ASSERT_EQUAL(fileHash, request.fileId);
+    ed2k::Endpoint endpoint;
+    CPPUNIT_ASSERT(ed2k::extractKadSourceEndpoint(endpoint, request.source));
+    CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.55"), endpoint.host);
+    CPPUNIT_ASSERT_EQUAL((uint16_t)4662, endpoint.port);
+    sawPublish = true;
+  }
+  CPPUNIT_ASSERT(sawPublish);
 }
 
 void DownloadHelperTest::testEd2kKadCommandAnswersFirewalledCheck()

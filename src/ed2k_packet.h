@@ -63,6 +63,7 @@ bool readPacketHeader(PacketHeader& header, const char* data, size_t length);
 Tag readTag(const std::string& data, size_t& offset);
 void skipTag(const std::string& data, size_t& offset);
 std::string createUInt32Tag(uint8_t id, uint32_t value);
+std::string createUInt64Tag(uint8_t id, uint64_t value);
 std::string createStringTag(uint8_t id, const std::string& value);
 bool parseTagList(std::vector<Tag>& tags, const std::string& payload);
 

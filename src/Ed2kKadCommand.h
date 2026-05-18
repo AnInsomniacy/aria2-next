@@ -52,6 +52,7 @@ private:
   void queueBootstrap();
   void queueRefresh();
   void queueFirewalledCheck();
+  void queueSourcePublish();
   void queueServerStatusPoll();
   void queueSourceSearch();
   void queueKeywordSearch();

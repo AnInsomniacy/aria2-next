@@ -36,6 +36,7 @@
 #include "ed2k_server.h"
 #include "fmt.h"
 #include "prefs.h"
+#include "util.h"
 #include "wallclock.h"
 
 namespace aria2 {
@@ -62,6 +63,7 @@ ed2k::Endpoint toEndpoint(const ed2k::KadContact& contact)
 
 constexpr int64_t SERVER_STATUS_POLL_INTERVAL = 45;
 constexpr int64_t FIREWALLED_CHECK_INTERVAL = 3600;
+constexpr int64_t SOURCE_PUBLISH_INTERVAL = 1800;
 
 int64_t peerRetryWait(const DownloadEngine* e)
 {
@@ -82,6 +84,12 @@ ed2k::Endpoint serverUdpEndpoint(const ed2k::Endpoint& server)
   endpoint.host = server.host;
   endpoint.port = server.port + 4;
   return endpoint;
+}
+
+bool publishableAddress(const std::string& host)
+{
+  return !host.empty() && host != "0.0.0.0" && host != "127.0.0.1" &&
+         host.compare(0, 4, "127.") != 0 && !util::inPrivateAddress(host);
 }
 
 } // namespace
@@ -266,6 +274,53 @@ void Ed2kKadCommand::queueFirewalledCheck()
     tx.expectedOpcode = ed2k::KAD_FIREWALLED_RES;
     tx.sentTime = now;
     attrs->kadTransactions.add(tx);
+  }
+}
+
+void Ed2kKadCommand::queueSourcePublish()
+{
+  if (!requestGroup_->downloadFinished()) {
+    return;
+  }
+  auto attrs = getEd2kAttrs(requestGroup_->getDownloadContext());
+  if (!attrs->kadRoutingTable || attrs->kadRoutingTable->liveSize() == 0 ||
+      attrs->link.hash.empty()) {
+    return;
+  }
+  const auto tcpPort =
+      static_cast<uint16_t>(e_->getOption()->getAsInt(PREF_ED2K_LISTEN_PORT));
+  if (tcpPort == 0) {
+    return;
+  }
+  const auto now = nowSeconds();
+  if (attrs->lastKadSourcePublish != 0 &&
+      now - attrs->lastKadSourcePublish < SOURCE_PUBLISH_INTERVAL) {
+    return;
+  }
+  auto observed = std::find_if(attrs->kadObservedAddresses.begin(),
+                               attrs->kadObservedAddresses.end(),
+                               publishableAddress);
+  if (observed == attrs->kadObservedAddresses.end()) {
+    return;
+  }
+  auto contacts = attrs->kadRoutingTable->findClosest(attrs->link.hash, 8, true);
+  if (contacts.empty()) {
+    return;
+  }
+  ed2k::Endpoint source;
+  source.host = *observed;
+  source.port = tcpPort;
+  const auto sourceId = clientKadId(e_);
+  const auto payload = ed2k::createKadPublishSourceRequestPayload(
+      attrs->link.hash, source, sourceId, attrs->link.size);
+  ed2k::KadPublishSourceRequest request;
+  if (!ed2k::parseKadPublishSourceRequestPayload(request, payload)) {
+    return;
+  }
+  attrs->kadSourceIndex.store(attrs->link.hash, request.source);
+  attrs->lastKadSourcePublish = now;
+  for (const auto& contact : contacts) {
+    queuePacket(toEndpoint(contact), ed2k::KAD_PUBLISH_SOURCE_REQ, payload);
   }
 }
 
@@ -607,8 +662,9 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
 
 bool Ed2kKadCommand::execute()
 {
-  if (requestGroup_->downloadFinished() || requestGroup_->isHaltRequested() ||
-      e_->getRequestGroupMan()->downloadFinished() || e_->isHaltRequested()) {
+  if (requestGroup_->isHaltRequested() || e_->isHaltRequested() ||
+      (e_->getRequestGroupMan()->downloadFinished() &&
+       !requestGroup_->downloadFinished())) {
     return true;
   }
   try {
@@ -638,15 +694,21 @@ bool Ed2kKadCommand::execute()
     schedulePendingEd2kServers(requestGroup_, e_);
     queueServerStatusPoll();
     queueBootstrap();
-    if (attrs->searchActive) {
-      queueKeywordSearch();
-    }
-    else {
-      queueSourceSearch();
+    if (!requestGroup_->downloadFinished()) {
+      if (attrs->searchActive) {
+        queueKeywordSearch();
+      }
+      else {
+        queueSourceSearch();
+      }
     }
     queueRefresh();
     queueFirewalledCheck();
+    queueSourcePublish();
     sendQueuedPackets();
+    if (requestGroup_->downloadFinished()) {
+      return true;
+    }
   }
   catch (DlAbortEx& e) {
     A2_LOG_INFO_EX("Exception thrown while handling ED2K Kad.", e);
