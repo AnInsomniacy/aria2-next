@@ -317,27 +317,18 @@ void RequestGroup::createInitialCommand(
     progressInfoFile_ = progressInfoFile;
 
     auto attrs = getEd2kAttrs(downloadContext_);
-    if (attrs->searchActive) {
-      for (const auto& server : attrs->servers) {
-        commands.push_back(
-            make_unique<Ed2kCommand>(e->newCUID(), this, e, server, true));
-      }
-      commands.push_back(make_unique<Ed2kKadCommand>(e->newCUID(), this, e));
-      if (commands.empty()) {
-        throw DOWNLOAD_FAILURE_EXCEPTION("ED2K search requires discovery data.");
-      }
-      e->setNoWait(true);
-      return;
+    const auto hasDiscoveryData = !attrs->servers.empty() ||
+                                  (attrs->kadRoutingTable &&
+                                   attrs->kadRoutingTable->liveSize() > 0);
+    if (attrs->searchActive && !hasDiscoveryData) {
+      throw DOWNLOAD_FAILURE_EXCEPTION("ED2K search requires discovery data.");
     }
     attrs->pieceHashes = attrs->link.pieceHashes;
     attrs->aichRootHash = attrs->link.aichHash;
     for (const auto& source : attrs->link.sources) {
       addEd2kPeer(attrs, source);
     }
-    for (const auto& server : attrs->servers) {
-      commands.push_back(
-          make_unique<Ed2kCommand>(e->newCUID(), this, e, server, true));
-    }
+    schedulePendingEd2kServers(this, e);
     for (const auto& peer : attrs->peers) {
       commands.push_back(
           make_unique<Ed2kCommand>(e->newCUID(), this, e, peer, false));

@@ -91,10 +91,11 @@ ed2k::EmulePeerInfo createLocalPeerInfo()
 
 Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
                          DownloadEngine* e, ed2k::Endpoint endpoint,
-                         bool serverMode)
+                         bool serverMode, bool countAsDownloadCommand)
     : AbstractCommand(cuid, makeEd2kRequest(endpoint, serverMode),
                       requestGroup->getDownloadContext()->getFirstFileEntry(),
-                      requestGroup, e),
+                      requestGroup, e, nullptr, nullptr, true,
+                      countAsDownloadCommand),
       mode_(serverMode ? Mode::SERVER : Mode::PEER),
       endpoint_(std::move(endpoint)),
       state_(State::INIT),
@@ -477,7 +478,9 @@ bool Ed2kCommand::readBody()
   handlePacket();
   body_.clear();
   bodyRead_ = 0;
-  state_ = State::READ_HEADER;
+  if (state_ == State::READ_BODY) {
+    state_ = State::READ_HEADER;
+  }
   return true;
 }
 

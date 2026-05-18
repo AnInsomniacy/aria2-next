@@ -88,6 +88,7 @@ private:
   bool checkSocketIsWritable_;
 
   bool incNumConnection_;
+  bool incNumStreamCommand_;
 
   int32_t calculateMinSplitSize() const;
 
@@ -229,7 +230,7 @@ public:
       const std::shared_ptr<FileEntry>& fileEntry, RequestGroup* requestGroup,
       DownloadEngine* e, const std::shared_ptr<SocketCore>& s = nullptr,
       const std::shared_ptr<SocketRecvBuffer>& socketRecvBuffer = nullptr,
-      bool incNumConnection = true);
+      bool incNumConnection = true, bool incNumStreamCommand = true);
 
   virtual ~AbstractCommand();
 

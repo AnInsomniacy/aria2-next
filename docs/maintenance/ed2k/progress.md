@@ -250,3 +250,20 @@ the learned source was absent from the saved ED2K link. After the fix,
 `100% tests passed, 0 tests failed out of 1`.
 Remaining: CP6 server TCP and UDP support is the next checkpoint.
 Blocked: none.
+
+2026-05-18 CP6 partial
+Changed: Added shared ED2K server scheduling for initial and runtime-discovered
+server endpoints. Learned OP_SERVERLIST endpoints now receive server login
+commands. Server control commands no longer consume peer download slots, and
+in-flight server connects are tracked to avoid duplicate reconnect storms.
+Fixed packet body handling so server handlers can keep WRITE or DONE state
+after parsing a packet.
+Verified: The new server-list scheduling regression failed before the state
+and scheduler fixes because the learned server never received a connection.
+After the fix, `cmake --build --preset default --target aria2_tests` passed
+and `ctest --preset default --output-on-failure -R aria2_tests` passed with
+`100% tests passed, 0 tests failed out of 1`. `git diff --check` passed.
+Remaining: Continue CP6 with server retry/backoff ownership, source request
+cadence, server metadata handling, and any missing LowID/client UDP callback
+behavior.
+Blocked: none.

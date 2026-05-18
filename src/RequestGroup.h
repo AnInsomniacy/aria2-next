@@ -306,6 +306,8 @@ public:
 
   void decreaseStreamCommand();
 
+  int getNumStreamCommand() const { return numStreamCommand_; }
+
   void increaseStreamConnection();
 
   void decreaseStreamConnection();

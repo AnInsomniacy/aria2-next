@@ -51,6 +51,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kServerStateUpdate);
   CPPUNIT_TEST(testEd2kInitialServerCommandRecordsFailure);
   CPPUNIT_TEST(testEd2kInitialServerCommandUpdatesServerState);
+  CPPUNIT_TEST(testEd2kServerListSchedulesLearnedServer);
   CPPUNIT_TEST(testEd2kServerCommandRequestsLowIdCallback);
   CPPUNIT_TEST(testEd2kPeerCommandAnswersSourceExchange2);
   CPPUNIT_TEST(testEd2kKadCommandUpdatesServerUdpStatus);
@@ -88,6 +89,7 @@ public:
   void testEd2kServerStateUpdate();
   void testEd2kInitialServerCommandRecordsFailure();
   void testEd2kInitialServerCommandUpdatesServerState();
+  void testEd2kServerListSchedulesLearnedServer();
   void testEd2kServerCommandRequestsLowIdCallback();
   void testEd2kPeerCommandAnswersSourceExchange2();
   void testEd2kKadCommandUpdatesServerUdpStatus();
@@ -581,6 +583,92 @@ void DownloadHelperTest::testEd2kInitialServerCommandUpdatesServerState()
   CPPUNIT_ASSERT_EQUAL((uint32_t)1234, state->users);
   CPPUNIT_ASSERT_EQUAL((uint32_t)5678, state->files);
   CPPUNIT_ASSERT_EQUAL(std::string("hello"), state->lastMessage);
+}
+
+void DownloadHelperTest::testEd2kServerListSchedulesLearnedServer()
+{
+  const std::string outdir = A2_TEST_OUT_DIR "/ed2k-server-list-schedule";
+  const std::string outfile = outdir + "/aria2 next.bin";
+  File(outfile).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outdir).mkdirs();
+
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, outdir);
+  option_->put(PREF_ED2K_SERVER, "127.0.0.1:1");
+  option_->put(PREF_CONNECT_TIMEOUT, "1");
+  option_->put(PREF_TIMEOUT, "1");
+  option_->put(PREF_SPLIT, "1");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_FALSE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+
+  SocketCore firstListenSocket;
+  firstListenSocket.bind(0);
+  firstListenSocket.beginListen();
+  firstListenSocket.setBlockingMode();
+  const auto firstEndpoint = firstListenSocket.getAddrInfo();
+  attrs->servers[0].host = "127.0.0.1";
+  attrs->servers[0].port = firstEndpoint.port;
+
+  SocketCore learnedListenSocket;
+  learnedListenSocket.bind(0);
+  learnedListenSocket.beginListen();
+  learnedListenSocket.setBlockingMode();
+  const auto learnedEndpoint = learnedListenSocket.getAddrInfo();
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  std::vector<std::unique_ptr<Command>> commands;
+  group->createInitialCommand(commands, &engine);
+  engine.addCommand(std::move(commands));
+
+  CPPUNIT_ASSERT_EQUAL(1, engine.run(true));
+  auto firstServerSocket = firstListenSocket.acceptConnection();
+  firstServerSocket->writeData(ed2k::createPacket(
+      ed2k::PROTO_EDONKEY, ed2k::OP_IDCHANGE,
+      ed2k::packUInt32(0x04030201)));
+  ed2k::Endpoint learnedServer;
+  learnedServer.host = "127.0.0.1";
+  learnedServer.port = learnedEndpoint.port;
+  firstServerSocket->writeData(ed2k::createPacket(
+      ed2k::PROTO_EDONKEY, ed2k::OP_SERVERLIST,
+      ed2k::createServerListPayload(std::vector<ed2k::Endpoint>{
+          learnedServer})));
+
+  for (int i = 0; i < 8 && !learnedListenSocket.isReadable(0); ++i) {
+    engine.run(true);
+  }
+
+  CPPUNIT_ASSERT(learnedListenSocket.isReadable(0));
+  auto learnedServerSocket = learnedListenSocket.acceptConnection();
+  learnedServerSocket->setNonBlockingMode();
+  std::string packet;
+  for (int i = 0; i < 4; ++i) {
+    char data[128];
+    size_t len = sizeof(data);
+    learnedServerSocket->readData(data, len);
+    packet.append(data, len);
+    if (!packet.empty()) {
+      break;
+    }
+    engine.run(true);
+  }
+
+  ed2k::PacketHeader header;
+  CPPUNIT_ASSERT(ed2k::readPacketHeader(header, packet.data(), packet.size()));
+  CPPUNIT_ASSERT_EQUAL((uint8_t)ed2k::PROTO_EDONKEY, header.protocol);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)ed2k::OP_LOGINREQUEST, header.opcode);
 }
 
 void DownloadHelperTest::testEd2kServerCommandRequestsLowIdCallback()

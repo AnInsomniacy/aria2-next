@@ -48,6 +48,7 @@ struct ServerStatus {
 
 struct ServerState {
   Endpoint endpoint;
+  bool connecting = false;
   bool connected = false;
   bool handshakeCompleted = false;
   uint32_t clientId = 0;
@@ -96,6 +97,7 @@ bool parseServerStatusPayload(ServerStatus& status,
                               const std::string& payload);
 bool parseServerMessagePayload(std::string& message,
                                const std::string& payload);
+std::string createServerListPayload(const std::vector<Endpoint>& servers);
 bool parseServerListPayload(std::vector<Endpoint>& servers,
                             const std::string& payload);
 std::string createServerStatePayload(const ServerState& state);

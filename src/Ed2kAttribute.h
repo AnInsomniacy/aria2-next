@@ -24,6 +24,7 @@
 
 namespace aria2 {
 
+class Command;
 class DownloadEngine;
 class RequestGroup;
 
@@ -51,6 +52,8 @@ Ed2kAttribute* getEd2kAttrs(const std::shared_ptr<DownloadContext>& dctx);
 bool addEd2kPeer(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
 ed2k::ServerState* getEd2kServerState(Ed2kAttribute* attrs,
                                       const ed2k::Endpoint& server);
+ed2k::ServerState* updateEd2kServerConnecting(Ed2kAttribute* attrs,
+                                              const ed2k::Endpoint& server);
 ed2k::ServerState* updateEd2kServerConnected(Ed2kAttribute* attrs,
                                              const ed2k::Endpoint& server);
 void updateEd2kServerIdChange(Ed2kAttribute* attrs,
@@ -71,6 +74,10 @@ void updateEd2kServerFailure(Ed2kAttribute* attrs,
 size_t addEd2kSearchResults(Ed2kAttribute* attrs,
                             const std::vector<ed2k::SearchResultEntry>& entries,
                             bool moreResults);
+void schedulePendingEd2kServers(RequestGroup* requestGroup, DownloadEngine* e);
+void schedulePendingEd2kServers(std::vector<std::unique_ptr<Command>>& commands,
+                                RequestGroup* requestGroup,
+                                DownloadEngine* e);
 void schedulePendingEd2kPeers(RequestGroup* requestGroup, DownloadEngine* e);
 
 } // namespace aria2

@@ -382,6 +382,7 @@ bool Ed2kKadCommand::execute()
     receivePackets();
     auto attrs = getEd2kAttrs(requestGroup_->getDownloadContext());
     attrs->kadTransactions.expire(nowSeconds(), 12);
+    schedulePendingEd2kServers(requestGroup_, e_);
     queueServerStatusPoll();
     queueBootstrap();
     if (attrs->searchActive) {

@@ -98,7 +98,8 @@ protected:
 
 public:
   Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup, DownloadEngine* e,
-              ed2k::Endpoint endpoint, bool serverMode);
+              ed2k::Endpoint endpoint, bool serverMode,
+              bool countAsDownloadCommand = true);
   virtual ~Ed2kCommand();
 
   virtual bool execute() CXX11_OVERRIDE;

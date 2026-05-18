@@ -80,7 +80,7 @@ AbstractCommand::AbstractCommand(
     const std::shared_ptr<FileEntry>& fileEntry, RequestGroup* requestGroup,
     DownloadEngine* e, const std::shared_ptr<SocketCore>& s,
     const std::shared_ptr<SocketRecvBuffer>& socketRecvBuffer,
-    bool incNumConnection)
+    bool incNumConnection, bool incNumStreamCommand)
     : Command(cuid),
       req_(req),
       fileEntry_(fileEntry),
@@ -96,7 +96,8 @@ AbstractCommand::AbstractCommand(
       timeout_(requestGroup->getTimeout()),
       checkSocketIsReadable_(false),
       checkSocketIsWritable_(false),
-      incNumConnection_(incNumConnection)
+      incNumConnection_(incNumConnection),
+      incNumStreamCommand_(incNumStreamCommand)
 {
   if (socket_ && socket_->isOpen()) {
     setReadCheckSocket(socket_);
@@ -104,7 +105,9 @@ AbstractCommand::AbstractCommand(
   if (incNumConnection_) {
     requestGroup->increaseStreamConnection();
   }
-  requestGroup_->increaseStreamCommand();
+  if (incNumStreamCommand_) {
+    requestGroup_->increaseStreamCommand();
+  }
   requestGroup_->increaseNumCommand();
 #ifdef ENABLE_ASYNC_DNS
   configureAsyncNameResolverMan(asyncNameResolverMan_.get(), e_->getOption());
@@ -119,7 +122,9 @@ AbstractCommand::~AbstractCommand()
   asyncNameResolverMan_->disableNameResolverCheck(e_, this);
 #endif // ENABLE_ASYNC_DNS
   requestGroup_->decreaseNumCommand();
-  requestGroup_->decreaseStreamCommand();
+  if (incNumStreamCommand_) {
+    requestGroup_->decreaseStreamCommand();
+  }
   if (incNumConnection_) {
     requestGroup_->decreaseStreamConnection();
   }

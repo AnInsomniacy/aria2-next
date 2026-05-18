@@ -316,6 +316,19 @@ bool parseServerMessagePayload(std::string& message,
   return true;
 }
 
+std::string createServerListPayload(const std::vector<Endpoint>& servers)
+{
+  if (servers.size() > 255) {
+    throw DL_ABORT_EX("Too many ED2K servers.");
+  }
+  std::string payload;
+  payload.push_back(static_cast<char>(servers.size()));
+  for (const auto& server : servers) {
+    payload += packEndpoint(server);
+  }
+  return payload;
+}
+
 bool parseServerListPayload(std::vector<Endpoint>& servers,
                             const std::string& payload)
 {

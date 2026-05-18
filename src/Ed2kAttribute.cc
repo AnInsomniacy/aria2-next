@@ -13,12 +13,14 @@
 #include "Ed2kAttribute.h"
 
 #include <algorithm>
+#include <chrono>
 
 #include "DownloadContext.h"
 #include "DownloadEngine.h"
 #include "Ed2kCommand.h"
 #include "RequestGroup.h"
 #include "a2functional.h"
+#include "wallclock.h"
 
 namespace aria2 {
 
@@ -69,6 +71,17 @@ ed2k::ServerState* getEd2kServerState(Ed2kAttribute* attrs,
   return &attrs->serverStates.back();
 }
 
+ed2k::ServerState* updateEd2kServerConnecting(Ed2kAttribute* attrs,
+                                              const ed2k::Endpoint& server)
+{
+  auto state = getEd2kServerState(attrs, server);
+  if (!state) {
+    return nullptr;
+  }
+  state->connecting = true;
+  return state;
+}
+
 ed2k::ServerState* updateEd2kServerConnected(Ed2kAttribute* attrs,
                                              const ed2k::Endpoint& server)
 {
@@ -76,6 +89,7 @@ ed2k::ServerState* updateEd2kServerConnected(Ed2kAttribute* attrs,
   if (!state) {
     return nullptr;
   }
+  state->connecting = false;
   state->connected = true;
   return state;
 }
@@ -151,6 +165,7 @@ void updateEd2kServerFailure(Ed2kAttribute* attrs,
   if (!state) {
     return;
   }
+  state->connecting = false;
   state->connected = false;
   state->handshakeCompleted = false;
   ++state->failCount;
@@ -183,11 +198,55 @@ size_t addEd2kSearchResults(Ed2kAttribute* attrs,
   return added;
 }
 
+void schedulePendingEd2kServers(RequestGroup* requestGroup, DownloadEngine* e)
+{
+  std::vector<std::unique_ptr<Command>> commands;
+  schedulePendingEd2kServers(commands, requestGroup, e);
+  e->addCommand(std::move(commands));
+}
+
+void schedulePendingEd2kServers(std::vector<std::unique_ptr<Command>>& commands,
+                                RequestGroup* requestGroup,
+                                DownloadEngine* e)
+{
+  auto attrs = getEd2kAttrs(requestGroup->getDownloadContext());
+  if (attrs->servers.empty()) {
+    return;
+  }
+  if (attrs->nextServerIndex >= attrs->servers.size()) {
+    attrs->nextServerIndex = 0;
+  }
+  const auto now = std::chrono::duration_cast<std::chrono::seconds>(
+                       global::wallclock().getTime().time_since_epoch())
+                       .count();
+  const auto limit = attrs->servers.size();
+  size_t scanned = 0;
+  while (scanned < limit) {
+    auto server = attrs->servers[attrs->nextServerIndex];
+    attrs->nextServerIndex = (attrs->nextServerIndex + 1) %
+                             attrs->servers.size();
+    ++scanned;
+    auto state = getEd2kServerState(attrs, server);
+    if (!state) {
+      continue;
+    }
+    if (state->connecting || state->handshakeCompleted) {
+      continue;
+    }
+    if (state->nextRetryTime > 0 && state->nextRetryTime > now) {
+      continue;
+    }
+    updateEd2kServerConnecting(attrs, server);
+    commands.push_back(make_unique<Ed2kCommand>(e->newCUID(), requestGroup, e,
+                                                server, true, false));
+  }
+}
+
 void schedulePendingEd2kPeers(RequestGroup* requestGroup, DownloadEngine* e)
 {
   auto attrs = getEd2kAttrs(requestGroup->getDownloadContext());
   while (attrs->nextPeerIndex < attrs->peers.size() &&
-         requestGroup->getNumCommand() <
+         requestGroup->getNumStreamCommand() <
              requestGroup->getNumConcurrentCommand()) {
     auto peer = attrs->peers[attrs->nextPeerIndex++];
     e->addCommand(make_unique<Ed2kCommand>(e->newCUID(), requestGroup, e,
