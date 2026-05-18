@@ -539,6 +539,15 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
     }
     return;
   }
+  if (opcode == ed2k::KAD_FIREWALLED_REQ) {
+    ed2k::KadFirewalledRequest request;
+    if (!ed2k::parseKadFirewalledRequestPayload(request, payload)) {
+      return;
+    }
+    queuePacket(endpoint, ed2k::KAD_FIREWALLED_RES,
+                ed2k::createKadFirewalledResponsePayload(endpoint.host));
+    return;
+  }
 }
 
 bool Ed2kKadCommand::execute()

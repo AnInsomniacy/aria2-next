@@ -634,3 +634,19 @@ failed out of 1`.
 Remaining: CP12 still needs outbound source publish, firewalled checks, and
 durable operational state.
 Blocked: none.
+
+2026-05-18 CP12 partial
+Changed: Added passive Kad firewalled check handling on the existing UDP
+command path. `KAD_FIREWALLED_REQ` is now parsed and answered with
+`KAD_FIREWALLED_RES` containing the requester's observed UDP address, matching
+the reference behavior for remote firewall probes without adding buddy,
+callback, or upload-queue behavior.
+Verified: The focused local UDP firewalled request test failed before the
+change because no response was sent. After the change, `cmake --build --preset
+default --target aria2_tests` passed with the existing local Tcl/Tk search-path
+linker warning, `ctest --preset default --output-on-failure -R aria2_tests`
+passed with `100% tests passed, 0 tests failed out of 1`, and `git diff
+--check` passed.
+Remaining: CP12 still needs outbound source publish, active firewalled checks,
+and durable operational state.
+Blocked: none.

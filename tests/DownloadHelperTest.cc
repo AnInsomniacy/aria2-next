@@ -91,6 +91,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kKadCommandHandlesClientUdpReask);
   CPPUNIT_TEST(testEd2kKadCommandTraversesSourceSearch);
   CPPUNIT_TEST(testEd2kKadCommandIndexesPublishedSource);
+  CPPUNIT_TEST(testEd2kKadCommandAnswersFirewalledCheck);
   CPPUNIT_TEST(testEd2kKadCommandRefreshesRoutingTable);
   CPPUNIT_TEST(testEd2kSearchResultDeduplication);
   CPPUNIT_TEST(testCreateRequestGroupForUri_parameterized);
@@ -152,6 +153,7 @@ public:
   void testEd2kKadCommandHandlesClientUdpReask();
   void testEd2kKadCommandTraversesSourceSearch();
   void testEd2kKadCommandIndexesPublishedSource();
+  void testEd2kKadCommandAnswersFirewalledCheck();
   void testEd2kKadCommandRefreshesRoutingTable();
   void testEd2kSearchResultDeduplication();
   void testCreateRequestGroupForUri_parameterized();
@@ -2355,6 +2357,67 @@ void DownloadHelperTest::testEd2kKadCommandIndexesPublishedSource()
   CPPUNIT_ASSERT_EQUAL((size_t)1, endpoints.size());
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"), endpoints[0].host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4662, endpoints[0].port);
+}
+
+void DownloadHelperTest::testEd2kKadCommandAnswersFirewalledCheck()
+{
+  const std::string fileHashHex = "0123456789abcdef0123456789abcdef";
+  const auto fileHash = util::fromHex(fileHashHex.begin(), fileHashHex.end());
+  const std::string requesterIdHex("11111111111111111111111111111111");
+  const auto requesterId =
+      util::fromHex(requesterIdHex.begin(), requesterIdHex.end());
+
+  SocketCore requesterSocket(SOCK_DGRAM);
+  requesterSocket.bind(0);
+  requesterSocket.setNonBlockingMode();
+
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|" + fileHashHex + "|/"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_ED2K_LISTEN_PORT, "4662");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_TRUE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+  attrs->kadRoutingTable =
+      std::make_shared<ed2k::KadRoutingTable>(std::string(16, '\xff'));
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  auto command = make_unique<Ed2kKadCommand>(engine.newCUID(), group.get(),
+                                             &engine);
+  auto commandPtr = command.get();
+  engine.addRoutineCommand(std::move(command));
+
+  CPPUNIT_ASSERT_EQUAL(1, engine.run(true));
+
+  const auto request = ed2k::createPacket(
+      ed2k::KAD_PROTOCOL, ed2k::KAD_FIREWALLED_REQ,
+      ed2k::createKadFirewalledRequestPayload(4662, requesterId, 0));
+  requesterSocket.writeData(request.data(), request.size(), "127.0.0.1",
+                            commandPtr->getLocalUdpPort());
+
+  CPPUNIT_ASSERT(commandPtr->waitLocalUdpReadable(1));
+  CPPUNIT_ASSERT_EQUAL(1, engine.run(true));
+  CPPUNIT_ASSERT(requesterSocket.isReadable(1));
+  char data[512];
+  size_t len = sizeof(data);
+  requesterSocket.readData(data, len);
+  ed2k::PacketHeader header;
+  CPPUNIT_ASSERT(ed2k::readPacketHeader(header, data, len));
+  CPPUNIT_ASSERT_EQUAL((uint8_t)ed2k::KAD_PROTOCOL, header.protocol);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)ed2k::KAD_FIREWALLED_RES, header.opcode);
+  ed2k::KadFirewalledResponse response;
+  CPPUNIT_ASSERT(ed2k::parseKadFirewalledResponsePayload(
+      response, std::string(data + 6, data + len)));
+  CPPUNIT_ASSERT_EQUAL(std::string("127.0.0.1"), response.ipAddress);
 }
 
 void DownloadHelperTest::testEd2kKadCommandRefreshesRoutingTable()
