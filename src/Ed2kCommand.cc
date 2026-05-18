@@ -393,6 +393,7 @@ void Ed2kCommand::queuePeerPartRequest()
     return;
   }
   const auto attrs = getEd2kAttrs(getDownloadContext());
+  updateEd2kPeerRequestedParts(attrs, endpoint_, ranges);
   queuePacket(ed2k::PROTO_EDONKEY,
               use64BitOffsets_ ? ed2k::OP_REQUESTPARTS_I64
                                : ed2k::OP_REQUESTPARTS,
@@ -553,6 +554,8 @@ void Ed2kCommand::handlePartData(int64_t begin, const std::string& data)
       if (segment->complete()) {
         if (verifyPiece(segment->getIndex())) {
           completeVerifiedSegment(segment->getIndex());
+          clearEd2kPeerRequestedParts(getEd2kAttrs(getDownloadContext()),
+                                      endpoint_);
         }
         else {
           segment->clear(getPieceStorage()->getWrDiskCache());

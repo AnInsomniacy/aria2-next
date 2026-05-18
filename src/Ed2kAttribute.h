@@ -63,6 +63,11 @@ bool markEd2kPeerDisconnected(Ed2kAttribute* attrs,
 bool updateEd2kPeerPartStatus(Ed2kAttribute* attrs,
                               const ed2k::Endpoint& peer,
                               const std::vector<bool>& partStatus);
+bool updateEd2kPeerRequestedParts(
+    Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
+    const std::vector<ed2k::PartRange>& ranges);
+bool clearEd2kPeerRequestedParts(Ed2kAttribute* attrs,
+                                 const ed2k::Endpoint& peer);
 bool markEd2kPeerAccepted(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
 bool markEd2kPeerOutOfParts(Ed2kAttribute* attrs,
                             const ed2k::Endpoint& peer);

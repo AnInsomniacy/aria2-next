@@ -412,3 +412,19 @@ Remaining: Continue CP7 with remaining request lifecycle ownership,
 disconnect handling, and peer download state separation where it reduces the
 overloaded command path.
 Blocked: none.
+
+2026-05-18 CP7 partial
+Changed: Added PeerState ownership for requested ED2K part ranges. Outbound
+peer part requests now record the requested ranges, successful full-piece
+completion clears them, and disconnected, out-of-parts, cancel, and failure
+states also clear pending request state. This mirrors the reference queue
+distinction between requested/downloaded blocks without introducing the full
+CP10 source and piece policy yet.
+Verified: The focused requested-parts peer command test failed before
+implementation because PeerState had no requested range state. After the
+change, `cmake --build --preset default --target aria2_tests` passed, `ctest
+--preset default --output-on-failure -R aria2_tests` passed with `100% tests
+passed, 0 tests failed out of 1`, and `git diff --check` passed.
+Remaining: Continue CP7 with disconnect behavior audit and decide whether a
+small peer download-session boundary should be split from `Ed2kCommand`.
+Blocked: none.

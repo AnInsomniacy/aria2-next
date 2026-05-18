@@ -117,6 +117,7 @@ bool markEd2kPeerDisconnected(Ed2kAttribute* attrs,
   }
   state->connecting = false;
   state->accepted = false;
+  state->requestedParts.clear();
   return true;
 }
 
@@ -129,6 +130,29 @@ bool updateEd2kPeerPartStatus(Ed2kAttribute* attrs,
     return false;
   }
   state->partStatus = partStatus;
+  return true;
+}
+
+bool updateEd2kPeerRequestedParts(
+    Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
+    const std::vector<ed2k::PartRange>& ranges)
+{
+  auto state = getEd2kPeerState(attrs, peer);
+  if (!state) {
+    return false;
+  }
+  state->requestedParts = ranges;
+  return true;
+}
+
+bool clearEd2kPeerRequestedParts(Ed2kAttribute* attrs,
+                                 const ed2k::Endpoint& peer)
+{
+  auto state = getEd2kPeerState(attrs, peer);
+  if (!state) {
+    return false;
+  }
+  state->requestedParts.clear();
   return true;
 }
 
@@ -155,6 +179,7 @@ bool markEd2kPeerOutOfParts(Ed2kAttribute* attrs, const ed2k::Endpoint& peer)
   state->connecting = false;
   state->accepted = false;
   state->queued = true;
+  state->requestedParts.clear();
   return true;
 }
 
@@ -168,6 +193,7 @@ bool markEd2kPeerCancelled(Ed2kAttribute* attrs, const ed2k::Endpoint& peer)
   state->connecting = false;
   state->accepted = false;
   state->queued = false;
+  state->requestedParts.clear();
   return true;
 }
 
@@ -182,6 +208,7 @@ bool markEd2kPeerFailure(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
   state->connecting = false;
   state->dead = true;
   state->accepted = false;
+  state->requestedParts.clear();
   ++state->failCount;
   state->lastFailureTime = now;
   const auto multiplier = std::min<uint32_t>(state->failCount, 6);

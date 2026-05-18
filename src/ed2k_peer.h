@@ -81,6 +81,7 @@ struct UdpReaskAck {
 struct PeerState {
   Endpoint endpoint;
   std::vector<bool> partStatus;
+  std::vector<PartRange> requestedParts;
   bool connecting = false;
   bool queued = false;
   uint16_t queueRank = 0;

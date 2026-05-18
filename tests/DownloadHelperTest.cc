@@ -53,6 +53,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kPeerSchedulingSkipsBackoff);
   CPPUNIT_TEST(testEd2kPeerCommandRecordsFailure);
   CPPUNIT_TEST(testEd2kPeerCommandBacksOffCorruptPiece);
+  CPPUNIT_TEST(testEd2kPeerCommandTracksRequestedParts);
   CPPUNIT_TEST(testEd2kPeerSchedulingSkipsConnectingPeer);
   CPPUNIT_TEST(testEd2kServerStateUpdate);
   CPPUNIT_TEST(testEd2kInitialServerCommandRecordsFailure);
@@ -99,6 +100,7 @@ public:
   void testEd2kPeerSchedulingSkipsBackoff();
   void testEd2kPeerCommandRecordsFailure();
   void testEd2kPeerCommandBacksOffCorruptPiece();
+  void testEd2kPeerCommandTracksRequestedParts();
   void testEd2kPeerSchedulingSkipsConnectingPeer();
   void testEd2kServerStateUpdate();
   void testEd2kInitialServerCommandRecordsFailure();
@@ -641,6 +643,84 @@ void DownloadHelperTest::testEd2kPeerCommandBacksOffCorruptPiece()
   CPPUNIT_ASSERT_EQUAL((uint32_t)1, state->failCount);
   CPPUNIT_ASSERT(state->lastFailureTime > 0);
   CPPUNIT_ASSERT(state->nextRetryTime >= state->lastFailureTime + 30);
+}
+
+void DownloadHelperTest::testEd2kPeerCommandTracksRequestedParts()
+{
+  const std::string outdir = A2_TEST_OUT_DIR "/ed2k-requested-parts";
+  const std::string outfile = outdir + "/aria2 next requested parts.bin";
+  File(outfile).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outdir).mkdirs();
+
+  const std::string data = "verified data";
+  const auto fileHash = ed2k::md4Digest(data);
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next%20requested%20parts.bin|" +
+      util::uitos(data.size()) + "|" + util::toHex(fileHash) +
+      "|sources,127.0.0.1:1|/"};
+  option_->put(PREF_DIR, outdir);
+  option_->put(PREF_CONNECT_TIMEOUT, "1");
+  option_->put(PREF_TIMEOUT, "1");
+  option_->put(PREF_RETRY_WAIT, "30");
+  option_->put(PREF_SPLIT, "1");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_FALSE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+
+  SocketCore listenSocket;
+  listenSocket.bind(0);
+  listenSocket.beginListen();
+  listenSocket.setBlockingMode();
+  const auto endpoint = listenSocket.getAddrInfo();
+  attrs->link.sources[0].host = "127.0.0.1";
+  attrs->link.sources[0].port = endpoint.port;
+  ed2k::Endpoint peer;
+  peer.host = "127.0.0.1";
+  peer.port = endpoint.port;
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  std::vector<std::unique_ptr<Command>> commands;
+  group->createInitialCommand(commands, &engine);
+  engine.addCommand(std::move(commands));
+
+  CPPUNIT_ASSERT_EQUAL(1, engine.run(true));
+  auto peerSocket = listenSocket.acceptConnection();
+  peerSocket->setNonBlockingMode();
+  peerSocket->writeData(ed2k::createPacket(ed2k::PROTO_EDONKEY,
+                                           ed2k::OP_ACCEPTUPLOADREQ, ""));
+
+  for (int i = 0; i < 8 && !peerSocket->isReadable(0); ++i) {
+    engine.run(true);
+  }
+  auto state = getEd2kPeerState(attrs, peer);
+  CPPUNIT_ASSERT(state);
+  CPPUNIT_ASSERT_EQUAL((size_t)1, state->requestedParts.size());
+  CPPUNIT_ASSERT_EQUAL((int64_t)0, state->requestedParts[0].begin);
+  CPPUNIT_ASSERT_EQUAL(static_cast<int64_t>(data.size()),
+                       state->requestedParts[0].end);
+
+  std::string partPayload = fileHash + ed2k::packUInt32(0) +
+                            ed2k::packUInt32(data.size()) + data;
+  peerSocket->writeData(ed2k::createPacket(
+      ed2k::PROTO_EDONKEY, ed2k::OP_SENDINGPART, partPayload));
+
+  for (int i = 0; i < 8 && group->getNumCommand() > 0; ++i) {
+    engine.run(true);
+  }
+
+  CPPUNIT_ASSERT(state->requestedParts.empty());
+  CPPUNIT_ASSERT(!state->accepted);
+  CPPUNIT_ASSERT(!state->connecting);
 }
 
 void DownloadHelperTest::testEd2kPeerSchedulingSkipsConnectingPeer()
