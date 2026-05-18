@@ -187,6 +187,8 @@ void SessionSerializerTest::testSaveEd2kDownload()
   ed2k::ServerState serverState;
   serverState.endpoint.host = "203.0.113.10";
   serverState.endpoint.port = 4661;
+  serverState.name = "Peer Server";
+  serverState.description = "Primary ED2K server";
   serverState.handshakeCompleted = true;
   serverState.clientId = 0x04030201;
   serverState.highId = true;
@@ -234,6 +236,9 @@ void SessionSerializerTest::testSaveEd2kDownload()
   auto value = line.substr(std::string(" ed2k-server-state=").size());
   CPPUNIT_ASSERT(ed2k::parseServerStatePayload(
       restored, util::fromHex(value.begin(), value.end())));
+  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"), restored.name);
+  CPPUNIT_ASSERT_EQUAL(std::string("Primary ED2K server"),
+                       restored.description);
   CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa, restored.tcpFlags);
   CPPUNIT_ASSERT_EQUAL((uint32_t)1234, restored.users);
   std::getline(in, line);

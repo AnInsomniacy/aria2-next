@@ -26,7 +26,11 @@ namespace ed2k {
 namespace {
 
 constexpr char SERVER_STATE_MAGIC[] = "A2ED2KSRV";
-constexpr uint32_t SERVER_STATE_VERSION = 2;
+constexpr uint32_t SERVER_STATE_VERSION = 3;
+
+constexpr uint8_t SERVER_TAG_NAME = 0x01;
+constexpr uint8_t SERVER_TAG_DESCRIPTION = 0x0b;
+constexpr uint8_t SERVER_TAG_PREFERENCE = 0x0e;
 
 void validateHashLength(const std::string& hash)
 {
@@ -81,7 +85,7 @@ Endpoint readServerStateEndpoint(const std::string& payload, size_t& offset)
 
 } // namespace
 
-std::vector<Endpoint> parseServerMet(const std::string& data)
+std::vector<ServerMetEntry> parseServerMetEntries(const std::string& data)
 {
   size_t offset = 0;
   auto header = readByte(data, offset);
@@ -89,17 +93,41 @@ std::vector<Endpoint> parseServerMet(const std::string& data)
     offset = 0;
   }
   const uint32_t count = readUInt32(readBytes(data, offset, 4).data());
-  std::vector<Endpoint> servers;
-  servers.reserve(count);
+  std::vector<ServerMetEntry> entries;
+  entries.reserve(count);
   for (uint32_t i = 0; i < count; ++i) {
-    auto endpoint = readEndpoint(data, offset);
+    ServerMetEntry entry;
+    entry.endpoint = readEndpoint(data, offset);
     const uint32_t tagCount = readUInt32(readBytes(data, offset, 4).data());
     for (uint32_t j = 0; j < tagCount; ++j) {
-      skipTag(data, offset);
+      const auto tag = readTag(data, offset);
+      if (tag.valueType == TagValueType::STRING) {
+        if (tag.id == SERVER_TAG_NAME) {
+          entry.name = tag.stringValue;
+        }
+        else if (tag.id == SERVER_TAG_DESCRIPTION) {
+          entry.description = tag.stringValue;
+        }
+        else if (tag.id == SERVER_TAG_PREFERENCE &&
+                 entry.endpoint.host == "0.0.0.0") {
+          entry.endpoint.host = tag.stringValue;
+        }
+      }
     }
-    if (!endpoint.host.empty() && endpoint.port) {
-      servers.push_back(std::move(endpoint));
+    if (!entry.endpoint.host.empty() && entry.endpoint.port) {
+      entries.push_back(std::move(entry));
     }
+  }
+  return entries;
+}
+
+std::vector<Endpoint> parseServerMet(const std::string& data)
+{
+  auto entries = parseServerMetEntries(data);
+  std::vector<Endpoint> servers;
+  servers.reserve(entries.size());
+  for (const auto& entry : entries) {
+    servers.push_back(entry.endpoint);
   }
   return servers;
 }
@@ -354,6 +382,8 @@ std::string createServerStatePayload(const ServerState& state)
   payload.append(SERVER_STATE_MAGIC, sizeof(SERVER_STATE_MAGIC) - 1);
   payload += packUInt32(SERVER_STATE_VERSION);
   appendServerStateEndpoint(payload, state.endpoint);
+  appendString(payload, state.name);
+  appendString(payload, state.description);
   appendByte(payload, state.connected ? 1 : 0);
   appendByte(payload, state.handshakeCompleted ? 1 : 0);
   payload += packUInt32(state.clientId);
@@ -391,11 +421,15 @@ bool parseServerStatePayload(ServerState& state, const std::string& payload)
       return false;
     }
     const auto version = readUInt32(readBytes(payload, offset, 4).data());
-    if (version != 1 && version != SERVER_STATE_VERSION) {
+    if (version != 1 && version != 2 && version != SERVER_STATE_VERSION) {
       return false;
     }
     ServerState parsed;
     parsed.endpoint = readServerStateEndpoint(payload, offset);
+    if (version >= 3) {
+      parsed.name = readString(payload, offset);
+      parsed.description = readString(payload, offset);
+    }
     parsed.connected = readByte(payload, offset) != 0;
     parsed.handshakeCompleted = readByte(payload, offset) != 0;
     parsed.clientId = readUInt32(readBytes(payload, offset, 4).data());

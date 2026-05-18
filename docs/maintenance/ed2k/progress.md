@@ -284,3 +284,18 @@ change, `cmake --build --preset default --target aria2_tests` passed,
 Remaining: Continue CP6 with server metadata handling and missing
 LowID/client UDP callback behavior.
 Blocked: none.
+
+2026-05-18 CP6 partial
+Changed: Added server.met entry parsing for server name, description, and
+hostname preference tags. RequestGroup creation now merges server.met metadata
+into ED2K server state for download and search tasks, and server-state session
+payloads persist the metadata while still accepting version 1 and 2 draft
+payloads.
+Verified: A focused parser regression failed before implementation because
+`parseServerMetEntries` did not exist. After the fix,
+`cmake --build --preset default --target aria2_tests` passed and
+`ctest --preset default --output-on-failure -R aria2_tests` passed with
+`100% tests passed, 0 tests failed out of 1`.
+Remaining: Continue CP6 with missing LowID/client UDP callback behavior and a
+final server-session audit.
+Blocked: none.

@@ -174,22 +174,43 @@ std::string readLocalFile(const std::string& path)
   return out.str();
 }
 
-void addServerMetFile(std::vector<ed2k::Endpoint>& endpoints,
-                      const std::string& path)
+void mergeServerMetFile(std::vector<ed2k::Endpoint>& endpoints,
+                        std::vector<ed2k::ServerState>& states,
+                        const std::string& path)
 {
-  for (const auto& endpoint : ed2k::parseServerMet(readLocalFile(path))) {
-    addUniqueEndpoint(endpoints, endpoint);
+  for (const auto& entry : ed2k::parseServerMetEntries(readLocalFile(path))) {
+    addUniqueEndpoint(endpoints, entry.endpoint);
+    auto i = std::find_if(states.begin(), states.end(),
+                          [&](const ed2k::ServerState& state) {
+                            return state.endpoint.host == entry.endpoint.host &&
+                                   state.endpoint.port == entry.endpoint.port;
+                          });
+    if (i == states.end()) {
+      ed2k::ServerState state;
+      state.endpoint = entry.endpoint;
+      state.name = entry.name;
+      state.description = entry.description;
+      states.push_back(state);
+      continue;
+    }
+    if (!entry.name.empty()) {
+      i->name = entry.name;
+    }
+    if (!entry.description.empty()) {
+      i->description = entry.description;
+    }
   }
 }
 
 void addOptionEd2kServers(std::vector<ed2k::Endpoint>& endpoints,
+                          std::vector<ed2k::ServerState>& states,
                           const std::shared_ptr<Option>& option)
 {
   if (!option->blank(PREF_ED2K_SERVER)) {
     addEndpointList(endpoints, option->get(PREF_ED2K_SERVER));
   }
   if (!option->blank(PREF_ED2K_SERVER_LIST)) {
-    addServerMetFile(endpoints, option->get(PREF_ED2K_SERVER_LIST));
+    mergeServerMetFile(endpoints, states, option->get(PREF_ED2K_SERVER_LIST));
   }
 }
 
@@ -283,8 +304,8 @@ createEd2kRequestGroup(const std::string& ed2kUri,
       option->getAsInt(PREF_MAX_CONNECTION_PER_SERVER));
   auto attrs = std::make_shared<Ed2kAttribute>();
   attrs->link = std::move(link);
-  addOptionEd2kServers(attrs->servers, option);
   attrs->serverStates = createEd2kServerStates(option);
+  addOptionEd2kServers(attrs->servers, attrs->serverStates, option);
   addEd2kServerStateEndpoints(attrs->servers, attrs->serverStates);
   attrs->kadRoutingTable =
       createEd2kKadRoutingTable(option, attrs->link.hash);
@@ -355,8 +376,8 @@ createEd2kSearchRequestGroup(const ed2k::SearchQuery& query,
   attrs->link.type = ed2k::LinkType::FILE;
   attrs->link.name = query.keyword;
   attrs->link.size = 0;
-  addOptionEd2kServers(attrs->servers, option);
   attrs->serverStates = createEd2kServerStates(option);
+  addOptionEd2kServers(attrs->servers, attrs->serverStates, option);
   addEd2kServerStateEndpoints(attrs->servers, attrs->serverStates);
   if (!option->blank(PREF_ED2K_NODE_LIST)) {
     attrs->kadRoutingTable =

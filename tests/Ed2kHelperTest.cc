@@ -1008,6 +1008,8 @@ void Ed2kHelperTest::testServerStatePayload()
   server.host = "203.0.113.10";
   server.port = 4661;
   state.endpoint = server;
+  state.name = "Peer Server";
+  state.description = "Primary ED2K server";
   state.connected = true;
   state.handshakeCompleted = true;
   state.clientId = 0x0a000001;
@@ -1037,6 +1039,9 @@ void Ed2kHelperTest::testServerStatePayload()
   CPPUNIT_ASSERT(parseServerStatePayload(parsed, payload));
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), parsed.endpoint.host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4661, parsed.endpoint.port);
+  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"), parsed.name);
+  CPPUNIT_ASSERT_EQUAL(std::string("Primary ED2K server"),
+                       parsed.description);
   CPPUNIT_ASSERT(parsed.connected);
   CPPUNIT_ASSERT(parsed.handshakeCompleted);
   CPPUNIT_ASSERT_EQUAL((uint32_t)0x0a000001, parsed.clientId);
@@ -1063,12 +1068,16 @@ void Ed2kHelperTest::testServerStatePayload()
 
   std::string v1Payload = payload;
   v1Payload.replace(sizeof("A2ED2KSRV") - 1, 4, packUInt32(1));
+  v1Payload.erase(sizeof("A2ED2KSRV") - 1 + 4 + 2 + server.host.size() + 2,
+                  2 + state.name.size() + 2 + state.description.size());
   v1Payload.erase(sizeof("A2ED2KSRV") - 1 + 4 + 2 + server.host.size() + 2 +
                   2 + 4 + 1 + 2 + state.ipAddress.size() + 4 + 4 + 4 + 4 +
                   4 + 4 + 4 + 4 + 2 + 2 + 4 + 4 + 8,
                   8);
   CPPUNIT_ASSERT(parseServerStatePayload(parsed, v1Payload));
   CPPUNIT_ASSERT_EQUAL((int64_t)0, parsed.nextSourceRequestTime);
+  CPPUNIT_ASSERT(parsed.name.empty());
+  CPPUNIT_ASSERT(parsed.description.empty());
 
   CPPUNIT_ASSERT(!parseServerStatePayload(parsed,
                                           payload.substr(0, payload.size() - 1)));
@@ -1126,17 +1135,47 @@ void Ed2kHelperTest::testServerMetParser()
   data += packUInt32(1);
   data += packUInt32(0x04030201);
   data += packUInt16(4661);
-  data += packUInt32(1);
+  data += packUInt32(2);
   data.push_back('\x82');
   data.push_back('\x01');
   data += packUInt16(11);
   data += "Peer Server";
+  data.push_back('\x82');
+  data.push_back('\x0b');
+  data += packUInt16(19);
+  data += "Primary ED2K server";
 
   auto servers = parseServerMet(data);
 
   CPPUNIT_ASSERT_EQUAL((size_t)1, servers.size());
   CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), servers[0].host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4661, servers[0].port);
+
+  auto entries = parseServerMetEntries(data);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, entries.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), entries[0].endpoint.host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, entries[0].endpoint.port);
+  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"), entries[0].name);
+  CPPUNIT_ASSERT_EQUAL(std::string("Primary ED2K server"),
+                       entries[0].description);
+
+  std::string hostnameEntry;
+  hostnameEntry.push_back('\x0e');
+  hostnameEntry += packUInt32(1);
+  hostnameEntry += packUInt32(0);
+  hostnameEntry += packUInt16(4661);
+  hostnameEntry += packUInt32(2);
+  hostnameEntry += createStringTag(0x0e, "peer.example.org");
+  hostnameEntry += createStringTag(0x01, "Hostname Server");
+
+  entries = parseServerMetEntries(hostnameEntry);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, entries.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("peer.example.org"),
+                       entries[0].endpoint.host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, entries[0].endpoint.port);
+  CPPUNIT_ASSERT_EQUAL(std::string("Hostname Server"), entries[0].name);
 }
 
 void Ed2kHelperTest::testMd4Digest()

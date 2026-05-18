@@ -48,6 +48,8 @@ struct ServerStatus {
 
 struct ServerState {
   Endpoint endpoint;
+  std::string name;
+  std::string description;
   bool connecting = false;
   bool connected = false;
   bool handshakeCompleted = false;
@@ -74,6 +76,13 @@ struct ServerState {
   std::string lastMessage;
 };
 
+struct ServerMetEntry {
+  Endpoint endpoint;
+  std::string name;
+  std::string description;
+};
+
+std::vector<ServerMetEntry> parseServerMetEntries(const std::string& data);
 std::vector<Endpoint> parseServerMet(const std::string& data);
 std::string createLoginRequestPayload(const std::string& clientHash,
                                       uint16_t listenPort,

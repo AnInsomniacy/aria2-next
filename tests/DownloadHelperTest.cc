@@ -44,6 +44,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCreateRequestGroupForUri);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2K);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KNodesDat);
+  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KServerMetMetadata);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KKadRoutingState);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KServerState);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KMultipleServerStates);
@@ -83,6 +84,7 @@ public:
   void testCreateRequestGroupForUri();
   void testCreateRequestGroupForUri_ED2K();
   void testCreateRequestGroupForUri_ED2KNodesDat();
+  void testCreateRequestGroupForUri_ED2KServerMetMetadata();
   void testCreateRequestGroupForUri_ED2KKadRoutingState();
   void testCreateRequestGroupForUri_ED2KServerState();
   void testCreateRequestGroupForUri_ED2KMultipleServerStates();
@@ -267,6 +269,44 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KNodesDat()
                        attrs->kadRoutingTable->getRouterNodes()[0].port);
 }
 
+void DownloadHelperTest::testCreateRequestGroupForUri_ED2KServerMetMetadata()
+{
+  std::string serverMet;
+  serverMet.push_back('\x0e');
+  serverMet += ed2k::packUInt32(1);
+  serverMet += ed2k::packUInt32(0x04030201);
+  serverMet += ed2k::packUInt16(4661);
+  serverMet += ed2k::packUInt32(2);
+  serverMet += ed2k::createStringTag(0x01, "Peer Server");
+  serverMet += ed2k::createStringTag(0x0b, "Primary ED2K server");
+  const std::string path = A2_TEST_OUT_DIR "/ed2k-server.met";
+  createFile(path, serverMet.size());
+  {
+    std::ofstream out(path.c_str(), std::ios::binary);
+    out.write(serverMet.data(), serverMet.size());
+  }
+
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_ED2K_SERVER_LIST, path);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+
+  createRequestGroupForUri(result, option_, uris);
+
+  auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
+  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->servers.size());
+  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->serverStates.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), attrs->servers[0].host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, attrs->servers[0].port);
+  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"),
+                       attrs->serverStates[0].name);
+  CPPUNIT_ASSERT_EQUAL(std::string("Primary ED2K server"),
+                       attrs->serverStates[0].description);
+}
+
 void DownloadHelperTest::testCreateRequestGroupForUri_ED2KKadRoutingState()
 {
   std::string selfHex("0123456789abcdef0123456789abcdef");
@@ -313,6 +353,8 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KServerState()
   ed2k::ServerState state;
   state.endpoint.host = "203.0.113.10";
   state.endpoint.port = 4661;
+  state.name = "Peer Server";
+  state.description = "Primary ED2K server";
   state.connected = true;
   state.handshakeCompleted = true;
   state.clientId = 0x04030201;
@@ -344,6 +386,9 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KServerState()
   const auto& restored = attrs->serverStates[0];
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), restored.endpoint.host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4661, restored.endpoint.port);
+  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"), restored.name);
+  CPPUNIT_ASSERT_EQUAL(std::string("Primary ED2K server"),
+                       restored.description);
   CPPUNIT_ASSERT(restored.handshakeCompleted);
   CPPUNIT_ASSERT_EQUAL((uint32_t)0x04030201, restored.clientId);
   CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa, restored.tcpFlags);
