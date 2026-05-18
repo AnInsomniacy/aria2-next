@@ -207,3 +207,18 @@ Remaining: Continue CP5 persistence coverage for ED2K metadata, sources,
 hashsets, AICH state, Kad state, shared files, and credits without broad test
 scaffolding.
 Blocked: none.
+
+2026-05-18 CP5 partial
+Changed: Fixed ED2K server-state resume scheduling. Restored server-state
+endpoints are now merged into the RequestGroup server list so a save-session
+restore can schedule server commands even when the user did not also pass
+`--ed2k-server` or `--ed2k-server-list`.
+Verified: The focused resume assertion failed before the fix with
+`attrs->servers.size()` equal to 0. After the fix,
+`cmake --build --preset default --target aria2_tests` passed and
+`ctest --preset default --output-on-failure -R aria2_tests` passed with
+`100% tests passed, 0 tests failed out of 1`.
+Remaining: Continue CP5 persistence coverage for ED2K metadata, sources,
+hashsets, AICH state, Kad state, shared files, and credits without broad test
+scaffolding.
+Blocked: none.

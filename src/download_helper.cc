@@ -193,6 +193,14 @@ void addOptionEd2kServers(std::vector<ed2k::Endpoint>& endpoints,
   }
 }
 
+void addEd2kServerStateEndpoints(std::vector<ed2k::Endpoint>& endpoints,
+                                 const std::vector<ed2k::ServerState>& states)
+{
+  for (const auto& state : states) {
+    addUniqueEndpoint(endpoints, state.endpoint);
+  }
+}
+
 std::vector<ed2k::ServerState>
 createEd2kServerStates(const std::shared_ptr<Option>& option)
 {
@@ -277,6 +285,7 @@ createEd2kRequestGroup(const std::string& ed2kUri,
   attrs->link = std::move(link);
   addOptionEd2kServers(attrs->servers, option);
   attrs->serverStates = createEd2kServerStates(option);
+  addEd2kServerStateEndpoints(attrs->servers, attrs->serverStates);
   attrs->kadRoutingTable =
       createEd2kKadRoutingTable(option, attrs->link.hash);
   dctx->setAttribute(CTX_ATTR_ED2K, std::move(attrs));
@@ -348,6 +357,7 @@ createEd2kSearchRequestGroup(const ed2k::SearchQuery& query,
   attrs->link.size = 0;
   addOptionEd2kServers(attrs->servers, option);
   attrs->serverStates = createEd2kServerStates(option);
+  addEd2kServerStateEndpoints(attrs->servers, attrs->serverStates);
   if (!option->blank(PREF_ED2K_NODE_LIST)) {
     attrs->kadRoutingTable =
         createEd2kKadRoutingTable(option,

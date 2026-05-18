@@ -334,6 +334,9 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KServerState()
 
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
   CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->serverStates.size());
+  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->servers.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), attrs->servers[0].host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, attrs->servers[0].port);
   const auto& restored = attrs->serverStates[0];
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), restored.endpoint.host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4661, restored.endpoint.port);
