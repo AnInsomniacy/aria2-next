@@ -146,8 +146,8 @@ bool markEd2kPeerCancelled(Ed2kAttribute* attrs, const ed2k::Endpoint& peer)
   return true;
 }
 
-bool markEd2kPeerDead(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
-                      int64_t now, int64_t baseRetrySeconds)
+bool markEd2kPeerFailure(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
+                         int64_t now, int64_t baseRetrySeconds)
 {
   auto state = getEd2kPeerState(attrs, peer);
   if (!state) {
@@ -156,11 +156,21 @@ bool markEd2kPeerDead(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
   state->queued = false;
   state->dead = true;
   state->accepted = false;
-  state->noFile = true;
   ++state->failCount;
   state->lastFailureTime = now;
   const auto multiplier = std::min<uint32_t>(state->failCount, 6);
   state->nextRetryTime = now + baseRetrySeconds * multiplier;
+  return true;
+}
+
+bool markEd2kPeerDead(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
+                      int64_t now, int64_t baseRetrySeconds)
+{
+  if (!markEd2kPeerFailure(attrs, peer, now, baseRetrySeconds)) {
+    return false;
+  }
+  auto state = getEd2kPeerState(attrs, peer);
+  state->noFile = true;
   return true;
 }
 

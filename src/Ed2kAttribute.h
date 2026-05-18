@@ -64,6 +64,8 @@ bool markEd2kPeerAccepted(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
 bool markEd2kPeerOutOfParts(Ed2kAttribute* attrs,
                             const ed2k::Endpoint& peer);
 bool markEd2kPeerCancelled(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
+bool markEd2kPeerFailure(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
+                         int64_t now, int64_t baseRetrySeconds);
 bool markEd2kPeerDead(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
                       int64_t now, int64_t baseRetrySeconds);
 ed2k::ServerState* getEd2kServerState(Ed2kAttribute* attrs,

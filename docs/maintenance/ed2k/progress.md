@@ -368,3 +368,16 @@ Remaining: Continue CP7 with 32-bit and 64-bit request lifecycle ownership,
 duplicate peer rejection, disconnect handling, and corrupt-piece retry through
 PeerState.
 Blocked: none.
+
+2026-05-18 CP7 partial
+Changed: Routed peer command connection failures through PeerState retry
+backoff with a generic failure marker. Kept no-file as a separate protocol
+state so transport failures do not claim the peer lacks the file.
+Verified: The focused peer command failure test failed before the change
+because PeerState stayed live after the command failed. After the change,
+`cmake --build --preset default --target aria2_tests` passed and `ctest
+--preset default --output-on-failure -R aria2_tests` passed with `100% tests
+passed, 0 tests failed out of 1`.
+Remaining: Continue CP7 with request lifecycle ownership, duplicate peer
+rejection, disconnect handling, and corrupt-piece retry through PeerState.
+Blocked: none.

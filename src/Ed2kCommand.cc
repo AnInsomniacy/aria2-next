@@ -141,13 +141,18 @@ bool Ed2kCommand::execute()
     return true;
   }
   catch (DlRetryEx& err) {
+    const auto now = std::chrono::duration_cast<std::chrono::seconds>(
+                         global::wallclock().getTime().time_since_epoch())
+                         .count();
+    const auto retryWait =
+        std::max<int64_t>(1, getOption()->getAsInt(PREF_RETRY_WAIT));
     if (mode_ == Mode::SERVER) {
-      updateEd2kServerFailure(
-          getEd2kAttrs(getDownloadContext()), endpoint_,
-          std::chrono::duration_cast<std::chrono::seconds>(
-              global::wallclock().getTime().time_since_epoch())
-              .count(),
-          std::max<int64_t>(1, getOption()->getAsInt(PREF_RETRY_WAIT)));
+      updateEd2kServerFailure(getEd2kAttrs(getDownloadContext()), endpoint_,
+                              now, retryWait);
+    }
+    else {
+      markEd2kPeerFailure(getEd2kAttrs(getDownloadContext()), endpoint_, now,
+                          retryWait);
     }
     A2_LOG_INFO_EX(EX_EXCEPTION_CAUGHT, err);
     return true;

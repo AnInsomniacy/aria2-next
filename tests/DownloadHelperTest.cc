@@ -12,6 +12,7 @@
 #include "DownloadEngine.h"
 #include "DownloadContext.h"
 #include "Ed2kAttribute.h"
+#include "Ed2kCommand.h"
 #include "Ed2kKadCommand.h"
 #include "Option.h"
 #include "RequestGroupMan.h"
@@ -50,6 +51,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KMultipleServerStates);
   CPPUNIT_TEST(testEd2kPeerDeduplication);
   CPPUNIT_TEST(testEd2kPeerSchedulingSkipsBackoff);
+  CPPUNIT_TEST(testEd2kPeerCommandRecordsFailure);
   CPPUNIT_TEST(testEd2kServerStateUpdate);
   CPPUNIT_TEST(testEd2kInitialServerCommandRecordsFailure);
   CPPUNIT_TEST(testEd2kInitialServerCommandUpdatesServerState);
@@ -93,6 +95,7 @@ public:
   void testCreateRequestGroupForUri_ED2KMultipleServerStates();
   void testEd2kPeerDeduplication();
   void testEd2kPeerSchedulingSkipsBackoff();
+  void testEd2kPeerCommandRecordsFailure();
   void testEd2kServerStateUpdate();
   void testEd2kInitialServerCommandRecordsFailure();
   void testEd2kInitialServerCommandUpdatesServerState();
@@ -505,6 +508,54 @@ void DownloadHelperTest::testEd2kPeerSchedulingSkipsBackoff()
   schedulePendingEd2kPeers(group.get(), &engine);
 
   CPPUNIT_ASSERT_EQUAL((int32_t)0, group->getNumCommand());
+}
+
+void DownloadHelperTest::testEd2kPeerCommandRecordsFailure()
+{
+  const std::string outdir = A2_TEST_OUT_DIR "/ed2k-peer-failure";
+  const std::string outfile = outdir + "/aria2 next peer failure.bin";
+  File(outfile).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outdir).mkdirs();
+
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next%20peer%20failure.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|"
+      "sources,127.0.0.1:1|/"};
+  option_->put(PREF_DIR, outdir);
+  option_->put(PREF_CONNECT_TIMEOUT, "1");
+  option_->put(PREF_TIMEOUT, "1");
+  option_->put(PREF_RETRY_WAIT, "30");
+  option_->put(PREF_SPLIT, "1");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_FALSE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+  auto peer = attrs->link.sources[0];
+  addEd2kPeer(attrs, peer);
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  engine.addCommand(make_unique<Ed2kCommand>(engine.newCUID(), group.get(),
+                                             &engine, peer, false));
+
+  for (int i = 0; i < 8 && group->getNumCommand() > 0; ++i) {
+    engine.run(true);
+  }
+
+  auto state = getEd2kPeerState(attrs, peer);
+  CPPUNIT_ASSERT(state);
+  CPPUNIT_ASSERT(state->dead);
+  CPPUNIT_ASSERT_EQUAL((uint32_t)1, state->failCount);
+  CPPUNIT_ASSERT(state->lastFailureTime > 0);
+  CPPUNIT_ASSERT(state->nextRetryTime >= state->lastFailureTime + 30);
 }
 
 void DownloadHelperTest::testEd2kServerStateUpdate()
