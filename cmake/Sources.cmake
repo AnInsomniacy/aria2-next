@@ -148,6 +148,8 @@ set(ARIA2_SOURCES_BASE
   src/Ed2kAttribute.h
   src/Ed2kCommand.cc
   src/Ed2kCommand.h
+  src/Ed2kPeerTransfer.cc
+  src/Ed2kPeerTransfer.h
   src/Ed2kKadCommand.cc
   src/Ed2kKadCommand.h
   src/Ed2kKadState.cc

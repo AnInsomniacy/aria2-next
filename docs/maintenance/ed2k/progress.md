@@ -457,3 +457,18 @@ passed, 0 tests failed out of 1`.
 Remaining: Continue CP7 by deciding whether a small peer download-session
 boundary should be split from `Ed2kCommand` before moving to CP9/CP10.
 Blocked: none.
+
+2026-05-18 CP7 partial
+Changed: Split ED2K peer data transfer ownership out of the overloaded
+`Ed2kCommand` path into `Ed2kPeerTransfer`. The new boundary owns expected
+part length lookup, in-flight SegmentMan validation, disk writes, segment
+completion, and MD4 piece verification. `Ed2kCommand` still owns socket,
+packet, and peer protocol state until CP9/CP10 justify a larger session split.
+Verified: `cmake --build --preset default --target aria2_tests` passed after
+CMake regenerated for the new source file. `ctest --preset default
+--output-on-failure -R aria2_tests` passed with `100% tests passed, 0 tests
+failed out of 1`.
+Remaining: Continue CP7 by auditing the remaining peer packet state
+transitions, then either mark CP7 verified or record the exact CP9/CP10
+dependency.
+Blocked: none.

@@ -24,12 +24,12 @@
 #include "DownloadEngine.h"
 #include "DownloadFailureException.h"
 #include "Ed2kAttribute.h"
+#include "Ed2kPeerTransfer.h"
 #include "FileEntry.h"
 #include "LogFactory.h"
 #include "Logger.h"
 #include "message.h"
 #include "Option.h"
-#include "Piece.h"
 #include "PieceStorage.h"
 #include "Request.h"
 #include "RequestGroup.h"
@@ -529,51 +529,17 @@ void Ed2kCommand::schedulePendingPeers()
   schedulePendingEd2kPeers(getRequestGroup(), getDownloadEngine());
 }
 
-int64_t Ed2kCommand::expectedPartLength(int64_t begin)
-{
-  std::vector<std::shared_ptr<Segment>> segments;
-  getSegmentMan()->getInFlightSegment(segments, getCuid());
-  for (const auto& segment : segments) {
-    if (segment->getPositionToWrite() == begin) {
-      return std::min(begin + static_cast<int64_t>(ed2k::BLOCK_LENGTH),
-                      segment->getPosition() + segment->getLength()) -
-             begin;
-    }
-  }
-  return 0;
-}
-
 void Ed2kCommand::handlePartData(int64_t begin, const std::string& data)
 {
-  if (begin < 0 || data.empty()) {
-    throw DL_RETRY_EX("Bad ED2K part range.");
+  ed2k::PeerTransfer transfer(getDownloadContext().get(), getPieceStorage().get(),
+                              getSegmentMan().get(), getCuid());
+  auto completedSegment = transfer.writePartData(begin, data);
+  if (!completedSegment) {
+    return;
   }
-  std::vector<std::shared_ptr<Segment>> segments;
-  getSegmentMan()->getInFlightSegment(segments, getCuid());
-  for (auto& segment : segments) {
-    if (segment->getPositionToWrite() == begin) {
-      getPieceStorage()->getDiskAdaptor()->writeData(
-          reinterpret_cast<const unsigned char*>(data.data()), data.size(),
-          begin);
-      getDownloadContext()->updateDownload(data.size());
-      segment->updateWrittenLength(data.size());
-      if (segment->complete()) {
-        if (verifyPiece(segment->getIndex())) {
-          completeVerifiedSegment(segment->getIndex());
-          clearEd2kPeerRequestedParts(getEd2kAttrs(getDownloadContext()),
-                                      endpoint_);
-        }
-        else {
-          segment->clear(getPieceStorage()->getWrDiskCache());
-          getSegmentMan()->cancelSegment(getCuid(), segment);
-          queueAichRecoveryRequest(segment->getIndex());
-          throw DL_RETRY_EX("Bad ED2K piece hash.");
-        }
-      }
-      return;
-    }
+  if (transfer.completeVerifiedSegment(completedSegment->getIndex())) {
+    clearEd2kPeerRequestedParts(getEd2kAttrs(getDownloadContext()), endpoint_);
   }
-  throw DL_RETRY_EX("Unexpected ED2K part range.");
 }
 
 void Ed2kCommand::handleServerPacket()
@@ -907,7 +873,10 @@ void Ed2kCommand::handlePeerPacket()
                                           attrs->link.hash, is64)) {
       throw DL_RETRY_EX("Bad compressed ED2K part packet.");
     }
-    const auto expectedLength = expectedPartLength(header.begin);
+    ed2k::PeerTransfer transfer(getDownloadContext().get(),
+                                getPieceStorage().get(), getSegmentMan().get(),
+                                getCuid());
+    const auto expectedLength = transfer.expectedPartLength(header.begin);
     if (expectedLength <= 0) {
       throw DL_RETRY_EX("Unexpected compressed ED2K part range.");
     }
@@ -938,47 +907,6 @@ void Ed2kCommand::handlePacket()
   }
   else {
     handlePeerPacket();
-  }
-}
-
-std::string Ed2kCommand::readPiece(size_t index)
-{
-  auto piece = getPieceStorage()->getPiece(index);
-  if (!piece) {
-    return std::string();
-  }
-  std::string data(piece->getLength(), '\0');
-  auto nread = getPieceStorage()->getDiskAdaptor()->readData(
-      reinterpret_cast<unsigned char*>(&data[0]), data.size(),
-      static_cast<int64_t>(index) * getDownloadContext()->getPieceLength());
-  if (nread != static_cast<ssize_t>(data.size())) {
-    return std::string();
-  }
-  return data;
-}
-
-bool Ed2kCommand::verifyPiece(size_t index)
-{
-  auto attrs = getEd2kAttrs(getDownloadContext());
-  if (attrs->pieceHashes.empty() && getDownloadContext()->getNumPieces() == 1) {
-    attrs->pieceHashes.push_back(attrs->link.hash);
-  }
-  if (index >= attrs->pieceHashes.size()) {
-    return false;
-  }
-  auto data = readPiece(index);
-  return !data.empty() && ed2k::md4Digest(data) == attrs->pieceHashes[index];
-}
-
-void Ed2kCommand::completeVerifiedSegment(size_t index)
-{
-  std::vector<std::shared_ptr<Segment>> segments;
-  getSegmentMan()->getInFlightSegment(segments, getCuid());
-  for (auto& segment : segments) {
-    if (segment->getIndex() == index) {
-      getSegmentMan()->completeSegment(getCuid(), segment);
-      break;
-    }
   }
 }
 

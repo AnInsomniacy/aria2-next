@@ -88,10 +88,6 @@ private:
   void addPeers(const std::vector<ed2k::Endpoint>& peers);
   void schedulePendingPeers();
   void handlePartData(int64_t begin, const std::string& data);
-  int64_t expectedPartLength(int64_t begin);
-  bool verifyPiece(size_t index);
-  void completeVerifiedSegment(size_t index);
-  std::string readPiece(size_t index);
 
 protected:
   virtual bool executeInternal() CXX11_OVERRIDE;
