@@ -212,7 +212,7 @@ libgcrypt-devel, libxml2-devel, openssl-devel, cppunit
 
 Source builds require CMake, Ninja, pkg-config, a C++11 compiler, and the
 development packages for the features you want to enable. Modern maintained
-builds require OpenSSL 4.0 or newer when the OpenSSL backend is selected.
+builds require OpenSSL 3.5 LTS or newer when the OpenSSL backend is selected.
 Install the documentation toolchain if you want to build the manual and man
 page::
 
