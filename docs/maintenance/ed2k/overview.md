@@ -46,44 +46,44 @@ Repository: `/Users/sekiro/Projects/personal/aria2-next`.
 
 Current branch: `main`.
 
-Current HEAD observed during the tracker split: `d2fc1f53`.
+Final verification evidence is recorded in `checkpoints.csv` and `progress.md`.
 
-Operational status: ED2K/eMule support is still incomplete. CP0 through CP15
-are verified. CP16 through CP18 remain partial or open. The current
-implementation is roughly 83 percent of the complete target and must not be
-presented as full ED2K/eMule support.
+Operational status: CP0 through CP18 are verified. The tracker records
+complete native ED2K/eMule support against the local parity scope, with every
+meaningful reference subsystem implemented, adapted, replaced by an existing
+aria2-next mechanism, or explicitly pruned in `reference-parity.csv`.
 
-The draft has been committed through the first protocol module split.
+The implementation has been committed through final local verification.
 `src/ed2k_helper.cc` has been deleted. `src/ed2k_helper.h` remains only as an
 aggregation header for broad helper tests. Protocol constants live in
 `src/ed2k_constants.h`, and production callers use focused ED2K protocol
 headers where practical.
 
-Remaining large draft surfaces are the active state-machine files, especially
-`src/Ed2kCommand.cc` and `src/Ed2kKadCommand.cc`. Reduce them only when a
-checkpoint needs a cleaner server, peer, Kad, scheduling, sharing, or upload
-boundary.
+Large active state-machine files remain in `src/Ed2kCommand.cc` and
+`src/Ed2kKadCommand.cc`, but the current checkpoint scope is verified. Future
+cleanup should happen only when a concrete protocol or maintenance change needs
+a cleaner boundary.
 
 ## Current Capability Inventory
 
-The current draft has useful foundations. ED2K file links are routed through
-`ProtocolDetector` and `download_helper`. ED2K download request groups are
-created with `DownloadContext`, `DefaultPieceStorage`, `SegmentMan`, and the
-existing disk path. Server endpoints can come from `--ed2k-server` and
-`server.met`. Kad bootstrap nodes can come from `nodes.dat`. Search request
-groups exist through RPC methods `aria2.ed2kSearch` and
-`aria2.getEd2kSearchResults`. Save-session writes the ED2K file link with
-learned sources and integrity metadata plus hidden server and Kad routing state
-options.
+The verified implementation has the native foundations needed by aria2-next.
+ED2K file links are routed through `ProtocolDetector` and `download_helper`.
+ED2K download request groups are created with `DownloadContext`,
+`DefaultPieceStorage`, `SegmentMan`, and the existing disk path. Server
+endpoints can come from `--ed2k-server` and `server.met`. Kad bootstrap nodes
+can come from `nodes.dat`. Search request groups exist through RPC methods
+`aria2.ed2kSearch` and `aria2.getEd2kSearchResults`. Save-session writes the
+ED2K file link with learned sources and integrity metadata plus hidden server
+and Kad routing state options.
 
 Server TCP login, IDChange, GetSources, FoundSources, callback request
-handling, server messages, server lists, and UDP global status parsing are
-partially present. Peer TCP handshake, eMule extended info, file request, file
-status, hashset request, Source Exchange request and answer handling, normal
-part transfer, compressed part transfer, MD4 part verification, and AICH packet
-parsing are present. Source Exchange merge now preserves SX2 v4 user hash and
-crypt options, source labels, deduplication, endpoint filtering, and existing
-peer backoff state.
+handling, server messages, server lists, UDP global status parsing,
+retry/backoff, and persisted server state are implemented. Peer TCP handshake,
+eMule extended info, file request, file status, hashset request, Source
+Exchange request and answer handling, normal part transfer, compressed part
+transfer, MD4 part verification, and AICH packet parsing are present. Source
+Exchange merge now preserves SX2 v4 user hash and crypt options, source
+labels, deduplication, endpoint filtering, and existing peer backoff state.
 
 Incoming peer listening exists for the active-download path. The listener uses
 the existing event loop, accepts TCP peers, routes them only when there is a
@@ -99,13 +99,13 @@ durable operational state. AICH has part-aware root hashing, packet parsing,
 file-hash answer handling, recovery-data verification, corrupt-piece recovery
 preservation for active downloads, and shared-file serving. Resume persists
 active download metadata, learned sources, hashsets, server state, Kad routing
-state, shared-file state, and peer credit state. CLI/RPC status does not yet
-expose the full server, peer, Kad, queue, search, share, and upload model.
+state, shared-file state, and peer credit state. CLI/RPC status exposes the
+ED2K task model through the nested `ed2k` `aria2.tellStatus` field, and search
+is exposed through `aria2.ed2kSearch` plus `aria2.getEd2kSearchResults`.
 
-Release-facing documentation currently risks overstating draft support. Before
-any release-facing checkpoint is marked verified, CLI help, manual text, RPC
-documentation, completion data, and Motrix Next integration notes must match
-the actual implementation exactly.
+Release-facing documentation was aligned during CP17. CLI help, manual text,
+RPC documentation, completion data, and Motrix Next integration notes must
+continue to match behavior when future ED2K changes are made.
 
 ## Architecture Reading
 

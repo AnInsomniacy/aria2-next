@@ -860,3 +860,15 @@ passed, 0 tests failed out of 1`. `build/default/aria2-next --version` passed
 and reported `Aria2 Next version 2.0.6`.
 Remaining: Complete the final goal audit.
 Blocked: none.
+
+2026-05-18 final audit verified
+Changed: Updated the ED2K overview and CP18 tracker action so the durable
+tracker matches the verified CP0 through CP18 state instead of the older CP16
+through CP18 partial snapshot.
+Verified: Fresh final gate passed under `conda activate global`: `cmake
+--preset default`, `cmake --build --preset default`, `ctest --preset default`,
+and `build/default/aria2-next --version`. Tracker audit reported 19/19
+checkpoints verified and 21/21 parity rows verified. `git diff --check`
+passed.
+Remaining: none.
+Blocked: none.
