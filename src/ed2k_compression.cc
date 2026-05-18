@@ -12,6 +12,7 @@
 /* copyright --> */
 #include "ed2k_compression.h"
 
+#include <cstring>
 #include <limits>
 #include <zlib.h>
 
