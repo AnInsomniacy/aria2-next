@@ -15,6 +15,7 @@
 #include <limits>
 
 #include "DlAbortEx.h"
+#include "base32.h"
 #include "ed2k_hash.h"
 #include "fmt.h"
 #include "util.h"
@@ -61,7 +62,7 @@ uint16_t parsePort(const std::string& value)
 int64_t parseSize(const std::string& value)
 {
   int64_t size = 0;
-  if (!util::parseLLIntNoThrow(size, value) || size < 0) {
+  if (!util::parseLLIntNoThrow(size, value) || size <= 0) {
     throw DL_ABORT_EX(fmt("Bad ED2K file size: %s", value.c_str()));
   }
   return size;
@@ -80,6 +81,16 @@ void validateHashLength(const std::string& hash)
   if (hash.size() != HASH_LENGTH) {
     throw DL_ABORT_EX("Bad ED2K hash length.");
   }
+}
+
+std::string parseAichHash(const std::string& value)
+{
+  auto normalized = util::toUpper(value);
+  auto decoded = base32::decode(normalized.begin(), normalized.end());
+  if (decoded.size() != AICH_HASH_LENGTH) {
+    throw DL_ABORT_EX("Bad ED2K AICH hash.");
+  }
+  return normalized;
 }
 
 Endpoint parseLinkEndpoint(const std::string& value)
@@ -142,7 +153,8 @@ void parseFileOption(Link& link, const std::string& option)
     }
   }
   else if (util::startsWith(option, "h=")) {
-    link.aichHash.assign(option.begin() + 2, option.end());
+    link.aichHash = parseAichHash(std::string(option.begin() + 2,
+                                              option.end()));
   }
   else if (util::startsWith(option, "sources,")) {
     std::vector<Scip> sources;

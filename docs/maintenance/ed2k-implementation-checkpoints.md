@@ -319,7 +319,7 @@ architecture decision.
 | CP1 | verified | Stabilize current ED2K tests | The two known ED2K failures were traced and fixed. Source Exchange now serializes unknown source servers as `0.0.0.0:0`; the UDP server status test waits for the command socket to become readable before executing the receive path. | Root cause is traced for Source Exchange answer serialization and UDP server status test scheduling. Fixes are minimal and do not hide failures. | `cmake --build --preset default --target aria2_tests`; `ctest --preset default --output-on-failure -R aria2_tests`. |
 | CP2 | verified | Reference parity audit | The parity ledger now classifies the meaningful reference subsystems as port, adapt, replace, or prune. The pruning ledger records daemon/UI/runtime/deprecated surfaces that must not be ported. | Audit all reference areas in the parity ledger. Record a decision for each meaningful subsystem. Add pruned items only with evidence and reason. | Reference inspection with `rg`/`sed`; documentation review; `git diff --check docs/maintenance/ed2k-implementation-checkpoints.md`. |
 | CP3 | verified | Protocol module boundaries | `ed2k_helper.cc` has been deleted, `ed2k_helper.h` is an aggregation header only, constants live in `ed2k_constants.h`, and production callers include narrow ED2K protocol headers. | Split only the necessary helpers into focused modules with no behavior drift. CMake source inventory remains accurate. | ED2K helper tests pass before and after split. |
-| CP4 | partial | Link support | File links, options, part hashes, AICH hash, source hash, crypt options, server links, serverlist links, and nodeslist links have parser coverage in draft helpers. | Parsing and serialization are complete for file/server/serverlist/nodeslist links, part hashes, AICH hashes, inline sources, source hashes, crypt options, safe output filenames, and all reference link variants that are not pruned. | Focused link parser tests plus `ProtocolDetectorTest`. |
+| CP4 | verified | Link support | File links, part hashes, AICH hashes, inline sources, source hashes, crypt options, server links, serverlist links, nodeslist links, encoded separators, percent-decoded UTF-8 names, safe output filenames, positive file sizes, and malformed hash rejection are covered. | Parsing and serialization are complete for file/server/serverlist/nodeslist links, part hashes, AICH hashes, inline sources, source hashes, crypt options, safe output filenames, and all reference link variants that are not pruned. | Focused link parser tests plus `ProtocolDetectorTest`. |
 | CP5 | partial | RequestGroup, disk, and resume spine | ED2K request groups use `DownloadContext`, `DefaultPieceStorage`, `SegmentMan`, disk adaptor, and control file paths. Session writes file link plus limited server/Kad state. | ED2K downloads and searches start through existing request group paths. Resume is restart-safe for file metadata, piece state, hashset state, AICH state, sources, server state, Kad state, shared files, and credits where implemented. | `SessionSerializerTest`; focused ED2K resume test; no regression in normal downloads. |
 | CP6 | partial | Server TCP and UDP support | Login, IDChange, GetSources, FoundSources, callback request, server status, server message, server list, and UDP global status are partially present. | Direct servers and server.met load correctly. Server login, HighID/LowID, status/messages, GetSources/FoundSources, callback, server list, UDP global status, retry/backoff, and persisted server state are correct and scheduled. | Focused server packet tests and local command simulation. |
 | CP7 | partial | Peer outbound download session | Outgoing peer TCP, hello, eMule info, file request/status, hashset, accept upload, queue rank, normal parts, compressed parts, and part hash verification are partially present. | Peer state machine handles 32-bit and 64-bit requests, normal and compressed parts, out-of-parts, cancel transfer, duplicate rejection, failure scoring, reconnect backoff, and corrupt piece retry. | Focused peer command tests with local socket pairs and disk-backed piece verification. |
@@ -505,4 +505,18 @@ Verified: `cmake --build --preset default --target aria2_tests` passed.
 `100% tests passed, 0 tests failed out of 1`. `git diff --check` passed.
 Remaining: CP4 should finish the ED2K link support audit and only add compact
 parser coverage for real missing link variants.
+Blocked: none.
+
+2026-05-18 CP4 verified
+Changed: Audited ED2K link behavior against the local goed2k-core, aMule,
+jed2k, and libed2k-qmule references. Confirmed support for file, server,
+serverlist, nodeslist, percent-encoded separators, UTF-8 names, part hashes,
+AICH master hashes, inline sources, source crypt options, and source hashes.
+Tightened file links to reject zero-length files and invalid AICH base32 data
+before they can create a download context or persisted session link.
+Verified: `cmake --build --preset default --target aria2_tests` passed.
+`ctest --preset default --output-on-failure -R aria2_tests` passed with
+`100% tests passed, 0 tests failed out of 1`. `git diff --check` passed.
+Remaining: CP5 should harden RequestGroup, disk, and resume state around the
+existing ED2K link metadata without adding broad test scaffolding.
 Blocked: none.

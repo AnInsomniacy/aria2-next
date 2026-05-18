@@ -175,6 +175,13 @@ void Ed2kHelperTest::testParseRejectsMalformedLinks()
       RecoverableException);
   CPPUNIT_ASSERT_THROW(parseLink("ed2k://|file|bad.bin|1|not-a-hash|/"),
                        RecoverableException);
+  CPPUNIT_ASSERT_THROW(
+      parseLink("ed2k://|file|empty.bin|0|0123456789abcdef0123456789abcdef|/"),
+      RecoverableException);
+  CPPUNIT_ASSERT_THROW(
+      parseLink("ed2k://|file|bad-aich.bin|1|"
+                "0123456789abcdef0123456789abcdef|h=ABC|/"),
+      RecoverableException);
   CPPUNIT_ASSERT_THROW(parseLink("ed2k://|server|127.0.0.1|70000|/"),
                        RecoverableException);
 }
