@@ -129,6 +129,11 @@ RequestGroupMan::RequestGroupMan(
       numStoppedTotal_(0)
 {
   setupOptimizeConcurrentDownloads();
+  const auto now = std::chrono::duration_cast<std::chrono::seconds>(
+                       global::wallclock().getTime().time_since_epoch())
+                       .count();
+  ed2kSharedStore_->loadOptionState(option_);
+  ed2kSharedStore_->importOptionFiles(option_, now);
   appendReservedGroup(reservedGroups_, requestGroups.begin(),
                       requestGroups.end());
 }

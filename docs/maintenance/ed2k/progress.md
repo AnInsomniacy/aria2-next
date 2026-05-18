@@ -718,3 +718,19 @@ restart-safe shared metadata persistence, incoming listener matching for
 shared/completed files, and shared-file status, hashset, Source Exchange,
 AICH, and part response serving.
 Blocked: none.
+
+2026-05-18 CP13 partial
+Changed: Added imported shared-file indexing and restart-safe shared metadata.
+`--ed2k-share-file` imports completed local files into the native shared store,
+hashes them with ED2K MD4 piece/root hashes and AICH root metadata, and records
+origin and hash time. `SessionSerializer` now writes validated shared files as
+hidden `ed2k-shared-file-state` records, and `RequestGroupMan` restores those
+records on startup while rejecting missing or size-mismatched files.
+Verified: `cmake --build --preset default --target aria2_tests` passed with
+the existing local Tcl/Tk search-path linker warning. `ctest --preset default
+--output-on-failure -R aria2_tests` passed with `100% tests passed, 0 tests
+failed out of 1`. `git diff --check` passed.
+Remaining: CP13 still needs incoming listener matching for shared/completed
+files and shared-file status, hashset, Source Exchange, AICH, and part response
+serving.
+Blocked: none.

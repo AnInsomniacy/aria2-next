@@ -22,6 +22,7 @@
 namespace aria2 {
 
 struct DownloadResult;
+class Option;
 
 namespace ed2k {
 
@@ -49,6 +50,8 @@ private:
 public:
   bool addOrReplace(SharedFile file);
   bool addCompletedDownload(const DownloadResult& result, int64_t now);
+  size_t loadOptionState(const Option* option);
+  size_t importOptionFiles(const Option* option, int64_t now);
 
   const SharedFile* findByHash(const std::string& hash) const;
   std::vector<SharedFile> list() const { return files_; }
@@ -56,6 +59,10 @@ public:
 };
 
 bool isValidSharedFile(const SharedFile& file);
+bool importSharedFile(SharedFile& result, const std::string& path,
+                      int64_t now);
+std::string createSharedFileStatePayload(const SharedFile& file);
+bool parseSharedFileStatePayload(SharedFile& file, const std::string& payload);
 
 } // namespace ed2k
 

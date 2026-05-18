@@ -517,6 +517,8 @@
   _(" --ed2k-node-list=FILE        Load ED2K Kad bootstrap nodes from a local nodes.dat file.")
 #define TEXT_ED2K_LISTEN_PORT                                           \
   _(" --ed2k-listen-port=PORT     Set TCP port number for incoming ED2K peer connections.")
+#define TEXT_ED2K_SHARE_FILE                                            \
+  _(" --ed2k-share-file=FILE      Import a completed local file into the ED2K shared store.")
 #define TEXT_AUTO_SAVE_INTERVAL                                         \
   _(" --auto-save-interval=SEC     Save a control file(*.aria2) every SEC seconds.\n" \
     "                              If 0 is given, a control file is not saved during\n" \

@@ -861,6 +861,7 @@ void removeOneshotOption(const std::shared_ptr<Option>& option)
   option->remove(PREF_PAUSE);
   option->remove(PREF_GID);
   option->remove(PREF_ED2K_SERVER_STATE);
+  option->remove(PREF_ED2K_SHARED_FILE_STATE);
   option->remove(PREF_ED2K_KAD_ROUTING_STATE);
 }
 

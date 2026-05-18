@@ -6,8 +6,11 @@
 #include "Ed2kAttribute.h"
 #include "File.h"
 #include "FileEntry.h"
+#include "Option.h"
 #include "TestUtil.h"
 #include "ed2k_link.h"
+#include "prefs.h"
+#include "util.h"
 
 namespace aria2 {
 
@@ -17,11 +20,15 @@ class Ed2kSharedStoreTest : public CppUnit::TestFixture {
   CPPUNIT_TEST_SUITE(Ed2kSharedStoreTest);
   CPPUNIT_TEST(testAddCompletedDownload);
   CPPUNIT_TEST(testRejectMissingOrWrongSizeFile);
+  CPPUNIT_TEST(testSharedFileStatePayload);
+  CPPUNIT_TEST(testImportOptionFile);
   CPPUNIT_TEST_SUITE_END();
 
 public:
   void testAddCompletedDownload();
   void testRejectMissingOrWrongSizeFile();
+  void testSharedFileStatePayload();
+  void testImportOptionFile();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(Ed2kSharedStoreTest);
@@ -99,6 +106,54 @@ void Ed2kSharedStoreTest::testRejectMissingOrWrongSizeFile()
   CPPUNIT_ASSERT(!store.addCompletedDownload(
       *createEd2kResult(wrongSizePath, 123, hash), 1000));
   CPPUNIT_ASSERT_EQUAL((size_t)0, store.size());
+}
+
+void Ed2kSharedStoreTest::testSharedFileStatePayload()
+{
+  const std::string path = A2_TEST_OUT_DIR "/ed2k-shared-store-state.bin";
+  createFile(path, 123);
+
+  SharedFile file;
+  file.hash.assign(16, '\x55');
+  file.aichRootHash.assign(20, '\x66');
+  file.pieceHashes.push_back(file.hash);
+  file.path = path;
+  file.name = "state file.bin";
+  file.size = 123;
+  file.lastHashTime = 3000;
+  file.origin = SharedOrigin::IMPORTED_FILE;
+  file.completed = true;
+
+  SharedFile parsed;
+  CPPUNIT_ASSERT(
+      parseSharedFileStatePayload(parsed, createSharedFileStatePayload(file)));
+  CPPUNIT_ASSERT_EQUAL(file.hash, parsed.hash);
+  CPPUNIT_ASSERT_EQUAL(file.aichRootHash, parsed.aichRootHash);
+  CPPUNIT_ASSERT_EQUAL(file.pieceHashes[0], parsed.pieceHashes[0]);
+  CPPUNIT_ASSERT_EQUAL(path, parsed.path);
+  CPPUNIT_ASSERT_EQUAL(std::string("state file.bin"), parsed.name);
+  CPPUNIT_ASSERT_EQUAL((int64_t)123, parsed.size);
+  CPPUNIT_ASSERT_EQUAL((int64_t)3000, parsed.lastHashTime);
+  CPPUNIT_ASSERT(parsed.origin == SharedOrigin::IMPORTED_FILE);
+}
+
+void Ed2kSharedStoreTest::testImportOptionFile()
+{
+  const std::string path = A2_TEST_OUT_DIR "/ed2k-shared-store-import.bin";
+  createFile(path, 64);
+
+  Option option;
+  option.put(PREF_ED2K_SHARE_FILE, path + "\n");
+  SharedStore store;
+  CPPUNIT_ASSERT_EQUAL((size_t)1, store.importOptionFiles(&option, 4000));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, store.size());
+  auto files = store.list();
+  CPPUNIT_ASSERT_EQUAL(path, files[0].path);
+  CPPUNIT_ASSERT_EQUAL(File(path).getBasename(), files[0].name);
+  CPPUNIT_ASSERT_EQUAL((int64_t)64, files[0].size);
+  CPPUNIT_ASSERT_EQUAL((int64_t)4000, files[0].lastHashTime);
+  CPPUNIT_ASSERT(files[0].origin == SharedOrigin::IMPORTED_FILE);
+  CPPUNIT_ASSERT_EQUAL(ed2k::md4Digest(readFile(path)), files[0].hash);
 }
 
 } // namespace ed2k

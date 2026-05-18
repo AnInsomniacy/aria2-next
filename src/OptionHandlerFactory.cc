@@ -217,10 +217,27 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
   }
   {
     OptionHandler* op(new CumulativeOptionHandler(
+        PREF_ED2K_SHARE_FILE, TEXT_ED2K_SHARE_FILE, NO_DEFAULT_VALUE, "\n",
+        PATH_TO_FILE));
+    op->addTag(TAG_ADVANCED);
+    op->setInitialOption(true);
+    op->setCumulative(true);
+    handlers.push_back(op);
+  }
+  {
+    OptionHandler* op(new CumulativeOptionHandler(
         PREF_ED2K_SERVER_STATE, NO_DESCRIPTION, NO_DEFAULT_VALUE, "\n"));
     op->setInitialOption(true);
     op->setCumulative(true);
     op->setChangeOptionForReserved(true);
+    op->hide();
+    handlers.push_back(op);
+  }
+  {
+    OptionHandler* op(new CumulativeOptionHandler(
+        PREF_ED2K_SHARED_FILE_STATE, NO_DESCRIPTION, NO_DEFAULT_VALUE, "\n"));
+    op->setInitialOption(true);
+    op->setCumulative(true);
     op->hide();
     handlers.push_back(op);
   }
