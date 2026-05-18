@@ -51,6 +51,7 @@ private:
   void init();
   void queueBootstrap();
   void queueRefresh();
+  void queueFirewalledCheck();
   void queueServerStatusPoll();
   void queueSourceSearch();
   void queueKeywordSearch();

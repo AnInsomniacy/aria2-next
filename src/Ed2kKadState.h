@@ -57,6 +57,7 @@ enum class KadTransactionPurpose {
   SOURCE_LOOKUP,
   KEYWORD_LOOKUP,
   REFRESH,
+  FIREWALLED_CHECK,
 };
 
 enum class KadTraversalKind {

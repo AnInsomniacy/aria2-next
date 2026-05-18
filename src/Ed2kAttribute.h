@@ -48,6 +48,9 @@ struct Ed2kAttribute : public ContextAttribute {
   ed2k::KadSourceIndex kadSourceIndex;
   std::unique_ptr<ed2k::KadTraversal> kadSourceTraversal;
   std::unique_ptr<ed2k::KadTraversal> kadKeywordTraversal;
+  int64_t lastKadFirewalledCheck = 0;
+  std::vector<std::string> kadObservedAddresses;
+  bool kadFirewalled = true;
   size_t nextServerIndex = 0;
   bool searchActive = false;
   bool searchMoreResults = false;

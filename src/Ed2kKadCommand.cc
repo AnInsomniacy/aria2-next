@@ -12,6 +12,7 @@
 /* copyright --> */
 #include "Ed2kKadCommand.h"
 
+#include <algorithm>
 #include <array>
 
 #include "DlAbortEx.h"
@@ -60,6 +61,7 @@ ed2k::Endpoint toEndpoint(const ed2k::KadContact& contact)
 }
 
 constexpr int64_t SERVER_STATUS_POLL_INTERVAL = 45;
+constexpr int64_t FIREWALLED_CHECK_INTERVAL = 3600;
 
 int64_t peerRetryWait(const DownloadEngine* e)
 {
@@ -227,6 +229,42 @@ void Ed2kKadCommand::queueRefresh()
     tx.expectedOpcode = ed2k::KAD_RES;
     tx.targetId = targetId;
     tx.sentTime = nowSeconds();
+    attrs->kadTransactions.add(tx);
+  }
+}
+
+void Ed2kKadCommand::queueFirewalledCheck()
+{
+  auto attrs = getEd2kAttrs(requestGroup_->getDownloadContext());
+  if (!attrs->kadRoutingTable || attrs->kadRoutingTable->liveSize() == 0) {
+    return;
+  }
+  const auto tcpPort =
+      static_cast<uint16_t>(e_->getOption()->getAsInt(PREF_ED2K_LISTEN_PORT));
+  if (tcpPort == 0) {
+    return;
+  }
+  const auto now = nowSeconds();
+  if (attrs->lastKadFirewalledCheck != 0 &&
+      now - attrs->lastKadFirewalledCheck < FIREWALLED_CHECK_INTERVAL) {
+    return;
+  }
+  auto contacts = attrs->kadRoutingTable->findClosest(clientKadId(e_), 8, true);
+  if (contacts.empty()) {
+    return;
+  }
+  attrs->lastKadFirewalledCheck = now;
+  for (const auto& contact : contacts) {
+    const auto endpoint = toEndpoint(contact);
+    queuePacket(endpoint, ed2k::KAD_FIREWALLED_REQ,
+                ed2k::createKadFirewalledRequestPayload(tcpPort,
+                                                         clientKadId(e_), 0));
+    ed2k::KadTransaction tx;
+    tx.endpoint = endpoint;
+    tx.contact = contact;
+    tx.purpose = ed2k::KadTransactionPurpose::FIREWALLED_CHECK;
+    tx.expectedOpcode = ed2k::KAD_FIREWALLED_RES;
+    tx.sentTime = now;
     attrs->kadTransactions.add(tx);
   }
 }
@@ -515,6 +553,23 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
     }
     return;
   }
+  if (opcode == ed2k::KAD_FIREWALLED_RES) {
+    ed2k::KadFirewalledResponse response;
+    if (!ed2k::parseKadFirewalledResponsePayload(response, payload)) {
+      return;
+    }
+    ed2k::KadTransaction tx;
+    if (attrs->kadTransactions.complete(endpoint, opcode, tx)) {
+      attrs->kadRoutingTable->nodeSeen(tx.contact, nowSeconds());
+    }
+    if (std::find(attrs->kadObservedAddresses.begin(),
+                  attrs->kadObservedAddresses.end(),
+                  response.ipAddress) == attrs->kadObservedAddresses.end()) {
+      attrs->kadObservedAddresses.push_back(response.ipAddress);
+    }
+    attrs->kadFirewalled = response.ipAddress.empty();
+    return;
+  }
   if (opcode == ed2k::KAD_PUBLISH_SOURCE_REQ) {
     ed2k::KadPublishSourceRequest request;
     if (!ed2k::parseKadPublishSourceRequestPayload(request, payload)) {
@@ -590,6 +645,7 @@ bool Ed2kKadCommand::execute()
       queueSourceSearch();
     }
     queueRefresh();
+    queueFirewalledCheck();
     sendQueuedPackets();
   }
   catch (DlAbortEx& e) {

@@ -650,3 +650,20 @@ passed with `100% tests passed, 0 tests failed out of 1`, and `git diff
 Remaining: CP12 still needs outbound source publish, active firewalled checks,
 and durable operational state.
 Blocked: none.
+
+2026-05-18 CP12 partial
+Changed: Added active Kad firewalled probes on the existing UDP command path.
+When known Kad nodes are available and the ED2K listen port is enabled,
+`Ed2kKadCommand` sends `KAD_FIREWALLED_REQ` to close contacts, tracks the
+transaction as a firewalled check, records observed addresses from
+`KAD_FIREWALLED_RES`, and updates request-level firewalled state without adding
+a second traversal engine.
+Verified: The focused local UDP firewalled probe test failed before the change
+because no `KAD_FIREWALLED_REQ` was sent. After the change, `cmake --build
+--preset default --target aria2_tests` passed with the existing local Tcl/Tk
+search-path linker warning, `ctest --preset default --output-on-failure -R
+aria2_tests` passed with `100% tests passed, 0 tests failed out of 1`, and
+`git diff --check` passed.
+Remaining: CP12 still needs outbound source publish and durable operational
+state.
+Blocked: none.
