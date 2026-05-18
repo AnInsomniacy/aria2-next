@@ -235,3 +235,18 @@ Verified: `cmake --build --preset default --target aria2_tests` passed.
 Remaining: Continue CP5 persistence coverage for ED2K sources, Kad state,
 shared files, and credits without broad test scaffolding.
 Blocked: none.
+
+2026-05-18 CP5 verified
+Changed: Persisted runtime-learned ED2K peers as inline ED2K link sources
+during save-session, deduplicating against original link sources. Updated the
+manual and maintenance overview so ED2K save-session documentation names the
+implemented active download state exactly. Recorded that shared files and peer
+credits remain CP13 and CP14 ownership because those subsystems do not exist
+yet.
+Verified: A focused session serializer assertion failed before the fix because
+the learned source was absent from the saved ED2K link. After the fix,
+`cmake --build --preset default --target aria2_tests` passed and
+`ctest --preset default --output-on-failure -R aria2_tests` passed with
+`100% tests passed, 0 tests failed out of 1`.
+Remaining: CP6 server TCP and UDP support is the next checkpoint.
+Blocked: none.

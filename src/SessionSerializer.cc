@@ -164,6 +164,22 @@ bool writeUri(IOFile& fp, const std::string& uri)
          fp.write("\t", 1) == 1;
 }
 
+void addUniqueEd2kSource(std::vector<ed2k::Endpoint>& sources,
+                         const ed2k::Endpoint& source)
+{
+  if (source.host.empty() || source.port == 0) {
+    return;
+  }
+  auto i = std::find_if(sources.begin(), sources.end(),
+                        [&](const ed2k::Endpoint& item) {
+                          return item.host == source.host &&
+                                 item.port == source.port;
+                        });
+  if (i == sources.end()) {
+    sources.push_back(source);
+  }
+}
+
 template <typename InputIterator, class UnaryPredicate>
 bool writeUri(IOFile& fp, InputIterator first, InputIterator last,
               UnaryPredicate& filter)
@@ -226,6 +242,9 @@ bool writeDownloadResult(IOFile& fp, std::set<a2_gid_t>& metainfoCache,
       }
       if (!attrs->aichRootHash.empty()) {
         link.aichHash = attrs->aichRootHash;
+      }
+      for (const auto& peer : attrs->peers) {
+        addUniqueEd2kSource(link.sources, peer);
       }
       if (!writeUri(fp, ed2k::toFileLink(link)) ||
           fp.write("\n", 1) != 1 ||

@@ -178,6 +178,10 @@ void SessionSerializerTest::testSaveEd2kDownload()
   attrs->pieceHashes = {
       util::fromHex(firstPieceHash.begin(), firstPieceHash.end()),
       util::fromHex(secondPieceHash.begin(), secondPieceHash.end())};
+  ed2k::Endpoint learnedPeer;
+  learnedPeer.host = "203.0.113.20";
+  learnedPeer.port = 4662;
+  attrs->peers.push_back(learnedPeer);
   attrs->kadRoutingTable =
       std::make_shared<ed2k::KadRoutingTable>(attrs->link.hash);
   ed2k::ServerState serverState;
@@ -216,6 +220,8 @@ void SessionSerializerTest::testSaveEd2kDownload()
                  std::string::npos);
   CPPUNIT_ASSERT(line.find("33333333333333333333333333333333:"
                            "44444444444444444444444444444444") !=
+                 std::string::npos);
+  CPPUNIT_ASSERT(line.find("sources,203.0.113.20:4662") !=
                  std::string::npos);
   std::getline(in, line);
   CPPUNIT_ASSERT_EQUAL(

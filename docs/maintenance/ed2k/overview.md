@@ -72,8 +72,9 @@ created with `DownloadContext`, `DefaultPieceStorage`, `SegmentMan`, and the
 existing disk path. Server endpoints can come from `--ed2k-server` and
 `server.met`. Kad bootstrap nodes can come from `nodes.dat`. Search request
 groups exist through RPC methods `aria2.ed2kSearch` and
-`aria2.getEd2kSearchResults`. Save-session writes the ED2K file link plus
-limited hidden server and Kad routing state options.
+`aria2.getEd2kSearchResults`. Save-session writes the ED2K file link with
+learned sources and integrity metadata plus hidden server and Kad routing state
+options.
 
 Server TCP login, IDChange, GetSources, FoundSources, callback request
 handling, server messages, server lists, and UDP global status parsing are
@@ -89,7 +90,9 @@ packet helpers, bootstrap, hello, and simple search requests, but it lacks a
 full traversal engine, publish loop, firewalled checks, routing refresh policy,
 and durable operational state. AICH has hashing and packet parsing, but not
 full tree verification, trust handling, or recovery application. Resume
-persists only limited ED2K state. CLI/RPC status does not yet expose the full
+persists active download metadata, learned sources, hashsets, server state, and
+Kad routing state, but not future sharing or peer credit state. CLI/RPC status
+does not yet expose the full
 server, peer, Kad, queue, search, share, and upload model.
 
 Release-facing documentation currently risks overstating draft support. Before

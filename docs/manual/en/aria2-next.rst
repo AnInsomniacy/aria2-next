@@ -670,9 +670,10 @@ ED2K Specific Options
     ED2K support currently includes native file links, server source
     discovery, Source Exchange, Kad bootstrap/source/search discovery,
     compressed part decoding, MD4 part verification, and AICH metadata
-    exchange. Save-session now preserves Kad routing state for ED2K tasks.
-    Sharing, upload queues, peer credits, and broader ED2K state persistence
-    are still being completed.
+    exchange. Save-session preserves ED2K link metadata, learned sources,
+    learned hashsets, server state, and Kad routing state for active ED2K
+    tasks. Sharing, upload queues, peer credits, and their persisted state are
+    still being completed.
 
 BitTorrent Specific Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
