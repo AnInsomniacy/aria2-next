@@ -74,7 +74,11 @@ PeerTransfer::writePartData(int64_t begin, const std::string& data)
       return nullptr;
     }
     if (!verifyPiece(segment->getIndex())) {
+      const auto pieceData = readPiece(segment->getIndex());
       segment->clear(pieceStorage_->getWrDiskCache());
+      if (!pieceData.empty()) {
+        applyAichRecovery(segment->getPiece(), pieceData);
+      }
       segmentMan_->cancelSegment(cuid_, segment);
       throw DL_RETRY_EX("Bad ED2K piece hash.");
     }
@@ -82,6 +86,48 @@ PeerTransfer::writePartData(int64_t begin, const std::string& data)
   }
 
   throw DL_RETRY_EX("Unexpected ED2K part range.");
+}
+
+bool PeerTransfer::applyAichRecovery(const std::shared_ptr<Piece>& piece,
+                                     const std::string& data) const
+{
+  auto attrs = getEd2kAttrs(dctx_);
+  if (!piece || attrs->aichRootHash.empty()) {
+    return false;
+  }
+
+  auto recoverySet =
+      std::find_if(attrs->aichRecoverySets.begin(),
+                   attrs->aichRecoverySets.end(),
+                   [&](const AichRecoverySet& item) {
+                     return item.partIndex == piece->getIndex();
+                   });
+  if (recoverySet == attrs->aichRecoverySets.end()) {
+    return false;
+  }
+
+  bool keptAny = false;
+  for (const auto& block : recoverySet->blocks) {
+    if (block.offset + block.length > data.size() ||
+        aichHash(data.data() + block.offset, block.length) != block.hash) {
+      continue;
+    }
+    const auto begin = block.offset / piece->getBlockLength();
+    const auto end =
+        (block.offset + block.length + piece->getBlockLength() - 1) /
+        piece->getBlockLength();
+    for (auto i = begin; i < end && i < piece->countBlock(); ++i) {
+      const auto blockBegin = i * piece->getBlockLength();
+      const auto blockEnd =
+          blockBegin + static_cast<size_t>(piece->getBlockLength(i));
+      if (blockBegin >= block.offset &&
+          blockEnd <= block.offset + block.length) {
+        piece->completeBlock(i);
+        keptAny = true;
+      }
+    }
+  }
+  return keptAny;
 }
 
 bool PeerTransfer::completeVerifiedSegment(size_t index)

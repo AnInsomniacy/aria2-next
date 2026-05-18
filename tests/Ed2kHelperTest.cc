@@ -36,7 +36,9 @@ class Ed2kHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEmuleInfoPayload);
   CPPUNIT_TEST(testUdpReaskPayloads);
   CPPUNIT_TEST(testAichPayloads);
+  CPPUNIT_TEST(testAichRecoveryData);
   CPPUNIT_TEST(testAichHashTree);
+  CPPUNIT_TEST(testAichHashTreeKeepsPartLevel);
   CPPUNIT_TEST(testKadPacketPayloads);
   CPPUNIT_TEST(testKadSearchPublishAndFirewallPayloads);
   CPPUNIT_TEST(testKadRoutingStatePayload);
@@ -68,7 +70,9 @@ public:
   void testEmuleInfoPayload();
   void testUdpReaskPayloads();
   void testAichPayloads();
+  void testAichRecoveryData();
   void testAichHashTree();
+  void testAichHashTreeKeepsPartLevel();
   void testKadPacketPayloads();
   void testKadSearchPublishAndFirewallPayloads();
   void testKadRoutingStatePayload();
@@ -845,6 +849,48 @@ void Ed2kHelperTest::testAichPayloads()
                                           std::string(16, '\0')));
 }
 
+void Ed2kHelperTest::testAichRecoveryData()
+{
+  std::string block0(EMBLOCK_LENGTH, 'a');
+  std::string block1(EMBLOCK_LENGTH, 'b');
+  std::string block2(100, 'c');
+  const auto hash0 = aichHash(block0);
+  const auto hash1 = aichHash(block1);
+  const auto hash2 = aichHash(block2);
+  const auto data = block0 + block1 + block2;
+  const auto root = aichRootHash(data.data(), data.size());
+  std::string recovery;
+  recovery += packUInt16(3);
+  recovery += packUInt16(7);
+  recovery += hash0;
+  recovery += packUInt16(6);
+  recovery += hash1;
+  recovery += packUInt16(2);
+  recovery += hash2;
+  recovery += packUInt16(0);
+
+  AichRecoveryData parsed;
+  CPPUNIT_ASSERT(parseAichRecoveryData(parsed, recovery,
+                                       block0.size() + block1.size() +
+                                           block2.size(),
+                                       false));
+  CPPUNIT_ASSERT(verifyAichRecoveryData(
+      parsed, root, block0.size() + block1.size() + block2.size(), 0));
+  AichRecoverySet recoverySet;
+  CPPUNIT_ASSERT(buildAichRecoverySet(
+      recoverySet, parsed, root,
+      block0.size() + block1.size() + block2.size(), 0));
+  CPPUNIT_ASSERT_EQUAL((size_t)3, recoverySet.blocks.size());
+  CPPUNIT_ASSERT_EQUAL(hash1, recoverySet.blocks[1].hash);
+  recovery[4] ^= 0x01;
+  CPPUNIT_ASSERT(parseAichRecoveryData(parsed, recovery,
+                                       block0.size() + block1.size() +
+                                           block2.size(),
+                                       false));
+  CPPUNIT_ASSERT(!verifyAichRecoveryData(
+      parsed, root, block0.size() + block1.size() + block2.size(), 0));
+}
+
 void Ed2kHelperTest::testAichHashTree()
 {
   std::string data;
@@ -869,6 +915,19 @@ void Ed2kHelperTest::testAichHashTree()
 
   CPPUNIT_ASSERT_THROW(aichRootHash(std::vector<std::string>{std::string(19, '\0')}),
                        RecoverableException);
+}
+
+void Ed2kHelperTest::testAichHashTreeKeepsPartLevel()
+{
+  std::string firstPart(PIECE_LENGTH, 'a');
+  std::string secondPart(EMBLOCK_LENGTH, 'b');
+  const auto expected =
+      aichHash(aichRootHash(firstPart.data(), firstPart.size()) +
+               aichRootHash(secondPart.data(), secondPart.size()));
+  const auto data = firstPart + secondPart;
+  const auto flatRoot = aichRootHash(data.data(), data.size());
+
+  CPPUNIT_ASSERT_EQUAL(expected, flatRoot);
 }
 
 void Ed2kHelperTest::testKadPacketPayloads()

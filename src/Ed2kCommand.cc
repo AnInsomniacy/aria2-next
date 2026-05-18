@@ -97,6 +97,22 @@ int64_t nextServerSourceRequestTime()
              .count() +
          60;
 }
+
+void storeAichRecoverySet(Ed2kAttribute* attrs,
+                          const ed2k::AichRecoverySet& recoverySet)
+{
+  auto existing = std::find_if(
+      attrs->aichRecoverySets.begin(), attrs->aichRecoverySets.end(),
+      [&](const ed2k::AichRecoverySet& item) {
+        return item.partIndex == recoverySet.partIndex;
+      });
+  if (existing == attrs->aichRecoverySets.end()) {
+    attrs->aichRecoverySets.push_back(recoverySet);
+  }
+  else {
+    *existing = recoverySet;
+  }
+}
 } // namespace
 
 Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
@@ -806,6 +822,29 @@ void Ed2kCommand::handlePeerPacket()
       ed2k::AichAnswer answer;
       if (!ed2k::parseAichAnswerPayload(answer, body_, attrs->link.hash)) {
         throw DL_RETRY_EX("Bad ED2K AICH answer.");
+      }
+      if (!answer.failed) {
+        if (answer.rootHash != attrs->aichRootHash) {
+          throw DL_RETRY_EX("Bad ED2K AICH recovery root.");
+        }
+        const auto partSize =
+            std::min<int64_t>(ed2k::PIECE_LENGTH,
+                              getDownloadContext()->getTotalLength() -
+                                  static_cast<int64_t>(answer.partIndex) *
+                                      ed2k::PIECE_LENGTH);
+        ed2k::AichRecoveryData recovery;
+        ed2k::AichRecoverySet recoverySet;
+        if (partSize <= 0 ||
+            !ed2k::parseAichRecoveryData(
+                recovery, answer.recoveryData, static_cast<size_t>(partSize),
+                use64BitOffsets_) ||
+            !ed2k::buildAichRecoverySet(
+                recoverySet, recovery, attrs->aichRootHash,
+                static_cast<size_t>(getDownloadContext()->getTotalLength()),
+                answer.partIndex)) {
+          throw DL_RETRY_EX("Bad ED2K AICH recovery data.");
+        }
+        storeAichRecoverySet(attrs, recoverySet);
       }
       break;
     }

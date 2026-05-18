@@ -15,6 +15,7 @@
 
 #include "ContextAttribute.h"
 #include "Ed2kKadState.h"
+#include "ed2k_aich.h"
 #include "ed2k_link.h"
 #include "ed2k_peer.h"
 #include "ed2k_search.h"
@@ -39,6 +40,7 @@ struct Ed2kAttribute : public ContextAttribute {
   std::vector<ed2k::PeerState> peerStates;
   std::vector<std::string> pieceHashes;
   std::string aichRootHash;
+  std::vector<ed2k::AichRecoverySet> aichRecoverySets;
   ed2k::SearchQuery searchQuery;
   std::vector<ed2k::SearchResultEntry> searchResults;
   std::shared_ptr<ed2k::KadRoutingTable> kadRoutingTable;

@@ -22,6 +22,7 @@
 namespace aria2 {
 
 class DownloadContext;
+class Piece;
 class PieceStorage;
 class SegmentMan;
 class Segment;
@@ -37,6 +38,8 @@ private:
 
   std::string readPiece(size_t index) const;
   bool verifyPiece(size_t index) const;
+  bool applyAichRecovery(const std::shared_ptr<Piece>& piece,
+                         const std::string& data) const;
 
 public:
   PeerTransfer(DownloadContext* dctx, PieceStorage* pieceStorage,

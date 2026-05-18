@@ -151,6 +151,25 @@ void validateAichHashLength(const std::string& hash)
   }
 }
 
+std::string aichRootHashForRange(const char* data, size_t length,
+                                 size_t baseSize, bool leftBranch)
+{
+  if (length <= baseSize) {
+    return aichHash(data, length);
+  }
+  const auto blockCount = (length + baseSize - 1) / baseSize;
+  const auto leftBlocks = (leftBranch ? blockCount + 1 : blockCount) / 2;
+  const auto leftLength = std::min(length, leftBlocks * baseSize);
+  const auto rightLength = length - leftLength;
+  const auto leftBase =
+      leftLength <= PIECE_LENGTH ? EMBLOCK_LENGTH : PIECE_LENGTH;
+  const auto rightBase =
+      rightLength <= PIECE_LENGTH ? EMBLOCK_LENGTH : PIECE_LENGTH;
+  return aichHash(aichRootHashForRange(data, leftLength, leftBase, true) +
+                  aichRootHashForRange(data + leftLength, rightLength,
+                                       rightBase, false));
+}
+
 } // namespace
 
 std::string md4Digest(const void* data, size_t length)
@@ -228,16 +247,12 @@ std::string aichHash(const std::string& data)
 
 std::string aichRootHash(const void* data, size_t length)
 {
-  auto bytes = static_cast<const char*>(data);
-  std::vector<std::string> leaves;
-  for (size_t offset = 0; offset < length; offset += EMBLOCK_LENGTH) {
-    const auto blockLength = std::min<size_t>(EMBLOCK_LENGTH, length - offset);
-    leaves.push_back(aichHash(bytes + offset, blockLength));
-  }
-  if (leaves.empty()) {
+  if (length == 0) {
     return aichHash("", 0);
   }
-  return aichRootHash(leaves);
+  const auto baseSize = length <= PIECE_LENGTH ? EMBLOCK_LENGTH : PIECE_LENGTH;
+  return aichRootHashForRange(static_cast<const char*>(data), length, baseSize,
+                              true);
 }
 
 std::string aichRootHash(const std::vector<std::string>& hashes)

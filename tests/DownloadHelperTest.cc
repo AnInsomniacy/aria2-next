@@ -15,10 +15,14 @@
 #include "DownloadEngine.h"
 #include "DownloadContext.h"
 #include "DefaultPieceStorage.h"
+#include "DiskAdaptor.h"
+#include "DlRetryEx.h"
 #include "Ed2kAttribute.h"
 #include "Ed2kCommand.h"
 #include "Ed2kKadCommand.h"
+#include "Ed2kPeerTransfer.h"
 #include "Option.h"
+#include "Piece.h"
 #include "RequestGroupMan.h"
 #include "SelectEventPoll.h"
 #include "Segment.h"
@@ -26,7 +30,9 @@
 #include "SocketCore.h"
 #include "DefaultBtProgressInfoFile.h"
 #include "array_fun.h"
+#include "base32.h"
 #include "ed2k_constants.h"
+#include "ed2k_aich.h"
 #include "ed2k_hash.h"
 #include "ed2k_kad.h"
 #include "ed2k_link.h"
@@ -61,6 +67,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kSourcePolicyRanksSources);
   CPPUNIT_TEST(testEd2kPiecePolicyUsesPeerAvailability);
   CPPUNIT_TEST(testEd2kPiecePolicyReclaimsIdlePeerSegment);
+  CPPUNIT_TEST(testEd2kPeerTransferAppliesAichRecoveryData);
   CPPUNIT_TEST(testEd2kSchedulingKeepsInlineSourceLabel);
   CPPUNIT_TEST(testEd2kPeerSchedulingSkipsBackoff);
   CPPUNIT_TEST(testEd2kPeerCommandRecordsFailure);
@@ -69,6 +76,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kPeerCommandRejectsUnexpectedPartBeforeWrite);
   CPPUNIT_TEST(testEd2kPeerCommandTracksRequestedParts);
   CPPUNIT_TEST(testEd2kPeerCommandWritesCompressedPart);
+  CPPUNIT_TEST(testEd2kPeerCommandAppliesAichRecoveryData);
   CPPUNIT_TEST(testEd2kIncomingPeerListenerAnswersHello);
   CPPUNIT_TEST(testEd2kPeerSchedulingSkipsConnectingPeer);
   CPPUNIT_TEST(testEd2kServerStateUpdate);
@@ -117,6 +125,7 @@ public:
   void testEd2kSourcePolicyRanksSources();
   void testEd2kPiecePolicyUsesPeerAvailability();
   void testEd2kPiecePolicyReclaimsIdlePeerSegment();
+  void testEd2kPeerTransferAppliesAichRecoveryData();
   void testEd2kSchedulingKeepsInlineSourceLabel();
   void testEd2kPeerSchedulingSkipsBackoff();
   void testEd2kPeerCommandRecordsFailure();
@@ -125,6 +134,7 @@ public:
   void testEd2kPeerCommandRejectsUnexpectedPartBeforeWrite();
   void testEd2kPeerCommandTracksRequestedParts();
   void testEd2kPeerCommandWritesCompressedPart();
+  void testEd2kPeerCommandAppliesAichRecoveryData();
   void testEd2kIncomingPeerListenerAnswersHello();
   void testEd2kPeerSchedulingSkipsConnectingPeer();
   void testEd2kServerStateUpdate();
@@ -640,6 +650,68 @@ void DownloadHelperTest::testEd2kPiecePolicyReclaimsIdlePeerSegment()
   CPPUNIT_ASSERT(oldOwner.empty());
 }
 
+void DownloadHelperTest::testEd2kPeerTransferAppliesAichRecoveryData()
+{
+  const std::string outdir = A2_TEST_OUT_DIR "/ed2k-transfer-aich-recovery";
+  const std::string outfile = outdir + "/aria2 next aich transfer.bin";
+  File(outfile).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outdir).mkdirs();
+
+  std::string block0(ed2k::EMBLOCK_LENGTH, 'a');
+  std::string block1(ed2k::EMBLOCK_LENGTH, 'b');
+  std::string block2(100, 'c');
+  const auto data = block0 + block1 + block2;
+  std::string corruptData = data;
+  corruptData[block0.size()] = 'x';
+  auto dctx = std::make_shared<DownloadContext>(
+      ed2k::PIECE_LENGTH, static_cast<int64_t>(data.size()),
+      outfile);
+  auto attrs = std::make_shared<Ed2kAttribute>();
+  attrs->link.hash = ed2k::md4Digest(data);
+  attrs->aichRootHash = ed2k::aichRootHash(data.data(), data.size());
+  attrs->pieceHashes.push_back(attrs->link.hash);
+  ed2k::AichRecoverySet recoverySet;
+  recoverySet.partIndex = 0;
+  ed2k::AichRecoveryBlock recoveryBlock;
+  recoveryBlock.offset = 0;
+  recoveryBlock.length = block0.size();
+  recoveryBlock.hash = ed2k::aichHash(block0);
+  recoverySet.blocks.push_back(recoveryBlock);
+  recoveryBlock.offset = block0.size();
+  recoveryBlock.length = block1.size();
+  recoveryBlock.hash = ed2k::aichHash(block1);
+  recoverySet.blocks.push_back(recoveryBlock);
+  recoveryBlock.offset = block0.size() + block1.size();
+  recoveryBlock.length = block2.size();
+  recoveryBlock.hash = ed2k::aichHash(block2);
+  recoverySet.blocks.push_back(recoveryBlock);
+  attrs->aichRecoverySets.push_back(recoverySet);
+  dctx->setAttribute(CTX_ATTR_ED2K, attrs);
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  auto group = std::make_shared<RequestGroup>(GroupId::create(), option_);
+  group->setDownloadContext(dctx);
+  auto pieceStorage = std::make_shared<DefaultPieceStorage>(dctx, option_.get());
+  pieceStorage->initStorage();
+  pieceStorage->getDiskAdaptor()->openFile();
+  group->setPieceStorage(pieceStorage);
+  auto segmentMan = std::make_shared<SegmentMan>(dctx, pieceStorage);
+  auto segment = segmentMan->getSegmentWithIndex(1, 0);
+  CPPUNIT_ASSERT(segment);
+
+  ed2k::PeerTransfer transfer(dctx.get(), pieceStorage.get(),
+                              segmentMan.get(), 1);
+  CPPUNIT_ASSERT_THROW(transfer.writePartData(0, corruptData),
+                       DlRetryEx);
+
+  auto piece = pieceStorage->getPiece(0);
+  CPPUNIT_ASSERT(piece);
+  CPPUNIT_ASSERT(piece->hasBlock(0));
+  CPPUNIT_ASSERT(!piece->hasBlock(ed2k::EMBLOCK_LENGTH /
+                                  piece->getBlockLength()));
+  CPPUNIT_ASSERT(!piece->pieceComplete());
+}
+
 void DownloadHelperTest::testEd2kSchedulingKeepsInlineSourceLabel()
 {
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-inline-source-label";
@@ -1135,6 +1207,96 @@ void DownloadHelperTest::testEd2kPeerCommandWritesCompressedPart()
   std::string fileData((std::istreambuf_iterator<char>(in)),
                        std::istreambuf_iterator<char>());
   CPPUNIT_ASSERT_EQUAL(data, fileData);
+}
+
+void DownloadHelperTest::testEd2kPeerCommandAppliesAichRecoveryData()
+{
+  const std::string outdir = A2_TEST_OUT_DIR "/ed2k-aich-recovery";
+  const std::string outfile = outdir + "/aria2 next aich.bin";
+  File(outfile).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outdir).mkdirs();
+
+  std::string block0(ed2k::EMBLOCK_LENGTH, 'a');
+  std::string block1(ed2k::EMBLOCK_LENGTH, 'b');
+  std::string block2(100, 'c');
+  const auto data = block0 + block1 + block2;
+  const auto fileHash = ed2k::md4Digest(data);
+  const auto aichRoot = ed2k::aichRootHash(data.data(), data.size());
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next%20aich.bin|" + util::uitos(data.size()) +
+      "|" + util::toHex(fileHash) + "|h=" + base32::encode(aichRoot) +
+      "|sources,127.0.0.1:1|/"};
+  option_->put(PREF_DIR, outdir);
+  option_->put(PREF_CONNECT_TIMEOUT, "1");
+  option_->put(PREF_TIMEOUT, "1");
+  option_->put(PREF_RETRY_WAIT, "30");
+  option_->put(PREF_SPLIT, "1");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_FALSE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+
+  SocketCore listenSocket;
+  listenSocket.bind(0);
+  listenSocket.beginListen();
+  listenSocket.setBlockingMode();
+  const auto endpoint = listenSocket.getAddrInfo();
+  attrs->link.sources[0].host = "127.0.0.1";
+  attrs->link.sources[0].port = endpoint.port;
+  ed2k::Endpoint peer;
+  peer.host = "127.0.0.1";
+  peer.port = endpoint.port;
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  std::vector<std::unique_ptr<Command>> commands;
+  group->createInitialCommand(commands, &engine);
+  engine.addCommand(std::move(commands));
+
+  CPPUNIT_ASSERT_EQUAL(1, engine.run(true));
+  auto peerSocket = listenSocket.acceptConnection();
+  peerSocket->setNonBlockingMode();
+  peerSocket->writeData(ed2k::createPacket(ed2k::PROTO_EDONKEY,
+                                           ed2k::OP_ACCEPTUPLOADREQ, ""));
+
+  for (int i = 0; i < 8 && !peerSocket->isReadable(0); ++i) {
+    engine.run(true);
+  }
+  auto state = getEd2kPeerState(attrs, peer);
+  CPPUNIT_ASSERT(state);
+  CPPUNIT_ASSERT_EQUAL((size_t)1, state->requestedParts.size());
+
+  std::string recovery;
+  recovery += ed2k::packUInt16(3);
+  recovery += ed2k::packUInt16(7);
+  recovery += ed2k::aichHash(block0);
+  recovery += ed2k::packUInt16(6);
+  recovery += ed2k::aichHash(block1);
+  recovery += ed2k::packUInt16(2);
+  recovery += ed2k::aichHash(block2);
+  recovery += ed2k::packUInt16(0);
+  peerSocket->writeData(ed2k::createPacket(
+      ed2k::PROTO_EMULE, ed2k::OP_AICHANSWER,
+      ed2k::createAichAnswerPayload(fileHash, 0, aichRoot, recovery)));
+
+  for (int i = 0; i < 8 && attrs->aichRecoverySets.empty(); ++i) {
+    engine.run(true);
+  }
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->aichRecoverySets.size());
+  CPPUNIT_ASSERT_EQUAL((size_t)0, attrs->aichRecoverySets[0].partIndex);
+  CPPUNIT_ASSERT_EQUAL((size_t)3, attrs->aichRecoverySets[0].blocks.size());
+  CPPUNIT_ASSERT_EQUAL(ed2k::aichHash(block2),
+                       attrs->aichRecoverySets[0].blocks[2].hash);
+
 }
 
 void DownloadHelperTest::testEd2kIncomingPeerListenerAnswersHello()

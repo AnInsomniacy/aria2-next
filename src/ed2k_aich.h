@@ -15,6 +15,7 @@
 
 #include "common.h"
 
+#include <vector>
 #include <cstdint>
 #include <string>
 
@@ -41,6 +42,27 @@ struct AichAnswer {
   std::string recoveryData;
 };
 
+struct AichRecoveryHash {
+  uint32_t identifier = 0;
+  std::string hash;
+};
+
+struct AichRecoveryData {
+  std::vector<AichRecoveryHash> hashes16;
+  std::vector<AichRecoveryHash> hashes32;
+};
+
+struct AichRecoveryBlock {
+  size_t offset = 0;
+  size_t length = 0;
+  std::string hash;
+};
+
+struct AichRecoverySet {
+  size_t partIndex = 0;
+  std::vector<AichRecoveryBlock> blocks;
+};
+
 std::string createAichFileHashRequestPayload(const std::string& fileHash);
 std::string createAichFileHashAnswerPayload(const std::string& fileHash,
                                             const std::string& rootHash);
@@ -58,6 +80,16 @@ std::string createAichAnswerPayload(const std::string& fileHash,
                                     const std::string& recoveryData);
 bool parseAichAnswerPayload(AichAnswer& answer, const std::string& payload,
                             const std::string& expectedFileHash);
+bool parseAichRecoveryData(AichRecoveryData& recovery,
+                           const std::string& payload, size_t partSize,
+                           bool largeFile);
+bool verifyAichRecoveryData(const AichRecoveryData& recovery,
+                            const std::string& rootHash, size_t fileSize,
+                            size_t partIndex);
+bool buildAichRecoverySet(AichRecoverySet& recoverySet,
+                          const AichRecoveryData& recovery,
+                          const std::string& rootHash, size_t fileSize,
+                          size_t partIndex);
 
 } // namespace ed2k
 

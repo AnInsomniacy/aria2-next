@@ -540,3 +540,20 @@ Remaining: Move to CP11 integrity and compressed transfer completion. AICH tree
 verification and recovery remain incomplete, and sharing/upload behavior
 remains CP13/CP14 scope.
 Blocked: none.
+
+2026-05-18 CP11 verified
+Changed: Completed the active-download integrity checkpoint. AICH root hashing
+now keeps ED2K part-level tree structure, AICH recovery packets are parsed and
+verified against the trusted root, OP_AICHANSWER stores verified recovery
+blocks by part index, and corrupt ED2K pieces can preserve AICH-verified clean
+blocks while retrying damaged ranges through the existing SegmentMan,
+PieceStorage, and disk paths. The parser now returns false for truncated AICH
+recovery payloads instead of leaking parser exceptions.
+Verified: `cmake --build --preset default --target aria2_tests` passed with
+the existing local Tcl/Tk search-path linker warning. `build/default/aria2_tests`
+passed with `OK (1086)`. `ctest --preset default --output-on-failure -R
+aria2_tests` passed with `100% tests passed, 0 tests failed out of 1`.
+`git diff --check` passed.
+Remaining: Move to CP12 Kad bootstrap and routing. Sharing and upload-side AICH
+serving remain CP13 and CP14 ownership.
+Blocked: none.
