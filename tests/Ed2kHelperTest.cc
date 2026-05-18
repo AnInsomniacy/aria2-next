@@ -6,6 +6,7 @@
 #include <zlib.h>
 
 #include "Exception.h"
+#include "base32.h"
 #include "util.h"
 
 namespace aria2 {
@@ -111,7 +112,8 @@ void Ed2kHelperTest::testParseFileLinkWithOptions()
   CPPUNIT_ASSERT_EQUAL((size_t)2, link.pieceHashes.size());
   CPPUNIT_ASSERT_EQUAL(std::string(16, '\x11'), link.pieceHashes[0]);
   CPPUNIT_ASSERT_EQUAL(std::string(16, '\x22'), link.pieceHashes[1]);
-  CPPUNIT_ASSERT_EQUAL(std::string("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"),
+  std::string aichRoot("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567");
+  CPPUNIT_ASSERT_EQUAL(base32::decode(aichRoot.begin(), aichRoot.end()),
                        link.aichHash);
   CPPUNIT_ASSERT_EQUAL((size_t)2, link.sources.size());
   CPPUNIT_ASSERT_EQUAL(std::string("192.0.2.1"), link.sources[0].host);
@@ -193,6 +195,7 @@ void Ed2kHelperTest::testSerializeFileLink()
       "0123456789abcdef0123456789abcdef|"
       "p=11111111111111111111111111111111:"
       "22222222222222222222222222222222|"
+      "h=ABCDEFGHIJKLMNOPQRSTUVWXYZ234567|"
       "sources,192.0.2.1:4662|/");
 
   auto reparsed = parseLink(toFileLink(link));
@@ -201,6 +204,7 @@ void Ed2kHelperTest::testSerializeFileLink()
   CPPUNIT_ASSERT_EQUAL(link.size, reparsed.size);
   CPPUNIT_ASSERT_EQUAL(link.hash, reparsed.hash);
   CPPUNIT_ASSERT_EQUAL(link.pieceHashes[0], reparsed.pieceHashes[0]);
+  CPPUNIT_ASSERT_EQUAL(link.aichHash, reparsed.aichHash);
   CPPUNIT_ASSERT_EQUAL(std::string("192.0.2.1"), reparsed.sources[0].host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4662, reparsed.sources[0].port);
 }

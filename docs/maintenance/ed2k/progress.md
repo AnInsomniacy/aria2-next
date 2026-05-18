@@ -222,3 +222,16 @@ Remaining: Continue CP5 persistence coverage for ED2K metadata, sources,
 hashsets, AICH state, Kad state, shared files, and credits without broad test
 scaffolding.
 Blocked: none.
+
+2026-05-18 CP5 partial
+Changed: Normalized ED2K AICH link hashes to raw protocol hash bytes inside
+the link model, with base32 decoding and encoding kept at the ED2K URI
+boundary. Updated save-session serialization to include runtime-learned ED2K
+piece hashsets in the persisted file link instead of writing only the original
+input link.
+Verified: `cmake --build --preset default --target aria2_tests` passed.
+`ctest --preset default --output-on-failure -R aria2_tests` passed with
+`100% tests passed, 0 tests failed out of 1`.
+Remaining: Continue CP5 persistence coverage for ED2K sources, Kad state,
+shared files, and credits without broad test scaffolding.
+Blocked: none.

@@ -90,7 +90,7 @@ std::string parseAichHash(const std::string& value)
   if (decoded.size() != AICH_HASH_LENGTH) {
     throw DL_ABORT_EX("Bad ED2K AICH hash.");
   }
-  return normalized;
+  return decoded;
 }
 
 Endpoint parseLinkEndpoint(const std::string& value)
@@ -281,8 +281,11 @@ std::string toFileLink(const Link& link)
     uri += "|";
   }
   if (!link.aichHash.empty()) {
+    if (link.aichHash.size() != AICH_HASH_LENGTH) {
+      throw DL_ABORT_EX("Bad ED2K AICH hash length.");
+    }
     uri += "h=";
-    uri += link.aichHash;
+    uri += base32::encode(link.aichHash);
     uri += "|";
   }
   if (!link.sources.empty()) {

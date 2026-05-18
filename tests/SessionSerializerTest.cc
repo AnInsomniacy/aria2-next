@@ -173,6 +173,11 @@ void SessionSerializerTest::testSaveEd2kDownload()
   createRequestGroupForUri(result, option, uris);
   CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
+  std::string firstPieceHash("33333333333333333333333333333333");
+  std::string secondPieceHash("44444444444444444444444444444444");
+  attrs->pieceHashes = {
+      util::fromHex(firstPieceHash.begin(), firstPieceHash.end()),
+      util::fromHex(secondPieceHash.begin(), secondPieceHash.end())};
   attrs->kadRoutingTable =
       std::make_shared<ed2k::KadRoutingTable>(attrs->link.hash);
   ed2k::ServerState serverState;
@@ -208,6 +213,9 @@ void SessionSerializerTest::testSaveEd2kDownload()
   std::getline(in, line);
   CPPUNIT_ASSERT(util::startsWith(line, "ed2k://|file|aria2%20next.bin|"));
   CPPUNIT_ASSERT(line.find("0123456789abcdef0123456789abcdef") !=
+                 std::string::npos);
+  CPPUNIT_ASSERT(line.find("33333333333333333333333333333333:"
+                           "44444444444444444444444444444444") !=
                  std::string::npos);
   std::getline(in, line);
   CPPUNIT_ASSERT_EQUAL(

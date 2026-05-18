@@ -220,7 +220,14 @@ bool writeDownloadResult(IOFile& fp, std::set<a2_gid_t>& metainfoCache,
     }
     if (dr->attrs.size() > CTX_ATTR_ED2K && dr->attrs[CTX_ATTR_ED2K]) {
       auto attrs = static_cast<Ed2kAttribute*>(dr->attrs[CTX_ATTR_ED2K].get());
-      if (!writeUri(fp, ed2k::toFileLink(attrs->link)) ||
+      auto link = attrs->link;
+      if (!attrs->pieceHashes.empty()) {
+        link.pieceHashes = attrs->pieceHashes;
+      }
+      if (!attrs->aichRootHash.empty()) {
+        link.aichHash = attrs->aichRootHash;
+      }
+      if (!writeUri(fp, ed2k::toFileLink(link)) ||
           fp.write("\n", 1) != 1 ||
           !writeOptionLine(fp, PREF_GID, dr->gid->toHex())) {
         return false;
