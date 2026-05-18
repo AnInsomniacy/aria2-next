@@ -175,6 +175,28 @@ std::string createRequestPartsPayload(const std::string& fileHash,
   return payload;
 }
 
+std::string createQueueRankPayload(uint32_t rank)
+{
+  return packUInt32(rank);
+}
+
+bool parseQueueRankPayload(uint16_t& rank, const std::string& payload)
+{
+  if (payload.size() == 2) {
+    rank = readUInt16(payload.data());
+    return true;
+  }
+  if (payload.size() == 4) {
+    const auto value = readUInt32(payload.data());
+    if (value > std::numeric_limits<uint16_t>::max()) {
+      return false;
+    }
+    rank = static_cast<uint16_t>(value);
+    return true;
+  }
+  return false;
+}
+
 std::string createRequestSources2Payload(const std::string& fileHash)
 {
   validateHashLength(fileHash);

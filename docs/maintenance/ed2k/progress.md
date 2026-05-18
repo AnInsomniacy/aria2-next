@@ -353,3 +353,18 @@ PeerState API existed. After implementation, `cmake --build --preset default
 Remaining: Continue CP7 by routing queue rank packets, peer failure paths,
 cancel/out-of-parts handling, and download-session state through PeerState.
 Blocked: none.
+
+2026-05-18 CP7 partial
+Changed: Routed peer TCP queue-rank, accept-upload, out-of-parts, no-file, and
+cancel-transfer packets through PeerState. Added OP_QUEUERANKING and
+OP_CANCELTRANSFER constants plus compact queue-rank payload parsing for 2-byte
+and 4-byte rank packets.
+Verified: The focused queue-rank peer command test failed before the
+implementation because PeerState did not record the remote rank. After the
+implementation, `cmake --build --preset default --target aria2_tests` passed
+and `ctest --preset default --output-on-failure -R aria2_tests` passed with
+`100% tests passed, 0 tests failed out of 1`.
+Remaining: Continue CP7 with 32-bit and 64-bit request lifecycle ownership,
+duplicate peer rejection, disconnect handling, and corrupt-piece retry through
+PeerState.
+Blocked: none.

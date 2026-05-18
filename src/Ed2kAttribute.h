@@ -57,6 +57,13 @@ ed2k::PeerState* getEd2kPeerState(Ed2kAttribute* attrs,
 bool markEd2kPeerQueued(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
                         uint16_t rank,
                         const std::vector<bool>& partStatus);
+bool updateEd2kPeerPartStatus(Ed2kAttribute* attrs,
+                              const ed2k::Endpoint& peer,
+                              const std::vector<bool>& partStatus);
+bool markEd2kPeerAccepted(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
+bool markEd2kPeerOutOfParts(Ed2kAttribute* attrs,
+                            const ed2k::Endpoint& peer);
+bool markEd2kPeerCancelled(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
 bool markEd2kPeerDead(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
                       int64_t now, int64_t baseRetrySeconds);
 ed2k::ServerState* getEd2kServerState(Ed2kAttribute* attrs,

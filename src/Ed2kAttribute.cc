@@ -91,8 +91,58 @@ bool markEd2kPeerQueued(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
   }
   state->queued = true;
   state->dead = false;
+  state->cancelled = false;
+  state->noFile = false;
   state->queueRank = rank;
   state->partStatus = partStatus;
+  return true;
+}
+
+bool updateEd2kPeerPartStatus(Ed2kAttribute* attrs,
+                              const ed2k::Endpoint& peer,
+                              const std::vector<bool>& partStatus)
+{
+  auto state = getEd2kPeerState(attrs, peer);
+  if (!state) {
+    return false;
+  }
+  state->partStatus = partStatus;
+  return true;
+}
+
+bool markEd2kPeerAccepted(Ed2kAttribute* attrs, const ed2k::Endpoint& peer)
+{
+  auto state = getEd2kPeerState(attrs, peer);
+  if (!state) {
+    return false;
+  }
+  state->accepted = true;
+  state->queued = false;
+  state->dead = false;
+  return true;
+}
+
+bool markEd2kPeerOutOfParts(Ed2kAttribute* attrs, const ed2k::Endpoint& peer)
+{
+  auto state = getEd2kPeerState(attrs, peer);
+  if (!state) {
+    return false;
+  }
+  state->outOfParts = true;
+  state->accepted = false;
+  state->queued = true;
+  return true;
+}
+
+bool markEd2kPeerCancelled(Ed2kAttribute* attrs, const ed2k::Endpoint& peer)
+{
+  auto state = getEd2kPeerState(attrs, peer);
+  if (!state) {
+    return false;
+  }
+  state->cancelled = true;
+  state->accepted = false;
+  state->queued = false;
   return true;
 }
 
@@ -105,6 +155,8 @@ bool markEd2kPeerDead(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
   }
   state->queued = false;
   state->dead = true;
+  state->accepted = false;
+  state->noFile = true;
   ++state->failCount;
   state->lastFailureTime = now;
   const auto multiplier = std::min<uint32_t>(state->failCount, 6);

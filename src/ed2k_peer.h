@@ -84,6 +84,10 @@ struct PeerState {
   bool queued = false;
   uint16_t queueRank = 0;
   bool dead = false;
+  bool accepted = false;
+  bool outOfParts = false;
+  bool cancelled = false;
+  bool noFile = false;
   uint32_t failCount = 0;
   int64_t lastFailureTime = 0;
   int64_t nextRetryTime = 0;
@@ -102,6 +106,8 @@ bool parseHashSetAnswerPayload(std::vector<std::string>& pieceHashes,
 std::string createRequestPartsPayload(const std::string& fileHash,
                                       const std::vector<PartRange>& ranges,
                                       bool use64BitOffsets);
+std::string createQueueRankPayload(uint32_t rank);
+bool parseQueueRankPayload(uint16_t& rank, const std::string& payload);
 std::string createRequestSources2Payload(const std::string& fileHash);
 bool parseRequestSources2Payload(uint8_t& version, const std::string& payload,
                                  const std::string& expectedFileHash);

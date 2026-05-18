@@ -781,6 +781,7 @@ void Ed2kCommand::handlePeerPacket()
     if (!ed2k::parseFileStatusPayload(bitfield, body_, attrs->link.hash)) {
       throw DL_RETRY_EX("ED2K file status hash mismatch.");
     }
+    updateEd2kPeerPartStatus(attrs, endpoint_, bitfield);
     peerFileStatusReceived_ = true;
     if (getDownloadContext()->getTotalLength() > ed2k::PIECE_LENGTH &&
         attrs->pieceHashes.empty()) {
@@ -810,14 +811,40 @@ void Ed2kCommand::handlePeerPacket()
   }
   case ed2k::OP_ACCEPTUPLOADREQ:
     peerAccepted_ = true;
+    markEd2kPeerAccepted(attrs, endpoint_);
     queuePeerPartRequest();
     state_ = State::WRITE;
     break;
   case ed2k::OP_OUTOFPARTREQS:
-  case ed2k::OP_FILEREQANSNOFIL:
-  case ed2k::OP_QUEUERANK:
+    markEd2kPeerOutOfParts(attrs, endpoint_);
     state_ = State::DONE;
     break;
+  case ed2k::OP_FILEREQANSNOFIL:
+    markEd2kPeerDead(
+        attrs, endpoint_,
+        std::chrono::duration_cast<std::chrono::seconds>(
+            global::wallclock().getTime().time_since_epoch())
+            .count(),
+        std::max<int64_t>(1, getOption()->getAsInt(PREF_RETRY_WAIT)));
+    state_ = State::DONE;
+    break;
+  case ed2k::OP_CANCELTRANSFER:
+    markEd2kPeerCancelled(attrs, endpoint_);
+    state_ = State::DONE;
+    break;
+  case ed2k::OP_QUEUERANK:
+  case ed2k::OP_QUEUERANKING: {
+    uint16_t rank = 0;
+    if (!ed2k::parseQueueRankPayload(rank, body_)) {
+      throw DL_RETRY_EX("Bad ED2K queue rank.");
+    }
+    auto peerState = getEd2kPeerState(attrs, endpoint_);
+    const std::vector<bool> partStatus =
+        peerState ? peerState->partStatus : std::vector<bool>();
+    markEd2kPeerQueued(attrs, endpoint_, rank, partStatus);
+    state_ = State::DONE;
+    break;
+  }
   case ed2k::OP_SENDINGPART:
   case ed2k::OP_SENDINGPART_I64: {
     const bool is64 = currentHeader_.opcode == ed2k::OP_SENDINGPART_I64;
