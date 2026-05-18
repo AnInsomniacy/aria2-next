@@ -7,6 +7,8 @@
 #include <iterator>
 #include <vector>
 
+#include <zlib.h>
+
 #include <cppunit/extensions/HelperMacros.h>
 
 #include "RequestGroup.h"
@@ -57,6 +59,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kPeerCommandBacksOffCorruptPiece);
   CPPUNIT_TEST(testEd2kPeerCommandRejectsUnexpectedPartBeforeWrite);
   CPPUNIT_TEST(testEd2kPeerCommandTracksRequestedParts);
+  CPPUNIT_TEST(testEd2kPeerCommandWritesCompressedPart);
   CPPUNIT_TEST(testEd2kPeerSchedulingSkipsConnectingPeer);
   CPPUNIT_TEST(testEd2kServerStateUpdate);
   CPPUNIT_TEST(testEd2kInitialServerCommandRecordsFailure);
@@ -106,6 +109,7 @@ public:
   void testEd2kPeerCommandBacksOffCorruptPiece();
   void testEd2kPeerCommandRejectsUnexpectedPartBeforeWrite();
   void testEd2kPeerCommandTracksRequestedParts();
+  void testEd2kPeerCommandWritesCompressedPart();
   void testEd2kPeerSchedulingSkipsConnectingPeer();
   void testEd2kServerStateUpdate();
   void testEd2kInitialServerCommandRecordsFailure();
@@ -133,6 +137,25 @@ public:
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(DownloadHelperTest);
+
+namespace {
+std::string deflateEd2kTestData(const std::string& input)
+{
+  z_stream strm;
+  std::memset(&strm, 0, sizeof(strm));
+  CPPUNIT_ASSERT_EQUAL(Z_OK, deflateInit(&strm, Z_DEFAULT_COMPRESSION));
+  std::string compressed(compressBound(input.size()), '\0');
+  strm.avail_in = input.size();
+  strm.next_in =
+      reinterpret_cast<unsigned char*>(const_cast<char*>(input.data()));
+  strm.avail_out = compressed.size();
+  strm.next_out = reinterpret_cast<unsigned char*>(&compressed[0]);
+  CPPUNIT_ASSERT_EQUAL(Z_STREAM_END, deflate(&strm, Z_FINISH));
+  compressed.resize(compressed.size() - strm.avail_out);
+  CPPUNIT_ASSERT_EQUAL(Z_OK, deflateEnd(&strm));
+  return compressed;
+}
+} // namespace
 
 void DownloadHelperTest::testCreateRequestGroupForUri()
 {
@@ -865,6 +888,87 @@ void DownloadHelperTest::testEd2kPeerCommandTracksRequestedParts()
   CPPUNIT_ASSERT(state->requestedParts.empty());
   CPPUNIT_ASSERT(!state->accepted);
   CPPUNIT_ASSERT(!state->connecting);
+}
+
+void DownloadHelperTest::testEd2kPeerCommandWritesCompressedPart()
+{
+  const std::string outdir = A2_TEST_OUT_DIR "/ed2k-compressed-part";
+  const std::string outfile = outdir + "/aria2 next compressed part.bin";
+  File(outfile).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outdir).mkdirs();
+
+  const std::string data = "verified compressed data";
+  const auto fileHash = ed2k::md4Digest(data);
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next%20compressed%20part.bin|" +
+      util::uitos(data.size()) + "|" + util::toHex(fileHash) +
+      "|sources,127.0.0.1:1|/"};
+  option_->put(PREF_DIR, outdir);
+  option_->put(PREF_CONNECT_TIMEOUT, "1");
+  option_->put(PREF_TIMEOUT, "1");
+  option_->put(PREF_RETRY_WAIT, "30");
+  option_->put(PREF_SPLIT, "1");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_FALSE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+
+  SocketCore listenSocket;
+  listenSocket.bind(0);
+  listenSocket.beginListen();
+  listenSocket.setBlockingMode();
+  const auto endpoint = listenSocket.getAddrInfo();
+  attrs->link.sources[0].host = "127.0.0.1";
+  attrs->link.sources[0].port = endpoint.port;
+  ed2k::Endpoint peer;
+  peer.host = "127.0.0.1";
+  peer.port = endpoint.port;
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  std::vector<std::unique_ptr<Command>> commands;
+  group->createInitialCommand(commands, &engine);
+  engine.addCommand(std::move(commands));
+
+  CPPUNIT_ASSERT_EQUAL(1, engine.run(true));
+  auto peerSocket = listenSocket.acceptConnection();
+  peerSocket->setNonBlockingMode();
+  peerSocket->writeData(ed2k::createPacket(ed2k::PROTO_EDONKEY,
+                                           ed2k::OP_ACCEPTUPLOADREQ, ""));
+
+  for (int i = 0; i < 8 && !peerSocket->isReadable(0); ++i) {
+    engine.run(true);
+  }
+  auto state = getEd2kPeerState(attrs, peer);
+  CPPUNIT_ASSERT(state);
+  CPPUNIT_ASSERT_EQUAL((size_t)1, state->requestedParts.size());
+
+  const auto compressed = deflateEd2kTestData(data);
+  std::string partPayload =
+      fileHash + ed2k::packUInt32(0) +
+      ed2k::packUInt32(static_cast<uint32_t>(compressed.size())) + compressed;
+  peerSocket->writeData(ed2k::createPacket(
+      ed2k::PROTO_EDONKEY, ed2k::OP_COMPRESSEDPART, partPayload));
+
+  for (int i = 0; i < 8 && group->getNumCommand() > 0; ++i) {
+    engine.run(true);
+  }
+
+  CPPUNIT_ASSERT(state->requestedParts.empty());
+  CPPUNIT_ASSERT(!state->accepted);
+  CPPUNIT_ASSERT(!state->connecting);
+  std::ifstream in(outfile.c_str(), std::ios::binary);
+  std::string fileData((std::istreambuf_iterator<char>(in)),
+                       std::istreambuf_iterator<char>());
+  CPPUNIT_ASSERT_EQUAL(data, fileData);
 }
 
 void DownloadHelperTest::testEd2kPeerSchedulingSkipsConnectingPeer()

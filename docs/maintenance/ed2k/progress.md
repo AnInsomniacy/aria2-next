@@ -472,3 +472,18 @@ Remaining: Continue CP7 by auditing the remaining peer packet state
 transitions, then either mark CP7 verified or record the exact CP9/CP10
 dependency.
 Blocked: none.
+
+2026-05-18 CP7 verified
+Changed: Closed the outbound peer download checkpoint with focused evidence
+for the remaining accepted transfer paths. Added compact coverage for
+compressed peer parts flowing through the command, zlib inflate path,
+Ed2kPeerTransfer write path, MD4 verification, requested-part cleanup, and
+final file content. Added 64-bit request-parts payload assertions to the
+protocol payload coverage.
+Verified: `cmake --build --preset default --target aria2_tests` passed.
+`ctest --preset default --output-on-failure -R aria2_tests` passed with
+`100% tests passed, 0 tests failed out of 1`.
+Remaining: Move to CP8 incoming peer listener. Source Exchange merge policy,
+full source/piece scheduling, incoming peer acceptance, sharing, and upload
+remain owned by later checkpoints.
+Blocked: none.

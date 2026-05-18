@@ -361,6 +361,15 @@ void Ed2kHelperTest::testProtocolPayloads()
   CPPUNIT_ASSERT_EQUAL((uint32_t)10, readUInt32(requestParts.data() + 28));
   CPPUNIT_ASSERT_EQUAL((uint32_t)30, readUInt32(requestParts.data() + 32));
   CPPUNIT_ASSERT_EQUAL((uint32_t)0, readUInt32(requestParts.data() + 36));
+
+  auto requestParts64 = createRequestPartsPayload(fileHash, ranges, true);
+  CPPUNIT_ASSERT_EQUAL((size_t)64, requestParts64.size());
+  CPPUNIT_ASSERT_EQUAL((uint64_t)0, readUInt64(requestParts64.data() + 16));
+  CPPUNIT_ASSERT_EQUAL((uint64_t)20, readUInt64(requestParts64.data() + 24));
+  CPPUNIT_ASSERT_EQUAL((uint64_t)0, readUInt64(requestParts64.data() + 32));
+  CPPUNIT_ASSERT_EQUAL((uint64_t)10, readUInt64(requestParts64.data() + 40));
+  CPPUNIT_ASSERT_EQUAL((uint64_t)30, readUInt64(requestParts64.data() + 48));
+  CPPUNIT_ASSERT_EQUAL((uint64_t)0, readUInt64(requestParts64.data() + 56));
 }
 
 void Ed2kHelperTest::testServerPayloadParsers()
