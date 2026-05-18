@@ -48,9 +48,9 @@ Current branch: `main`.
 
 Current HEAD observed during the tracker split: `d2fc1f53`.
 
-Operational status: ED2K/eMule support is still incomplete. CP0 through CP11
-are verified. CP12 through CP18 remain partial or open. The current
-implementation is roughly 63 percent of the complete target and must not be
+Operational status: ED2K/eMule support is still incomplete. CP0 through CP14
+are verified. CP15 through CP18 remain partial or open. The current
+implementation is roughly 79 percent of the complete target and must not be
 presented as full ED2K/eMule support.
 
 The draft has been committed through the first protocol module split.
@@ -89,19 +89,18 @@ Incoming peer listening exists for the active-download path. The listener uses
 the existing event loop, accepts TCP peers, routes them only when there is a
 unique active ED2K download group, rejects duplicate active endpoints, and
 normalizes incoming Hello endpoints to the peer's advertised ED2K listen port.
-Shared/completed-file matching is still owned by the future shared store and
-upload checkpoints. Upload behavior is not yet an upload queue with slots,
-ranks, limits, statistics, and credits. Sharing and imported shared files are
-not first-class persistent state. Kad has packet helpers, bootstrap, hello, and
-simple search requests, but it lacks a full traversal engine, publish loop,
-firewalled checks, routing refresh policy, and durable operational state. AICH
-now has part-aware root hashing, packet parsing, file-hash answer handling,
-recovery-data verification, and corrupt-piece recovery preservation for active
-downloads. AICH serving for shared files remains owned by the shared store and
-upload checkpoints. Resume persists active download metadata, learned sources,
-hashsets, server state, and Kad routing state, but not future sharing or peer
-credit state. CLI/RPC status does not yet expose the full server, peer, Kad,
-queue, search, share, and upload model.
+Shared/completed-file matching is handled by the native shared store and shared
+peer command. Upload behavior now has a native upload queue with slot limits,
+queue ranks, protocol-visible accept/ranking responses, transfer-stat upload
+accounting, peer credit counters, and hidden session persistence. Sharing and
+imported shared files are first-class persistent state. Kad has bootstrap,
+hello, traversal, search, publish, firewalled checks, routing refresh, and
+durable operational state. AICH has part-aware root hashing, packet parsing,
+file-hash answer handling, recovery-data verification, corrupt-piece recovery
+preservation for active downloads, and shared-file serving. Resume persists
+active download metadata, learned sources, hashsets, server state, Kad routing
+state, shared-file state, and peer credit state. CLI/RPC status does not yet
+expose the full server, peer, Kad, queue, search, share, and upload model.
 
 Release-facing documentation currently risks overstating draft support. Before
 any release-facing checkpoint is marked verified, CLI help, manual text, RPC

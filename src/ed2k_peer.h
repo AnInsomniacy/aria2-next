@@ -67,6 +67,7 @@ struct EmuleMiscOptions2 {
 };
 
 struct EmulePeerInfo {
+  std::string userHash;
   uint8_t version = 0;
   uint8_t protocolVersion = 0;
   EmuleMiscOptions miscOptions;
@@ -138,6 +139,9 @@ bool parseAnswerSources2Payload(SourceExchangeAnswer& answer,
                                 const std::string& expectedFileHash);
 std::string createEmuleInfoPayload(const EmulePeerInfo& info);
 bool parseEmuleInfoPayload(EmulePeerInfo& info, const std::string& payload);
+bool parsePeerHelloUserHash(std::string& userHash,
+                            const std::string& payload,
+                            bool helloPacket);
 std::string createUdpReaskFilePingPayload(const std::string& fileHash,
                                           uint16_t completeSources = 0);
 bool parseUdpReaskFilePingPayload(UdpReask& reask,

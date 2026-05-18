@@ -360,12 +360,16 @@ PrefPtr PREF_ED2K_SERVER_LIST = makePref("ed2k-server-list");
 PrefPtr PREF_ED2K_NODE_LIST = makePref("ed2k-node-list");
 // value: 0-65535
 PrefPtr PREF_ED2K_LISTEN_PORT = makePref("ed2k-listen-port");
+// value: 1*digit
+PrefPtr PREF_ED2K_UPLOAD_SLOTS = makePref("ed2k-upload-slots");
 // value: path to shared file
 PrefPtr PREF_ED2K_SHARE_FILE = makePref("ed2k-share-file");
 // value: hex-encoded ED2K server state
 PrefPtr PREF_ED2K_SERVER_STATE = makePref("ed2k-server-state");
 // value: hex-encoded ED2K shared file state
 PrefPtr PREF_ED2K_SHARED_FILE_STATE = makePref("ed2k-shared-file-state");
+// value: hex-encoded ED2K peer credit state
+PrefPtr PREF_ED2K_PEER_CREDIT_STATE = makePref("ed2k-peer-credit-state");
 // value: hex-encoded ED2K Kad routing state
 PrefPtr PREF_ED2K_KAD_ROUTING_STATE = makePref("ed2k-kad-routing-state");
 // value: string

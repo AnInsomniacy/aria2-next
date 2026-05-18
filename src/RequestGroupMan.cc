@@ -49,6 +49,7 @@
 #include "Logger.h"
 #include "DownloadEngine.h"
 #include "Ed2kSharedStore.h"
+#include "Ed2kUploadQueue.h"
 #include "message.h"
 #include "a2functional.h"
 #include "DownloadResult.h"
@@ -126,6 +127,8 @@ RequestGroupMan::RequestGroupMan(
       openedFileCounter_(std::make_shared<OpenedFileCounter>(
           this, option->getAsInt(PREF_BT_MAX_OPEN_FILES))),
       ed2kSharedStore_(make_unique<ed2k::SharedStore>()),
+      ed2kUploadQueue_(make_unique<ed2k::UploadQueue>(
+          option->getAsInt(PREF_ED2K_UPLOAD_SLOTS))),
       numStoppedTotal_(0)
 {
   setupOptimizeConcurrentDownloads();
@@ -134,6 +137,7 @@ RequestGroupMan::RequestGroupMan(
                        .count();
   ed2kSharedStore_->loadOptionState(option_);
   ed2kSharedStore_->importOptionFiles(option_, now);
+  ed2kUploadQueue_->credits().loadOptionState(option_);
   appendReservedGroup(reservedGroups_, requestGroups.begin(),
                       requestGroups.end());
 }

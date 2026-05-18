@@ -313,12 +313,16 @@ extern PrefPtr PREF_ED2K_SERVER_LIST;
 extern PrefPtr PREF_ED2K_NODE_LIST;
 // value: 0-65535
 extern PrefPtr PREF_ED2K_LISTEN_PORT;
+// value: 1*digit
+extern PrefPtr PREF_ED2K_UPLOAD_SLOTS;
 // value: path to shared file
 extern PrefPtr PREF_ED2K_SHARE_FILE;
 // value: hex-encoded ED2K server state
 extern PrefPtr PREF_ED2K_SERVER_STATE;
 // value: hex-encoded ED2K shared file state
 extern PrefPtr PREF_ED2K_SHARED_FILE_STATE;
+// value: hex-encoded ED2K peer credit state
+extern PrefPtr PREF_ED2K_PEER_CREDIT_STATE;
 // value: hex-encoded ED2K Kad routing state
 extern PrefPtr PREF_ED2K_KAD_ROUTING_STATE;
 // value: string

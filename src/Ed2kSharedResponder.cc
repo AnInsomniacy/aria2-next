@@ -16,6 +16,8 @@
 
 #include "Ed2kSharedFile.h"
 #include "Ed2kSharedStore.h"
+#include "Ed2kUploadQueue.h"
+#include "RequestGroupMan.h"
 #include "ed2k_aich.h"
 #include "ed2k_constants.h"
 #include "ed2k_hash.h"
@@ -26,9 +28,17 @@ namespace aria2 {
 
 namespace ed2k {
 
-SharedResponder::SharedResponder(SharedStore* store,
+SharedResponder::SharedResponder(SharedStore* store, UploadQueue* uploadQueue,
+                                 RequestGroupMan* rgman,
+                                 const Endpoint& endpoint,
+                                 const std::string& userHash,
                                  std::deque<std::string>& outbox)
-    : store_(store), outbox_(&outbox)
+    : store_(store),
+      uploadQueue_(uploadQueue),
+      outbox_(&outbox),
+      endpoint_(endpoint),
+      userHash_(userHash),
+      rgman_(rgman)
 {
 }
 
@@ -146,6 +156,27 @@ bool SharedResponder::queueAichAnswer(const std::string& fileHash,
   return true;
 }
 
+bool SharedResponder::requestUploadSlot(const std::string& fileHash,
+                                        int64_t now)
+{
+  if (!hasFile(fileHash)) {
+    queueNoFile(fileHash);
+    return false;
+  }
+  if (!uploadQueue_) {
+    queuePacket(PROTO_EDONKEY, OP_ACCEPTUPLOADREQ, "");
+    return true;
+  }
+  if (uploadQueue_->requestUpload(endpoint_, userHash_, fileHash, now,
+                                  rgman_)) {
+    queuePacket(PROTO_EDONKEY, OP_ACCEPTUPLOADREQ, "");
+    return true;
+  }
+  queuePacket(PROTO_EDONKEY, OP_QUEUERANKING,
+              createQueueRankPayload(uploadQueue_->queueRank(endpoint_)));
+  return false;
+}
+
 bool SharedResponder::queuePartAnswers(const std::string& requestPayload,
                                        bool use64BitOffsets)
 {
@@ -160,6 +191,11 @@ bool SharedResponder::queuePartAnswers(const std::string& requestPayload,
     queueNoFile(fileHash);
     return false;
   }
+  if (uploadQueue_ && !uploadQueue_->isUploading(endpoint_)) {
+    queuePacket(PROTO_EDONKEY, OP_QUEUERANKING,
+                createQueueRankPayload(uploadQueue_->queueRank(endpoint_)));
+    return false;
+  }
   for (const auto& range : ranges) {
     std::string payload;
     if (!createSharedFilePartPayload(payload, *file, range,
@@ -169,6 +205,12 @@ bool SharedResponder::queuePartAnswers(const std::string& requestPayload,
     queuePacket(PROTO_EDONKEY,
                 use64BitOffsets ? OP_SENDINGPART_I64 : OP_SENDINGPART,
                 payload);
+    if (uploadQueue_) {
+      uploadQueue_->noteUploaded(endpoint_, range.end - range.begin);
+    }
+    if (rgman_) {
+      rgman_->getNetStat().updateUpload(range.end - range.begin);
+    }
   }
   return true;
 }

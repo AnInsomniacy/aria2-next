@@ -670,6 +670,15 @@ ED2K Specific Options
   Set TCP port number for incoming ED2K peer connections. Use ``0`` to let the
   operating system choose an available local port. Default: ``4662``
 
+.. option:: --ed2k-upload-slots=<NUM>
+
+  Set the maximum number of active ED2K upload slots. Default: ``3``
+
+.. option:: --ed2k-share-file=<FILE>
+
+  Import a completed local file into the ED2K shared store. This option can be
+  used multiple times.
+
   .. note::
 
     ED2K support currently includes native file links, server source
@@ -677,8 +686,8 @@ ED2K Specific Options
     compressed part decoding, MD4 part verification, and AICH metadata
     exchange. Save-session preserves ED2K link metadata, learned sources,
     learned hashsets, server state, and Kad routing state for active ED2K
-    tasks. Sharing, upload queues, peer credits, and their persisted state are
-    still being completed.
+    tasks. Sharing, upload queues, peer credits, and their persisted state use
+    the native ED2K shared store and upload queue.
 
 BitTorrent Specific Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2173,6 +2182,8 @@ of URIs. These optional lines must start with white space(s).
   * :option:`ed2k-listen-port <--ed2k-listen-port>`
   * :option:`ed2k-server <--ed2k-server>`
   * :option:`ed2k-server-list <--ed2k-server-list>`
+  * :option:`ed2k-share-file <--ed2k-share-file>`
+  * :option:`ed2k-upload-slots <--ed2k-upload-slots>`
   * :option:`enable-http-keep-alive <--enable-http-keep-alive>`
   * :option:`enable-http-pipelining <--enable-http-pipelining>`
   * :option:`enable-mmap <--enable-mmap>`

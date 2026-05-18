@@ -47,6 +47,7 @@
 #include "Option.h"
 #include "DownloadResult.h"
 #include "Ed2kSharedStore.h"
+#include "Ed2kUploadQueue.h"
 #include "FileEntry.h"
 #include "prefs.h"
 #include "util.h"
@@ -178,6 +179,22 @@ bool writeEd2kSharedStore(IOFile& fp, const ed2k::SharedStore* store)
         util::toHex(ed2k::createSharedFileStatePayload(file));
     if (!state.empty() &&
         !writeOptionLine(fp, PREF_ED2K_SHARED_FILE_STATE, state)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool writeEd2kPeerCredits(IOFile& fp, const ed2k::UploadQueue* queue)
+{
+  if (!queue) {
+    return true;
+  }
+  for (const auto& credit : queue->credits().list()) {
+    const auto state =
+        util::toHex(ed2k::createPeerCreditStatePayload(credit));
+    if (!state.empty() &&
+        !writeOptionLine(fp, PREF_ED2K_PEER_CREDIT_STATE, state)) {
       return false;
     }
   }
@@ -390,6 +407,9 @@ bool SessionSerializer::save(IOFile& fp) const
   std::set<a2_gid_t> metainfoCache;
 
   if (!writeEd2kSharedStore(fp, rgman_->getEd2kSharedStore())) {
+    return false;
+  }
+  if (!writeEd2kPeerCredits(fp, rgman_->getEd2kUploadQueue())) {
     return false;
   }
 

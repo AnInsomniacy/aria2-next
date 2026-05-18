@@ -18,6 +18,7 @@
 #include "Ed2kAttribute.h"
 #include "Ed2kKadState.h"
 #include "Ed2kSharedStore.h"
+#include "Ed2kUploadQueue.h"
 #include "util.h"
 
 namespace aria2 {
@@ -29,6 +30,7 @@ class SessionSerializerTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testSaveErrorDownload);
   CPPUNIT_TEST(testSaveEd2kDownload);
   CPPUNIT_TEST(testSaveEd2kSharedStore);
+  CPPUNIT_TEST(testSaveEd2kPeerCredits);
   CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -36,6 +38,7 @@ public:
   void testSaveErrorDownload();
   void testSaveEd2kDownload();
   void testSaveEd2kSharedStore();
+  void testSaveEd2kPeerCredits();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(SessionSerializerTest);
@@ -292,6 +295,36 @@ void SessionSerializerTest::testSaveEd2kSharedStore()
   CPPUNIT_ASSERT_EQUAL(path, restored.path);
   CPPUNIT_ASSERT_EQUAL((int64_t)111, restored.size);
   CPPUNIT_ASSERT(restored.origin == ed2k::SharedOrigin::IMPORTED_FILE);
+}
+
+void SessionSerializerTest::testSaveEd2kPeerCredits()
+{
+  auto option = std::make_shared<Option>();
+  option->put(PREF_MAX_DOWNLOAD_RESULT, "10");
+  option->put(PREF_ED2K_UPLOAD_SLOTS, "3");
+  RequestGroupMan rgman{std::vector<std::shared_ptr<RequestGroup>>(), 1,
+                        option.get()};
+  auto queue = rgman.getEd2kUploadQueue();
+  const std::string userHash(ed2k::HASH_LENGTH, '\x44');
+  queue->credits().addUploaded(userHash, 1234);
+  queue->credits().addDownloaded(userHash, 5678);
+
+  SessionSerializer serializer(&rgman);
+  std::string filename =
+      A2_TEST_OUT_DIR "/aria2_SessionSerializerTest_testSaveEd2kPeerCredits";
+  CPPUNIT_ASSERT(serializer.save(filename));
+
+  std::ifstream in(filename.c_str(), std::ios::binary);
+  std::string line;
+  std::getline(in, line);
+  CPPUNIT_ASSERT(util::startsWith(line, " ed2k-peer-credit-state="));
+  auto value = line.substr(std::string(" ed2k-peer-credit-state=").size());
+  ed2k::PeerCreditState restored;
+  CPPUNIT_ASSERT(ed2k::parsePeerCreditStatePayload(
+      restored, util::fromHex(value.begin(), value.end())));
+  CPPUNIT_ASSERT_EQUAL(userHash, restored.userHash);
+  CPPUNIT_ASSERT_EQUAL((uint64_t)1234, restored.uploaded);
+  CPPUNIT_ASSERT_EQUAL((uint64_t)5678, restored.downloaded);
 }
 
 } // namespace aria2

@@ -19,6 +19,7 @@
 #include "DownloadContext.h"
 #include "DownloadEngine.h"
 #include "Ed2kAttribute.h"
+#include "Ed2kUploadQueue.h"
 #include "LogFactory.h"
 #include "Logger.h"
 #include "Option.h"
@@ -490,8 +491,14 @@ void Ed2kKadCommand::handleEd2kUdpPacket(const ed2k::Endpoint& endpoint,
       queueEmuleUdpPacket(endpoint, ed2k::OP_FILENOTFOUND, std::string());
       return;
     }
+    uint16_t rank = 0;
+    auto rgman = e_->getRequestGroupMan().get();
+    auto uploadQueue = rgman ? rgman->getEd2kUploadQueue() : nullptr;
+    if (uploadQueue) {
+      rank = uploadQueue->queueRank(endpoint);
+    }
     queueEmuleUdpPacket(endpoint, ed2k::OP_REASKACK,
-                       ed2k::createUdpReaskAckPayload(0));
+                        ed2k::createUdpReaskAckPayload(rank));
     return;
   }
   if (opcode != ed2k::OP_GLOBSERVSTATRES || endpoint.port < 4) {

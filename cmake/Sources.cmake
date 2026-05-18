@@ -160,6 +160,8 @@ set(ARIA2_SOURCES_BASE
   src/Ed2kSharedResponder.h
   src/Ed2kSharedStore.cc
   src/Ed2kSharedStore.h
+  src/Ed2kUploadQueue.cc
+  src/Ed2kUploadQueue.h
   src/Ed2kKadCommand.cc
   src/Ed2kKadCommand.h
   src/Ed2kKadState.cc

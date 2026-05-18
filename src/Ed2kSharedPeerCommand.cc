@@ -18,6 +18,7 @@
 #include "DownloadEngine.h"
 #include "Ed2kSharedResponder.h"
 #include "Ed2kSharedStore.h"
+#include "Ed2kUploadQueue.h"
 #include "LogFactory.h"
 #include "Logger.h"
 #include "RequestGroupMan.h"
@@ -27,6 +28,7 @@
 #include "ed2k_hash.h"
 #include "ed2k_server.h"
 #include "fmt.h"
+#include "wallclock.h"
 
 namespace aria2 {
 
@@ -82,6 +84,10 @@ Ed2kSharedPeerCommand::~Ed2kSharedPeerCommand()
   e_->deleteSocketForReadCheck(socket_, this);
   if (writeCheck_) {
     e_->deleteSocketForWriteCheck(socket_, this);
+  }
+  if (e_ && e_->getRequestGroupMan() &&
+      e_->getRequestGroupMan()->getEd2kUploadQueue()) {
+    e_->getRequestGroupMan()->getEd2kUploadQueue()->remove(endpoint_);
   }
 }
 
@@ -222,7 +228,9 @@ ed2k::SharedResponder Ed2kSharedPeerCommand::createSharedResponder()
 {
   auto rgman = e_->getRequestGroupMan().get();
   auto store = rgman ? rgman->getEd2kSharedStore() : nullptr;
-  return ed2k::SharedResponder(store, outbox_);
+  auto uploadQueue = rgman ? rgman->getEd2kUploadQueue() : nullptr;
+  return ed2k::SharedResponder(store, uploadQueue, rgman, endpoint_,
+                               remotePeerInfo_.userHash, outbox_);
 }
 
 void Ed2kSharedPeerCommand::handleEmulePacket()
@@ -283,11 +291,22 @@ void Ed2kSharedPeerCommand::handleEdonkeyPacket()
 {
   switch (currentHeader_.opcode) {
   case ed2k::OP_HELLO:
+    ed2k::parsePeerHelloUserHash(remotePeerInfo_.userHash, body_, true);
     queuePeerHelloAnswer();
     queueEmuleInfo(true);
     break;
   case ed2k::OP_HELLOANSWER:
+    ed2k::parsePeerHelloUserHash(remotePeerInfo_.userHash, body_, false);
     queueEmuleInfo(false);
+    break;
+  case ed2k::OP_STARTUPLOADREQ:
+    if (body_.size() != ed2k::HASH_LENGTH) {
+      throw DL_RETRY_EX("Bad ED2K shared peer upload request.");
+    }
+    createSharedResponder().requestUploadSlot(
+        body_, std::chrono::duration_cast<std::chrono::seconds>(
+                   global::wallclock().getTime().time_since_epoch())
+                   .count());
     break;
   case ed2k::OP_REQUESTFILENAME:
     if (body_.size() != ed2k::HASH_LENGTH) {

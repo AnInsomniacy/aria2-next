@@ -418,6 +418,17 @@ bool parseEmuleInfoPayload(EmulePeerInfo& info, const std::string& payload)
   return true;
 }
 
+bool parsePeerHelloUserHash(std::string& userHash, const std::string& payload,
+                            bool helloPacket)
+{
+  const auto offset = helloPacket ? 1 : 0;
+  if (payload.size() < offset + HASH_LENGTH) {
+    return false;
+  }
+  userHash = payload.substr(offset, HASH_LENGTH);
+  return true;
+}
+
 std::string createUdpReaskFilePingPayload(const std::string& fileHash,
                                           uint16_t completeSources)
 {

@@ -40,6 +40,24 @@ Remaining: CP12 still needs Kad source publish, firewalled checks, and durable
 operational state before it can be verified.
 Blocked: none.
 
+2026-05-18 CP14 verified
+Changed: Added native ED2K upload queue and peer credits. `RequestGroupMan`
+now owns `Ed2kUploadQueue`, loads `--ed2k-upload-slots`, restores hidden
+`ed2k-peer-credit-state` records, and exposes the queue to active-download,
+shared-only peer, and UDP reask paths. `Ed2kSharedResponder` gates shared-file
+part serving behind upload admission, sends `OP_ACCEPTUPLOADREQ` for active
+slots or `OP_QUEUERANKING` for waiting peers, records uploaded bytes in
+`NetStat`, and updates peer credit counters. Active-download peer commands now
+handle `OP_STARTUPLOADREQ` through the same responder path, so shared upload
+behavior is consistent with shared-only incoming peers.
+Verified: `cmake --build --preset default --target aria2_tests` passed with
+the existing local Tcl/Tk search-path linker warning. `build/default/aria2_tests`
+passed with `OK (1108)`. `ctest --preset default --output-on-failure -R
+aria2_tests` passed with `100% tests passed, 0 tests failed out of 1`.
+`git diff --check` passed.
+Remaining: Move to CP15 search through CLI and RPC.
+Blocked: none.
+
 2026-05-18 CP0 scope-update
 Changed: Strengthened the scope from a practical downloader to complete native
 ED2K/eMule parity against the local reference repositories. Added the

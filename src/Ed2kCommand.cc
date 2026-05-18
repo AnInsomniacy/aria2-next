@@ -26,6 +26,7 @@
 #include "Ed2kAttribute.h"
 #include "Ed2kPeerTransfer.h"
 #include "Ed2kSharedResponder.h"
+#include "Ed2kUploadQueue.h"
 #include "FileEntry.h"
 #include "LogFactory.h"
 #include "Logger.h"
@@ -188,6 +189,12 @@ Ed2kCommand::~Ed2kCommand()
 {
   if (mode_ == Mode::PEER && getDownloadContext()) {
     markEd2kPeerDisconnected(getEd2kAttrs(getDownloadContext()), endpoint_);
+  }
+  if (mode_ == Mode::PEER && getDownloadEngine() &&
+      getDownloadEngine()->getRequestGroupMan() &&
+      getDownloadEngine()->getRequestGroupMan()->getEd2kUploadQueue()) {
+    getDownloadEngine()->getRequestGroupMan()->getEd2kUploadQueue()->remove(
+        endpoint_);
   }
 }
 
@@ -446,7 +453,9 @@ ed2k::SharedResponder Ed2kCommand::createSharedResponder()
 {
   auto rgman = getDownloadEngine()->getRequestGroupMan().get();
   auto store = rgman ? rgman->getEd2kSharedStore() : nullptr;
-  return ed2k::SharedResponder(store, outbox_);
+  auto uploadQueue = rgman ? rgman->getEd2kUploadQueue() : nullptr;
+  return ed2k::SharedResponder(store, uploadQueue, rgman, endpoint_,
+                               remotePeerInfo_.userHash, outbox_);
 }
 
 bool Ed2kCommand::updatePeerEndpointFromHello(bool helloPacket)
@@ -899,6 +908,7 @@ void Ed2kCommand::handlePeerPacket()
     if (!updatePeerEndpointFromHello(true)) {
       break;
     }
+    ed2k::parsePeerHelloUserHash(remotePeerInfo_.userHash, body_, true);
     queuePeerHelloAnswer();
     queueEmuleInfo(true);
     queuePeerFileRequest();
@@ -908,6 +918,7 @@ void Ed2kCommand::handlePeerPacket()
     if (!updatePeerEndpointFromHello(false)) {
       break;
     }
+    ed2k::parsePeerHelloUserHash(remotePeerInfo_.userHash, body_, false);
     queueEmuleInfo(false);
     queuePeerFileRequest();
     state_ = State::WRITE;
@@ -976,6 +987,16 @@ void Ed2kCommand::handlePeerPacket()
     createSharedResponder().queueHashSetAnswer(body_);
     state_ = State::WRITE;
     break;
+  case ed2k::OP_STARTUPLOADREQ:
+    if (body_.size() != ed2k::HASH_LENGTH) {
+      throw DL_RETRY_EX("Bad ED2K upload request.");
+    }
+    createSharedResponder().requestUploadSlot(
+        body_, std::chrono::duration_cast<std::chrono::seconds>(
+                   global::wallclock().getTime().time_since_epoch())
+                   .count());
+    state_ = State::WRITE;
+    break;
   case ed2k::OP_ACCEPTUPLOADREQ:
     peerAccepted_ = true;
     markEd2kPeerAccepted(attrs, endpoint_);
@@ -1033,7 +1054,15 @@ void Ed2kCommand::handlePeerPacket()
         static_cast<size_t>(end - begin) != body_.size() - metaLength) {
       throw DL_RETRY_EX("Bad ED2K part range.");
     }
-    handlePartData(begin, body_.substr(metaLength));
+    const auto data = body_.substr(metaLength);
+    if (!remotePeerInfo_.userHash.empty()) {
+      auto rgman = getDownloadEngine()->getRequestGroupMan().get();
+      if (rgman && rgman->getEd2kUploadQueue()) {
+        rgman->getEd2kUploadQueue()->noteDownloaded(remotePeerInfo_.userHash,
+                                                    data.size());
+      }
+    }
+    handlePartData(begin, data);
     if (getRequestGroup()->downloadFinished()) {
       state_ = State::DONE;
     }
