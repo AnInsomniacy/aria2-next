@@ -6,9 +6,10 @@ work.
 
 The repository keeps only the durable review artifacts:
 
-- `docs/maintenance/open-issue-review.md` is the human-readable summary.
-- `docs/maintenance/issue-review-matrix.csv` is the complete issue-by-issue review
-  matrix.
+- `docs/maintenance/upstream-issue-review/summary.md` is the human-readable
+  summary.
+- `docs/maintenance/upstream-issue-review/matrix.csv` is the complete
+  issue-by-issue review matrix.
 
 The temporary GitHub API cache, raw issue payloads, and raw comment payloads were
 intentionally removed after the matrix was preserved. They were useful as local
@@ -21,9 +22,10 @@ import and survived the bug-focused cleanup pass. Feature requests, broad suppor
 questions, duplicates without actionable evidence, and stale reports without a
 maintainable code path were excluded before this final matrix was produced.
 
-Each retained issue has one row in `docs/maintenance/issue-review-matrix.csv`. The
-matrix records the issue number, priority, affected area, title, final state,
-root-cause group, required action, and review evidence.
+Each retained issue has one row in
+`docs/maintenance/upstream-issue-review/matrix.csv`. The matrix records the
+issue number, priority, affected area, title, final state, root-cause group,
+required action, and review evidence.
 
 ## Result
 
