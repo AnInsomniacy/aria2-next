@@ -326,3 +326,17 @@ Verified: `cmake --build --preset default --target aria2_tests` passed and
 Remaining: Continue CP6 with a final server-session audit, then move to CP7 or
 record any CP14-owned UDP upload details in the parity ledger.
 Blocked: none.
+
+2026-05-18 CP6 verified
+Changed: Completed the CP6 server-session audit and marked server connection
+policy verified. The implemented server surface now covers direct servers,
+server.met metadata, login, IDChange HighID/LowID state, source requests,
+found sources, server callback routing, server status/messages, learned server
+lists, UDP global status, retry/backoff, persisted server state, and compact
+client UDP reask handling. UDP buddy callback and upload-queue-aware ranks
+remain documented as CP14 upload ownership.
+Verified: `git diff --check` passed. `cmake --build --preset default --target
+aria2_tests` passed. `ctest --preset default --output-on-failure -R
+aria2_tests` passed with `100% tests passed, 0 tests failed out of 1`.
+Remaining: Move to CP7 peer outbound download session.
+Blocked: none.
