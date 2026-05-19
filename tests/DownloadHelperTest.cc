@@ -2119,8 +2119,86 @@ void DownloadHelperTest::testEd2kPeerHelloUsesServerClientId()
   CPPUNIT_ASSERT_EQUAL((uint8_t)ed2k::PROTO_EDONKEY, header.protocol);
   CPPUNIT_ASSERT_EQUAL((uint8_t)ed2k::OP_HELLO, header.opcode);
   CPPUNIT_ASSERT(packet.size() >= 6 + 1 + ed2k::HASH_LENGTH + 4);
+  const auto payload = packet.substr(6, header.payloadSize());
+  CPPUNIT_ASSERT_EQUAL((uint8_t)ed2k::HASH_LENGTH,
+                       static_cast<uint8_t>(payload[0]));
+  CPPUNIT_ASSERT_EQUAL((uint8_t)14, static_cast<uint8_t>(payload[1 + 5]));
+  CPPUNIT_ASSERT_EQUAL((uint8_t)111, static_cast<uint8_t>(payload[1 + 14]));
   CPPUNIT_ASSERT_EQUAL((uint32_t)0x0a000001,
                        ed2k::readUInt32(packet.data() + 6 + 1 + 16));
+  std::vector<ed2k::Tag> tags;
+  CPPUNIT_ASSERT(ed2k::parseTagList(
+      tags, payload.substr(1 + ed2k::HASH_LENGTH + 4 + 2,
+                           payload.size() - (1 + ed2k::HASH_LENGTH + 4 + 2) -
+                               6)));
+  auto findUintTag = [&](uint8_t id) -> const ed2k::Tag* {
+    const auto tag = std::find_if(tags.begin(), tags.end(),
+                                  [&](const ed2k::Tag& item) {
+                                    return item.id == id &&
+                                           item.valueType ==
+                                               ed2k::TagValueType::UINT;
+                                  });
+    return tag == tags.end() ? nullptr : &*tag;
+  };
+  CPPUNIT_ASSERT(findUintTag(0xef));
+  CPPUNIT_ASSERT_EQUAL((uint64_t)0, findUintTag(0xef)->intValue);
+  CPPUNIT_ASSERT(findUintTag(0xfa));
+  CPPUNIT_ASSERT_EQUAL((uint64_t)0,
+                       findUintTag(0xfa)->intValue & (1u << 1));
+  CPPUNIT_ASSERT(findUintTag(0xfb));
+  CPPUNIT_ASSERT_EQUAL((uint64_t)0x03060000, findUintTag(0xfb)->intValue);
+
+  ed2k::EmulePeerInfo peerInfo;
+  peerInfo.miscOptions.extendedRequestsVersion = 2;
+  peerSocket->writeData(ed2k::createPacket(
+      ed2k::PROTO_EDONKEY, ed2k::OP_HELLOANSWER,
+      ed2k::createPeerHelloPayload(std::string(ed2k::HASH_LENGTH, '\x33'),
+                                   0x0a000002, 4662, server, "peer",
+                                   peerInfo, false)));
+
+  std::string followup;
+  std::string requestFilename;
+  for (int i = 0; i < 8 && requestFilename.empty(); ++i) {
+    if (!peerSocket->isReadable(0)) {
+      engine.run(true);
+    }
+    if (!peerSocket->isReadable(0)) {
+      continue;
+    }
+    char data[512];
+    size_t len = sizeof(data);
+    peerSocket->readData(data, len);
+    followup.append(data, len);
+    size_t offset = 0;
+    while (followup.size() - offset >= 6) {
+      CPPUNIT_ASSERT(ed2k::readPacketHeader(header, followup.data() + offset,
+                                            followup.size() - offset));
+      const auto packetSize = 5 + header.size;
+      if (followup.size() - offset < packetSize) {
+        break;
+      }
+      if (header.protocol == ed2k::PROTO_EDONKEY &&
+          header.opcode == ed2k::OP_REQUESTFILENAME) {
+        requestFilename =
+            followup.substr(offset + 6, header.payloadSize());
+        break;
+      }
+      offset += packetSize;
+    }
+    followup.erase(0, offset);
+  }
+  CPPUNIT_ASSERT_EQUAL((size_t)(ed2k::HASH_LENGTH + 2 + 1 + 2),
+                       requestFilename.size());
+  CPPUNIT_ASSERT_EQUAL(attrs->link.hash,
+                       requestFilename.substr(0, ed2k::HASH_LENGTH));
+  CPPUNIT_ASSERT_EQUAL((uint16_t)2, ed2k::readUInt16(
+                                       requestFilename.data() +
+                                       ed2k::HASH_LENGTH));
+  CPPUNIT_ASSERT_EQUAL((uint8_t)0, static_cast<uint8_t>(
+                                      requestFilename[ed2k::HASH_LENGTH + 2]));
+  CPPUNIT_ASSERT_EQUAL((uint16_t)0,
+                       ed2k::readUInt16(requestFilename.data() +
+                                        ed2k::HASH_LENGTH + 3));
 }
 
 void DownloadHelperTest::testEd2kInitialServerCommandRecordsFailure()

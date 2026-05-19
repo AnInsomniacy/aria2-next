@@ -62,3 +62,38 @@ Next evidence should compare the exact sent hello bytes against aMule/eMule
 and exercise a known local peer fixture that can answer hello.
 Blocked: Public XP fixture currently provides only two reachable-looking
 server sources, and both close before any peer response.
+
+2026-05-19 RF1/RF5 partial
+Changed: Tested the newer Windows 11 x64 ED2K fixture in controlled 30 second
+runs under `/Users/sekiro/Desktop/aria2-next-ed2k-debug`. The fixture is
+better than the XP link for request-flow diagnosis because public servers
+returned a source for hash `f3c8ae69aa86f1fc8204cc9bc4d9f61b`. A pre-fix run
+reached peer `58.163.147.2:4377`, received `OP_HELLOANSWER`, sent
+`OP_EMULEINFO` plus `OP_REQUESTFILENAME`, received `OP_EMULEINFOANSWER`, and
+then saw the peer close before any file answer. Authoritative aMule/eMule
+references show that when `extendedRequestsVersion > 0`, `OP_REQUESTFILENAME`
+must include part-status data after the file hash, and when the version is
+greater than 1 it must also include complete-source count. The draft
+advertised extended request version 2 but sent only the 16 byte file hash.
+Implemented an aria2-next native request payload builder that writes hash,
+ED2K part count, local completed-part bitfield, and complete-source count.
+Incoming shared-peer file requests now accept modern extended payloads and
+pass the hash portion to the shared responder. A compact regression assertion
+was added to the existing peer hello test to verify that the first outgoing
+`OP_REQUESTFILENAME` is no longer the 16 byte short packet that aMule treats
+as invalid after advertising extended requests.
+Verified: `PATH=/opt/homebrew/bin:$PATH cmake --build --preset default
+--target aria2-next aria2_tests` passed. A post-fix 30 second public run with
+the same Windows 11 x64 fixture still ended at 0 bytes, but that run did not
+reach the fixed request-flow boundary: server `45.82.80.155:5687` returned
+one source, then peer `58.163.147.2:4377` reset immediately after local
+`OP_HELLO` with no peer packet received. All observed servers assigned LowID
+and emitted the public warning that the local network configuration is not
+externally reachable. The post-fix run directory was
+`/Users/sekiro/Desktop/aria2-next-ed2k-debug/rf1-win11-x64-extreq-20260519-114314`.
+Remaining: Continue RF1/RF5 with controlled local peer fixtures and later
+public runs that reach `OP_REQFILENAMEANSWER`, `OP_FILESTATUS`, queue, or part
+request state. Public single-source runs cannot prove the request-flow fix
+when the peer closes before answering hello.
+Blocked: Public live verification is nondeterministic while the client is
+LowID and current fixtures provide only one or two reachable-looking sources.

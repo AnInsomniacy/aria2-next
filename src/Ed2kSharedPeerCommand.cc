@@ -329,10 +329,11 @@ void Ed2kSharedPeerCommand::handleEdonkeyPacket()
                    .count());
     break;
   case ed2k::OP_REQUESTFILENAME:
-    if (body_.size() != ed2k::HASH_LENGTH) {
+    if (body_.size() < ed2k::HASH_LENGTH) {
       throw DL_RETRY_EX("Bad ED2K shared peer file request.");
     }
-    createSharedResponder().queueFileNameAnswer(body_);
+    createSharedResponder().queueFileNameAnswer(
+        body_.substr(0, ed2k::HASH_LENGTH));
     break;
   case ed2k::OP_SETREQFILEID:
     if (body_.size() != ed2k::HASH_LENGTH) {

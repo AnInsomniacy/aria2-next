@@ -111,6 +111,45 @@ ed2k::EmulePeerInfo createLocalPeerInfo()
   return info;
 }
 
+std::string createPeerFileRequestPayload(const DownloadContext* dctx,
+                                         PieceStorage* pieceStorage,
+                                         const std::string& fileHash,
+                                         uint8_t extendedRequestsVersion)
+{
+  auto payload = fileHash;
+  if (extendedRequestsVersion == 0) {
+    return payload;
+  }
+
+  const auto partCount = dctx->getNumPieces();
+  if (partCount > std::numeric_limits<uint16_t>::max()) {
+    throw DL_ABORT_EX("ED2K file has too many parts.");
+  }
+  payload += ed2k::packUInt16(static_cast<uint16_t>(partCount));
+
+  for (size_t index = 0; index < partCount;) {
+    uint8_t bits = 0;
+    for (size_t bit = 0; bit < 8 && index < partCount; ++bit, ++index) {
+      if (pieceStorage && pieceStorage->hasPiece(index)) {
+        bits |= 1u << bit;
+      }
+    }
+    payload.push_back(static_cast<char>(bits));
+  }
+
+  if (extendedRequestsVersion > 1) {
+    payload += ed2k::packUInt16(0);
+  }
+  return payload;
+}
+
+bool isFileRequestPayloadForHash(const std::string& payload,
+                                 const std::string& expectedHash)
+{
+  return payload.size() >= ed2k::HASH_LENGTH &&
+         payload.compare(0, ed2k::HASH_LENGTH, expectedHash) == 0;
+}
+
 int64_t nextServerSourceRequestTime()
 {
   return std::chrono::duration_cast<std::chrono::seconds>(
@@ -381,8 +420,12 @@ void Ed2kCommand::queuePeerFileRequest()
     return;
   }
   peerFileRequestSent_ = true;
+  auto attrs = getEd2kAttrs(getDownloadContext());
   queuePacket(ed2k::PROTO_EDONKEY, ed2k::OP_REQUESTFILENAME,
-              getEd2kAttrs(getDownloadContext())->link.hash);
+              createPeerFileRequestPayload(
+                  getDownloadContext().get(), getPieceStorage().get(),
+                  attrs->link.hash, localPeerInfo_.miscOptions
+                                        .extendedRequestsVersion));
 }
 
 void Ed2kCommand::queuePeerFileStatusRequest()
@@ -1047,10 +1090,11 @@ void Ed2kCommand::handlePeerPacket()
     }
     break;
   case ed2k::OP_REQUESTFILENAME:
-    if (body_.size() != ed2k::HASH_LENGTH) {
+    if (!isFileRequestPayloadForHash(body_, attrs->link.hash)) {
       throw DL_RETRY_EX("Bad ED2K file request.");
     }
-    createSharedResponder().queueFileNameAnswer(body_);
+    createSharedResponder().queueFileNameAnswer(
+        body_.substr(0, ed2k::HASH_LENGTH));
     state_ = State::WRITE;
     break;
   case ed2k::OP_SETREQFILEID:
