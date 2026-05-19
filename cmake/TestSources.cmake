@@ -100,6 +100,7 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/IteratableChecksumValidatorTest.cc
   tests/MessageDigestTest.cc
   tests/Ed2kHelperTest.cc
+  tests/Ed2kCommandTest.cc
   tests/Ed2kKadStateTest.cc
   tests/Ed2kSharedStoreTest.cc
 )

@@ -644,6 +644,9 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
     attrs->kadRoutingTable->nodeSeen(sender, nowSeconds());
     for (const auto& contact : response.contacts) {
       attrs->kadRoutingTable->heardAbout(contact, nowSeconds());
+      if (contact.host == endpoint.host && contact.udpPort == endpoint.port) {
+        continue;
+      }
       queuePacket(toEndpoint(contact), ed2k::KAD_HELLO_REQ,
                   ed2k::createKadHelloPayload(clientKadId(e_),
                                               localEd2kTcpPort(e_), 8));
