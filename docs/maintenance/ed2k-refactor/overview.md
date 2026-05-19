@@ -98,8 +98,11 @@ disk/integrity safety, RPC field contracts, and confirmed regressions. Avoid
 broad scaffolding, fake tests, placeholder files, and tests that simply mirror
 implementation details.
 
-Routine checkpoints should use the smallest commands that prove the changed
-surface. Final completion requires:
+Batch related changes and verify once at the end of the batch. Run
+intermediate tests only when a failing boundary is needed to prove a root cause
+or when a risky edit needs immediate feedback. Routine checkpoints should use
+the smallest commands that prove the changed surface. Final completion
+requires:
 
 ```bash
 cmake --preset default
@@ -116,8 +119,8 @@ claiming completion.
 
 ## Update Rules
 
-Every checkpoint update must record changed files, verification evidence,
-remaining work, blockers, and relevant reference-audit decisions. Scratch
-logs, packet captures, generated reports, and local caches must stay outside
-the repository.
-
+Every checkpoint update must record changed files, final verification evidence,
+remaining work, blockers, and relevant reference-audit decisions. Keep
+`progress.md` checkpoint-sized. Do not record every investigation step, every
+ordinary local build, or every small test run. Scratch logs, packet captures,
+generated reports, and local caches must stay outside the repository.
