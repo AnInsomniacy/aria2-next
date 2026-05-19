@@ -128,3 +128,19 @@ Remaining: Continue RF5 for multi-part status/hashset sequencing,
 multi-packet variants, file identifiers, and controlled queue/transfer state
 verification.
 Blocked: none.
+
+2026-05-19 RF2 partial
+Changed: Split the RF2 metadata audit row into focused durable rows for file
+links, server and nodes links, server.met parsing, and nodes.dat parsing. The
+new rows are based on the current authoritative local references: aMule
+`ED2KLink`, eMule `ED2KLink`, the local aMule ED2K link protocol document,
+aMule/eMule server list and server metadata loaders, MLDonkey server.met
+import paths, and aMule/eMule/MLDonkey Kad contact loading paths. The audit now
+separates behavior to adapt from legacy GUI update prompts and local UI
+history that should be pruned or replaced by aria2-next task/session plumbing.
+Verified: Documentation-only audit refinement. CSV width check for
+`checkpoints.csv` and `reference-audit.csv` passed.
+Remaining: Continue RF2 by auditing search-link/UI-only surfaces, social
+packet surfaces, known-file metadata, and persistence formats before marking
+RF2 verified.
+Blocked: none.
