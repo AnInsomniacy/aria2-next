@@ -1401,7 +1401,7 @@ bool Ed2kCommand::executeInternal()
     case State::DONE:
       return true;
     }
-    if (!outbox_.empty()) {
+    if (state_ != State::DONE && !outbox_.empty()) {
       state_ = State::WRITE;
     }
   }

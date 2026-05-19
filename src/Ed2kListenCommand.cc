@@ -109,8 +109,7 @@ bool Ed2kListenCommand::execute()
 {
   auto sharedStore = e_->getRequestGroupMan()->getEd2kSharedStore();
   const bool hasSharedFiles = sharedStore && sharedStore->size() != 0;
-  if (e_->isHaltRequested() ||
-      (e_->getRequestGroupMan()->downloadFinished() && !hasSharedFiles)) {
+  if (e_->isHaltRequested() || (!findEd2kRequestGroup() && !hasSharedFiles)) {
     return true;
   }
 
