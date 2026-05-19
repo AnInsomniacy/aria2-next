@@ -5,6 +5,7 @@
 #include "DownloadResult.h"
 #include "Ed2kAttribute.h"
 #include "Ed2kSharedFile.h"
+#include "Ed2kUploadQueue.h"
 #include "File.h"
 #include "FileEntry.h"
 #include "Option.h"
@@ -28,6 +29,7 @@ class Ed2kSharedStoreTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testSharedFileProtocolPayloads);
   CPPUNIT_TEST(testSharedFilePartPayload);
   CPPUNIT_TEST(testSharedFileAichAnswerPayload);
+  CPPUNIT_TEST(testUploadQueueRejectsDuplicateUserHash);
   CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -38,6 +40,7 @@ public:
   void testSharedFileProtocolPayloads();
   void testSharedFilePartPayload();
   void testSharedFileAichAnswerPayload();
+  void testUploadQueueRejectsDuplicateUserHash();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(Ed2kSharedStoreTest);
@@ -289,6 +292,34 @@ void Ed2kSharedStoreTest::testSharedFileAichAnswerPayload()
                                        data.size(), false));
   CPPUNIT_ASSERT(verifyAichRecoveryData(recovery, file.aichRootHash,
                                         data.size(), 0));
+}
+
+void Ed2kSharedStoreTest::testUploadQueueRejectsDuplicateUserHash()
+{
+  UploadQueue queue(1);
+  Endpoint first;
+  first.host = "203.0.113.10";
+  first.port = 4662;
+  Endpoint duplicate;
+  duplicate.host = "203.0.113.11";
+  duplicate.port = 4662;
+  Endpoint other;
+  other.host = "203.0.113.12";
+  other.port = 4662;
+  const std::string userHash(HASH_LENGTH, '\x44');
+  const std::string otherUserHash(HASH_LENGTH, '\x45');
+  const std::string fileHash(HASH_LENGTH, '\x66');
+
+  CPPUNIT_ASSERT(queue.requestUpload(first, userHash, fileHash, 1000, nullptr));
+  CPPUNIT_ASSERT(!queue.requestUpload(duplicate, userHash, fileHash, 1001,
+                                      nullptr));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, queue.peers().size());
+  CPPUNIT_ASSERT(queue.isUploading(first));
+
+  CPPUNIT_ASSERT(!queue.requestUpload(other, otherUserHash, fileHash, 1002,
+                                      nullptr));
+  CPPUNIT_ASSERT_EQUAL((size_t)2, queue.peers().size());
+  CPPUNIT_ASSERT_EQUAL((uint16_t)1, queue.queueRank(other));
 }
 
 } // namespace ed2k

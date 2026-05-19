@@ -146,6 +146,19 @@ UploadPeer* UploadQueue::findPeer(const Endpoint& endpoint)
   return i == peers_.end() ? nullptr : &*i;
 }
 
+const UploadPeer* UploadQueue::findPeerByUserHash(
+    const std::string& userHash) const
+{
+  if (userHash.size() != HASH_LENGTH) {
+    return nullptr;
+  }
+  auto i = std::find_if(peers_.begin(), peers_.end(),
+                        [&](const UploadPeer& peer) {
+                          return peer.userHash == userHash;
+                        });
+  return i == peers_.end() ? nullptr : &*i;
+}
+
 bool UploadQueue::canOpenSlot(RequestGroupMan* rgman) const
 {
   if (uploadingCount() >= maxSlots_) {
@@ -164,6 +177,9 @@ bool UploadQueue::requestUpload(const Endpoint& endpoint,
     return false;
   }
   auto peer = findPeer(endpoint);
+  if (!peer && findPeerByUserHash(userHash)) {
+    return false;
+  }
   if (!peer) {
     UploadPeer created;
     created.endpoint = endpoint;

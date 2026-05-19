@@ -199,3 +199,18 @@ with expected 4 and actual 1. After the fix, `git diff --check` passed,
 `build/default/aria2_tests` passed with `OK (1096)`.
 Remaining: Start RA60 sharing upload and credits alignment.
 Blocked: none.
+
+2026-05-19 RA60 verified
+Changed: Closed sharing, upload queue, and credit alignment. The shared-file
+store and responder already matched the non-pruned reference surface for
+completed/imported file metadata, disk validation, filename/status/hashset,
+Source Exchange, AICH, and part serving. UploadQueue now also rejects a second
+queue entry with the same 16-byte user hash, matching the aMule/eMule duplicate
+identity guard without importing secure-ident or GUI queue policy.
+Verified: The new `Ed2kSharedStoreTest::testUploadQueueRejectsDuplicateUserHash`
+failed before the UploadQueue guard because two endpoints with the same user
+hash could occupy the queue. After the fix, `cmake --build --preset default
+--target aria2_tests` passed and `build/default/aria2_tests` passed with
+`OK (1097)`. `git diff --check` passed.
+Remaining: Start RA70 search RPC and Motrix alignment.
+Blocked: none.

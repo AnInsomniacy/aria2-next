@@ -65,6 +65,7 @@ private:
   size_t maxSlots_;
 
   UploadPeer* findPeer(const Endpoint& endpoint);
+  const UploadPeer* findPeerByUserHash(const std::string& userHash) const;
   void sortWaiting();
   void recomputeRanks();
   bool canOpenSlot(RequestGroupMan* rgman) const;
