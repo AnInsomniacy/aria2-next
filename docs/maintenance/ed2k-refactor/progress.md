@@ -214,3 +214,18 @@ hash could occupy the queue. After the fix, `cmake --build --preset default
 `OK (1097)`. `git diff --check` passed.
 Remaining: Start RA70 search RPC and Motrix alignment.
 Blocked: none.
+
+2026-05-19 RA70 verified
+Changed: Closed search, RPC, and Motrix field alignment. Existing server/Kad
+search transport, result deduplication, local filters, merged source counts,
+complete source counts, generated `ed2kLink`, boolean `moreResults`, and nested
+ED2K `tellStatus` fields already matched the non-pruned tracker surface.
+Search result metadata parsing now also maps the legacy named media codec tag
+`codec` into `mediaCodec`, matching the aMule/eMule metadata conversion path.
+The tracker path for the manual was corrected to `docs/manual/en/aria2-next.rst`.
+Verified: The new `Ed2kHelperTest::testSearchResultPayload` assertion failed
+before the parser fix because `mediaCodec` was empty for a named `codec` tag.
+After the fix, `cmake --build --preset default --target aria2_tests` passed and
+`build/default/aria2_tests` passed with `OK (1097)`.
+Remaining: Start RA71 documentation and final local audit.
+Blocked: none.

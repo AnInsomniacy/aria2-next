@@ -102,7 +102,7 @@ void applySearchTag(SearchResultEntry& entry, const Tag& tag, uint64_t& sizeLow,
     else if (tag.id == 0xd3 || tag.name == "length") {
       entry.mediaLength = tag.stringValue;
     }
-    else if (tag.id == 0xd5) {
+    else if (tag.id == 0xd5 || tag.name == "codec") {
       entry.mediaCodec = tag.stringValue;
     }
   }

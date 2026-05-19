@@ -601,7 +601,7 @@ void Ed2kHelperTest::testSearchResultPayload()
   auto fileHash = util::fromHex(fileHashHex.begin(), fileHashHex.end());
 
   std::string tags;
-  tags += packUInt32(6);
+  tags += packUInt32(7);
   tags.push_back(static_cast<char>(0x02 | 0x80));
   tags.push_back('\x01');
   tags += packUInt16(9);
@@ -622,6 +622,11 @@ void Ed2kHelperTest::testSearchResultPayload()
   tags.push_back(static_cast<char>(0x03 | 0x80));
   tags.push_back('\x30');
   tags += packUInt32(7);
+  tags.push_back('\x02');
+  tags += packUInt16(5);
+  tags += "codec";
+  tags += packUInt16(4);
+  tags += "H264";
 
   std::string payload;
   payload += packUInt32(1);
@@ -641,6 +646,7 @@ void Ed2kHelperTest::testSearchResultPayload()
   CPPUNIT_ASSERT_EQUAL(std::string("Video"), result.entries[0].fileType);
   CPPUNIT_ASSERT_EQUAL((uint32_t)42, result.entries[0].sourceCount);
   CPPUNIT_ASSERT_EQUAL((uint32_t)7, result.entries[0].completeSourceCount);
+  CPPUNIT_ASSERT_EQUAL(std::string("H264"), result.entries[0].mediaCodec);
   CPPUNIT_ASSERT_EQUAL(std::string("server"), result.entries[0].sourceNetwork);
   CPPUNIT_ASSERT_EQUAL((size_t)1, result.entries[0].sources.size());
   CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"),
