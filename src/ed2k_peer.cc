@@ -461,6 +461,21 @@ bool parseEmuleInfoPayload(EmulePeerInfo& info, const std::string& payload)
   return true;
 }
 
+EmulePeerInfo createLocalEmulePeerInfo()
+{
+  EmulePeerInfo info;
+  info.version = 0x3c;
+  info.protocolVersion = 0x01;
+  info.miscOptions.aichVersion = 1;
+  info.miscOptions.unicode = true;
+  info.miscOptions.dataCompressionVersion = 1;
+  info.miscOptions.sourceExchange1Version = 3;
+  info.miscOptions.extendedRequestsVersion = 2;
+  info.miscOptions2.supportsLargeFiles = true;
+  info.miscOptions2.supportsSourceExchange2 = true;
+  return info;
+}
+
 std::string createPeerHelloPayload(const std::string& clientHash,
                                    uint32_t clientId,
                                    uint16_t listenPort,

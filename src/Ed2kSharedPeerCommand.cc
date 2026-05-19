@@ -65,21 +65,6 @@ uint16_t localEd2kTcpPort(const DownloadEngine* e)
   return 0;
 }
 
-ed2k::EmulePeerInfo createLocalPeerInfo()
-{
-  ed2k::EmulePeerInfo info;
-  info.version = 0x3c;
-  info.protocolVersion = 0x01;
-  info.miscOptions.aichVersion = 1;
-  info.miscOptions.unicode = true;
-  info.miscOptions.dataCompressionVersion = 1;
-  info.miscOptions.sourceExchange1Version = 3;
-  info.miscOptions.extendedRequestsVersion = 2;
-  info.miscOptions2.supportsLargeFiles = true;
-  info.miscOptions2.supportsSourceExchange2 = true;
-  return info;
-}
-
 } // namespace
 
 Ed2kSharedPeerCommand::Ed2kSharedPeerCommand(
@@ -92,7 +77,7 @@ Ed2kSharedPeerCommand::Ed2kSharedPeerCommand(
       state_(State::READ_HEADER),
       headerRead_(0),
       bodyRead_(0),
-      localPeerInfo_(createLocalPeerInfo()),
+      localPeerInfo_(ed2k::createLocalEmulePeerInfo()),
       writeCheck_(false)
 {
   socket_->setNonBlockingMode();

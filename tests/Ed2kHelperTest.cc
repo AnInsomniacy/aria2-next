@@ -37,6 +37,7 @@ class Ed2kHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testInflateCompressedPartData);
   CPPUNIT_TEST(testInflatePackedPacketPayload);
   CPPUNIT_TEST(testEmuleInfoPayload);
+  CPPUNIT_TEST(testLocalEmulePeerInfoCapabilities);
   CPPUNIT_TEST(testPeerHelloPayload);
   CPPUNIT_TEST(testUdpReaskPayloads);
   CPPUNIT_TEST(testAichPayloads);
@@ -74,6 +75,7 @@ public:
   void testInflateCompressedPartData();
   void testInflatePackedPacketPayload();
   void testEmuleInfoPayload();
+  void testLocalEmulePeerInfoCapabilities();
   void testPeerHelloPayload();
   void testUdpReaskPayloads();
   void testAichPayloads();
@@ -971,6 +973,25 @@ void Ed2kHelperTest::testEmuleInfoPayload()
   CPPUNIT_ASSERT(!parsed.miscOptions.multiPacket);
   CPPUNIT_ASSERT(!parsed.miscOptions2.supportsSourceExchange2);
   CPPUNIT_ASSERT(!parsed.miscOptions2.supportsLargeFiles);
+}
+
+void Ed2kHelperTest::testLocalEmulePeerInfoCapabilities()
+{
+  auto info = createLocalEmulePeerInfo();
+
+  CPPUNIT_ASSERT_EQUAL((uint8_t)1, info.miscOptions.aichVersion);
+  CPPUNIT_ASSERT(info.miscOptions.unicode);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)1,
+                       info.miscOptions.dataCompressionVersion);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)3,
+                       info.miscOptions.sourceExchange1Version);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)2,
+                       info.miscOptions.extendedRequestsVersion);
+  CPPUNIT_ASSERT(info.miscOptions2.supportsLargeFiles);
+  CPPUNIT_ASSERT(info.miscOptions2.supportsSourceExchange2);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)0, info.miscOptions.secureIdentVersion);
+  CPPUNIT_ASSERT(!info.miscOptions.multiPacket);
+  CPPUNIT_ASSERT(!info.miscOptions2.supportsExtendedMultipacket);
 }
 
 void Ed2kHelperTest::testPeerHelloPayload()

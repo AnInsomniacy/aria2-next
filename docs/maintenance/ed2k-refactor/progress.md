@@ -108,3 +108,17 @@ Verified: `cmake --build --preset default --target aria2_tests` passed.
 `build/default/aria2_tests` passed with `OK (1093)`.
 Remaining: Start RA30 peer hello and capability truth.
 Blocked: none.
+
+2026-05-19 RA30 verified
+Changed: Aligned peer hello capability truth against aMule, eMule, and
+Wireshark. Local ED2K peer capability construction now lives in
+`ed2k_peer.*` and is shared by active-download and shared-only peer commands.
+Hello packets advertise implemented AICH, Unicode, compression, Source
+Exchange, and large-file support. Multipacket, extended multipacket, crypt,
+secure identification, Kad, and file identifiers remain unadvertised until
+their packet and state paths are complete. Standalone eMule info keeps the
+reference-compatible legacy tag shape.
+Verified: `cmake --build --preset default --target aria2_tests` passed.
+`build/default/aria2_tests` passed with `OK (1094)`.
+Remaining: Start RA31 modern peer request flow.
+Blocked: none.

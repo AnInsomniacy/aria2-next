@@ -96,21 +96,6 @@ uint16_t localEd2kTcpPort(const DownloadEngine* e)
   return 0;
 }
 
-ed2k::EmulePeerInfo createLocalPeerInfo()
-{
-  ed2k::EmulePeerInfo info;
-  info.version = 0x3c;
-  info.protocolVersion = 0x01;
-  info.miscOptions.aichVersion = 1;
-  info.miscOptions.unicode = true;
-  info.miscOptions.dataCompressionVersion = 1;
-  info.miscOptions.sourceExchange1Version = 3;
-  info.miscOptions.extendedRequestsVersion = 2;
-  info.miscOptions2.supportsLargeFiles = true;
-  info.miscOptions2.supportsSourceExchange2 = true;
-  return info;
-}
-
 std::string createPeerFileRequestPayload(const DownloadContext* dctx,
                                          PieceStorage* pieceStorage,
                                          const std::string& fileHash,
@@ -197,7 +182,7 @@ Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
       serverRequestSent_(false),
       use64BitOffsets_(requestGroup->getDownloadContext()->getTotalLength() >
                        std::numeric_limits<uint32_t>::max()),
-      localPeerInfo_(createLocalPeerInfo())
+      localPeerInfo_(ed2k::createLocalEmulePeerInfo())
 {
   setTimeout(std::chrono::seconds(getOption()->getAsInt(PREF_CONNECT_TIMEOUT)));
   if (getSegmentMan()) {
@@ -233,7 +218,7 @@ Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
       use64BitOffsets_(requestGroup->getDownloadContext()->getTotalLength() >
                        std::numeric_limits<uint32_t>::max()),
       incoming_(true),
-      localPeerInfo_(createLocalPeerInfo())
+      localPeerInfo_(ed2k::createLocalEmulePeerInfo())
 {
   setTimeout(std::chrono::seconds(getOption()->getAsInt(PREF_CONNECT_TIMEOUT)));
   if (getSegmentMan()) {

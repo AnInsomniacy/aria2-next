@@ -143,6 +143,7 @@ bool parseAnswerSources2Payload(SourceExchangeAnswer& answer,
                                 const std::string& expectedFileHash);
 std::string createEmuleInfoPayload(const EmulePeerInfo& info);
 bool parseEmuleInfoPayload(EmulePeerInfo& info, const std::string& payload);
+EmulePeerInfo createLocalEmulePeerInfo();
 std::string createPeerHelloPayload(const std::string& clientHash,
                                    uint32_t clientId,
                                    uint16_t listenPort,
