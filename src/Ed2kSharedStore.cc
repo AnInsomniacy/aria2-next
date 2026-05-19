@@ -243,9 +243,12 @@ bool importSharedFile(SharedFile& result, const std::string& path, int64_t now)
     pieceHashes.push_back(md4Digest(piece));
     aichPieceHashes.push_back(aichRootHash(piece.data(), piece.size()));
   }
+  if (size >= PIECE_LENGTH && size % PIECE_LENGTH == 0) {
+    pieceHashes.push_back(md4Digest(""));
+  }
 
   SharedFile shared;
-  shared.hash = rootHash(pieceHashes);
+  shared.hash = pieceHashes.empty() ? md4Digest(piece) : rootHash(pieceHashes);
   shared.aichRootHash = aichRootHash(aichPieceHashes);
   shared.pieceHashes = std::move(pieceHashes);
   shared.path = path;

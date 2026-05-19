@@ -181,13 +181,16 @@ bool createSharedFileHashSetPayload(std::string& payload,
                                     const SharedFile& file)
 {
   validateSharedFile(file);
-  if (!file.pieceHashes.empty()) {
-    payload = createHashSetAnswerPayload(file.hash, file.pieceHashes);
+  const auto expectedHashCount = hashSetPartCount(file.size);
+  if (expectedHashCount == 0) {
+    payload = createHashSetAnswerPayload(file.hash, std::vector<std::string>());
     return true;
   }
-  if (file.size <= PIECE_LENGTH) {
-    payload =
-        createHashSetAnswerPayload(file.hash, std::vector<std::string>(1, file.hash));
+  if (!file.pieceHashes.empty()) {
+    if (file.pieceHashes.size() != expectedHashCount) {
+      return false;
+    }
+    payload = createHashSetAnswerPayload(file.hash, file.pieceHashes);
     return true;
   }
   return false;

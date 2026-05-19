@@ -52,6 +52,7 @@ class Ed2kHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testServerMetParser);
   CPPUNIT_TEST(testMd4Digest);
   CPPUNIT_TEST(testRootHash);
+  CPPUNIT_TEST(testHashSetPartCount);
   CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -90,6 +91,7 @@ public:
   void testServerMetParser();
   void testMd4Digest();
   void testRootHash();
+  void testHashSetPartCount();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(Ed2kHelperTest);
@@ -1642,6 +1644,22 @@ void Ed2kHelperTest::testRootHash()
   std::string concat = multiple[0] + multiple[1];
   CPPUNIT_ASSERT_EQUAL(util::toHex(md4Digest(concat)),
                        util::toHex(rootHash(multiple)));
+}
+
+void Ed2kHelperTest::testHashSetPartCount()
+{
+  CPPUNIT_ASSERT_EQUAL((size_t)0, hashSetPartCount(1));
+  CPPUNIT_ASSERT_EQUAL((size_t)0,
+                       hashSetPartCount(static_cast<int64_t>(PIECE_LENGTH) -
+                                        1));
+  CPPUNIT_ASSERT_EQUAL((size_t)2,
+                       hashSetPartCount(static_cast<int64_t>(PIECE_LENGTH)));
+  CPPUNIT_ASSERT_EQUAL((size_t)2,
+                       hashSetPartCount(static_cast<int64_t>(PIECE_LENGTH) +
+                                        1));
+  CPPUNIT_ASSERT_EQUAL((size_t)3,
+                       hashSetPartCount(static_cast<int64_t>(PIECE_LENGTH) *
+                                        2));
 }
 
 } // namespace ed2k

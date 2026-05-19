@@ -194,8 +194,18 @@ void Ed2kSharedStoreTest::testSharedFileProtocolPayloads()
   std::string payload;
   CPPUNIT_ASSERT(createSharedFileHashSetPayload(payload, file));
   CPPUNIT_ASSERT(parseHashSetAnswerPayload(hashes, payload, file.hash));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, hashes.size());
-  CPPUNIT_ASSERT_EQUAL(file.hash, hashes[0]);
+  CPPUNIT_ASSERT(hashes.empty());
+
+  file.size = static_cast<int64_t>(PIECE_LENGTH);
+  file.hash = rootHash(std::vector<std::string>{
+      std::string(HASH_LENGTH, '\x33'), md4Digest("")});
+  file.pieceHashes.clear();
+  file.pieceHashes.push_back(std::string(HASH_LENGTH, '\x33'));
+  file.pieceHashes.push_back(md4Digest(""));
+  CPPUNIT_ASSERT(createSharedFileHashSetPayload(payload, file));
+  CPPUNIT_ASSERT(parseHashSetAnswerPayload(hashes, payload, file.hash));
+  CPPUNIT_ASSERT_EQUAL((size_t)2, hashes.size());
+  CPPUNIT_ASSERT_EQUAL(md4Digest(""), hashes[1]);
 
   file.pieceHashes.clear();
   file.size = static_cast<int64_t>(PIECE_LENGTH) + 1;

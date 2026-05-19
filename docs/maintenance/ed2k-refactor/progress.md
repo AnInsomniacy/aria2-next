@@ -157,3 +157,16 @@ the fix, `cmake --build --preset default --target aria2_tests` passed and
 `build/default/aria2_tests` passed with `OK (1094)`.
 Remaining: Start RA40 disk transfer and integrity alignment.
 Blocked: none.
+
+2026-05-19 RA40 verified
+Changed: Aligned ED2K MD4 hashset boundaries with the authoritative aMule and
+eMule model. Hashset request and validation now use the ED2K theoretical
+part-hash count instead of aria2 data-piece count. Files smaller than
+`PARTSIZE` return no hashset entries. Exact `PARTSIZE` multiples request and
+validate the reference trailing empty MD4 hash. Shared-file import and hashset
+responses use the same boundary rules.
+Verified: `cmake --build --preset default --target aria2_tests` passed.
+`build/default/aria2_tests` passed with `OK (1095)`. `git diff --check`
+passed.
+Remaining: Start RA50 source policy and Source Exchange alignment.
+Blocked: none.

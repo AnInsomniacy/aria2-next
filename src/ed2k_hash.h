@@ -16,6 +16,7 @@
 #include "common.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -31,6 +32,7 @@ constexpr size_t AICH_HASH_LENGTH = 20;
 
 std::string md4Digest(const void* data, size_t length);
 std::string md4Digest(const std::string& data);
+size_t hashSetPartCount(int64_t fileSize);
 std::string rootHash(const std::vector<std::string>& pieceHashes);
 std::string aichHash(const void* data, size_t length);
 std::string aichHash(const std::string& data);

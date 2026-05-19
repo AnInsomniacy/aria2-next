@@ -213,6 +213,15 @@ std::string md4Digest(const std::string& data)
   return md4Digest(data.data(), data.size());
 }
 
+size_t hashSetPartCount(int64_t fileSize)
+{
+  if (fileSize <= 0) {
+    return 0;
+  }
+  const auto fullParts = static_cast<size_t>(fileSize / PIECE_LENGTH);
+  return fullParts == 0 ? 0 : fullParts + 1;
+}
+
 std::string rootHash(const std::vector<std::string>& pieceHashes)
 {
   if (pieceHashes.empty()) {

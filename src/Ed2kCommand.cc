@@ -1135,6 +1135,12 @@ void Ed2kCommand::handlePeerPacket()
       queuePeerFileStatusRequest();
       state_ = State::WRITE;
     }
+    else if (ed2k::hashSetPartCount(getDownloadContext()->getTotalLength()) >
+                 0 &&
+             attrs->pieceHashes.empty()) {
+      queuePeerHashSetRequest();
+      state_ = State::WRITE;
+    }
     else {
       queueSourceExchangeRequest();
       queuePeerStartUpload();
@@ -1163,7 +1169,7 @@ void Ed2kCommand::handlePeerPacket()
     }
     updateEd2kPeerPartStatus(attrs, endpoint_, bitfield);
     peerFileStatusReceived_ = true;
-    if (getDownloadContext()->getTotalLength() > ed2k::PIECE_LENGTH &&
+    if (ed2k::hashSetPartCount(getDownloadContext()->getTotalLength()) > 0 &&
         attrs->pieceHashes.empty()) {
       queuePeerHashSetRequest();
     }
@@ -1178,7 +1184,8 @@ void Ed2kCommand::handlePeerPacket()
     std::vector<std::string> pieceHashes;
     if (!ed2k::parseHashSetAnswerPayload(pieceHashes, body_,
                                          attrs->link.hash) ||
-        pieceHashes.size() != getDownloadContext()->getNumPieces() ||
+        pieceHashes.size() !=
+            ed2k::hashSetPartCount(getDownloadContext()->getTotalLength()) ||
         ed2k::rootHash(pieceHashes) != attrs->link.hash) {
       throw DOWNLOAD_FAILURE_EXCEPTION2("Bad ED2K hash set.",
                                         error_code::CHECKSUM_ERROR);
