@@ -90,6 +90,10 @@ struct PeerState {
   std::vector<bool> partStatus;
   std::vector<PartRange> requestedParts;
   uint32_t sourceFlags = 0;
+  uint32_t clientId = 0;
+  bool lowId = false;
+  bool callbackRequested = false;
+  bool callbackImpossible = false;
   bool connecting = false;
   bool queued = false;
   uint16_t queueRank = 0;

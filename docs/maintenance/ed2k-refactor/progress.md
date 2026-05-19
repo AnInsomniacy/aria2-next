@@ -4,10 +4,21 @@ This file is the compact evidence trail for the ED2K/eMule refactor. Keep it
 checkpoint-sized. Do not record every investigation step, every routine local
 build, or every small test run.
 
-Verification should be batched. Run intermediate tests only when they prove a
-root cause, protect a risky protocol boundary, or close a checkpoint. Do not
-append test-only notes unless the result changes checkpoint state or records a
-durable blocker.
+Verification is batched by default. Run intermediate checks only when they
+prove a root cause, protect a risky protocol boundary, or close a checkpoint.
+Ordinary parser edits, log wording changes, small cleanup, and mechanical
+refactors should be verified together at the end of the active batch. Do not
+add a progress entry for a test run unless it changes checkpoint state,
+confirms a regression boundary, or records a durable blocker.
+
+Tests must stay focused. Add or run tests only for parser contracts, packet
+framing, protocol state transitions, persistence formats, disk and integrity
+safety, RPC field contracts, or confirmed regressions. Do not add broad
+scaffolding, placeholder tests, tests for incidental logging, or tests that
+mirror implementation details. Read command output directly from the terminal.
+Keep raw public-network logs and packet captures outside the repository under
+`/Users/sekiro/Desktop/aria2-next-ed2k-debug` only when network evidence is
+needed.
 
 Use this format:
 
@@ -70,40 +81,28 @@ Remaining: none for RF2.
 Blocked: none.
 
 2026-05-19 RF3/RF5 partial
-Changed: Advanced server-source compatibility and preserved adjacent
-request-flow fixes found during baseline work. Server IDChange and status now
-retain obfuscation and extended UDP metadata. TCP and UDP source parsing
-preserves LowID classification, client ID, user hash, and crypt metadata.
-Large-file source requests are gated by server capability. TCP source requests
-use `OP_GETSOURCES_OBFU` when the server advertises TCP source obfuscation.
-Extended callback-requested payloads preserve endpoint, crypt options, and
-user hash fields. Peers requiring encrypted transport are not scheduled into
-the current plaintext path. Peer hello parsing reads eMule misc option tags.
-Extended filename requests include part status and complete-source count when
-advertised. File-status bitfields use reference wire order, and single-part
-files skip the extra request-file-id step after filename answer.
-Verified: One focused local batch verification passed for the affected build
-and loopback protocol surface. Future work should batch related RF3/RF5 changes
-and run one focused verification after the batch, with live ED2K checks reserved
-for checkpoint closure or final interoperability evidence.
-Remaining: RF3 still needs callback-fail state handling, UDP source/status
-closure, and final server-source evidence. RF5 still needs multipart
-status/hashset sequencing, multipacket variants, file identifiers, controlled
+Changed: Advanced server-source compatibility and kept adjacent request-flow
+fixes found during baseline work. RF3 now preserves server obfuscation and
+extended UDP metadata, parses TCP and UDP source crypt metadata, gates
+large-file source requests by server capability, sends `OP_GETSOURCES_OBFU`
+only when advertised, accepts extended callback-requested payloads, skips
+plaintext scheduling for sources that require encrypted transport, handles
+server `OP_REJECT`, keeps the server session alive after `OP_CALLBACK_FAIL`,
+and handles packed UDP server source replies using the reference shape where
+only the original payload is compressed. RF5 adjacent work parses eMule misc
+option tags, sends extended filename requests when advertised, writes
+file-status bitfields in reference wire order, and skips the extra
+request-file-id step for single-part files.
+Verified: One focused local build covered the affected source path:
+`cmake --build --preset default --target aria2_tests -j 1` passed with the
+existing local `/opt/homebrew/opt/tcl-tk/lib` linker warning, and
+`git diff --check` passed. Socket-heavy ED2K command simulations were removed
+from `DownloadHelperTest` because they duplicated integration behavior and
+made the full CppUnit binary depend on local bind/connect permission. Keep
+future RF3/RF5 checks batched, with live ED2K runs reserved for checkpoint
+closure or final interoperability evidence.
+Remaining: RF3 still needs final callback/source-state review and one
+server-source evidence run before checkpoint closure. RF5 remains pending for
+multipart status/hashset sequencing, multipacket variants, file identifiers,
 queue/transfer state verification, and later live evidence.
-Blocked: none.
-
-2026-05-19 RF3 partial
-Changed: Added server `OP_REJECT` handling and changed server
-`OP_CALLBACK_FAIL` handling to log and continue reading the server session,
-matching the authoritative clients' discard behavior instead of ending the
-connection immediately. Added ED2K UDP packed datagram support for compressed
-server source replies using the reference `OP_PACKEDPROT` shape where the
-outer opcode is preserved and only the payload is compressed.
-Verified: `cmake --build --preset default --target aria2_tests -j 1` passed
-with the existing local `/opt/homebrew/opt/tcl-tk/lib` linker warning.
-`build/default/aria2_tests` passed with `OK (1115)`. `git diff --check
-src/ed2k_constants.h src/Ed2kCommand.cc src/Ed2kKadCommand.cc
-tests/DownloadHelperTest.cc` passed.
-Remaining: RF3 still needs final callback/source-state review and a final
-server-source evidence run before marking the checkpoint verified.
 Blocked: none.

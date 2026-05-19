@@ -49,6 +49,9 @@ int sourcePriority(uint32_t sourceFlags)
 namespace {
 bool canConnect(const PeerState& peer, int64_t now)
 {
+  if (peer.lowId && (peer.callbackRequested || peer.callbackImpossible)) {
+    return false;
+  }
   if (peer.connecting || peer.accepted || peer.noFile || peer.cancelled) {
     return false;
   }

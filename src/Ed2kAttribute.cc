@@ -123,6 +123,43 @@ bool addEd2kPeer(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
   return true;
 }
 
+bool addEd2kFoundSource(Ed2kAttribute* attrs, const ed2k::FoundSource& source,
+                        uint32_t sourceFlag, bool callbackRequested)
+{
+  if (!attrs || source.endpoint.host.empty() || source.endpoint.port == 0) {
+    return false;
+  }
+  if (!source.lowId) {
+    return addEd2kPeer(attrs, source.endpoint, sourceFlag);
+  }
+  auto state = getEd2kPeerState(attrs, source.endpoint);
+  if (!state) {
+    return false;
+  }
+  if (!source.endpoint.userHash.empty() && state->endpoint.userHash.empty()) {
+    state->endpoint.userHash = source.endpoint.userHash;
+  }
+  if (source.endpoint.cryptOptions != 0 &&
+      state->endpoint.cryptOptions == 0) {
+    state->endpoint.cryptOptions = source.endpoint.cryptOptions;
+  }
+  state->sourceFlags |= sourceFlag;
+  state->clientId = source.clientId;
+  state->lowId = true;
+  if (callbackRequested) {
+    state->callbackRequested = true;
+    state->callbackImpossible = false;
+  }
+  else if (!state->callbackRequested) {
+    state->callbackImpossible = true;
+  }
+  state->connecting = false;
+  state->accepted = false;
+  state->queued = false;
+  state->requestedParts.clear();
+  return false;
+}
+
 size_t mergeEd2kServerSources(Ed2kAttribute* attrs,
                               const std::vector<ed2k::FoundSource>& sources,
                               uint32_t sourceFlag)
@@ -133,12 +170,13 @@ size_t mergeEd2kServerSources(Ed2kAttribute* attrs,
   size_t added = 0;
   for (const auto& source : sources) {
     if (source.lowId) {
+      addEd2kFoundSource(attrs, source, sourceFlag, false);
       continue;
     }
     if ((source.endpoint.cryptOptions & ed2k::SOURCE_CRYPT_REQUIRE) != 0) {
       continue;
     }
-    if (addEd2kPeer(attrs, source.endpoint, sourceFlag)) {
+    if (addEd2kFoundSource(attrs, source, sourceFlag, false)) {
       ++added;
     }
   }

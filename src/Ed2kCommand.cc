@@ -861,7 +861,11 @@ void Ed2kCommand::handleServerPacket()
     for (const auto& source : sources) {
       if (source.lowId) {
         if (canRequestCallback) {
+          addEd2kFoundSource(attrs, source, ed2k::PEER_SOURCE_SERVER, true);
           queueCallbackRequest(source.clientId);
+        }
+        else {
+          addEd2kFoundSource(attrs, source, ed2k::PEER_SOURCE_SERVER, false);
         }
       }
     }
@@ -881,6 +885,12 @@ void Ed2kCommand::handleServerPacket()
     }
     if ((peer.cryptOptions & ed2k::SOURCE_CRYPT_REQUIRE) == 0) {
       addEd2kPeer(attrs, peer, ed2k::PEER_SOURCE_SERVER);
+      auto state = getEd2kPeerState(attrs, peer);
+      if (state) {
+        state->lowId = false;
+        state->callbackRequested = false;
+        state->callbackImpossible = false;
+      }
     }
     schedulePendingPeers();
     state_ = State::DONE;

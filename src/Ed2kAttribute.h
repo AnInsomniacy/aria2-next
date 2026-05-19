@@ -62,6 +62,8 @@ Ed2kAttribute* getEd2kAttrs(const std::shared_ptr<DownloadContext>& dctx);
 bool addEd2kPeer(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
 bool addEd2kPeer(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
                  uint32_t sourceFlag);
+bool addEd2kFoundSource(Ed2kAttribute* attrs, const ed2k::FoundSource& source,
+                        uint32_t sourceFlag, bool callbackRequested);
 size_t mergeEd2kServerSources(Ed2kAttribute* attrs,
                               const std::vector<ed2k::FoundSource>& sources,
                               uint32_t sourceFlag);
