@@ -522,9 +522,18 @@ void updateEd2kServerSourceRequestTime(Ed2kAttribute* attrs,
   if (!state) {
     return;
   }
+  state->nextSourceRequestTime = nextTime;
+}
+
+void markEd2kServerSourceRequestFinished(Ed2kAttribute* attrs,
+                                         const ed2k::Endpoint& server)
+{
+  auto state = getEd2kServerState(attrs, server);
+  if (!state) {
+    return;
+  }
   state->connected = false;
   state->connecting = false;
-  state->nextSourceRequestTime = nextTime;
 }
 
 void updateEd2kServerFailure(Ed2kAttribute* attrs,

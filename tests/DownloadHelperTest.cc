@@ -940,9 +940,11 @@ void DownloadHelperTest::testEd2kServerStateUpdate()
   CPPUNIT_ASSERT_EQUAL(std::string("hello"), state->lastMessage);
 
   updateEd2kServerSourceRequestTime(&attrs, server, 90);
+  CPPUNIT_ASSERT(state->connected);
+  CPPUNIT_ASSERT_EQUAL((int64_t)90, state->nextSourceRequestTime);
+  markEd2kServerSourceRequestFinished(&attrs, server);
   CPPUNIT_ASSERT(!state->connected);
   CPPUNIT_ASSERT(!state->connecting);
-  CPPUNIT_ASSERT_EQUAL((int64_t)90, state->nextSourceRequestTime);
 
   updateEd2kServerFailure(&attrs, server, 100, 30);
   CPPUNIT_ASSERT(!state->connected);

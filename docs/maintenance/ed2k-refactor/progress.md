@@ -106,3 +106,18 @@ server-source evidence run before checkpoint closure. RF5 remains pending for
 multipart status/hashset sequencing, multipacket variants, file identifiers,
 queue/transfer state verification, and later live evidence.
 Blocked: none.
+
+2026-05-19 RF3 partial
+Changed: Split ED2K server source-request throttling from active socket state.
+After a source request is queued, the server session now stays connected until
+the request is rejected, skipped, or answered. The server is marked idle only
+when that source request path is finished, which prevents the scheduler from
+opening duplicate commands to the same server while an `OP_FOUNDSOURCES` reply
+is still pending.
+Verified: `git diff --check` passed. `cmake --build --preset default --target
+aria2_tests -j 1` passed with the existing local
+`/opt/homebrew/opt/tcl-tk/lib` linker warning.
+Remaining: RF3 still needs the final UDP source/callback audit, tracker status
+updates for the verified RF3 rows, and one short server-source evidence run
+before checkpoint closure.
+Blocked: none.

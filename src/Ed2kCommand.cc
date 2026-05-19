@@ -838,6 +838,7 @@ void Ed2kCommand::handleServerPacket()
       if (!queueGetSources()) {
         updateEd2kServerSourceRequestTime(attrs, endpoint_,
                                           nextServerSourceRequestTime());
+        markEd2kServerSourceRequestFinished(attrs, endpoint_);
         state_ = State::DONE;
         return;
       }
@@ -875,6 +876,7 @@ void Ed2kCommand::handleServerPacket()
                     getCuid(), endpoint_.host.c_str(), endpoint_.port,
                     static_cast<unsigned long>(sources.size())));
     schedulePendingPeers();
+    markEd2kServerSourceRequestFinished(attrs, endpoint_);
     state_ = outbox_.empty() ? State::DONE : State::WRITE;
     return;
   }
