@@ -269,6 +269,27 @@ bool markEd2kPeerDisconnected(Ed2kAttribute* attrs,
   return true;
 }
 
+bool markEd2kCallbackFailed(Ed2kAttribute* attrs, uint32_t clientId)
+{
+  if (!attrs || clientId == 0) {
+    return false;
+  }
+  auto i = std::find_if(attrs->peerStates.begin(), attrs->peerStates.end(),
+                        [&](const ed2k::PeerState& state) {
+                          return state.lowId && state.clientId == clientId;
+                        });
+  if (i == attrs->peerStates.end()) {
+    return false;
+  }
+  i->callbackRequested = false;
+  i->callbackImpossible = true;
+  i->connecting = false;
+  i->accepted = false;
+  i->queued = false;
+  i->requestedParts.clear();
+  return true;
+}
+
 bool updateEd2kPeerPartStatus(Ed2kAttribute* attrs,
                               const ed2k::Endpoint& peer,
                               const std::vector<bool>& partStatus)

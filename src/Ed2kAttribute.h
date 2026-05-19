@@ -78,6 +78,7 @@ bool markEd2kPeerQueued(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
 bool markEd2kPeerConnecting(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
 bool markEd2kPeerDisconnected(Ed2kAttribute* attrs,
                               const ed2k::Endpoint& peer);
+bool markEd2kCallbackFailed(Ed2kAttribute* attrs, uint32_t clientId);
 bool updateEd2kPeerPartStatus(Ed2kAttribute* attrs,
                               const ed2k::Endpoint& peer,
                               const std::vector<bool>& partStatus);

@@ -897,6 +897,9 @@ void Ed2kCommand::handleServerPacket()
     return;
   }
   if (currentHeader_.opcode == ed2k::OP_CALLBACK_FAIL) {
+    if (body_.size() >= 4) {
+      markEd2kCallbackFailed(attrs, ed2k::readUInt32(body_.data()));
+    }
     A2_LOG_INFO(fmt("CUID#%" PRId64
                     " - ED2K server %s:%u reported callback failure.",
                     getCuid(), endpoint_.host.c_str(), endpoint_.port));

@@ -558,6 +558,9 @@ void DownloadHelperTest::testEd2kServerSourceMergeSkipsUnsupportedSources()
   CPPUNIT_ASSERT(state->callbackRequested);
   CPPUNIT_ASSERT(!state->callbackImpossible);
   CPPUNIT_ASSERT(!ed2k::selectConnectPeer(callbackAttrs.peerStates, 0));
+  CPPUNIT_ASSERT(markEd2kCallbackFailed(&callbackAttrs, lowId.clientId));
+  CPPUNIT_ASSERT(!state->callbackRequested);
+  CPPUNIT_ASSERT(state->callbackImpossible);
 }
 
 void DownloadHelperTest::testEd2kSourceExchangeMergePolicy()
