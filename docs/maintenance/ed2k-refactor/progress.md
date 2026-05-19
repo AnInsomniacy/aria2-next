@@ -144,3 +144,33 @@ Remaining: Continue RF2 by auditing search-link/UI-only surfaces, social
 packet surfaces, known-file metadata, and persistence formats before marking
 RF2 verified.
 Blocked: none.
+
+2026-05-19 RF2 partial
+Changed: Expanded the active authoritative reference audit for the remaining
+metadata and integration surfaces. Search links, search filters and result
+metadata, known/shared file metadata, part.met replacement, AICH persistence,
+peer credits and secure identity, upload queue policy, obsolete social packet
+surfaces, and shared-directory browsing are now tracked as separate decisions
+instead of being hidden inside broad search, persistence, sharing, or prune
+rows.
+Verified: Documentation-only audit refinement based on local authoritative
+references under `amule-official`, `emule-official-0.50a`,
+`mldonkey-official`, `wireshark-official`, and `protocol-docs`.
+Remaining: Continue RF2 by auditing packet-level RF3-RF5 capability rows in
+the same detail before marking the reference audit verified.
+Blocked: none.
+
+2026-05-19 RF2 partial
+Changed: Expanded the packet-level authoritative reference audit for the live
+interoperability risk areas. Server IDChange and capability flags, TCP and UDP
+source request variants, FoundSources OBFU parsing, callback routing, LowID
+impossible paths, peer capability truth, large-file/Unicode/compression
+claims, modern file request sequencing, multipacket envelopes, file
+identifiers, and transfer failure packets now have separate durable rows.
+Verified: Documentation-only audit refinement based on local authoritative
+references under `amule-official`, `emule-official-0.50a`,
+`mldonkey-official`, `wireshark-official`, and `protocol-docs`.
+Remaining: Validate the tracker shape, then continue RF2 by checking whether
+any remaining reference subsystem is still hidden inside broad rows before
+marking RF2 verified.
+Blocked: none.
