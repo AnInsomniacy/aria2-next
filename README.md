@@ -1,29 +1,28 @@
-# Aria2 Next
+<div align="center">
+  <img src="docs/media/aria2-next-icon.png" alt="Aria2 Next icon" width="144" height="144" />
+  <h1>Aria2 Next</h1>
+  <p>Maintained aria2 fork with extensive bug fixes, modernized architecture, full compatibility, and reliable cross-platform releases.</p>
 
 [![CI](https://github.com/AnInsomniacy/aria2-next/actions/workflows/ci.yml/badge.svg)](https://github.com/AnInsomniacy/aria2-next/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/AnInsomniacy/aria2-next.svg)](https://github.com/AnInsomniacy/aria2-next/releases)
 [![License: GPLv2](https://img.shields.io/badge/license-GPLv2-blue.svg)](COPYING)
 
-Aria2 Next is the maintained [aria2](https://github.com/aria2/aria2) engine for [Motrix Next](https://github.com/AnInsomniacy/motrix-next) and other aria2-compatible consumers. It keeps the original aria2 option, configuration, session, JSON-RPC, and libaria2 interfaces intact while publishing current, reproducible, portable builds.
+  <p>
+    <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux%20%7C%20Android-blue.svg" alt="Platform: macOS, Windows, Linux, Android" />
+  </p>
+</div>
 
-Maintenance focuses on cross-platform release reliability, dependency baselines, compatibility fixes, and a preserved audit of upstream issue history in [`docs/maintenance/upstream-issue-review/matrix.csv`](docs/maintenance/upstream-issue-review/matrix.csv).
+## Why Aria2 Next?
+
+aria2 is remarkable open source software. For over a decade it has been one of the most capable download engines available, trusted by countless tools and users worldwide. We are deeply grateful to the original authors and contributors of the [aria2 project](https://github.com/aria2/aria2). They built something that has stood the test of time, and that enduring quality is the best testament to their vision and craftsmanship.
+
+But upstream development has slowed dramatically in recent years. Dependencies grew stale, builds broke on modern platforms, and a backlog of bugs went unaddressed. We picked up the baton: migrated the codebase to a modern build framework, triaged and fixed a substantial number of upstream issues, and introduced ED2K protocol support for the first time. A full audit trail is preserved in [`docs/maintenance/upstream-issue-review/matrix.csv`](docs/maintenance/upstream-issue-review/matrix.csv).
+
+Aria2 Next is the actively maintained aria2 engine powering Motrix Next and other aria2-compatible consumers. All original interfaces, including options, configuration, sessions, JSON-RPC, and libaria2, remain intact so downstream projects get a seamless upgrade. We ship current, reproducible, portable builds that work across platforms out of the box. The focus is straightforward: release reliability, current dependency baselines, and ongoing compatibility fixes. Same engine, renewed foundation.
 
 ## Native ED2K/eMule Support
 
 Aria2 Next includes native ED2K/eMule support reimplemented inside aria2's existing engine architecture from authoritative eMule, aMule, MLDonkey, Wireshark, and protocol documentation references. The reference-alignment work is tracked in [`docs/maintenance/ed2k-refactor/`](docs/maintenance/ed2k-refactor/). Core ED2K/eMule behavior has been ported where it fits aria2-next, while obsolete legacy structures were removed or replaced with existing compatible integration surfaces.
-
-## What This Repository Provides
-
-| Area | Status |
-| --- | --- |
-| Engine | aria2-compatible `aria2-next` binary |
-| Primary consumer | Motrix Next sidecar engine |
-| External consumers | Existing aria2 scripts, frontends, RPC clients, and automation |
-| Build system | CMake 3.25+ with Ninja presets |
-| Release targets | macOS, Windows, and Linux on x64 and ARM64 |
-| Additional packaging | Android ARM64 |
-| Maintenance | Maintained by AnInsomniacy since 2026 |
-| Maintenance record | Preserved upstream issue review matrix |
 
 ## Compatibility
 
@@ -37,6 +36,46 @@ Aria2 Next includes native ED2K/eMule support reimplemented inside aria2's exist
 | Library | public libaria2 headers under `src/includes/aria2/` |
 
 Motrix Next embeds this engine, but release artifacts are ordinary aria2-compatible binaries.
+
+## Quick Start
+
+Download a file:
+
+```bash
+aria2-next https://example.com/file.iso
+```
+
+Download an ED2K file link:
+
+```bash
+aria2-next '<ed2k-file-link>'
+```
+
+Run the JSON-RPC server:
+
+```bash
+aria2-next --enable-rpc --rpc-listen-all=false --rpc-listen-port=6800
+```
+
+Inspect enabled features and build details:
+
+```bash
+aria2-next --version
+aria2-next --help=#ed2k
+```
+
+## What This Repository Provides
+
+| Area | Status |
+| --- | --- |
+| Engine | aria2-compatible `aria2-next` binary |
+| Primary consumer | Motrix Next sidecar engine |
+| External consumers | Existing aria2 scripts, frontends, RPC clients, and automation |
+| Build system | CMake 3.25+ with Ninja presets |
+| Release targets | macOS, Windows, and Linux on x64 and ARM64 |
+| Additional packaging | Android ARM64 release builds |
+| Maintenance | Maintained by AnInsomniacy since 2026 |
+| Maintenance record | Preserved upstream issue review matrix |
 
 ## Build
 
@@ -77,16 +116,9 @@ Linux and macOS downloads are executable files. If your browser clears the execu
 
 Release binaries verify HTTPS certificates by default. Windows releases use WinTLS and the Windows trust store. OpenSSL and GnuTLS builds use system CA loading first, then a detected or explicitly configured CA bundle fallback.
 
-Use the binary like aria2:
-
-```bash
-aria2-next https://example.com/file.iso
-aria2-next --enable-rpc --rpc-listen-all=false --rpc-listen-port=6800
-```
-
 ## Maintenance Audit
 
-The durable audit artifacts live under [`docs/maintenance/`](docs/maintenance/). The preserved matrix contains 137 reviewed upstream bug issues, including 44 rows with final state `fixed-verified`.
+The durable audit artifacts live under [`docs/maintenance/`](docs/maintenance/). The preserved matrix contains 137 reviewed upstream bug issues, including 43 rows with final state `fixed-verified`.
 
 The audit separates confirmed fixes, already-fixed reports, documented behavior, environment issues, platform issues, site-specific reports, non-reproducible reports, and larger architecture limitations.
 
