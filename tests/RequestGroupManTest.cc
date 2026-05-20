@@ -7,12 +7,15 @@
 #include "TestUtil.h"
 #include "Ed2kAttribute.h"
 #include "Ed2kSharedStore.h"
+#include "DefaultBtProgressInfoFile.h"
+#include "DiskAdaptor.h"
 #include "prefs.h"
 #include "DownloadContext.h"
 #include "RequestGroup.h"
 #include "Option.h"
 #include "DownloadResult.h"
 #include "FileEntry.h"
+#include "PieceStorage.h"
 #include "ServerStatMan.h"
 #include "ServerStat.h"
 #include "File.h"
@@ -59,6 +62,7 @@ class RequestGroupManTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testFillRequestGroupFromReserver);
   CPPUNIT_TEST(testFillRequestGroupFromReserver_uriParser);
   CPPUNIT_TEST(testReduceMaxConcurrentDownloads);
+  CPPUNIT_TEST(testUserRemoveDoesNotKeepControlFile);
   CPPUNIT_TEST(testInsertReservedGroup);
   CPPUNIT_TEST(testAddDownloadResult);
   CPPUNIT_TEST(testAddDownloadResultSharesCompletedEd2kFile);
@@ -93,6 +97,7 @@ public:
   void testFillRequestGroupFromReserver();
   void testFillRequestGroupFromReserver_uriParser();
   void testReduceMaxConcurrentDownloads();
+  void testUserRemoveDoesNotKeepControlFile();
   void testInsertReservedGroup();
   void testAddDownloadResult();
   void testAddDownloadResultSharesCompletedEd2kFile();
@@ -302,6 +307,42 @@ void RequestGroupManTest::testReduceMaxConcurrentDownloads()
   CPPUNIT_ASSERT(findReservedGroup(rgman_, rgs[2]->getGID()));
   CPPUNIT_ASSERT(!rgs[1]->isPauseRequested());
   CPPUNIT_ASSERT(!rgs[2]->isPauseRequested());
+}
+
+void RequestGroupManTest::testUserRemoveDoesNotKeepControlFile()
+{
+  const std::string path =
+      A2_TEST_OUT_DIR "/request-group-man-user-remove.bin";
+  const std::string ctrlPath = path + DefaultBtProgressInfoFile::getSuffix();
+  File(path).remove();
+  File(ctrlPath).remove();
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  rgman_->setMaxDownloadResult(1);
+
+  auto group = createRequestGroup(1_k, 4_k, path, "http://host/file",
+                                  util::copy(option_));
+  group->setRequestGroupMan(rgman_);
+  group->setState(RequestGroup::STATE_ACTIVE);
+  group->initPieceStorage();
+  group->getPieceStorage()->getDiskAdaptor()->openFile();
+  group->setProgressInfoFile(std::make_shared<DefaultBtProgressInfoFile>(
+      group->getDownloadContext(), group->getPieceStorage(), option_.get()));
+  group->saveControlFile();
+  CPPUNIT_ASSERT(File(ctrlPath).isFile());
+
+  rgman_->addRequestGroup(group);
+  e_->addCommand(make_unique<ActiveDownloadCommand>(e_->newCUID(),
+                                                    group.get()));
+
+  group->setForceHaltRequested(true, RequestGroup::USER_REQUEST);
+  while (e_->run(true) != 0)
+    ;
+
+  CPPUNIT_ASSERT(!File(ctrlPath).exists());
+  CPPUNIT_ASSERT_EQUAL((size_t)0, rgman_->getRequestGroups().size());
+  auto result = rgman_->findDownloadResult(group->getGID());
+  CPPUNIT_ASSERT(result);
+  CPPUNIT_ASSERT_EQUAL(error_code::REMOVED, result->result);
 }
 
 void RequestGroupManTest::testInsertReservedGroup()

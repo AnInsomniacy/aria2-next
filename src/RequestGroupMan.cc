@@ -436,7 +436,12 @@ public:
               fmt(_("Download GID#%s not complete: %s"),
                   GroupId::toHex(group->getGID()).c_str(),
                   group->getDownloadContext()->getBasePath().c_str()));
-          group->saveControlFile();
+          if (group->isUserRequestedHalt()) {
+            group->removeControlFile();
+          }
+          else {
+            group->saveControlFile();
+          }
         }
       }
       catch (RecoverableException& ex) {

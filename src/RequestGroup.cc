@@ -1082,6 +1082,10 @@ void RequestGroup::setHaltRequested(bool f, HaltReason haltReason)
   if (haltRequested_) {
     pauseRequested_ = false;
     haltReason_ = haltReason;
+    if (!numCommand_ && requestGroupMan_) {
+      A2_LOG_DEBUG(fmt("GID#%s - Request queue check", gid_->toHex().c_str()));
+      requestGroupMan_->requestQueueCheck();
+    }
   }
 #ifdef ENABLE_BITTORRENT
   if (btRuntime_) {

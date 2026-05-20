@@ -1371,6 +1371,7 @@ bool Ed2kCommand::executeInternal()
     case State::CONNECTING:
       if (!getSocket()->isWritable(0)) {
         setWriteCheckSocket(getSocket());
+        addCommandSelf();
         return false;
       }
       if (!checkIfConnectionEstablished(getSocket(), connectedHostname_,

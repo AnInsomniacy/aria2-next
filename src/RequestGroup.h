@@ -353,6 +353,11 @@ public:
 
   bool isForceHaltRequested() const { return forceHaltRequested_; }
 
+  bool isUserRequestedHalt() const
+  {
+    return haltRequested_ && haltReason_ == USER_REQUEST;
+  }
+
   void setPauseRequested(bool f);
 
   bool isPauseRequested() const { return pauseRequested_; }

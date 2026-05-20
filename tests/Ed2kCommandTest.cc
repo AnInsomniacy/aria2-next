@@ -215,6 +215,8 @@ class Ed2kCommandTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testServerSourceDiscoveryFlow);
   CPPUNIT_TEST(testPeerHandshakeQueuesFileRequestAndQueueRank);
   CPPUNIT_TEST(testPeerCommandFinishesGroupAfterLastPart);
+  CPPUNIT_TEST(testPendingConnectDrainsAfterHalt);
+  CPPUNIT_TEST(testForceHaltDrainsIdleKadGroup);
   CPPUNIT_TEST(testKadBootstrapSourceSearchAddsPeer);
   CPPUNIT_TEST_SUITE_END();
 
@@ -222,6 +224,8 @@ public:
   void testServerSourceDiscoveryFlow();
   void testPeerHandshakeQueuesFileRequestAndQueueRank();
   void testPeerCommandFinishesGroupAfterLastPart();
+  void testPendingConnectDrainsAfterHalt();
+  void testForceHaltDrainsIdleKadGroup();
   void testKadBootstrapSourceSearchAddsPeer();
 };
 
@@ -537,6 +541,65 @@ void Ed2kCommandTest::testPeerCommandFinishesGroupAfterLastPart()
   CPPUNIT_ASSERT_EQUAL(error_code::FINISHED,
                        engine.getRequestGroupMan()->getDownloadResults()[0]
                            ->result);
+}
+
+void Ed2kCommandTest::testPendingConnectDrainsAfterHalt()
+{
+  auto option = createOption();
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option.get());
+  auto dctx = createEd2kContext();
+  auto group = createRequestGroup(option, dctx);
+  engine.setRequestGroupMan(
+      make_unique<RequestGroupMan>(
+          std::vector<std::shared_ptr<RequestGroup>>{group}, 5,
+          option.get()));
+  engine.getRequestGroupMan()->addRequestGroup(group);
+  group->setRequestGroupMan(engine.getRequestGroupMan().get());
+
+  ed2k::Endpoint endpoint;
+  endpoint.host = "192.0.2.1";
+  endpoint.port = 4661;
+  engine.addCommand(make_unique<Ed2kCommand>(engine.newCUID(), group.get(),
+                                             &engine, endpoint, true, false));
+
+  runEngineTicks(engine, 2);
+  CPPUNIT_ASSERT_EQUAL((int32_t)1, group->getNumCommand());
+
+  group->setHaltRequested(true, RequestGroup::USER_REQUEST);
+  engine.setRefreshInterval(std::chrono::milliseconds(0));
+  for (int i = 0; i < MAX_ENGINE_TICKS && group->getNumCommand() != 0; ++i) {
+    engine.run(true);
+  }
+
+  CPPUNIT_ASSERT_EQUAL((int32_t)0, group->getNumCommand());
+}
+
+void Ed2kCommandTest::testForceHaltDrainsIdleKadGroup()
+{
+  auto option = createOption();
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option.get());
+  auto dctx = createEd2kContext();
+  auto group = createRequestGroup(option, dctx);
+  engine.setRequestGroupMan(
+      make_unique<RequestGroupMan>(
+          std::vector<std::shared_ptr<RequestGroup>>{group}, 5,
+          option.get()));
+  engine.getRequestGroupMan()->addRequestGroup(group);
+  group->setRequestGroupMan(engine.getRequestGroupMan().get());
+
+  engine.addCommand(make_unique<Ed2kKadCommand>(engine.newCUID(), group.get(),
+                                                &engine));
+  runEngineTicks(engine, 1);
+  CPPUNIT_ASSERT_EQUAL((int32_t)0, group->getNumCommand());
+
+  engine.getRequestGroupMan()->clearQueueCheck();
+  group->setForceHaltRequested(true, RequestGroup::USER_REQUEST);
+  CPPUNIT_ASSERT(engine.getRequestGroupMan()->queueCheckRequested());
+  engine.getRequestGroupMan()->removeStoppedGroup(&engine);
+  CPPUNIT_ASSERT_EQUAL((size_t)0,
+                       engine.getRequestGroupMan()->countRequestGroup());
 }
 
 void Ed2kCommandTest::testKadBootstrapSourceSearchAddsPeer()
