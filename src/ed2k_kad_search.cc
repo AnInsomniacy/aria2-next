@@ -150,6 +150,7 @@ bool extractKadSourceEndpoint(Endpoint& endpoint, const KadSearchEntry& entry)
 {
   uint32_t ip = 0;
   uint16_t port = 0;
+  uint16_t cryptOptions = 0;
   uint64_t sourceType = 0;
   bool hasIp = false;
   bool hasPort = false;
@@ -168,6 +169,9 @@ bool extractKadSourceEndpoint(Endpoint& endpoint, const KadSearchEntry& entry)
     else if (tag.id == 0xff) {
       sourceType = tag.intValue;
     }
+    else if (tag.id == 0xf3) {
+      cryptOptions = static_cast<uint16_t>(tag.intValue);
+    }
   }
   if (!hasIp || !hasPort || port == 0 ||
       (sourceType != 0 && sourceType != 1 && sourceType != 4)) {
@@ -175,6 +179,8 @@ bool extractKadSourceEndpoint(Endpoint& endpoint, const KadSearchEntry& entry)
   }
   endpoint.host = ipv4FromEndpoint(ip);
   endpoint.port = port;
+  endpoint.userHash = entry.id;
+  endpoint.cryptOptions = cryptOptions;
   return true;
 }
 

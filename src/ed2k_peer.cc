@@ -425,7 +425,7 @@ std::string createEmuleInfoPayload(const EmulePeerInfo& info)
   payload += packUInt32(8);
   payload += createUInt32Tag(ET_COMPRESSION,
                              info.miscOptions.dataCompressionVersion);
-  payload += createUInt32Tag(ET_UDPPORT, 0);
+  payload += createUInt32Tag(ET_UDPPORT, info.udpPort);
   payload += createUInt32Tag(ET_UDPVER, info.miscOptions.udpVersion);
   payload += createUInt32Tag(ET_SOURCEEXCHANGE,
                              info.miscOptions.sourceExchange1Version);

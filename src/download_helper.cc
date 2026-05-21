@@ -83,6 +83,7 @@ constexpr char DEFAULT_ED2K_SERVER_LIST[] =
     "45.82.80.155:5687,176.123.5.89:4725,85.121.5.137:4232,"
     "176.123.2.239:4232,145.239.2.134:4661,91.208.162.87:4232,"
     "37.15.61.236:4232";
+constexpr char DEFAULT_ED2K_NODE_LIST_PATH[] = "${HOME}/.aMule/nodes.dat";
 
 void unfoldURI(std::vector<std::string>& result,
                const std::vector<std::string>& args)
@@ -302,9 +303,41 @@ createEd2kServerStates(const std::shared_ptr<Option>& option)
   return states;
 }
 
+std::string defaultEd2kNodeListPath()
+{
+  return util::replace(DEFAULT_ED2K_NODE_LIST_PATH, "${HOME}",
+                       util::getHomeDir());
+}
+
+std::shared_ptr<ed2k::KadRoutingTable>
+createEd2kKadRoutingTableFromNodesDat(const std::string& path,
+                                      const std::string& selfId,
+                                      bool required)
+{
+  if (!required && !File(path).isFile()) {
+    return nullptr;
+  }
+  ed2k::NodesDat nodes;
+  if (!ed2k::parseNodesDat(nodes, readLocalFile(path))) {
+    if (required) {
+      throw DL_ABORT_EX(fmt("Cannot parse ED2K node list: %s", path.c_str()));
+    }
+    return nullptr;
+  }
+  auto table = std::make_shared<ed2k::KadRoutingTable>(selfId);
+  for (const auto& contact : nodes.contacts) {
+    ed2k::Endpoint endpoint;
+    endpoint.host = contact.host;
+    endpoint.port = contact.udpPort;
+    table->addRouterNode(endpoint);
+  }
+  return table;
+}
+
 std::shared_ptr<ed2k::KadRoutingTable> createEd2kKadRoutingTable(
     const std::shared_ptr<Option>& option, const std::string& selfId,
-    ed2k::KadRoutingSnapshot* restoredSnapshot = nullptr)
+    ed2k::KadRoutingSnapshot* restoredSnapshot = nullptr,
+    bool createEmpty = false)
 {
   if (!option->blank(PREF_ED2K_KAD_ROUTING_STATE)) {
     ed2k::KadRoutingSnapshot snapshot;
@@ -321,23 +354,20 @@ std::shared_ptr<ed2k::KadRoutingTable> createEd2kKadRoutingTable(
     }
     return table;
   }
-  if (option->blank(PREF_ED2K_NODE_LIST)) {
-    return nullptr;
+  if (!option->blank(PREF_ED2K_NODE_LIST)) {
+    return createEd2kKadRoutingTableFromNodesDat(
+        option->get(PREF_ED2K_NODE_LIST), selfId, true);
   }
-  ed2k::NodesDat nodes;
-  if (!ed2k::parseNodesDat(
-          nodes, readLocalFile(option->get(PREF_ED2K_NODE_LIST)))) {
-    throw DL_ABORT_EX(fmt("Cannot parse ED2K node list: %s",
-                          option->get(PREF_ED2K_NODE_LIST).c_str()));
+  auto table =
+      createEd2kKadRoutingTableFromNodesDat(defaultEd2kNodeListPath(), selfId,
+                                            false);
+  if (table) {
+    return table;
   }
-  auto table = std::make_shared<ed2k::KadRoutingTable>(selfId);
-  for (const auto& contact : nodes.contacts) {
-    ed2k::Endpoint endpoint;
-    endpoint.host = contact.host;
-    endpoint.port = contact.udpPort;
-    table->addRouterNode(endpoint);
+  if (createEmpty) {
+    return std::make_shared<ed2k::KadRoutingTable>(selfId);
   }
-  return table;
+  return nullptr;
 }
 } // namespace
 
@@ -371,7 +401,7 @@ createEd2kRequestGroup(const std::string& ed2kUri,
   addDefaultEd2kServersIfNeeded(attrs->servers, attrs->link, option);
   ed2k::KadRoutingSnapshot kadSnapshot;
   attrs->kadRoutingTable =
-      createEd2kKadRoutingTable(option, attrs->link.hash, &kadSnapshot);
+      createEd2kKadRoutingTable(option, attrs->clientHash, &kadSnapshot, true);
   if (attrs->kadRoutingTable) {
     restoreEd2kKadOperationalState(attrs.get(), kadSnapshot);
   }
@@ -451,7 +481,7 @@ createEd2kSearchRequestGroup(const ed2k::SearchQuery& query,
       !option->blank(PREF_ED2K_KAD_ROUTING_STATE)) {
     ed2k::KadRoutingSnapshot kadSnapshot;
     attrs->kadRoutingTable = createEd2kKadRoutingTable(
-        option, ed2k::createKadKeywordTarget(query.keyword), &kadSnapshot);
+        option, attrs->clientHash, &kadSnapshot);
     if (attrs->kadRoutingTable) {
       restoreEd2kKadOperationalState(attrs.get(), kadSnapshot);
     }

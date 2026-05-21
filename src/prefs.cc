@@ -360,6 +360,8 @@ PrefPtr PREF_ED2K_SERVER_LIST = makePref("ed2k-server-list");
 PrefPtr PREF_ED2K_NODE_LIST = makePref("ed2k-node-list");
 // value: 0-65535
 PrefPtr PREF_ED2K_LISTEN_PORT = makePref("ed2k-listen-port");
+// value: 0-65535
+PrefPtr PREF_ED2K_UDP_LISTEN_PORT = makePref("ed2k-udp-listen-port");
 // value: 1*digit
 PrefPtr PREF_ED2K_UPLOAD_SLOTS = makePref("ed2k-upload-slots");
 // value: path to shared file

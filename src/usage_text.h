@@ -517,6 +517,8 @@
   _(" --ed2k-node-list=FILE        Load ED2K Kad bootstrap nodes from a local nodes.dat file.")
 #define TEXT_ED2K_LISTEN_PORT                                           \
   _(" --ed2k-listen-port=PORT     Set TCP port number for incoming ED2K peer connections.")
+#define TEXT_ED2K_UDP_LISTEN_PORT                                       \
+  _(" --ed2k-udp-listen-port=PORT Set UDP port number for ED2K Kad and peer reask packets.")
 #define TEXT_ED2K_UPLOAD_SLOTS                                          \
   _(" --ed2k-upload-slots=NUM     Set maximum active ED2K upload slots.")
 #define TEXT_ED2K_SHARE_FILE                                            \

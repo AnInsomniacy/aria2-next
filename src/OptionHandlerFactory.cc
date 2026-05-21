@@ -221,6 +221,15 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
   }
   {
     OptionHandler* op(new NumberOptionHandler(
+        PREF_ED2K_UDP_LISTEN_PORT, TEXT_ED2K_UDP_LISTEN_PORT, "4672", 0,
+        UINT16_MAX));
+    op->addTag(TAG_ADVANCED);
+    op->addTag(TAG_ED2K);
+    op->setInitialOption(true);
+    handlers.push_back(op);
+  }
+  {
+    OptionHandler* op(new NumberOptionHandler(
         PREF_ED2K_UPLOAD_SLOTS, TEXT_ED2K_UPLOAD_SLOTS, "3", 1));
     op->addTag(TAG_ADVANCED);
     op->addTag(TAG_ED2K);

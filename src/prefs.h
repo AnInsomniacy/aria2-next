@@ -313,6 +313,8 @@ extern PrefPtr PREF_ED2K_SERVER_LIST;
 extern PrefPtr PREF_ED2K_NODE_LIST;
 // value: 0-65535
 extern PrefPtr PREF_ED2K_LISTEN_PORT;
+// value: 0-65535
+extern PrefPtr PREF_ED2K_UDP_LISTEN_PORT;
 // value: 1*digit
 extern PrefPtr PREF_ED2K_UPLOAD_SLOTS;
 // value: path to shared file

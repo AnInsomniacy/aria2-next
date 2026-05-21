@@ -2,6 +2,7 @@
 
 #include <string>
 #include <algorithm>
+#include <cstdlib>
 #include <fstream>
 #include <vector>
 
@@ -53,6 +54,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCreateRequestGroupForUri);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2K);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KClientHash);
+  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KDefaultKadBootstrap);
   CPPUNIT_TEST(testCreateEd2kSearchRequestGroupClientHash);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KNodesDat);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KServerMetMetadata);
@@ -120,6 +122,7 @@ public:
   void testCreateRequestGroupForUri();
   void testCreateRequestGroupForUri_ED2K();
   void testCreateRequestGroupForUri_ED2KClientHash();
+  void testCreateRequestGroupForUri_ED2KDefaultKadBootstrap();
   void testCreateEd2kSearchRequestGroupClientHash();
   void testCreateRequestGroupForUri_ED2KNodesDat();
   void testCreateRequestGroupForUri_ED2KServerMetMetadata();
@@ -303,6 +306,71 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KClientHash()
                        util::toHex(attrs->clientHash));
 }
 
+void DownloadHelperTest::testCreateRequestGroupForUri_ED2KDefaultKadBootstrap()
+{
+  std::string nodeIdHex("23a8ceff57a7a32d562d649ed7893796");
+  auto nodeId = util::fromHex(nodeIdHex.begin(), nodeIdHex.end());
+  ed2k::KadContact contact;
+  contact.id = nodeId;
+  contact.host = "203.0.113.1";
+  contact.udpPort = 4672;
+  contact.tcpPort = 4662;
+  contact.version = 8;
+
+  std::string nodesDat;
+  nodesDat += ed2k::packUInt32(0);
+  nodesDat += ed2k::packUInt32(3);
+  nodesDat += ed2k::packUInt32(1);
+  nodesDat += ed2k::packUInt32(1);
+  nodesDat += ed2k::createKadResponsePayload(
+                  nodeId, std::vector<ed2k::KadContact>{contact})
+                  .substr(ed2k::HASH_LENGTH + 1);
+  const std::string home = A2_TEST_OUT_DIR "/ed2k-default-home";
+  const std::string amuleDir = home + "/.aMule";
+  File(amuleDir).mkdirs();
+  const std::string path = amuleDir + "/nodes.dat";
+  {
+    std::ofstream out(path.c_str(), std::ios::binary);
+    out.write(nodesDat.data(), nodesDat.size());
+  }
+
+  const char* oldHome = getenv("HOME");
+  const std::string oldHomeValue = oldHome ? oldHome : "";
+  setenv("HOME", home.c_str(), 1);
+
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, "/tmp");
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  try {
+    createRequestGroupForUri(result, option_, uris);
+  }
+  catch (...) {
+    if (oldHome) {
+      setenv("HOME", oldHomeValue.c_str(), 1);
+    }
+    else {
+      unsetenv("HOME");
+    }
+    throw;
+  }
+  if (oldHome) {
+    setenv("HOME", oldHomeValue.c_str(), 1);
+  }
+  else {
+    unsetenv("HOME");
+  }
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
+  CPPUNIT_ASSERT(attrs->kadRoutingTable);
+  CPPUNIT_ASSERT(!attrs->kadRoutingTable->getRouterNodes().empty());
+  CPPUNIT_ASSERT_EQUAL(attrs->clientHash,
+                       attrs->kadRoutingTable->snapshot().selfId);
+}
+
 void DownloadHelperTest::testCreateEd2kSearchRequestGroupClientHash()
 {
   option_->put(PREF_ED2K_CLIENT_HASH,
@@ -360,6 +428,8 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KNodesDat()
   CPPUNIT_ASSERT(attrs->kadRoutingTable);
   CPPUNIT_ASSERT_EQUAL((size_t)1,
                        attrs->kadRoutingTable->getRouterNodes().size());
+  CPPUNIT_ASSERT_EQUAL(attrs->clientHash,
+                       attrs->kadRoutingTable->snapshot().selfId);
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.1"),
                        attrs->kadRoutingTable->getRouterNodes()[0].host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4672,
@@ -453,6 +523,8 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KKadRoutingState()
   CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->kadRoutingTable->liveSize());
   CPPUNIT_ASSERT_EQUAL((size_t)1,
                        attrs->kadRoutingTable->getRouterNodes().size());
+  CPPUNIT_ASSERT_EQUAL(attrs->clientHash,
+                       attrs->kadRoutingTable->snapshot().selfId);
   auto closest = attrs->kadRoutingTable->findClosest(self, 1, false);
   CPPUNIT_ASSERT_EQUAL((size_t)1, closest.size());
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.8"), closest[0].host);

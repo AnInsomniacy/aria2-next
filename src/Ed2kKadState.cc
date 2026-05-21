@@ -339,7 +339,6 @@ KadRoutingSnapshot KadRoutingTable::snapshot() const
 void KadRoutingTable::restore(const KadRoutingSnapshot& snapshot)
 {
   validateId(snapshot.selfId);
-  selfId_ = snapshot.selfId;
   routerNodes_ = snapshot.routerNodes;
   lastBootstrap_ = snapshot.lastBootstrap;
   lastRefresh_ = snapshot.lastRefresh;

@@ -82,6 +82,16 @@ uint16_t localEd2kTcpPort(const DownloadEngine* e)
   return 0;
 }
 
+uint16_t localEd2kUdpPort(const DownloadEngine* e)
+{
+  auto configured = e->getOption()->getAsInt(PREF_ED2K_UDP_LISTEN_PORT);
+  if (configured > 0 &&
+      configured <= static_cast<int>(std::numeric_limits<uint16_t>::max())) {
+    return static_cast<uint16_t>(configured);
+  }
+  return 0;
+}
+
 std::string createPeerFileRequestPayload(const DownloadContext* dctx,
                                          PieceStorage* pieceStorage,
                                          const std::string& fileHash,
@@ -169,6 +179,8 @@ Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
                        std::numeric_limits<uint32_t>::max()),
       localPeerInfo_(ed2k::createLocalEmulePeerInfo())
 {
+  localPeerInfo_.udpPort = localEd2kUdpPort(e);
+  localPeerInfo_.miscOptions.udpVersion = localPeerInfo_.udpPort == 0 ? 0 : 4;
   setTimeout(std::chrono::seconds(getOption()->getAsInt(PREF_CONNECT_TIMEOUT)));
   if (getSegmentMan()) {
     auto peerStat = getRequest()->initPeerStat();
@@ -205,6 +217,8 @@ Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
       incoming_(true),
       localPeerInfo_(ed2k::createLocalEmulePeerInfo())
 {
+  localPeerInfo_.udpPort = localEd2kUdpPort(e);
+  localPeerInfo_.miscOptions.udpVersion = localPeerInfo_.udpPort == 0 ? 0 : 4;
   setTimeout(std::chrono::seconds(getOption()->getAsInt(PREF_CONNECT_TIMEOUT)));
   if (getSegmentMan()) {
     auto peerStat = getRequest()->initPeerStat();

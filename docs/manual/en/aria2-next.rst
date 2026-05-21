@@ -679,6 +679,11 @@ ED2K Specific Options
   Set TCP port number for incoming ED2K peer connections. Use ``0`` to let the
   operating system choose an available local port. Default: ``4662``
 
+.. option:: --ed2k-udp-listen-port=<PORT>
+
+  Set UDP port number for ED2K Kad and peer reask packets. Use ``0`` to let the
+  operating system choose an available local port. Default: ``4672``
+
 .. option:: --ed2k-upload-slots=<NUM>
 
   Set the maximum number of active ED2K upload slots. Default: ``3``
@@ -2184,6 +2189,7 @@ of URIs. These optional lines must start with white space(s).
   * :option:`dry-run <--dry-run>`
   * :option:`ed2k-node-list <--ed2k-node-list>`
   * :option:`ed2k-listen-port <--ed2k-listen-port>`
+  * :option:`ed2k-udp-listen-port <--ed2k-udp-listen-port>`
   * :option:`ed2k-server <--ed2k-server>`
   * :option:`ed2k-server-list <--ed2k-server-list>`
   * :option:`ed2k-share-file <--ed2k-share-file>`

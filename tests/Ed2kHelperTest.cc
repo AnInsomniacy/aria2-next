@@ -1,4 +1,5 @@
 #include "ed2k_helper.h"
+#include "ed2k_endpoint.h"
 #include "Ed2kKadState.h"
 
 #include <algorithm>
@@ -32,6 +33,7 @@ class Ed2kHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testSearchResultPayload);
   CPPUNIT_TEST(testKadKeywordTarget);
   CPPUNIT_TEST(testKadSearchEntriesToSearchResults);
+  CPPUNIT_TEST(testKadSourceEndpointPreservesUdpAndCryptMetadata);
   CPPUNIT_TEST(testSourceExchange2Payloads);
   CPPUNIT_TEST(testCompressedPartPayloads);
   CPPUNIT_TEST(testInflateCompressedPartData);
@@ -71,6 +73,7 @@ public:
   void testSearchResultPayload();
   void testKadKeywordTarget();
   void testKadSearchEntriesToSearchResults();
+  void testKadSourceEndpointPreservesUdpAndCryptMetadata();
   void testSourceExchange2Payloads();
   void testCompressedPartPayloads();
   void testInflateCompressedPartData();
@@ -800,6 +803,49 @@ void Ed2kHelperTest::testKadSearchEntriesToSearchResults()
       results[0].ed2kLink);
 }
 
+void Ed2kHelperTest::testKadSourceEndpointPreservesUdpAndCryptMetadata()
+{
+  KadSearchEntry entry;
+  entry.id = std::string(HASH_LENGTH, '\x44');
+
+  Tag sourceType;
+  sourceType.id = 0xff;
+  sourceType.valueType = TagValueType::UINT;
+  sourceType.intValue = 1;
+  entry.tags.push_back(sourceType);
+
+  Tag sourceIp;
+  sourceIp.id = 0xfe;
+  sourceIp.valueType = TagValueType::UINT;
+  sourceIp.intValue = ipv4ToEndpointValue("203.0.113.44");
+  entry.tags.push_back(sourceIp);
+
+  Tag sourcePort;
+  sourcePort.id = 0xfd;
+  sourcePort.valueType = TagValueType::UINT;
+  sourcePort.intValue = 4662;
+  entry.tags.push_back(sourcePort);
+
+  Tag sourceUdpPort;
+  sourceUdpPort.id = 0xfc;
+  sourceUdpPort.valueType = TagValueType::UINT;
+  sourceUdpPort.intValue = 4672;
+  entry.tags.push_back(sourceUdpPort);
+
+  Tag encryption;
+  encryption.id = 0xf3;
+  encryption.valueType = TagValueType::UINT;
+  encryption.intValue = 0x03;
+  entry.tags.push_back(encryption);
+
+  Endpoint endpoint;
+  CPPUNIT_ASSERT(extractKadSourceEndpoint(endpoint, entry));
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.44"), endpoint.host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, endpoint.port);
+  CPPUNIT_ASSERT_EQUAL(std::string(HASH_LENGTH, '\x44'), endpoint.userHash);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)0x03, endpoint.cryptOptions);
+}
+
 void Ed2kHelperTest::testSourceExchange2Payloads()
 {
   std::string fileHashHex("0123456789abcdef0123456789abcdef");
@@ -975,6 +1021,7 @@ void Ed2kHelperTest::testEmuleInfoPayload()
   info.miscOptions.multiPacket = true;
   info.miscOptions2.supportsSourceExchange2 = true;
   info.miscOptions2.supportsLargeFiles = true;
+  info.udpPort = 4672;
 
   auto payload = createEmuleInfoPayload(info);
   std::vector<Tag> muleTags;
@@ -1002,7 +1049,7 @@ void Ed2kHelperTest::testEmuleInfoPayload()
   CPPUNIT_ASSERT(parseEmuleInfoPayload(parsed, payload));
   CPPUNIT_ASSERT_EQUAL((uint8_t)0x3c, parsed.version);
   CPPUNIT_ASSERT_EQUAL((uint8_t)0x01, parsed.protocolVersion);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0, parsed.udpPort);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, parsed.udpPort);
   CPPUNIT_ASSERT_EQUAL((uint8_t)0, parsed.miscOptions.aichVersion);
   CPPUNIT_ASSERT(!parsed.miscOptions.unicode);
   CPPUNIT_ASSERT_EQUAL((uint8_t)1, parsed.miscOptions.dataCompressionVersion);

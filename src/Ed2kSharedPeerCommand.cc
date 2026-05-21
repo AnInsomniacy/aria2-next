@@ -52,6 +52,16 @@ uint16_t localEd2kTcpPort(const DownloadEngine* e)
   return 0;
 }
 
+uint16_t localEd2kUdpPort(const DownloadEngine* e)
+{
+  auto configured = e->getOption()->getAsInt(PREF_ED2K_UDP_LISTEN_PORT);
+  if (configured > 0 &&
+      configured <= static_cast<int>(std::numeric_limits<uint16_t>::max())) {
+    return static_cast<uint16_t>(configured);
+  }
+  return 0;
+}
+
 } // namespace
 
 Ed2kSharedPeerCommand::Ed2kSharedPeerCommand(
@@ -67,6 +77,8 @@ Ed2kSharedPeerCommand::Ed2kSharedPeerCommand(
       localPeerInfo_(ed2k::createLocalEmulePeerInfo()),
       writeCheck_(false)
 {
+  localPeerInfo_.udpPort = localEd2kUdpPort(e);
+  localPeerInfo_.miscOptions.udpVersion = localPeerInfo_.udpPort == 0 ? 0 : 4;
   socket_->setNonBlockingMode();
   e_->addSocketForReadCheck(socket_, this);
 }

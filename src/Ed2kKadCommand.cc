@@ -47,16 +47,6 @@ namespace aria2 {
 
 namespace {
 
-std::string clientKadId(const DownloadEngine* e)
-{
-  auto id = e->getSessionId();
-  if (id.size() >= ed2k::HASH_LENGTH) {
-    return id.substr(0, ed2k::HASH_LENGTH);
-  }
-  id.append(ed2k::HASH_LENGTH - id.size(), '\0');
-  return id;
-}
-
 ed2k::Endpoint toEndpoint(const ed2k::KadContact& contact)
 {
   ed2k::Endpoint endpoint;
@@ -85,6 +75,16 @@ uint32_t createChallenge()
 uint16_t localEd2kTcpPort(const DownloadEngine* e)
 {
   const auto configured = e->getOption()->getAsInt(PREF_ED2K_LISTEN_PORT);
+  if (configured > 0 &&
+      configured <= static_cast<int>(std::numeric_limits<uint16_t>::max())) {
+    return static_cast<uint16_t>(configured);
+  }
+  return 0;
+}
+
+uint16_t localEd2kUdpPort(const DownloadEngine* e)
+{
+  const auto configured = e->getOption()->getAsInt(PREF_ED2K_UDP_LISTEN_PORT);
   if (configured > 0 &&
       configured <= static_cast<int>(std::numeric_limits<uint16_t>::max())) {
     return static_cast<uint16_t>(configured);
@@ -151,7 +151,7 @@ int64_t Ed2kKadCommand::nowSeconds() const
 
 void Ed2kKadCommand::init()
 {
-  socket_->bind(nullptr, 0, AF_INET);
+  socket_->bind(nullptr, localEd2kUdpPort(e_), AF_INET);
   socket_->setNonBlockingMode();
   e_->addSocketForReadCheck(socket_, this);
   initialized_ = true;
@@ -159,7 +159,7 @@ void Ed2kKadCommand::init()
   auto attrs = getEd2kAttrs(requestGroup_->getDownloadContext());
   if (!attrs->kadRoutingTable) {
     attrs->kadRoutingTable =
-        std::make_shared<ed2k::KadRoutingTable>(clientKadId(e_));
+        std::make_shared<ed2k::KadRoutingTable>(attrs->clientHash);
   }
   for (const auto& source : attrs->link.sources) {
     ed2k::Endpoint endpoint;
@@ -301,7 +301,8 @@ void Ed2kKadCommand::queueFirewalledCheck()
       now - attrs->lastKadFirewalledCheck < FIREWALLED_CHECK_INTERVAL) {
     return;
   }
-  auto contacts = attrs->kadRoutingTable->findClosest(clientKadId(e_), 8, true);
+  auto contacts = attrs->kadRoutingTable->findClosest(attrs->clientHash, 8,
+                                                      true);
   if (contacts.empty()) {
     return;
   }
@@ -310,7 +311,7 @@ void Ed2kKadCommand::queueFirewalledCheck()
     const auto endpoint = toEndpoint(contact);
     queuePacket(endpoint, ed2k::KAD_FIREWALLED_REQ,
                 ed2k::createKadFirewalledRequestPayload(tcpPort,
-                                                         clientKadId(e_), 0));
+                                                         attrs->clientHash, 0));
     ed2k::KadTransaction tx;
     tx.endpoint = endpoint;
     tx.contact = contact;
@@ -353,7 +354,7 @@ void Ed2kKadCommand::queueSourcePublish()
   ed2k::Endpoint source;
   source.host = *observed;
   source.port = tcpPort;
-  const auto sourceId = clientKadId(e_);
+  const auto sourceId = attrs->clientHash;
   const auto payload = ed2k::createKadPublishSourceRequestPayload(
       attrs->link.hash, source, sourceId, attrs->link.size);
   ed2k::KadPublishSourceRequest request;
@@ -647,12 +648,13 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
     }
     const auto contacts =
         requesterId.empty()
-            ? attrs->kadRoutingTable->findClosest(clientKadId(e_), 20, false)
+            ? attrs->kadRoutingTable->findClosest(attrs->clientHash, 20,
+                                                  false)
             : attrs->kadRoutingTable->findClosestExcluding(
-                  clientKadId(e_), requesterId, 20, false);
+                  attrs->clientHash, requesterId, 20, false);
     queuePacket(endpoint, ed2k::KAD_BOOTSTRAP_RES,
                 ed2k::createKadBootstrapResponsePayload(
-                    clientKadId(e_), localEd2kTcpPort(e_), 8, contacts));
+                    attrs->clientHash, localEd2kTcpPort(e_), 8, contacts));
     return;
   }
   if (opcode == ed2k::KAD_BOOTSTRAP_RES) {
@@ -675,7 +677,7 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
         continue;
       }
       queuePacket(toEndpoint(contact), ed2k::KAD_HELLO_REQ,
-                  ed2k::createKadHelloPayload(clientKadId(e_),
+                  ed2k::createKadHelloPayload(attrs->clientHash,
                                               localEd2kTcpPort(e_), 8));
     }
     return;
@@ -693,7 +695,7 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
     }
     if (opcode == ed2k::KAD_HELLO_REQ) {
       queuePacket(endpoint, ed2k::KAD_HELLO_RES,
-                  ed2k::createKadHelloPayload(clientKadId(e_),
+                  ed2k::createKadHelloPayload(attrs->clientHash,
                                               localEd2kTcpPort(e_), 8));
     }
     return;
@@ -701,7 +703,7 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
   if (opcode == ed2k::KAD_REQ) {
     ed2k::KadRequest request;
     if (!ed2k::parseKadRequestPayload(request, payload) ||
-        request.receiverId != clientKadId(e_)) {
+        request.receiverId != attrs->clientHash) {
       return;
     }
     const auto searchType = request.searchType & 0x1f;
@@ -802,7 +804,7 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
     if (!entries.empty()) {
       queuePacket(endpoint, ed2k::KAD_SEARCH_RES,
                   ed2k::createKadSearchResultPayload(
-                      clientKadId(e_), request.targetId, entries));
+                      attrs->clientHash, request.targetId, entries));
     }
     return;
   }
