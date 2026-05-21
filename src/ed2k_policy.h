@@ -28,8 +28,24 @@ class SegmentMan;
 
 namespace ed2k {
 
+enum class PeerLifecycle {
+  USEFUL,
+  CONNECTING,
+  QUEUED,
+  DOWNLOADING,
+  NO_NEEDED_PARTS,
+  CALLBACK_WAITING,
+  DEAD,
+  RETRYING,
+  NO_FILE,
+  CANCELLED
+};
+
 int sourcePriority(uint32_t sourceFlags);
+PeerLifecycle classifyPeerLifecycle(const PeerState& peer, int64_t now);
 PeerState* selectConnectPeer(std::vector<PeerState>& peers, int64_t now);
+PeerState* selectConnectPeer(std::vector<PeerState>& peers, int64_t now,
+                             size_t activeSourceCap);
 std::vector<std::shared_ptr<Segment>>
 selectRequestSegments(SegmentMan* segmentMan, cuid_t cuid,
                       const std::vector<bool>& peerAvailability,

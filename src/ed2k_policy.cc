@@ -48,6 +48,11 @@ int sourcePriority(uint32_t sourceFlags)
 }
 
 namespace {
+bool retryReady(const PeerState& peer, int64_t now)
+{
+  return !peer.dead || peer.nextRetryTime <= now;
+}
+
 bool canConnect(const PeerState& peer, int64_t now)
 {
   if ((peer.endpoint.cryptOptions & SOURCE_CRYPT_REQUIRE) != 0) {
@@ -56,19 +61,75 @@ bool canConnect(const PeerState& peer, int64_t now)
   if (peer.lowId && (peer.callbackRequested || peer.callbackImpossible)) {
     return false;
   }
-  if (peer.connecting || peer.accepted || peer.noFile || peer.cancelled) {
+  if (peer.connecting || peer.accepted || peer.noFile || peer.cancelled ||
+      peer.outOfParts) {
     return false;
   }
-  if (peer.dead && peer.nextRetryTime > now) {
+  if (!retryReady(peer, now)) {
     return false;
   }
   return true;
+}
+
+bool countsAgainstActiveCap(const PeerState& peer, int64_t now)
+{
+  const auto lifecycle = classifyPeerLifecycle(peer, now);
+  return lifecycle == PeerLifecycle::CONNECTING ||
+         lifecycle == PeerLifecycle::DOWNLOADING ||
+         lifecycle == PeerLifecycle::RETRYING;
 }
 } // namespace
 
 PeerState* selectConnectPeer(std::vector<PeerState>& peers, int64_t now)
 {
+  return selectConnectPeer(peers, now, 0);
+}
+
+PeerLifecycle classifyPeerLifecycle(const PeerState& peer, int64_t now)
+{
+  if (peer.cancelled) {
+    return PeerLifecycle::CANCELLED;
+  }
+  if (peer.noFile) {
+    return PeerLifecycle::NO_FILE;
+  }
+  if (peer.lowId && peer.callbackRequested) {
+    return PeerLifecycle::CALLBACK_WAITING;
+  }
+  if (peer.outOfParts) {
+    return PeerLifecycle::NO_NEEDED_PARTS;
+  }
+  if (peer.dead) {
+    return peer.nextRetryTime <= now ? PeerLifecycle::RETRYING
+                                     : PeerLifecycle::DEAD;
+  }
+  if (peer.connecting) {
+    return PeerLifecycle::CONNECTING;
+  }
+  if (peer.accepted) {
+    return PeerLifecycle::DOWNLOADING;
+  }
+  if (peer.queued) {
+    return PeerLifecycle::QUEUED;
+  }
+  return PeerLifecycle::USEFUL;
+}
+
+PeerState* selectConnectPeer(std::vector<PeerState>& peers, int64_t now,
+                             size_t activeSourceCap)
+{
   PeerState* selected = nullptr;
+  if (activeSourceCap > 0) {
+    size_t active = 0;
+    for (const auto& peer : peers) {
+      if (countsAgainstActiveCap(peer, now)) {
+        ++active;
+      }
+    }
+    if (active >= activeSourceCap) {
+      return nullptr;
+    }
+  }
   for (auto& peer : peers) {
     if (!canConnect(peer, now)) {
       continue;

@@ -284,6 +284,7 @@ bool markEd2kPeerQueued(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
   state->dead = false;
   state->cancelled = false;
   state->noFile = false;
+  state->outOfParts = false;
   state->queueRank = rank;
   state->partStatus = partStatus;
   return true;
@@ -378,6 +379,7 @@ bool markEd2kPeerAccepted(Ed2kAttribute* attrs, const ed2k::Endpoint& peer)
   state->accepted = true;
   state->queued = false;
   state->dead = false;
+  state->outOfParts = false;
   return true;
 }
 
@@ -437,6 +439,27 @@ bool markEd2kPeerDead(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
   auto state = getEd2kPeerState(attrs, peer);
   state->noFile = true;
   return true;
+}
+
+size_t expireEd2kDeadSources(Ed2kAttribute* attrs, int64_t now)
+{
+  if (!attrs) {
+    return 0;
+  }
+  size_t expired = 0;
+  for (auto& state : attrs->peerStates) {
+    if (!state.dead || state.nextRetryTime == 0 ||
+        state.nextRetryTime > now) {
+      continue;
+    }
+    state.dead = false;
+    state.noFile = false;
+    state.cancelled = false;
+    state.nextRetryTime = 0;
+    state.requestedParts.clear();
+    ++expired;
+  }
+  return expired;
 }
 
 ed2k::ServerState* getEd2kServerState(Ed2kAttribute* attrs,
@@ -731,6 +754,7 @@ void schedulePendingEd2kPeers(RequestGroup* requestGroup, DownloadEngine* e)
   const auto now = std::chrono::duration_cast<std::chrono::seconds>(
                        global::wallclock().getTime().time_since_epoch())
                        .count();
+  expireEd2kDeadSources(attrs, now);
   while (requestGroup->getNumStreamCommand() <
          requestGroup->getNumConcurrentCommand()) {
     auto state = ed2k::selectConnectPeer(attrs->peerStates, now);

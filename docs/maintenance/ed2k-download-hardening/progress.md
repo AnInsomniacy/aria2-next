@@ -75,3 +75,33 @@ passed. `build/default/aria2_tests --list` now exposes exact test paths for
 short checkpoint verification.
 
 Remaining: Start AR20 source lifecycle and quality model.
+
+### AR20 - Source Lifecycle and Quality Model
+
+Changed: Added explicit ED2K peer lifecycle classification for useful,
+connecting, queued, downloading, no-needed-parts, callback-waiting, dead,
+retrying, no-file, and cancelled states. Source selection now has an optional
+active-source cap while preserving existing quality ordering by fail count,
+source origin, queued state, and queue rank. Dead and no-file sources expire
+after their bounded retry horizon before peer scheduling, and no-needed-parts
+peers are kept separate from permanent failure.
+
+Reference evidence: aMule `CDeadSourceList` keeps dead sources only until their
+timeout expires, and `CPartFile::Process` treats `DS_NONEEDEDPARTS` as a
+temporary state with slower recheck and possible later source refresh rather
+than a permanent failure. aMule source limits and source quality are tied to
+per-file source count, queue state, and rare-file/source-origin behavior.
+
+Current-code evidence: `src/ed2k_policy.*` now owns lifecycle classification
+and capped connect selection. `src/Ed2kAttribute.*` expires dead source state
+before peer scheduling and clears `outOfParts` only when a peer is queued or
+accepted again. Existing `PeerState` flags remain the storage owner.
+
+Verified: `cmake --build --preset default --target aria2_tests` passed.
+Focused CppUnit paths
+`DownloadHelperTest::testEd2kSourcePolicyClassifiesLifecycle`,
+`DownloadHelperTest::testEd2kSourcePolicyExpiresDeadSources`,
+`DownloadHelperTest::testEd2kSourcePolicyAppliesActiveCap`, and
+`DownloadHelperTest::testEd2kSourcePolicyRanksSources` passed.
+
+Remaining: Start AR30 server discovery cadence.

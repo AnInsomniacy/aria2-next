@@ -100,6 +100,7 @@ bool markEd2kPeerFailure(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
                          int64_t now, int64_t baseRetrySeconds);
 bool markEd2kPeerDead(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
                       int64_t now, int64_t baseRetrySeconds);
+size_t expireEd2kDeadSources(Ed2kAttribute* attrs, int64_t now);
 ed2k::ServerState* getEd2kServerState(Ed2kAttribute* attrs,
                                       const ed2k::Endpoint& server);
 ed2k::ServerState* updateEd2kServerConnecting(Ed2kAttribute* attrs,
