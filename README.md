@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/media/aria2-next-icon.png" alt="Aria2 Next icon" width="144" height="144" />
+  <img src="docs/media/aria2-next-icon-f41fadab.png" alt="Aria2 Next icon" width="144" height="144" />
   <h1>Aria2 Next</h1>
   <p>Maintained aria2 fork with extensive bug fixes and modernized architecture.</p>
 
