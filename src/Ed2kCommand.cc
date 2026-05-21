@@ -550,12 +550,36 @@ void Ed2kCommand::queuePeerPartRequest()
   if (ranges.empty()) {
     return;
   }
-  updateEd2kPeerRequestedParts(attrs, endpoint_, ranges);
+  updateEd2kPeerRequestedParts(attrs, endpoint_, ranges, nowSeconds());
   queuePacket(ed2k::PROTO_EDONKEY,
               use64BitOffsets_ ? ed2k::OP_REQUESTPARTS_I64
                                : ed2k::OP_REQUESTPARTS,
               ed2k::createRequestPartsPayload(attrs->link.hash, ranges,
                                               use64BitOffsets_));
+}
+
+void Ed2kCommand::queueCancelTransfer()
+{
+  queuePacket(ed2k::PROTO_EDONKEY, ed2k::OP_CANCELTRANSFER, std::string());
+}
+
+bool Ed2kCommand::expireStalledTransfer()
+{
+  if (mode_ != Mode::PEER || incoming_) {
+    return false;
+  }
+  constexpr int64_t TRANSFER_TIMEOUT = 100;
+  const auto retryWait =
+      std::max<int64_t>(1, getOption()->getAsInt(PREF_RETRY_WAIT));
+  if (!expireEd2kStalledPeerTransfer(getEd2kAttrs(getDownloadContext()),
+                                     getSegmentMan().get(), endpoint_,
+                                     getCuid(), nowSeconds(),
+                                     TRANSFER_TIMEOUT, retryWait)) {
+    return false;
+  }
+  queueCancelTransfer();
+  state_ = State::WRITE;
+  return true;
 }
 
 ed2k::SharedResponder Ed2kCommand::createSharedResponder()
@@ -802,6 +826,10 @@ void Ed2kCommand::handlePartData(int64_t begin, const std::string& data)
   ed2k::PeerTransfer transfer(getDownloadContext().get(), getPieceStorage().get(),
                               getSegmentMan().get(), getCuid());
   auto completedSegment = transfer.writePartData(begin, data);
+  removeEd2kPeerCompletedRequestedRange(getEd2kAttrs(getDownloadContext()),
+                                        endpoint_, begin,
+                                        begin + static_cast<int64_t>(data.size()),
+                                        nowSeconds());
   if (!completedSegment) {
     return;
   }
@@ -1409,11 +1437,17 @@ bool Ed2kCommand::executeInternal()
       }
       break;
     case State::READ_HEADER:
+      if (expireStalledTransfer()) {
+        break;
+      }
       if (!readHeader()) {
         return false;
       }
       break;
     case State::READ_BODY:
+      if (expireStalledTransfer()) {
+        break;
+      }
       if (!readBody()) {
         return false;
       }

@@ -30,6 +30,7 @@ class Command;
 class DownloadEngine;
 class Option;
 class RequestGroup;
+class SegmentMan;
 
 class DownloadContext;
 
@@ -109,8 +110,21 @@ bool updateEd2kPeerPartStatus(Ed2kAttribute* attrs,
 bool updateEd2kPeerRequestedParts(
     Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
     const std::vector<ed2k::PartRange>& ranges);
+bool updateEd2kPeerRequestedParts(
+    Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
+    const std::vector<ed2k::PartRange>& ranges, int64_t now);
+size_t removeEd2kPeerCompletedRequestedRange(Ed2kAttribute* attrs,
+                                             const ed2k::Endpoint& peer,
+                                             int64_t begin, int64_t end,
+                                             int64_t now);
 bool clearEd2kPeerRequestedParts(Ed2kAttribute* attrs,
                                  const ed2k::Endpoint& peer);
+bool expireEd2kStalledPeerTransfer(Ed2kAttribute* attrs,
+                                   SegmentMan* segmentMan,
+                                   const ed2k::Endpoint& peer,
+                                   int64_t cuid, int64_t now,
+                                   int64_t timeoutSeconds,
+                                   int64_t baseRetrySeconds);
 bool markEd2kPeerAccepted(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
 bool markEd2kPeerOutOfParts(Ed2kAttribute* attrs,
                             const ed2k::Endpoint& peer);

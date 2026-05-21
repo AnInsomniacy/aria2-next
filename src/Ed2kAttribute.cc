@@ -23,6 +23,7 @@
 #include "Ed2kCommand.h"
 #include "Option.h"
 #include "RequestGroup.h"
+#include "SegmentMan.h"
 #include "SimpleRandomizer.h"
 #include "a2functional.h"
 #include "ed2k_hash.h"
@@ -560,12 +561,48 @@ bool updateEd2kPeerRequestedParts(
     Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
     const std::vector<ed2k::PartRange>& ranges)
 {
+  return updateEd2kPeerRequestedParts(attrs, peer, ranges, 0);
+}
+
+bool updateEd2kPeerRequestedParts(
+    Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
+    const std::vector<ed2k::PartRange>& ranges, int64_t now)
+{
   auto state = getEd2kPeerState(attrs, peer);
   if (!state) {
     return false;
   }
   state->requestedParts = ranges;
+  if (!ranges.empty() && now != 0) {
+    state->lastPartRequestTime = now;
+    state->lastTransferProgressTime = now;
+    state->cancelTransferSent = false;
+  }
   return true;
+}
+
+size_t removeEd2kPeerCompletedRequestedRange(Ed2kAttribute* attrs,
+                                             const ed2k::Endpoint& peer,
+                                             int64_t begin, int64_t end,
+                                             int64_t now)
+{
+  auto state = getEd2kPeerState(attrs, peer);
+  if (!state || end <= begin) {
+    return 0;
+  }
+  const auto oldSize = state->requestedParts.size();
+  state->requestedParts.erase(
+      std::remove_if(state->requestedParts.begin(), state->requestedParts.end(),
+                     [&](const ed2k::PartRange& range) {
+                       return range.begin >= begin && range.end <= end;
+                     }),
+      state->requestedParts.end());
+  const auto removed = oldSize - state->requestedParts.size();
+  if (removed != 0) {
+    state->lastTransferProgressTime = now;
+    state->cancelTransferSent = false;
+  }
+  return removed;
 }
 
 bool clearEd2kPeerRequestedParts(Ed2kAttribute* attrs,
@@ -576,6 +613,36 @@ bool clearEd2kPeerRequestedParts(Ed2kAttribute* attrs,
     return false;
   }
   state->requestedParts.clear();
+  return true;
+}
+
+bool expireEd2kStalledPeerTransfer(Ed2kAttribute* attrs,
+                                   SegmentMan* segmentMan,
+                                   const ed2k::Endpoint& peer,
+                                   int64_t cuid, int64_t now,
+                                   int64_t timeoutSeconds,
+                                   int64_t baseRetrySeconds)
+{
+  auto state = getEd2kPeerState(attrs, peer);
+  if (!state || !segmentMan || timeoutSeconds <= 0 ||
+      state->requestedParts.empty()) {
+    return false;
+  }
+  const auto lastProgress =
+      state->lastTransferProgressTime != 0 ? state->lastTransferProgressTime
+                                           : state->lastPartRequestTime;
+  if (lastProgress == 0 || now - lastProgress < timeoutSeconds) {
+    return false;
+  }
+  segmentMan->cancelSegment(cuid);
+  state->requestedParts.clear();
+  state->cancelTransferSent = true;
+  if (!markEd2kPeerFailure(attrs, peer, now, baseRetrySeconds)) {
+    return false;
+  }
+  state = getEd2kPeerState(attrs, peer);
+  state->queued = true;
+  state->cancelTransferSent = true;
   return true;
 }
 
@@ -595,6 +662,7 @@ bool markEd2kPeerAccepted(Ed2kAttribute* attrs, const ed2k::Endpoint& peer)
   state->udpReaskPending = false;
   state->remoteQueueFull = false;
   state->outOfParts = false;
+  state->cancelTransferSent = false;
   return true;
 }
 

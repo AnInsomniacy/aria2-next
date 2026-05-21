@@ -272,3 +272,37 @@ Focused CppUnit paths
 `DownloadHelperTest::testEd2kServerSourceMergeSkipsUnsupportedSources` passed.
 
 Remaining: Start AR80 transfer pacing and retry.
+
+### AR80 - Transfer Pacing and Retry
+
+Changed: Added transfer request timing and stall recovery for ED2K peer
+downloads. Outbound part requests now record request and progress timestamps.
+Completed part data removes matching requested ranges. Stalled peer transfers
+release their `SegmentMan` ownership, clear requested ranges, mark bounded retry
+state, and queue `OP_CANCELTRANSFER` before continuing through the existing peer
+command path.
+
+Reference evidence: aMule `CUpDownClient::SendBlockRequests` limits outstanding
+block requests, clears local block requests when no free blocks remain, sends
+`OP_CANCELTRANSFER`, and uses `DOWNLOADTIMEOUT` in `CalculateKBpsDown` to cancel
+a peer and return it to queue handling after no block progress. aria2-next keeps
+that behavior in native request-range and segment ownership instead of copying
+aMule block-list structures.
+
+Current-code evidence: `src/Ed2kCommand.*` timestamps outgoing request ranges,
+checks stalled peer reads, queues cancel transfer, and refreshes requested ranges
+after data writes. `src/Ed2kAttribute.*` owns requested-range removal and stalled
+transfer expiry. `src/ed2k_peer.h` stores transfer timing and cancel state.
+`Ed2kPeerTransfer` and existing MD4/AICH paths remain the disk integrity
+boundary.
+
+Verified: `cmake --build --preset default --target aria2_tests` passed. Focused
+CppUnit paths
+`DownloadHelperTest::testEd2kPeerTransferRemovesCompletedRequestedRanges`,
+`DownloadHelperTest::testEd2kPeerTransferExpiresStalledRequests`,
+`DownloadHelperTest::testEd2kPiecePolicyUsesPeerAvailability`,
+`DownloadHelperTest::testEd2kPiecePolicyReclaimsIdlePeerSegment`,
+`DownloadHelperTest::testEd2kPeerTransferIgnoresDuplicateData`, and
+`DownloadHelperTest::testEd2kPeerTransferAppliesAichRecoveryData` passed.
+
+Remaining: Start AR90 sharing upload and credits hardening.

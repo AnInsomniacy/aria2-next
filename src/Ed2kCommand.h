@@ -98,6 +98,8 @@ private:
   void queueSourceExchangeAnswer(uint8_t version);
   void queuePeerStartUpload();
   void queuePeerPartRequest();
+  void queueCancelTransfer();
+  bool expireStalledTransfer();
   ed2k::SharedResponder createSharedResponder();
   bool updatePeerEndpointFromHello(bool helloPacket);
   void addPeer(const ed2k::Endpoint& peer);

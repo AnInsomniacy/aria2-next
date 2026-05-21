@@ -78,6 +78,8 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kServerSourceCadencePolicy);
   CPPUNIT_TEST(testEd2kPiecePolicyUsesPeerAvailability);
   CPPUNIT_TEST(testEd2kPiecePolicyReclaimsIdlePeerSegment);
+  CPPUNIT_TEST(testEd2kPeerTransferRemovesCompletedRequestedRanges);
+  CPPUNIT_TEST(testEd2kPeerTransferExpiresStalledRequests);
   CPPUNIT_TEST(testEd2kPeerTransferIgnoresDuplicateData);
   CPPUNIT_TEST(testEd2kPeerTransferAppliesAichRecoveryData);
   CPPUNIT_TEST(testEd2kSchedulingKeepsInlineSourceLabel);
@@ -139,6 +141,8 @@ public:
   void testEd2kServerSourceCadencePolicy();
   void testEd2kPiecePolicyUsesPeerAvailability();
   void testEd2kPiecePolicyReclaimsIdlePeerSegment();
+  void testEd2kPeerTransferRemovesCompletedRequestedRanges();
+  void testEd2kPeerTransferExpiresStalledRequests();
   void testEd2kPeerTransferIgnoresDuplicateData();
   void testEd2kPeerTransferAppliesAichRecoveryData();
   void testEd2kSchedulingKeepsInlineSourceLabel();
@@ -1233,6 +1237,84 @@ void DownloadHelperTest::testEd2kPiecePolicyReclaimsIdlePeerSegment()
   std::vector<std::shared_ptr<Segment>> oldOwner;
   segmentMan->getInFlightSegment(oldOwner, 1);
   CPPUNIT_ASSERT(oldOwner.empty());
+}
+
+void DownloadHelperTest::testEd2kPeerTransferRemovesCompletedRequestedRanges()
+{
+  Ed2kAttribute attrs;
+  ed2k::Endpoint peer;
+  peer.host = "203.0.113.10";
+  peer.port = 4662;
+  addEd2kPeer(&attrs, peer, ed2k::PEER_SOURCE_SERVER);
+
+  std::vector<ed2k::PartRange> ranges;
+  ed2k::PartRange range;
+  range.begin = 0;
+  range.end = 10;
+  ranges.push_back(range);
+  range.begin = 10;
+  range.end = 20;
+  ranges.push_back(range);
+  CPPUNIT_ASSERT(updateEd2kPeerRequestedParts(&attrs, peer, ranges, 100));
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1,
+                       removeEd2kPeerCompletedRequestedRange(&attrs, peer,
+                                                             0, 10, 120));
+  auto state = getEd2kPeerState(&attrs, peer);
+  CPPUNIT_ASSERT(state);
+  CPPUNIT_ASSERT_EQUAL((size_t)1, state->requestedParts.size());
+  CPPUNIT_ASSERT_EQUAL((int64_t)10, state->requestedParts[0].begin);
+  CPPUNIT_ASSERT_EQUAL((int64_t)20, state->requestedParts[0].end);
+  CPPUNIT_ASSERT_EQUAL((int64_t)120, state->lastTransferProgressTime);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1,
+                       removeEd2kPeerCompletedRequestedRange(&attrs, peer,
+                                                             10, 20, 125));
+  CPPUNIT_ASSERT(state->requestedParts.empty());
+  CPPUNIT_ASSERT_EQUAL((int64_t)125, state->lastTransferProgressTime);
+}
+
+void DownloadHelperTest::testEd2kPeerTransferExpiresStalledRequests()
+{
+  auto dctx = std::make_shared<DownloadContext>(
+      ed2k::PIECE_LENGTH, static_cast<int64_t>(ed2k::PIECE_LENGTH) * 2,
+      "aria2-next-ed2k.bin");
+  auto attrs = std::make_shared<Ed2kAttribute>();
+  dctx->setAttribute(CTX_ATTR_ED2K, attrs);
+  auto pieceStorage = std::make_shared<DefaultPieceStorage>(dctx, option_.get());
+  auto segmentMan = std::make_shared<SegmentMan>(dctx, pieceStorage);
+  auto segment = segmentMan->getSegmentWithIndex(7, 0);
+  CPPUNIT_ASSERT(segment);
+
+  ed2k::Endpoint peer;
+  peer.host = "203.0.113.10";
+  peer.port = 4662;
+  addEd2kPeer(attrs.get(), peer, ed2k::PEER_SOURCE_SERVER);
+  std::vector<ed2k::PartRange> ranges;
+  ed2k::PartRange range;
+  range.begin = 0;
+  range.end = 10;
+  ranges.push_back(range);
+  CPPUNIT_ASSERT(updateEd2kPeerRequestedParts(attrs.get(), peer, ranges, 100));
+  auto state = getEd2kPeerState(attrs.get(), peer);
+  state->accepted = true;
+
+  CPPUNIT_ASSERT(!expireEd2kStalledPeerTransfer(
+      attrs.get(), segmentMan.get(), peer, 7, 129, 30, 15));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, state->requestedParts.size());
+
+  CPPUNIT_ASSERT(expireEd2kStalledPeerTransfer(
+      attrs.get(), segmentMan.get(), peer, 7, 130, 30, 15));
+  CPPUNIT_ASSERT(state->requestedParts.empty());
+  CPPUNIT_ASSERT(state->queued);
+  CPPUNIT_ASSERT(!state->accepted);
+  CPPUNIT_ASSERT(state->dead);
+  CPPUNIT_ASSERT_EQUAL((uint32_t)1, state->failCount);
+  CPPUNIT_ASSERT_EQUAL((int64_t)145, state->nextRetryTime);
+
+  std::vector<std::shared_ptr<Segment>> inFlight;
+  segmentMan->getInFlightSegment(inFlight, 7);
+  CPPUNIT_ASSERT(inFlight.empty());
 }
 
 void DownloadHelperTest::testEd2kPeerTransferIgnoresDuplicateData()

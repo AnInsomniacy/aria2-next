@@ -122,6 +122,9 @@ struct PeerState {
   bool remoteQueueFull = false;
   int64_t lastUdpReaskTime = 0;
   int64_t nextUdpReaskTime = 0;
+  int64_t lastPartRequestTime = 0;
+  int64_t lastTransferProgressTime = 0;
+  bool cancelTransferSent = false;
   bool dead = false;
   bool accepted = false;
   bool outOfParts = false;
