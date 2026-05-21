@@ -21,6 +21,7 @@
 #include <array>
 #include <deque>
 #include <vector>
+#include <cstdint>
 
 namespace aria2 {
 
@@ -65,6 +66,7 @@ private:
   bool use64BitOffsets_;
   bool incoming_;
   bool serverRequestSent_;
+  std::deque<uint32_t> pendingCallbackClientIds_;
   ed2k::EmulePeerInfo localPeerInfo_;
   ed2k::EmulePeerInfo remotePeerInfo_;
 

@@ -63,7 +63,12 @@ bool canConnect(const PeerState& peer, int64_t now)
   if ((peer.endpoint.cryptOptions & SOURCE_CRYPT_REQUIRE) != 0) {
     return false;
   }
-  if (peer.lowId && (peer.callbackRequested || peer.callbackImpossible)) {
+  if (peer.lowId) {
+    return false;
+  }
+  if (peer.lowIdCallbackState == LowIdCallbackState::IMPOSSIBLE ||
+      peer.lowIdCallbackState == LowIdCallbackState::FAILED ||
+      peer.lowIdCallbackState == LowIdCallbackState::TIMED_OUT) {
     return false;
   }
   if (peer.connecting || peer.accepted || peer.queued || peer.noFile ||
@@ -146,7 +151,7 @@ PeerLifecycle classifyPeerLifecycle(const PeerState& peer, int64_t now)
   if (peer.noFile) {
     return PeerLifecycle::NO_FILE;
   }
-  if (peer.lowId && peer.callbackRequested) {
+  if (peer.lowIdCallbackState == LowIdCallbackState::REQUESTED) {
     return PeerLifecycle::CALLBACK_WAITING;
   }
   if (peer.outOfParts) {

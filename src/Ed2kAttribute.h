@@ -93,7 +93,16 @@ bool markEd2kPeerQueueFull(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
 bool markEd2kPeerConnecting(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
 bool markEd2kPeerDisconnected(Ed2kAttribute* attrs,
                               const ed2k::Endpoint& peer);
+bool markEd2kCallbackRequestSent(Ed2kAttribute* attrs, uint32_t clientId,
+                                 int64_t now, int64_t timeoutSeconds);
+bool markEd2kCallbackAccepted(Ed2kAttribute* attrs, uint32_t clientId,
+                              const ed2k::Endpoint& peer, int64_t now);
+bool markEd2kCallbackCompleted(Ed2kAttribute* attrs,
+                               const ed2k::Endpoint& peer);
 bool markEd2kCallbackFailed(Ed2kAttribute* attrs, uint32_t clientId);
+bool markEd2kCallbackFailed(Ed2kAttribute* attrs, uint32_t clientId,
+                            int64_t now, int64_t baseRetrySeconds);
+size_t expireEd2kCallbackWaits(Ed2kAttribute* attrs, int64_t now);
 bool updateEd2kPeerPartStatus(Ed2kAttribute* attrs,
                               const ed2k::Endpoint& peer,
                               const std::vector<bool>& partStatus);

@@ -235,3 +235,40 @@ Focused CppUnit paths
 `Ed2kHelperTest::testPeerHelloPayload` passed.
 
 Remaining: Start AR70 LowID callback handling.
+
+### AR70 - LowID Callback Handling
+
+Changed: Added explicit LowID callback state to `PeerState` and centralized
+server-mediated callback transitions in `Ed2kAttribute`. Callback sources now
+move through requested, accepted, failed, timed-out, impossible, and completed
+states. Server callback requests keep the requested LowID ids in the server
+command so `OP_CALLBACKREQUESTED` can bind the accepted endpoint to the
+matching pending request. Peer scheduling now blocks LowID direct connects
+until an accepted callback exposes a reachable endpoint, and expired failed
+callback waits become unreachable without consuming active peer slots.
+
+Reference evidence: aMule `CUpDownClient::TryToConnect` separates
+`DS_LOWTOLOWIP`, `DS_WAITCALLBACK`, and `DS_WAITCALLBACKKAD`. aMule
+`ServerSocket` accepts server callback endpoints, while `ClientUDPSocket`,
+`ClientTCPSocket`, `DownloadClient`, Kad `Search`, and
+`KademliaUDPListener` show that buddy and direct UDP callback require a
+separate buddy owner, direct callback timeout owner, UDP verification, and
+callback routing state. aMule UPnP/NAT helper code is an application-level
+router control surface.
+
+Current-code evidence: `src/ed2k_peer.h` owns `LowIdCallbackState`.
+`src/Ed2kAttribute.*` owns callback accepted, completed, failed, and expiry
+helpers. `src/Ed2kCommand.*` tracks pending server callback request ids and
+uses the helper for callback acceptance. `src/ed2k_policy.cc` keeps LowID and
+failed callback states out of normal direct-connect scheduling. CAP15 records
+buddy/direct callback as a bounded limitation for now, and CAP21 replaces
+router helpers with existing aria2-next listen-port ownership.
+
+Verified: `cmake --build --preset default --target aria2_tests` passed.
+Focused CppUnit paths
+`DownloadHelperTest::testEd2kLowIdCallbackStateTransitions`,
+`DownloadHelperTest::testEd2kPeerActionPolicyIsolatesUnreachableLowId`,
+`DownloadHelperTest::testEd2kPeerActionPolicyHandlesCallbackAndExpiry`, and
+`DownloadHelperTest::testEd2kServerSourceMergeSkipsUnsupportedSources` passed.
+
+Remaining: Start AR80 transfer pacing and retry.

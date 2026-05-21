@@ -63,9 +63,11 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kSourceExchangeMergePolicy);
   CPPUNIT_TEST(testEd2kSourcePolicyRanksSources);
   CPPUNIT_TEST(testEd2kSourcePolicyClassifiesLifecycle);
+  CPPUNIT_TEST(testEd2kLowIdCallbackStateTransitions);
   CPPUNIT_TEST(testEd2kPeerActionPolicySelectsConnect);
   CPPUNIT_TEST(testEd2kPeerActionPolicyReportsQueuedReask);
   CPPUNIT_TEST(testEd2kPeerActionPolicyHandlesCallbackAndExpiry);
+  CPPUNIT_TEST(testEd2kPeerActionPolicyIsolatesUnreachableLowId);
   CPPUNIT_TEST(testEd2kConnectPolicyIgnoresNonConnectActions);
   CPPUNIT_TEST(testEd2kSourcePolicyExpiresDeadSources);
   CPPUNIT_TEST(testEd2kPeerUdpReaskStateTransitions);
@@ -122,9 +124,11 @@ public:
   void testEd2kSourceExchangeMergePolicy();
   void testEd2kSourcePolicyRanksSources();
   void testEd2kSourcePolicyClassifiesLifecycle();
+  void testEd2kLowIdCallbackStateTransitions();
   void testEd2kPeerActionPolicySelectsConnect();
   void testEd2kPeerActionPolicyReportsQueuedReask();
   void testEd2kPeerActionPolicyHandlesCallbackAndExpiry();
+  void testEd2kPeerActionPolicyIsolatesUnreachableLowId();
   void testEd2kConnectPolicyIgnoresNonConnectActions();
   void testEd2kSourcePolicyExpiresDeadSources();
   void testEd2kPeerUdpReaskStateTransitions();
@@ -723,6 +727,80 @@ void DownloadHelperTest::testEd2kSourcePolicyClassifiesLifecycle()
                        ed2k::classifyPeerLifecycle(peer, 160));
 }
 
+void DownloadHelperTest::testEd2kLowIdCallbackStateTransitions()
+{
+  Ed2kAttribute attrs;
+  ed2k::FoundSource source;
+  source.endpoint.host = "120.0.0.0";
+  source.endpoint.port = 4662;
+  source.clientId = 0x00000120;
+  source.lowId = true;
+
+  CPPUNIT_ASSERT(!addEd2kFoundSource(&attrs, source,
+                                     ed2k::PEER_SOURCE_SERVER, true));
+  auto state = getEd2kPeerState(&attrs, source.endpoint);
+  CPPUNIT_ASSERT(state);
+  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::REQUESTED,
+                       state->lowIdCallbackState);
+  CPPUNIT_ASSERT(state->callbackRequested);
+  CPPUNIT_ASSERT(!state->callbackImpossible);
+  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::CALLBACK_WAITING,
+                       ed2k::classifyPeerLifecycle(*state, 100));
+  CPPUNIT_ASSERT(markEd2kCallbackRequestSent(&attrs, source.clientId,
+                                             105, 45));
+  CPPUNIT_ASSERT_EQUAL((int64_t)105, state->lastCallbackTime);
+  CPPUNIT_ASSERT_EQUAL((int64_t)150, state->callbackDeadline);
+
+  ed2k::Endpoint callbackPeer;
+  callbackPeer.host = "203.0.113.44";
+  callbackPeer.port = 4662;
+  CPPUNIT_ASSERT(markEd2kCallbackAccepted(&attrs, source.clientId,
+                                          callbackPeer, 120));
+  state = getEd2kPeerState(&attrs, callbackPeer);
+  CPPUNIT_ASSERT(state);
+  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::ACCEPTED,
+                       state->lowIdCallbackState);
+  CPPUNIT_ASSERT(!state->lowId);
+  CPPUNIT_ASSERT(!state->callbackRequested);
+  CPPUNIT_ASSERT(!state->callbackImpossible);
+  CPPUNIT_ASSERT_EQUAL(source.clientId, state->clientId);
+  CPPUNIT_ASSERT_EQUAL((int64_t)120, state->lastCallbackTime);
+  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::USEFUL,
+                       ed2k::classifyPeerLifecycle(*state, 121));
+
+  CPPUNIT_ASSERT(markEd2kCallbackCompleted(&attrs, callbackPeer));
+  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::COMPLETED,
+                       state->lowIdCallbackState);
+
+  Ed2kAttribute failAttrs;
+  CPPUNIT_ASSERT(!addEd2kFoundSource(&failAttrs, source,
+                                     ed2k::PEER_SOURCE_SERVER, true));
+  state = getEd2kPeerState(&failAttrs, source.endpoint);
+  CPPUNIT_ASSERT(markEd2kCallbackFailed(&failAttrs, source.clientId, 180, 30));
+  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::FAILED,
+                       state->lowIdCallbackState);
+  CPPUNIT_ASSERT(state->callbackImpossible);
+  CPPUNIT_ASSERT(state->dead);
+  CPPUNIT_ASSERT_EQUAL((int64_t)210, state->nextRetryTime);
+
+  CPPUNIT_ASSERT(expireEd2kCallbackWaits(&failAttrs, 211) == 1);
+  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::IMPOSSIBLE,
+                       state->lowIdCallbackState);
+  CPPUNIT_ASSERT(!state->dead);
+  CPPUNIT_ASSERT(state->callbackImpossible);
+
+  Ed2kAttribute timeoutAttrs;
+  CPPUNIT_ASSERT(!addEd2kFoundSource(&timeoutAttrs, source,
+                                     ed2k::PEER_SOURCE_SERVER, true));
+  state = getEd2kPeerState(&timeoutAttrs, source.endpoint);
+  CPPUNIT_ASSERT(markEd2kCallbackRequestSent(&timeoutAttrs, source.clientId,
+                                             300, 45));
+  CPPUNIT_ASSERT(expireEd2kCallbackWaits(&timeoutAttrs, 345) == 1);
+  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::TIMED_OUT,
+                       state->lowIdCallbackState);
+  CPPUNIT_ASSERT(state->callbackImpossible);
+}
+
 void DownloadHelperTest::testEd2kPeerActionPolicySelectsConnect()
 {
   std::vector<ed2k::PeerState> peers(2);
@@ -768,6 +846,7 @@ void DownloadHelperTest::testEd2kPeerActionPolicyHandlesCallbackAndExpiry()
   peers[0].endpoint.port = 4662;
   peers[0].lowId = true;
   peers[0].callbackRequested = true;
+  peers[0].lowIdCallbackState = ed2k::LowIdCallbackState::REQUESTED;
   peers[0].clientId = 42;
   peers[1].endpoint.host = "203.0.113.11";
   peers[1].endpoint.port = 4662;
@@ -784,10 +863,36 @@ void DownloadHelperTest::testEd2kPeerActionPolicyHandlesCallbackAndExpiry()
 
   peers[0].callbackRequested = false;
   peers[0].callbackImpossible = true;
+  peers[0].lowIdCallbackState = ed2k::LowIdCallbackState::IMPOSSIBLE;
   action = ed2k::selectPeerAction(peers, 130, 1);
   CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::RETRY, action.type);
   CPPUNIT_ASSERT(action.peer);
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.11"), action.peer->endpoint.host);
+}
+
+void DownloadHelperTest::testEd2kPeerActionPolicyIsolatesUnreachableLowId()
+{
+  std::vector<ed2k::PeerState> peers(2);
+  peers[0].endpoint.host = "120.0.0.0";
+  peers[0].endpoint.port = 4662;
+  peers[0].lowId = true;
+  peers[0].clientId = 0x00000120;
+  peers[0].callbackImpossible = true;
+  peers[0].lowIdCallbackState = ed2k::LowIdCallbackState::IMPOSSIBLE;
+  peers[1].endpoint.host = "203.0.113.12";
+  peers[1].endpoint.port = 4662;
+
+  auto action = ed2k::selectPeerAction(peers, 100, 1);
+
+  CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::CONNECT, action.type);
+  CPPUNIT_ASSERT(action.peer);
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.12"), action.peer->endpoint.host);
+  CPPUNIT_ASSERT(!ed2k::selectConnectPeer(peers, 100)->lowId);
+
+  peers[1].connecting = true;
+  action = ed2k::selectPeerAction(peers, 100, 1);
+  CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::WAIT, action.type);
+  CPPUNIT_ASSERT(!action.peer);
 }
 
 void DownloadHelperTest::testEd2kConnectPolicyIgnoresNonConnectActions()

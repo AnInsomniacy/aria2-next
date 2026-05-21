@@ -91,6 +91,16 @@ struct UdpReaskAck {
   uint16_t rank = 0;
 };
 
+enum class LowIdCallbackState {
+  NONE,
+  REQUESTED,
+  ACCEPTED,
+  FAILED,
+  TIMED_OUT,
+  IMPOSSIBLE,
+  COMPLETED
+};
+
 struct PeerState {
   Endpoint endpoint;
   std::vector<bool> partStatus;
@@ -100,6 +110,9 @@ struct PeerState {
   bool lowId = false;
   bool callbackRequested = false;
   bool callbackImpossible = false;
+  LowIdCallbackState lowIdCallbackState = LowIdCallbackState::NONE;
+  int64_t lastCallbackTime = 0;
+  int64_t callbackDeadline = 0;
   bool connecting = false;
   bool queued = false;
   uint16_t queueRank = 0;

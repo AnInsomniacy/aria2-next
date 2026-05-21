@@ -343,6 +343,10 @@ void Ed2kCommand::queueSearchRequest()
 
 void Ed2kCommand::queueCallbackRequest(uint32_t clientId)
 {
+  pendingCallbackClientIds_.push_back(clientId);
+  constexpr int64_t CALLBACK_TIMEOUT = 45;
+  markEd2kCallbackRequestSent(getEd2kAttrs(getDownloadContext()), clientId,
+                              nowSeconds(), CALLBACK_TIMEOUT);
   queuePacket(ed2k::PROTO_EDONKEY, ed2k::OP_CALLBACKREQUEST,
               ed2k::createCallbackRequestPayload(clientId));
 }
@@ -885,11 +889,10 @@ void Ed2kCommand::handleServerPacket()
     }
     if ((peer.cryptOptions & ed2k::SOURCE_CRYPT_REQUIRE) == 0) {
       addEd2kPeer(attrs, peer, ed2k::PEER_SOURCE_SERVER);
-      auto state = getEd2kPeerState(attrs, peer);
-      if (state) {
-        state->lowId = false;
-        state->callbackRequested = false;
-        state->callbackImpossible = false;
+      if (!pendingCallbackClientIds_.empty()) {
+        markEd2kCallbackAccepted(attrs, pendingCallbackClientIds_.front(),
+                                 peer, nowSeconds());
+        pendingCallbackClientIds_.pop_front();
       }
     }
     schedulePendingPeers();
@@ -898,7 +901,13 @@ void Ed2kCommand::handleServerPacket()
   }
   if (currentHeader_.opcode == ed2k::OP_CALLBACK_FAIL) {
     if (body_.size() >= 4) {
-      markEd2kCallbackFailed(attrs, ed2k::readUInt32(body_.data()));
+      const auto clientId = ed2k::readUInt32(body_.data());
+      markEd2kCallbackFailed(attrs, clientId);
+      auto i = std::find(pendingCallbackClientIds_.begin(),
+                         pendingCallbackClientIds_.end(), clientId);
+      if (i != pendingCallbackClientIds_.end()) {
+        pendingCallbackClientIds_.erase(i);
+      }
     }
     A2_LOG_INFO(fmt("CUID#%" PRId64
                     " - ED2K server %s:%u reported callback failure.",
