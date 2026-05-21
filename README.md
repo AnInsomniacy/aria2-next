@@ -22,7 +22,11 @@ Aria2 Next is an actively maintained aria2-compatible engine for everyone, and i
 
 ## Native ED2K/eMule Support
 
-Aria2 Next includes native ED2K/eMule support reimplemented inside aria2's existing engine architecture from authoritative eMule, aMule, MLDonkey, Wireshark, and protocol documentation references. The reference-alignment work is tracked in [`docs/maintenance/ed2k-refactor/`](docs/maintenance/ed2k-refactor/). Core ED2K/eMule behavior has been ported where it fits aria2-next, while obsolete legacy structures were removed or replaced with existing compatible integration surfaces.
+Aria2 Next includes native ED2K/eMule support reimplemented inside aria2's existing engine architecture from authoritative eMule, aMule, MLDonkey, Wireshark, and protocol documentation references. It supports ED2K file links, server-based source discovery, `server.met`, Kad bootstrap through `nodes.dat`, peer transfer, MD4 and AICH integrity data, compressed parts, Source Exchange, search, sharing, upload slots, peer credits, session persistence, and ED2K fields in JSON-RPC status output.
+
+ED2K is exposed through normal aria2-style CLI and RPC workflows. Use `--ed2k-server`, `--ed2k-server-list`, `--ed2k-node-list`, `--ed2k-listen-port`, `--ed2k-upload-slots`, and `--ed2k-share-file` for discovery, listening, and sharing configuration. `aria2-next --help=#ed2k` prints the current option set.
+
+The reference-alignment work is tracked in [`docs/maintenance/ed2k-refactor/`](docs/maintenance/ed2k-refactor/). Core ED2K/eMule behavior has been ported where it fits aria2-next, while obsolete legacy structures were removed or replaced with existing compatible integration surfaces.
 
 ## Compatibility
 
