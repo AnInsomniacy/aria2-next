@@ -45,6 +45,11 @@ public:
   {
     return outbox_.at(index);
   }
+  void testHandleEd2kUdpPacket(const ed2k::Endpoint& endpoint, uint8_t opcode,
+                               const std::string& payload)
+  {
+    handleEd2kUdpPacket(endpoint, opcode, payload);
+  }
 #endif // A2_TEST_DIR
 
 private:

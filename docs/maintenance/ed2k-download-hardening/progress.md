@@ -306,3 +306,36 @@ CppUnit paths
 `DownloadHelperTest::testEd2kPeerTransferAppliesAichRecoveryData` passed.
 
 Remaining: Start AR90 sharing upload and credits hardening.
+
+### AR90 - Sharing Upload and Credits Hardening
+
+Changed: Hardened ED2K UDP upload reask cooperation and pinned credit-weighted
+upload ordering. Unknown UDP `OP_REASKFILEPING` senders now receive
+`OP_QUEUEFULL` instead of a misleading rank-zero `OP_REASKACK`. Peers already
+occupying an upload slot still receive a rank-zero ACK. Existing TCP upload
+slot, queued rank, shared-file part serving, and persisted credit ownership stay
+in the native aria2-next upload queue and shared responder.
+
+Reference evidence: aMule `ClientUDPSocket` responds to known waiting upload
+clients with `OP_REASKACK`, includes queue rank, and uses `OP_QUEUEFULL` for
+untracked senders when it cannot admit them. aMule `UploadQueue` ranks waiting
+clients by score, and `ClientCredits` applies uploaded/downloaded counters while
+secure identification gates remain separate. aria2-next keeps secure-ident
+unadvertised and uses practical user-hash credit counters only.
+
+Current-code evidence: `src/Ed2kKadCommand.cc` owns UDP upload reask replies.
+`src/Ed2kUploadQueue.*` owns upload slots, queue ranks, duplicate user-hash
+rejection, credit score ordering, and counters. `src/Ed2kSharedResponder.*`
+continues to serve parts only for upload-slot peers and returns queue ranks for
+waiting peers. `src/SessionSerializer.cc` already persists peer credit state.
+
+Verified: `cmake --build --preset default --target aria2_tests` passed. Focused
+CppUnit paths
+`DownloadHelperTest::testEd2kKadCommandQueueFullForUnknownUploadReask`,
+`DownloadHelperTest::testEd2kKadCommandAckForUploadingPeerReask`,
+`Ed2kSharedStoreTest::testUploadQueueRejectsDuplicateUserHash`,
+`Ed2kSharedStoreTest::testUploadQueueCreditsSortWaitingPeers`,
+`SessionSerializerTest::testSaveEd2kPeerCredits`, and
+`Ed2kHelperTest::testUdpReaskPayloads` passed.
+
+Remaining: Start AR100 capability truth, documentation, and final verification.

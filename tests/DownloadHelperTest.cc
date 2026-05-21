@@ -16,6 +16,7 @@
 #include "Ed2kAttribute.h"
 #include "Ed2kKadCommand.h"
 #include "Ed2kPeerTransfer.h"
+#include "Ed2kUploadQueue.h"
 #include "Option.h"
 #include "Piece.h"
 #include "RequestGroupMan.h"
@@ -74,6 +75,8 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kPeerUdpReaskReplyMatchesUdpPort);
   CPPUNIT_TEST(testEd2kPeerUdpReaskDueSelection);
   CPPUNIT_TEST(testEd2kKadCommandQueuesDuePeerReask);
+  CPPUNIT_TEST(testEd2kKadCommandQueueFullForUnknownUploadReask);
+  CPPUNIT_TEST(testEd2kKadCommandAckForUploadingPeerReask);
   CPPUNIT_TEST(testEd2kSourcePolicyAppliesActiveCap);
   CPPUNIT_TEST(testEd2kServerSourceCadencePolicy);
   CPPUNIT_TEST(testEd2kPiecePolicyUsesPeerAvailability);
@@ -137,6 +140,8 @@ public:
   void testEd2kPeerUdpReaskReplyMatchesUdpPort();
   void testEd2kPeerUdpReaskDueSelection();
   void testEd2kKadCommandQueuesDuePeerReask();
+  void testEd2kKadCommandQueueFullForUnknownUploadReask();
+  void testEd2kKadCommandAckForUploadingPeerReask();
   void testEd2kSourcePolicyAppliesActiveCap();
   void testEd2kServerSourceCadencePolicy();
   void testEd2kPiecePolicyUsesPeerAvailability();
@@ -1096,6 +1101,95 @@ void DownloadHelperTest::testEd2kKadCommandQueuesDuePeerReask()
   CPPUNIT_ASSERT(state->udpReaskPending);
   CPPUNIT_ASSERT_EQUAL((int64_t)200, state->lastUdpReaskTime);
   CPPUNIT_ASSERT_EQUAL((int64_t)1500, state->nextUdpReaskTime);
+}
+
+void DownloadHelperTest::testEd2kKadCommandQueueFullForUnknownUploadReask()
+{
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_ED2K_SERVER, "203.0.113.10:4661");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_TRUE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  Ed2kKadCommand command(1, group.get(), &engine);
+
+  ed2k::Endpoint remote;
+  remote.host = "203.0.113.30";
+  remote.port = 4672;
+  command.testHandleEd2kUdpPacket(
+      remote, ed2k::OP_REASKFILEPING,
+      ed2k::createUdpReaskFilePingPayload(attrs->link.hash));
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueuedPacketCount());
+  const auto& item = command.testQueuedPacketAt(0);
+  CPPUNIT_ASSERT_EQUAL(remote.host, item.first.host);
+  CPPUNIT_ASSERT_EQUAL(remote.port, item.first.port);
+  ed2k::PacketHeader header;
+  CPPUNIT_ASSERT(ed2k::readDatagramHeader(header, item.second.data(),
+                                          item.second.size()));
+  CPPUNIT_ASSERT_EQUAL(ed2k::PROTO_EMULE, header.protocol);
+  CPPUNIT_ASSERT_EQUAL(ed2k::OP_QUEUEFULL, header.opcode);
+  CPPUNIT_ASSERT_EQUAL((size_t)0, header.payloadSize());
+}
+
+void DownloadHelperTest::testEd2kKadCommandAckForUploadingPeerReask()
+{
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_ED2K_SERVER, "203.0.113.10:4661");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_TRUE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  auto uploadQueue = engine.getRequestGroupMan()->getEd2kUploadQueue();
+
+  ed2k::Endpoint remote;
+  remote.host = "203.0.113.31";
+  remote.port = 4672;
+  CPPUNIT_ASSERT(uploadQueue->requestUpload(remote,
+                                            std::string(ed2k::HASH_LENGTH,
+                                                        '\x44'),
+                                            attrs->link.hash, 1000, nullptr));
+  Ed2kKadCommand command(1, group.get(), &engine);
+  command.testHandleEd2kUdpPacket(
+      remote, ed2k::OP_REASKFILEPING,
+      ed2k::createUdpReaskFilePingPayload(attrs->link.hash));
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueuedPacketCount());
+  const auto& item = command.testQueuedPacketAt(0);
+  ed2k::PacketHeader header;
+  CPPUNIT_ASSERT(ed2k::readDatagramHeader(header, item.second.data(),
+                                          item.second.size()));
+  CPPUNIT_ASSERT_EQUAL(ed2k::PROTO_EMULE, header.protocol);
+  CPPUNIT_ASSERT_EQUAL(ed2k::OP_REASKACK, header.opcode);
+  ed2k::UdpReaskAck ack;
+  CPPUNIT_ASSERT(ed2k::parseUdpReaskAckPayload(ack, item.second.substr(2)));
+  CPPUNIT_ASSERT_EQUAL((uint16_t)0, ack.rank);
 }
 
 void DownloadHelperTest::testEd2kSourcePolicyAppliesActiveCap()

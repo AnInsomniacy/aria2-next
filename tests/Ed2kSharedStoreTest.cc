@@ -30,6 +30,7 @@ class Ed2kSharedStoreTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testSharedFilePartPayload);
   CPPUNIT_TEST(testSharedFileAichAnswerPayload);
   CPPUNIT_TEST(testUploadQueueRejectsDuplicateUserHash);
+  CPPUNIT_TEST(testUploadQueueCreditsSortWaitingPeers);
   CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -41,6 +42,7 @@ public:
   void testSharedFilePartPayload();
   void testSharedFileAichAnswerPayload();
   void testUploadQueueRejectsDuplicateUserHash();
+  void testUploadQueueCreditsSortWaitingPeers();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(Ed2kSharedStoreTest);
@@ -320,6 +322,35 @@ void Ed2kSharedStoreTest::testUploadQueueRejectsDuplicateUserHash()
                                       nullptr));
   CPPUNIT_ASSERT_EQUAL((size_t)2, queue.peers().size());
   CPPUNIT_ASSERT_EQUAL((uint16_t)1, queue.queueRank(other));
+}
+
+void Ed2kSharedStoreTest::testUploadQueueCreditsSortWaitingPeers()
+{
+  UploadQueue queue(1);
+  Endpoint active;
+  active.host = "203.0.113.10";
+  active.port = 4662;
+  Endpoint older;
+  older.host = "203.0.113.11";
+  older.port = 4662;
+  Endpoint credited;
+  credited.host = "203.0.113.12";
+  credited.port = 4662;
+  const std::string activeHash(HASH_LENGTH, '\x40');
+  const std::string olderHash(HASH_LENGTH, '\x41');
+  const std::string creditedHash(HASH_LENGTH, '\x42');
+  const std::string fileHash(HASH_LENGTH, '\x66');
+
+  CPPUNIT_ASSERT(queue.requestUpload(active, activeHash, fileHash, 1000,
+                                     nullptr));
+  CPPUNIT_ASSERT(!queue.requestUpload(older, olderHash, fileHash, 1001,
+                                      nullptr));
+  queue.credits().addDownloaded(creditedHash, 4 * 1024 * 1024);
+  CPPUNIT_ASSERT(!queue.requestUpload(credited, creditedHash, fileHash, 1002,
+                                      nullptr));
+
+  CPPUNIT_ASSERT_EQUAL((uint16_t)2, queue.queueRank(older));
+  CPPUNIT_ASSERT_EQUAL((uint16_t)1, queue.queueRank(credited));
 }
 
 } // namespace ed2k

@@ -570,6 +570,10 @@ void Ed2kKadCommand::handleEd2kUdpPacket(const ed2k::Endpoint& endpoint,
     if (uploadQueue) {
       rank = uploadQueue->queueRank(endpoint);
     }
+    if (rank == 0 && (!uploadQueue || !uploadQueue->isUploading(endpoint))) {
+      queueEmuleUdpPacket(endpoint, ed2k::OP_QUEUEFULL, std::string());
+      return;
+    }
     queueEmuleUdpPacket(endpoint, ed2k::OP_REASKACK,
                         ed2k::createUdpReaskAckPayload(rank));
     return;
