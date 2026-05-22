@@ -295,10 +295,6 @@ bool serverUdpSourceRequestDue(const ServerState& server, int64_t fileSize,
       !supportsUdpFileSize(server, fileSize)) {
     return false;
   }
-  if ((server.udpFlags & (SRV_UDPFLG_EXT_GETSOURCES |
-                          SRV_UDPFLG_EXT_GETSOURCES2)) == 0) {
-    return false;
-  }
   return server.lastUdpSourceRequestTime == 0 ||
          now - server.lastUdpSourceRequestTime >=
              SERVER_UDP_SOURCE_REASK_INTERVAL;

@@ -310,6 +310,7 @@ void Ed2kKadCommand::queueServerStatusPoll()
       now - lastServerStatusPoll_ < SERVER_STATUS_POLL_INTERVAL) {
     return;
   }
+  bool queued = false;
   auto attrs = getEd2kAttrs(requestGroup_->getDownloadContext());
   for (const auto& server : attrs->servers) {
     auto state = getEd2kServerState(attrs, server);
@@ -320,8 +321,11 @@ void Ed2kKadCommand::queueServerStatusPoll()
     state->lastUdpStatusTime = now;
     queueEd2kUdpPacket(serverUdpEndpoint(server), ed2k::OP_GLOBSERVSTATREQ,
                        ed2k::packUInt32(state->udpStatusChallenge));
+    queued = true;
   }
-  lastServerStatusPoll_ = now;
+  if (queued) {
+    lastServerStatusPoll_ = now;
+  }
 }
 
 void Ed2kKadCommand::queueServerSourcePoll()
