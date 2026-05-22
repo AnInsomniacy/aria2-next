@@ -108,6 +108,8 @@ struct PeerState {
   uint32_t sourceFlags = 0;
   uint32_t clientId = 0;
   bool lowId = false;
+  Endpoint callbackBuddy;
+  std::string callbackBuddyId;
   bool callbackRequested = false;
   bool callbackImpossible = false;
   LowIdCallbackState lowIdCallbackState = LowIdCallbackState::NONE;

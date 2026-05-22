@@ -42,6 +42,16 @@ struct KadSearchResult {
   std::vector<KadSearchEntry> entries;
 };
 
+struct KadSourceEndpoint {
+  Endpoint endpoint;
+  uint16_t udpPort = 0;
+  uint8_t sourceType = 0;
+  uint32_t buddyIp = 0;
+  uint16_t buddyPort = 0;
+  std::string buddyHash;
+  std::string buddyId;
+};
+
 struct KadPublishSourceRequest {
   std::string fileId;
   KadSearchEntry source;
@@ -64,7 +74,11 @@ std::string createKadSearchResultPayload(const std::string& sourceId,
                                              entries);
 bool extractKadSourceEndpoint(Endpoint& endpoint,
                               const KadSearchEntry& entry);
+bool extractKadSourceEndpoint(KadSourceEndpoint& source,
+                              const KadSearchEntry& entry);
 std::vector<Endpoint> extractKadSourceEndpoints(const KadSearchResult& result);
+std::vector<KadSourceEndpoint>
+extractKadSourceEndpointDetails(const KadSearchResult& result);
 std::string createKadPublishSourceRequestPayload(const std::string& fileId,
                                                  const Endpoint& source,
                                                  const std::string& sourceId,

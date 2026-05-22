@@ -47,6 +47,7 @@ struct KadRoutingSnapshot {
   std::string selfId;
   std::vector<KadRoutingBucketSnapshot> buckets;
   std::vector<Endpoint> routerNodes;
+  std::vector<KadContact> routerContacts;
   int64_t lastBootstrap = 0;
   int64_t lastRefresh = 0;
   int64_t lastSelfRefresh = 0;
@@ -54,6 +55,7 @@ struct KadRoutingSnapshot {
   int64_t lastSourcePublish = 0;
   int64_t lastSourceSearch = 0;
   uint32_t sourceSearchCount = 0;
+  uint32_t udpVerifyKey = 0;
   std::vector<std::string> observedAddresses;
   bool firewalled = true;
 };
@@ -97,7 +99,10 @@ public:
   bool needBootstrap(int64_t now);
   bool needRefresh(std::string& targetId, int64_t now);
   void addRouterNode(const Endpoint& endpoint);
+  void addRouterNode(const KadContact& contact);
   std::vector<Endpoint> getRouterNodes() const;
+  std::vector<KadContact> getRouterContacts() const;
+  bool findByEndpoint(KadContact& contact, const Endpoint& endpoint) const;
   KadRoutingSnapshot snapshot() const;
   void restore(const KadRoutingSnapshot& snapshot);
   size_t liveSize() const;
@@ -115,6 +120,7 @@ private:
   size_t bucketSize_;
   std::vector<Bucket> buckets_;
   std::vector<Endpoint> routerNodes_;
+  std::vector<KadContact> routerContacts_;
   int64_t lastBootstrap_ = 0;
   int64_t lastRefresh_ = 0;
   int64_t lastSelfRefresh_ = 0;

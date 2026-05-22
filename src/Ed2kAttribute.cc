@@ -27,6 +27,8 @@
 #include "SimpleRandomizer.h"
 #include "a2functional.h"
 #include "ed2k_hash.h"
+#include "ed2k_endpoint.h"
+#include "ed2k_kad.h"
 #include "ed2k_policy.h"
 #include "prefs.h"
 #include "util.h"
@@ -80,6 +82,14 @@ std::string getOrCreateEd2kClientHash(Option* option)
   const auto clientHash = createEd2kClientHash();
   option->put(PREF_ED2K_CLIENT_HASH, util::toHex(clientHash));
   return clientHash;
+}
+
+uint32_t createEd2kKadUdpVerifyKey()
+{
+  uint32_t key = 0;
+  SimpleRandomizer::getInstance()->getRandomBytes(
+      reinterpret_cast<unsigned char*>(&key), sizeof(key));
+  return key == 0 ? 1 : key;
 }
 
 bool addUniqueEndpoint(std::vector<ed2k::Endpoint>& endpoints,
@@ -182,6 +192,52 @@ bool addEd2kPeer(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
     state->sourceFlags |= sourceFlag;
   }
   return true;
+}
+
+bool addEd2kKadSourcePeer(Ed2kAttribute* attrs,
+                          const ed2k::KadSourceEndpoint& source,
+                          uint32_t sourceFlag)
+{
+  if (!attrs || source.endpoint.host.empty() || source.endpoint.port == 0) {
+    return false;
+  }
+  if (source.sourceType != 0 && source.sourceType != 1 &&
+      source.sourceType != 4 && source.sourceType != 3 &&
+      source.sourceType != 5) {
+    return false;
+  }
+  const bool callbackOnly =
+      source.sourceType == 3 || source.sourceType == 5;
+  const uint32_t lowIdClientId = callbackOnly
+                                     ? ed2k::ipv4ToEndpointValue(
+                                           source.endpoint.host)
+                                     : 0;
+  const auto added =
+      callbackOnly ? false : addEd2kPeer(attrs, source.endpoint, sourceFlag);
+  auto state = getEd2kPeerState(attrs, source.endpoint);
+  if (state) {
+    state->sourceFlags |= sourceFlag;
+    if (source.udpPort != 0) {
+      state->udpPort = source.udpPort;
+      if (state->udpVersion == 0) {
+        state->udpVersion = 4;
+      }
+    }
+    if (callbackOnly) {
+      state->clientId = lowIdClientId;
+      state->lowId = true;
+      state->callbackRequested = true;
+      state->callbackImpossible = false;
+      state->lowIdCallbackState = ed2k::LowIdCallbackState::REQUESTED;
+      state->callbackDeadline = 0;
+      state->callbackBuddy.host = ed2k::ipv4FromEndpoint(source.buddyIp);
+      state->callbackBuddy.port = source.buddyPort;
+      state->callbackBuddyId =
+          source.buddyId.empty() ? ed2k::ed2kHashToKadId(source.buddyHash)
+                                 : source.buddyId;
+    }
+  }
+  return added;
 }
 
 bool addEd2kFoundSource(Ed2kAttribute* attrs, const ed2k::FoundSource& source,
@@ -1128,6 +1184,7 @@ ed2k::KadRoutingSnapshot createEd2kKadSnapshot(const Ed2kAttribute* attrs)
   snapshot.lastSourcePublish = attrs->lastKadSourcePublish;
   snapshot.lastSourceSearch = attrs->lastKadSourceSearch;
   snapshot.sourceSearchCount = attrs->kadSourceSearchCount;
+  snapshot.udpVerifyKey = attrs->kadUdpVerifyKey;
   snapshot.observedAddresses = attrs->kadObservedAddresses;
   snapshot.firewalled = attrs->kadFirewalled;
   return snapshot;
@@ -1140,6 +1197,7 @@ void restoreEd2kKadOperationalState(Ed2kAttribute* attrs,
   attrs->lastKadSourcePublish = snapshot.lastSourcePublish;
   attrs->lastKadSourceSearch = snapshot.lastSourceSearch;
   attrs->kadSourceSearchCount = snapshot.sourceSearchCount;
+  attrs->kadUdpVerifyKey = snapshot.udpVerifyKey;
   attrs->kadObservedAddresses = snapshot.observedAddresses;
   attrs->kadFirewalled = snapshot.firewalled;
 }

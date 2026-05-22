@@ -17,6 +17,8 @@
 #include "DlAbortEx.h"
 #include "ed2k_endpoint.h"
 #include "ed2k_hash.h"
+#include "ed2k_kad.h"
+#include "util.h"
 
 namespace aria2 {
 
@@ -29,6 +31,26 @@ void validateHashLength(const std::string& hash)
   if (hash.size() != HASH_LENGTH) {
     throw DL_ABORT_EX("Bad ED2K hash length.");
   }
+}
+
+bool isSupportedSourceType(uint64_t sourceType)
+{
+  return sourceType == 0 || sourceType == 1 || sourceType == 3 ||
+         sourceType == 4 || sourceType == 5 || sourceType == 6;
+}
+
+bool isDirectKadTcpSourceType(uint64_t sourceType)
+{
+  return sourceType == 0 || sourceType == 1 || sourceType == 4;
+}
+
+bool decodeHexHash(std::string& out, const std::string& value)
+{
+  if (value.size() != HASH_LENGTH * 2 || !util::isHexDigit(value)) {
+    return false;
+  }
+  out = util::fromHex(value.begin(), value.end());
+  return true;
 }
 
 } // namespace
@@ -148,13 +170,35 @@ std::string createKadSearchResultPayload(
 
 bool extractKadSourceEndpoint(Endpoint& endpoint, const KadSearchEntry& entry)
 {
+  KadSourceEndpoint source;
+  if (!extractKadSourceEndpoint(source, entry)) {
+    return false;
+  }
+  if (!isDirectKadTcpSourceType(source.sourceType)) {
+    return false;
+  }
+  endpoint = source.endpoint;
+  return true;
+}
+
+bool extractKadSourceEndpoint(KadSourceEndpoint& source,
+                              const KadSearchEntry& entry)
+{
   uint32_t ip = 0;
   uint16_t port = 0;
+  uint16_t udpPort = 0;
   uint16_t cryptOptions = 0;
   uint64_t sourceType = 0;
+  uint32_t buddyIp = 0;
+  uint16_t buddyPort = 0;
+  std::string buddyId;
   bool hasIp = false;
   bool hasPort = false;
   for (const auto& tag : entry.tags) {
+    if (tag.valueType == TagValueType::STRING && tag.id == 0xf8) {
+      decodeHexHash(buddyId, tag.stringValue);
+      continue;
+    }
     if (tag.valueType != TagValueType::UINT) {
       continue;
     }
@@ -166,6 +210,15 @@ bool extractKadSourceEndpoint(Endpoint& endpoint, const KadSearchEntry& entry)
       port = static_cast<uint16_t>(tag.intValue);
       hasPort = true;
     }
+    else if (tag.id == 0xfc) {
+      udpPort = static_cast<uint16_t>(tag.intValue);
+    }
+    else if (tag.id == 0xfb) {
+      buddyIp = static_cast<uint32_t>(tag.intValue);
+    }
+    else if (tag.id == 0xfa) {
+      buddyPort = static_cast<uint16_t>(tag.intValue);
+    }
     else if (tag.id == 0xff) {
       sourceType = tag.intValue;
     }
@@ -174,26 +227,44 @@ bool extractKadSourceEndpoint(Endpoint& endpoint, const KadSearchEntry& entry)
     }
   }
   if (!hasIp || !hasPort || port == 0 ||
-      (sourceType != 0 && sourceType != 1 && sourceType != 4)) {
+      !isSupportedSourceType(sourceType)) {
     return false;
   }
-  endpoint.host = ipv4FromEndpoint(ip);
-  endpoint.port = port;
-  endpoint.userHash = entry.id;
-  endpoint.cryptOptions = cryptOptions;
+  source.endpoint.host = ipv4FromEndpoint(ip);
+  source.endpoint.port = port;
+  source.endpoint.userHash = kadIdToEd2kHash(entry.id);
+  source.endpoint.cryptOptions = cryptOptions;
+  source.udpPort = udpPort;
+  source.sourceType = static_cast<uint8_t>(sourceType);
+  source.buddyIp = buddyIp;
+  source.buddyPort = buddyPort;
+  source.buddyHash = buddyId.empty() ? std::string() : kadIdToEd2kHash(buddyId);
+  source.buddyId = std::move(buddyId);
   return true;
 }
 
 std::vector<Endpoint> extractKadSourceEndpoints(const KadSearchResult& result)
 {
   std::vector<Endpoint> endpoints;
-  for (const auto& entry : result.entries) {
-    Endpoint endpoint;
-    if (extractKadSourceEndpoint(endpoint, entry)) {
-      endpoints.push_back(std::move(endpoint));
+  for (const auto& source : extractKadSourceEndpointDetails(result)) {
+    if (isDirectKadTcpSourceType(source.sourceType)) {
+      endpoints.push_back(source.endpoint);
     }
   }
   return endpoints;
+}
+
+std::vector<KadSourceEndpoint>
+extractKadSourceEndpointDetails(const KadSearchResult& result)
+{
+  std::vector<KadSourceEndpoint> sources;
+  for (const auto& entry : result.entries) {
+    KadSourceEndpoint source;
+    if (extractKadSourceEndpoint(source, entry)) {
+      sources.push_back(std::move(source));
+    }
+  }
+  return sources;
 }
 
 std::string createKadPublishSourceRequestPayload(const std::string& fileId,

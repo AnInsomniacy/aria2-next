@@ -29,6 +29,7 @@
 #include "base32.h"
 #include "ed2k_constants.h"
 #include "ed2k_aich.h"
+#include "ed2k_endpoint.h"
 #include "ed2k_hash.h"
 #include "ed2k_kad.h"
 #include "ed2k_link.h"
@@ -55,6 +56,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2K);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KClientHash);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KDefaultKadBootstrap);
+  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KDefaultMacKadBootstrap);
   CPPUNIT_TEST(testCreateEd2kSearchRequestGroupClientHash);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KNodesDat);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KServerMetMetadata);
@@ -63,6 +65,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KMultipleServerStates);
   CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KDefaultServers);
   CPPUNIT_TEST(testEd2kPeerDeduplication);
+  CPPUNIT_TEST(testEd2kKadSourcePeerMergePreservesUdpMetadata);
   CPPUNIT_TEST(testEd2kServerSourceMergeSkipsUnsupportedSources);
   CPPUNIT_TEST(testEd2kSourceExchangeMergePolicy);
   CPPUNIT_TEST(testEd2kSourcePolicyRanksSources);
@@ -78,6 +81,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kPeerUdpReaskReplyMatchesUdpPort);
   CPPUNIT_TEST(testEd2kPeerUdpReaskDueSelection);
   CPPUNIT_TEST(testEd2kKadCommandQueuesDuePeerReask);
+  CPPUNIT_TEST(testEd2kKadCommandQueuesKadCallback);
   CPPUNIT_TEST(testEd2kKadCommandQueueFullForUnknownUploadReask);
   CPPUNIT_TEST(testEd2kKadCommandAckForUploadingPeerReask);
   CPPUNIT_TEST(testEd2kSourcePolicyAppliesActiveCap);
@@ -123,6 +127,7 @@ public:
   void testCreateRequestGroupForUri_ED2K();
   void testCreateRequestGroupForUri_ED2KClientHash();
   void testCreateRequestGroupForUri_ED2KDefaultKadBootstrap();
+  void testCreateRequestGroupForUri_ED2KDefaultMacKadBootstrap();
   void testCreateEd2kSearchRequestGroupClientHash();
   void testCreateRequestGroupForUri_ED2KNodesDat();
   void testCreateRequestGroupForUri_ED2KServerMetMetadata();
@@ -131,6 +136,7 @@ public:
   void testCreateRequestGroupForUri_ED2KMultipleServerStates();
   void testCreateRequestGroupForUri_ED2KDefaultServers();
   void testEd2kPeerDeduplication();
+  void testEd2kKadSourcePeerMergePreservesUdpMetadata();
   void testEd2kServerSourceMergeSkipsUnsupportedSources();
   void testEd2kSourceExchangeMergePolicy();
   void testEd2kSourcePolicyRanksSources();
@@ -146,6 +152,7 @@ public:
   void testEd2kPeerUdpReaskReplyMatchesUdpPort();
   void testEd2kPeerUdpReaskDueSelection();
   void testEd2kKadCommandQueuesDuePeerReask();
+  void testEd2kKadCommandQueuesKadCallback();
   void testEd2kKadCommandQueueFullForUnknownUploadReask();
   void testEd2kKadCommandAckForUploadingPeerReask();
   void testEd2kSourcePolicyAppliesActiveCap();
@@ -367,7 +374,76 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KDefaultKadBootstrap()
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
   CPPUNIT_ASSERT(attrs->kadRoutingTable);
   CPPUNIT_ASSERT(!attrs->kadRoutingTable->getRouterNodes().empty());
-  CPPUNIT_ASSERT_EQUAL(attrs->clientHash,
+  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->clientHash),
+                       attrs->kadRoutingTable->snapshot().selfId);
+}
+
+void DownloadHelperTest::testCreateRequestGroupForUri_ED2KDefaultMacKadBootstrap()
+{
+  std::string nodeIdHex("23a8ceff57a7a32d562d649ed7893796");
+  auto nodeId = util::fromHex(nodeIdHex.begin(), nodeIdHex.end());
+  ed2k::KadContact contact;
+  contact.id = nodeId;
+  contact.host = "203.0.113.2";
+  contact.udpPort = 4672;
+  contact.tcpPort = 4662;
+  contact.version = 8;
+
+  std::string nodesDat;
+  nodesDat += ed2k::packUInt32(0);
+  nodesDat += ed2k::packUInt32(3);
+  nodesDat += ed2k::packUInt32(1);
+  nodesDat += ed2k::packUInt32(1);
+  nodesDat += ed2k::createKadResponsePayload(
+                  nodeId, std::vector<ed2k::KadContact>{contact})
+                  .substr(ed2k::HASH_LENGTH + 1);
+  const std::string home = A2_TEST_OUT_DIR "/ed2k-default-mac-home";
+  const std::string amuleDir = home + "/Library/Application Support/aMule";
+  File(amuleDir).mkdirs();
+  const std::string path = amuleDir + "/nodes.dat";
+  {
+    std::ofstream out(path.c_str(), std::ios::binary);
+    out.write(nodesDat.data(), nodesDat.size());
+  }
+
+  const char* oldHome = getenv("HOME");
+  const std::string oldHomeValue = oldHome ? oldHome : "";
+  setenv("HOME", home.c_str(), 1);
+
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, "/tmp");
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  try {
+    createRequestGroupForUri(result, option_, uris);
+  }
+  catch (...) {
+    if (oldHome) {
+      setenv("HOME", oldHomeValue.c_str(), 1);
+    }
+    else {
+      unsetenv("HOME");
+    }
+    throw;
+  }
+  if (oldHome) {
+    setenv("HOME", oldHomeValue.c_str(), 1);
+  }
+  else {
+    unsetenv("HOME");
+  }
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
+  CPPUNIT_ASSERT(!attrs->servers.empty());
+  CPPUNIT_ASSERT(attrs->kadRoutingTable);
+  CPPUNIT_ASSERT_EQUAL((size_t)1,
+                       attrs->kadRoutingTable->getRouterNodes().size());
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.2"),
+                       attrs->kadRoutingTable->getRouterNodes()[0].host);
+  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->clientHash),
                        attrs->kadRoutingTable->snapshot().selfId);
 }
 
@@ -425,10 +501,11 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KNodesDat()
   createRequestGroupForUri(result, option_, uris);
 
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
+  CPPUNIT_ASSERT(!attrs->servers.empty());
   CPPUNIT_ASSERT(attrs->kadRoutingTable);
   CPPUNIT_ASSERT_EQUAL((size_t)1,
                        attrs->kadRoutingTable->getRouterNodes().size());
-  CPPUNIT_ASSERT_EQUAL(attrs->clientHash,
+  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->clientHash),
                        attrs->kadRoutingTable->snapshot().selfId);
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.1"),
                        attrs->kadRoutingTable->getRouterNodes()[0].host);
@@ -523,7 +600,7 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KKadRoutingState()
   CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->kadRoutingTable->liveSize());
   CPPUNIT_ASSERT_EQUAL((size_t)1,
                        attrs->kadRoutingTable->getRouterNodes().size());
-  CPPUNIT_ASSERT_EQUAL(attrs->clientHash,
+  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->clientHash),
                        attrs->kadRoutingTable->snapshot().selfId);
   auto closest = attrs->kadRoutingTable->findClosest(self, 1, false);
   CPPUNIT_ASSERT_EQUAL((size_t)1, closest.size());
@@ -670,6 +747,55 @@ void DownloadHelperTest::testEd2kPeerDeduplication()
   CPPUNIT_ASSERT_EQUAL((uint32_t)1, state->failCount);
   CPPUNIT_ASSERT_EQUAL((int64_t)100, state->lastFailureTime);
   CPPUNIT_ASSERT_EQUAL((int64_t)130, state->nextRetryTime);
+}
+
+void DownloadHelperTest::testEd2kKadSourcePeerMergePreservesUdpMetadata()
+{
+  Ed2kAttribute attrs;
+  ed2k::KadSourceEndpoint source;
+  source.endpoint.host = "203.0.113.44";
+  source.endpoint.port = 4662;
+  source.endpoint.userHash = std::string(ed2k::HASH_LENGTH, '\x44');
+  source.endpoint.cryptOptions = 0x03;
+  source.udpPort = 4672;
+  source.sourceType = 1;
+
+  CPPUNIT_ASSERT(addEd2kKadSourcePeer(&attrs, source,
+                                      ed2k::PEER_SOURCE_KAD));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.peers.size());
+  auto state = getEd2kPeerState(&attrs, source.endpoint);
+  CPPUNIT_ASSERT(state);
+  CPPUNIT_ASSERT_EQUAL(std::string(ed2k::HASH_LENGTH, '\x44'),
+                       state->endpoint.userHash);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)0x03, state->endpoint.cryptOptions);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, state->udpPort);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)4, state->udpVersion);
+
+  source.udpPort = 4682;
+  CPPUNIT_ASSERT(!addEd2kKadSourcePeer(&attrs, source,
+                                       ed2k::PEER_SOURCE_KAD));
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4682, state->udpPort);
+
+  source.endpoint.host = "203.0.113.45";
+  source.sourceType = 3;
+  source.buddyIp = ed2k::ipv4ToEndpointValue("203.0.113.99");
+  source.buddyPort = 4672;
+  source.buddyHash = std::string(ed2k::HASH_LENGTH, '\x55');
+  CPPUNIT_ASSERT(!addEd2kKadSourcePeer(&attrs, source,
+                                       ed2k::PEER_SOURCE_KAD));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.peers.size());
+  auto callbackState = getEd2kPeerState(&attrs, source.endpoint);
+  CPPUNIT_ASSERT(callbackState);
+  CPPUNIT_ASSERT(callbackState->lowId);
+  CPPUNIT_ASSERT(callbackState->callbackRequested);
+  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::REQUESTED,
+                       callbackState->lowIdCallbackState);
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.99"),
+                       callbackState->callbackBuddy.host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, callbackState->callbackBuddy.port);
+  CPPUNIT_ASSERT_EQUAL(
+      ed2k::ed2kHashToKadId(std::string(ed2k::HASH_LENGTH, '\x55')),
+      callbackState->callbackBuddyId);
 }
 
 void DownloadHelperTest::testEd2kServerSourceMergeSkipsUnsupportedSources()
@@ -1194,6 +1320,64 @@ void DownloadHelperTest::testEd2kKadCommandQueuesDuePeerReask()
   CPPUNIT_ASSERT(state->udpReaskPending);
   CPPUNIT_ASSERT_EQUAL((int64_t)200, state->lastUdpReaskTime);
   CPPUNIT_ASSERT_EQUAL((int64_t)1500, state->nextUdpReaskTime);
+}
+
+void DownloadHelperTest::testEd2kKadCommandQueuesKadCallback()
+{
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_ED2K_SERVER, "203.0.113.10:4661");
+  option_->put(PREF_ED2K_LISTEN_PORT, "4662");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_TRUE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+  ed2k::KadSourceEndpoint source;
+  source.endpoint.host = "203.0.113.44";
+  source.endpoint.port = 4662;
+  source.endpoint.userHash = std::string(ed2k::HASH_LENGTH, '\x44');
+  source.udpPort = 4672;
+  source.sourceType = 3;
+  source.buddyIp = ed2k::ipv4ToEndpointValue("203.0.113.99");
+  source.buddyPort = 4672;
+  source.buddyHash = std::string(ed2k::HASH_LENGTH, '\x55');
+  addEd2kKadSourcePeer(attrs, source, ed2k::PEER_SOURCE_KAD);
+  auto state = getEd2kPeerState(attrs, source.endpoint);
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  Ed2kKadCommand command(1, group.get(), &engine);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueueDueKadCallbacks(200));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueuedPacketCount());
+  const auto& item = command.testQueuedPacketAt(0);
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.99"), item.first.host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, item.first.port);
+  ed2k::PacketHeader header;
+  CPPUNIT_ASSERT(ed2k::readDatagramHeader(header, item.second.data(),
+                                          item.second.size()));
+  CPPUNIT_ASSERT_EQUAL(ed2k::KAD_PROTOCOL, header.protocol);
+  CPPUNIT_ASSERT_EQUAL(ed2k::KAD_CALLBACK_REQ, header.opcode);
+  ed2k::KadCallbackRequest request;
+  CPPUNIT_ASSERT(ed2k::parseKadCallbackRequestPayload(
+      request, item.second.substr(2)));
+  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(source.buddyHash),
+                       request.buddyId);
+  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->link.hash),
+                       request.fileId);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, request.tcpPort);
+  CPPUNIT_ASSERT_EQUAL((int64_t)200, state->lastCallbackTime);
+  CPPUNIT_ASSERT_EQUAL((int64_t)245, state->callbackDeadline);
+  CPPUNIT_ASSERT_EQUAL((size_t)0, command.testQueueDueKadCallbacks(210));
 }
 
 void DownloadHelperTest::testEd2kKadCommandQueueFullForUnknownUploadReask()

@@ -33,6 +33,7 @@ struct KadContact {
   uint16_t udpPort = 0;
   uint16_t tcpPort = 0;
   uint8_t version = 0;
+  uint32_t udpKey = 0;
 };
 
 struct KadHello {
@@ -80,6 +81,18 @@ struct KadFirewalledUdp {
   uint16_t tcpPort = 0;
 };
 
+struct KadCallbackRequest {
+  std::string buddyId;
+  std::string fileId;
+  uint16_t tcpPort = 0;
+};
+
+struct KadObfuscatedDatagram {
+  std::string datagram;
+  uint32_t receiverVerifyKey = 0;
+  uint32_t senderVerifyKey = 0;
+};
+
 struct NodesDat {
   uint32_t version = 0;
   uint32_t bootstrapEdition = 0;
@@ -87,6 +100,9 @@ struct NodesDat {
   std::vector<bool> verified;
 };
 
+std::string ed2kHashToKadId(const std::string& hash);
+std::string kadIdToEd2kHash(const std::string& id);
+std::string kadIdToObfuscationKeyBytes(const std::string& id);
 KadContact readKadContact(const std::string& data, size_t& offset);
 std::string packKadContact(const KadContact& contact);
 std::string createKadHelloPayload(const std::string& id, uint16_t tcpPort,
@@ -121,6 +137,27 @@ std::string createKadFirewalledUdpPayload(uint8_t errorCode,
                                           uint16_t tcpPort);
 bool parseKadFirewalledUdpPayload(KadFirewalledUdp& response,
                                   const std::string& payload);
+std::string createKadCallbackRequestPayload(const std::string& buddyId,
+                                            const std::string& fileId,
+                                            uint16_t tcpPort);
+bool parseKadCallbackRequestPayload(KadCallbackRequest& request,
+                                    const std::string& payload);
+std::string createKadObfuscatedDatagram(const std::string& datagram,
+                                        const std::string& targetId,
+                                        uint16_t randomKeyPart,
+                                        uint32_t receiverVerifyKey = 0,
+                                        uint32_t senderVerifyKey = 0);
+std::string createKadObfuscatedDatagram(const std::string& datagram,
+                                        uint32_t receiverVerifyKey,
+                                        uint32_t senderVerifyKey,
+                                        uint16_t randomKeyPart);
+bool parseKadObfuscatedDatagram(KadObfuscatedDatagram& parsed,
+                                const std::string& datagram,
+                                const std::string& targetId);
+bool parseKadObfuscatedDatagram(KadObfuscatedDatagram& parsed,
+                                const std::string& datagram,
+                                uint32_t receiverVerifyKey);
+uint32_t createKadUdpVerifyKey(uint32_t baseKey, const std::string& host);
 std::string createKadRoutingStatePayload(const KadRoutingSnapshot& snapshot);
 bool parseKadRoutingStatePayload(KadRoutingSnapshot& snapshot,
                                  const std::string& payload);

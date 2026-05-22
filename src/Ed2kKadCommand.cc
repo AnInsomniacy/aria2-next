@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <array>
 #include <limits>
+#include <memory>
 
 #include "DlAbortEx.h"
 #include "DownloadContext.h"
@@ -55,9 +56,28 @@ ed2k::Endpoint toEndpoint(const ed2k::KadContact& contact)
   return endpoint;
 }
 
+std::string createKadDatagram(uint8_t opcode, const std::string& payload)
+{
+  return ed2k::createDatagram(ed2k::KAD_PROTOCOL, opcode, payload);
+}
+
 constexpr int64_t SERVER_STATUS_POLL_INTERVAL = 45;
 constexpr int64_t FIREWALLED_CHECK_INTERVAL = 3600;
 constexpr int64_t SOURCE_PUBLISH_INTERVAL = 1800;
+
+bool isKadProtocolDatagram(const std::string& datagram)
+{
+  ed2k::PacketHeader header;
+  return ed2k::readDatagramHeader(header, datagram.data(), datagram.size()) &&
+         header.protocol == ed2k::KAD_PROTOCOL &&
+         header.payloadSize() + 2 == datagram.size();
+}
+
+bool isKnownEd2kUdpProtocol(uint8_t protocol)
+{
+  return protocol == ed2k::KAD_PROTOCOL || protocol == ed2k::PROTO_EDONKEY ||
+         protocol == ed2k::PROTO_EMULE || protocol == ed2k::PROTO_PACKED;
+}
 
 int64_t peerRetryWait(const DownloadEngine* e)
 {
@@ -92,6 +112,14 @@ uint16_t localEd2kUdpPort(const DownloadEngine* e)
   return 0;
 }
 
+uint32_t localKadUdpVerifyKey(const Ed2kAttribute* attrs,
+                              const ed2k::Endpoint& endpoint)
+{
+  return attrs ? ed2k::createKadUdpVerifyKey(attrs->kadUdpVerifyKey,
+                                             endpoint.host)
+               : 0;
+}
+
 ed2k::Endpoint serverUdpEndpoint(const ed2k::Endpoint& server)
 {
   ed2k::Endpoint endpoint;
@@ -104,6 +132,11 @@ bool publishableAddress(const std::string& host)
 {
   return !host.empty() && host != "0.0.0.0" && host != "127.0.0.1" &&
          host.compare(0, 4, "127.") != 0 && !util::inPrivateAddress(host);
+}
+
+bool directKadTcpSourceType(uint8_t sourceType)
+{
+  return sourceType == 0 || sourceType == 1 || sourceType == 4;
 }
 
 } // namespace
@@ -155,11 +188,17 @@ void Ed2kKadCommand::init()
   socket_->setNonBlockingMode();
   e_->addSocketForReadCheck(socket_, this);
   initialized_ = true;
+  A2_LOG_INFO(fmt("IPv4 ED2K Kad: listening on UDP port %u",
+                  socket_->getAddrInfo().port));
 
   auto attrs = getEd2kAttrs(requestGroup_->getDownloadContext());
+  if (attrs->kadUdpVerifyKey == 0) {
+    attrs->kadUdpVerifyKey = createEd2kKadUdpVerifyKey();
+  }
   if (!attrs->kadRoutingTable) {
     attrs->kadRoutingTable =
-        std::make_shared<ed2k::KadRoutingTable>(attrs->clientHash);
+        std::make_shared<ed2k::KadRoutingTable>(
+            ed2k::ed2kHashToKadId(attrs->clientHash));
   }
   for (const auto& source : attrs->link.sources) {
     ed2k::Endpoint endpoint;
@@ -175,6 +214,77 @@ void Ed2kKadCommand::queuePacket(const ed2k::Endpoint& endpoint, uint8_t opcode,
 {
   outbox_.push_back(std::make_pair(
       endpoint, ed2k::createDatagram(ed2k::KAD_PROTOCOL, opcode, payload)));
+}
+
+void Ed2kKadCommand::queueKadContactPacket(const ed2k::KadContact& contact,
+                                           uint8_t opcode,
+                                           const std::string& payload)
+{
+  auto datagram = createKadDatagram(opcode, payload);
+  if (contact.version >= 6 && contact.id.size() == ed2k::HASH_LENGTH) {
+    uint16_t randomKeyPart = 0;
+    SimpleRandomizer::getInstance()->getRandomBytes(
+        reinterpret_cast<unsigned char*>(&randomKeyPart),
+        sizeof(randomKeyPart));
+    datagram = ed2k::createKadObfuscatedDatagram(
+        datagram, contact.id, randomKeyPart, contact.udpKey,
+        localKadUdpVerifyKey(getEd2kAttrs(requestGroup_->getDownloadContext()),
+                             toEndpoint(contact)));
+  }
+  outbox_.push_back(std::make_pair(toEndpoint(contact), datagram));
+}
+
+void Ed2kKadCommand::queueKadResponsePacket(
+    const ed2k::Endpoint& endpoint,
+    const ed2k::KadObfuscatedDatagram& context, uint8_t opcode,
+    const std::string& payload)
+{
+  auto datagram = createKadDatagram(opcode, payload);
+  if (context.senderVerifyKey != 0) {
+    uint16_t randomKeyPart = 0;
+    SimpleRandomizer::getInstance()->getRandomBytes(
+        reinterpret_cast<unsigned char*>(&randomKeyPart),
+        sizeof(randomKeyPart));
+    datagram = ed2k::createKadObfuscatedDatagram(
+        datagram, context.senderVerifyKey, context.receiverVerifyKey,
+        randomKeyPart);
+  }
+  outbox_.push_back(std::make_pair(endpoint, datagram));
+}
+
+bool Ed2kKadCommand::tryDecodeKadObfuscatedDatagram(
+    ed2k::KadObfuscatedDatagram& parsed, const ed2k::Endpoint& endpoint,
+    const std::string& raw)
+{
+  if (ed2k::parseKadObfuscatedDatagram(
+          parsed, raw, localKadUdpVerifyKey(
+                           getEd2kAttrs(requestGroup_->getDownloadContext()),
+                           endpoint)) &&
+      isKadProtocolDatagram(parsed.datagram)) {
+    return true;
+  }
+
+  auto attrs = getEd2kAttrs(requestGroup_->getDownloadContext());
+  if (!attrs->kadRoutingTable) {
+    return false;
+  }
+  if (ed2k::parseKadObfuscatedDatagram(
+          parsed, raw, ed2k::ed2kHashToKadId(attrs->clientHash)) &&
+      isKadProtocolDatagram(parsed.datagram)) {
+    return true;
+  }
+  ed2k::KadContact contact;
+  if (!attrs->kadRoutingTable->findByEndpoint(contact, endpoint) ||
+      contact.id.size() != ed2k::HASH_LENGTH) {
+    return false;
+  }
+  if (ed2k::parseKadObfuscatedDatagram(parsed, raw, contact.id) &&
+      isKadProtocolDatagram(parsed.datagram)) {
+    return true;
+  }
+  return contact.udpKey != 0 &&
+         ed2k::parseKadObfuscatedDatagram(parsed, raw, contact.udpKey) &&
+         isKadProtocolDatagram(parsed.datagram);
 }
 
 void Ed2kKadCommand::queueEd2kUdpPacket(const ed2k::Endpoint& endpoint,
@@ -248,7 +358,30 @@ void Ed2kKadCommand::queueBootstrap()
   if (!attrs->kadRoutingTable || !attrs->kadRoutingTable->needBootstrap(nowSeconds())) {
     return;
   }
+  size_t queued = 0;
+  auto routerContacts = attrs->kadRoutingTable->getRouterContacts();
+  for (const auto& contact : routerContacts) {
+    const auto endpoint = toEndpoint(contact);
+    queueKadContactPacket(contact, ed2k::KAD_BOOTSTRAP_REQ, std::string());
+    ed2k::KadTransaction tx;
+    tx.endpoint = endpoint;
+    tx.contact = contact;
+    tx.purpose = ed2k::KadTransactionPurpose::BOOTSTRAP;
+    tx.expectedOpcode = ed2k::KAD_BOOTSTRAP_RES;
+    tx.sentTime = nowSeconds();
+    attrs->kadTransactions.add(tx);
+    ++queued;
+  }
   for (const auto& endpoint : attrs->kadRoutingTable->getRouterNodes()) {
+    const auto duplicate =
+        std::find_if(routerContacts.begin(), routerContacts.end(),
+                     [&](const ed2k::KadContact& contact) {
+                       return contact.host == endpoint.host &&
+                              contact.udpPort == endpoint.port;
+                     }) != routerContacts.end();
+    if (duplicate) {
+      continue;
+    }
     queuePacket(endpoint, ed2k::KAD_BOOTSTRAP_REQ, std::string());
     ed2k::KadTransaction tx;
     tx.endpoint = endpoint;
@@ -256,6 +389,11 @@ void Ed2kKadCommand::queueBootstrap()
     tx.expectedOpcode = ed2k::KAD_BOOTSTRAP_RES;
     tx.sentTime = nowSeconds();
     attrs->kadTransactions.add(tx);
+    ++queued;
+  }
+  if (queued != 0) {
+    A2_LOG_INFO(fmt("Queued ED2K Kad bootstrap to %lu router node(s).",
+                    static_cast<unsigned long>(queued)));
   }
 }
 
@@ -272,9 +410,10 @@ void Ed2kKadCommand::queueRefresh()
   auto contacts = attrs->kadRoutingTable->findClosest(targetId, 8, true);
   for (const auto& contact : contacts) {
     const auto endpoint = toEndpoint(contact);
-    queuePacket(endpoint, ed2k::KAD_REQ,
-                ed2k::createKadRequestPayload(ed2k::KAD_FIND_NODE, targetId,
-                                               contact.id));
+    queueKadContactPacket(
+        contact, ed2k::KAD_REQ,
+        ed2k::createKadRequestPayload(ed2k::KAD_FIND_NODE, targetId,
+                                      contact.id));
     ed2k::KadTransaction tx;
     tx.endpoint = endpoint;
     tx.contact = contact;
@@ -301,17 +440,17 @@ void Ed2kKadCommand::queueFirewalledCheck()
       now - attrs->lastKadFirewalledCheck < FIREWALLED_CHECK_INTERVAL) {
     return;
   }
-  auto contacts = attrs->kadRoutingTable->findClosest(attrs->clientHash, 8,
-                                                      true);
+  const auto kadClientId = ed2k::ed2kHashToKadId(attrs->clientHash);
+  auto contacts = attrs->kadRoutingTable->findClosest(kadClientId, 8, true);
   if (contacts.empty()) {
     return;
   }
   attrs->lastKadFirewalledCheck = now;
   for (const auto& contact : contacts) {
     const auto endpoint = toEndpoint(contact);
-    queuePacket(endpoint, ed2k::KAD_FIREWALLED_REQ,
-                ed2k::createKadFirewalledRequestPayload(tcpPort,
-                                                         attrs->clientHash, 0));
+    queueKadContactPacket(
+        contact, ed2k::KAD_FIREWALLED_REQ,
+        ed2k::createKadFirewalledRequestPayload(tcpPort, kadClientId, 0));
     ed2k::KadTransaction tx;
     tx.endpoint = endpoint;
     tx.contact = contact;
@@ -332,6 +471,7 @@ void Ed2kKadCommand::queueSourcePublish()
       attrs->link.hash.empty()) {
     return;
   }
+  const auto kadFileId = ed2k::ed2kHashToKadId(attrs->link.hash);
   const auto tcpPort = localEd2kTcpPort(e_);
   if (tcpPort == 0) {
     return;
@@ -347,24 +487,24 @@ void Ed2kKadCommand::queueSourcePublish()
   if (observed == attrs->kadObservedAddresses.end()) {
     return;
   }
-  auto contacts = attrs->kadRoutingTable->findClosest(attrs->link.hash, 8, true);
+  auto contacts = attrs->kadRoutingTable->findClosest(kadFileId, 8, true);
   if (contacts.empty()) {
     return;
   }
   ed2k::Endpoint source;
   source.host = *observed;
   source.port = tcpPort;
-  const auto sourceId = attrs->clientHash;
+  const auto sourceId = ed2k::ed2kHashToKadId(attrs->clientHash);
   const auto payload = ed2k::createKadPublishSourceRequestPayload(
-      attrs->link.hash, source, sourceId, attrs->link.size);
+      kadFileId, source, sourceId, attrs->link.size);
   ed2k::KadPublishSourceRequest request;
   if (!ed2k::parseKadPublishSourceRequestPayload(request, payload)) {
     return;
   }
-  attrs->kadSourceIndex.store(attrs->link.hash, request.source);
+  attrs->kadSourceIndex.store(kadFileId, request.source);
   attrs->lastKadSourcePublish = now;
   for (const auto& contact : contacts) {
-    queuePacket(toEndpoint(contact), ed2k::KAD_PUBLISH_SOURCE_REQ, payload);
+    queueKadContactPacket(contact, ed2k::KAD_PUBLISH_SOURCE_REQ, payload);
   }
 }
 
@@ -377,12 +517,14 @@ void Ed2kKadCommand::queueTraversalActions(
     const auto endpoint = toEndpoint(action.contact);
     if (action.type == ed2k::KadTraversalActionType::FIND_NODE) {
       const auto searchType =
-          traversal.kind() == ed2k::KadTraversalKind::KEYWORD_LOOKUP
+          traversal.kind() == ed2k::KadTraversalKind::KEYWORD_LOOKUP ||
+                  traversal.kind() == ed2k::KadTraversalKind::SOURCE_LOOKUP
               ? ed2k::KAD_FIND_VALUE
               : ed2k::KAD_FIND_NODE;
-      queuePacket(endpoint, ed2k::KAD_REQ,
-                  ed2k::createKadRequestPayload(
-                      searchType, traversal.targetId(), action.contact.id));
+      queueKadContactPacket(action.contact, ed2k::KAD_REQ,
+                            ed2k::createKadRequestPayload(
+                                searchType, traversal.targetId(),
+                                action.contact.id));
       ed2k::KadTransaction tx;
       tx.endpoint = endpoint;
       tx.contact = action.contact;
@@ -398,14 +540,14 @@ void Ed2kKadCommand::queueTraversalActions(
     }
 
     if (traversal.kind() == ed2k::KadTraversalKind::KEYWORD_LOOKUP) {
-      queuePacket(endpoint, ed2k::KAD_SEARCH_KEYS_REQ,
-                  ed2k::createKadSearchKeysRequestPayload(
-                      traversal.targetId(), 0));
+      queueKadContactPacket(
+          action.contact, ed2k::KAD_SEARCH_KEYS_REQ,
+          ed2k::createKadSearchKeysRequestPayload(traversal.targetId(), 0));
     }
     else {
-      queuePacket(endpoint, ed2k::KAD_SEARCH_SOURCES_REQ,
-                  ed2k::createKadSearchSourcesRequestPayload(
-                      traversal.targetId(), 0, traversal.size()));
+      queueKadContactPacket(action.contact, ed2k::KAD_SEARCH_SOURCES_REQ,
+                            ed2k::createKadSearchSourcesRequestPayload(
+                                traversal.targetId(), 0, traversal.size()));
     }
     ed2k::KadTransaction tx;
     tx.endpoint = endpoint;
@@ -427,12 +569,13 @@ void Ed2kKadCommand::queueSourceSearch()
   if (!shouldStartEd2kKadSourceSearch(attrs, now)) {
     return;
   }
-  auto contacts = attrs->kadRoutingTable->findClosest(attrs->link.hash, 8, true);
+  const auto kadFileId = ed2k::ed2kHashToKadId(attrs->link.hash);
+  auto contacts = attrs->kadRoutingTable->findClosest(kadFileId, 8, true);
   if (contacts.empty()) {
     return;
   }
   attrs->kadSourceTraversal = make_unique<ed2k::KadTraversal>(
-      ed2k::KadTraversalKind::SOURCE_LOOKUP, attrs->link.hash,
+      ed2k::KadTraversalKind::SOURCE_LOOKUP, kadFileId,
       attrs->link.size);
   queueTraversalActions(*attrs->kadSourceTraversal,
                         attrs->kadSourceTraversal->start(contacts));
@@ -478,12 +621,64 @@ size_t Ed2kKadCommand::queueDuePeerReasks(int64_t now)
   return queued;
 }
 
+size_t Ed2kKadCommand::queueDueKadCallbacks(int64_t now)
+{
+  auto attrs = getEd2kAttrs(requestGroup_->getDownloadContext());
+  const auto tcpPort = localEd2kTcpPort(e_);
+  if (!attrs || tcpPort == 0 || attrs->link.hash.empty()) {
+    return 0;
+  }
+  constexpr int64_t CALLBACK_TIMEOUT = 45;
+  size_t queued = 0;
+  for (auto& state : attrs->peerStates) {
+    if (!state.lowId || !state.callbackRequested ||
+        state.lowIdCallbackState != ed2k::LowIdCallbackState::REQUESTED ||
+        state.lastCallbackTime != 0 || state.callbackBuddy.host.empty() ||
+        state.callbackBuddy.port == 0 ||
+        state.callbackBuddyId.size() != ed2k::HASH_LENGTH) {
+      continue;
+    }
+    queuePacket(state.callbackBuddy, ed2k::KAD_CALLBACK_REQ,
+                ed2k::createKadCallbackRequestPayload(
+                    state.callbackBuddyId,
+                    ed2k::ed2kHashToKadId(attrs->link.hash), tcpPort));
+    state.lastCallbackTime = now;
+    state.callbackDeadline = now + CALLBACK_TIMEOUT;
+    ++queued;
+    A2_LOG_DEBUG(fmt("Queued ED2K Kad callback request to buddy %s:%u "
+                     "for source %s:%u.",
+                     state.callbackBuddy.host.c_str(),
+                     state.callbackBuddy.port, state.endpoint.host.c_str(),
+                     state.endpoint.port));
+  }
+  return queued;
+}
+
 void Ed2kKadCommand::sendQueuedPackets()
 {
   while (!outbox_.empty()) {
     auto item = outbox_.front();
-    socket_->writeData(item.second.data(), item.second.size(), item.first.host,
-                       item.first.port);
+    ed2k::PacketHeader header;
+    if (ed2k::readDatagramHeader(header, item.second.data(),
+                                  item.second.size()) &&
+        isKnownEd2kUdpProtocol(header.protocol)) {
+      A2_LOG_DEBUG(fmt(
+          "Sending ED2K UDP packet to %s:%u protocol=0x%02x opcode=0x%02x payload=%lu.",
+          item.first.host.c_str(), item.first.port, header.protocol,
+          header.opcode, static_cast<unsigned long>(header.payloadSize())));
+    }
+    else {
+      A2_LOG_DEBUG(fmt(
+          "Sending obfuscated ED2K Kad UDP packet to %s:%u payload=%lu.",
+          item.first.host.c_str(), item.first.port,
+          static_cast<unsigned long>(item.second.size())));
+    }
+    const auto sent = socket_->writeData(item.second.data(), item.second.size(),
+                                        item.first.host, item.first.port);
+    if (sent < 0) {
+      A2_LOG_DEBUG(fmt("Failed to send ED2K UDP packet to %s:%u.",
+                       item.first.host.c_str(), item.first.port));
+    }
     outbox_.pop_front();
   }
 }
@@ -493,17 +688,36 @@ void Ed2kKadCommand::receivePackets()
   std::array<unsigned char, 64_k> data;
   while (true) {
     Endpoint sender;
-    const auto length = socket_->readDataFrom(data.data(), data.size(), sender);
+    auto length = socket_->readDataFrom(data.data(), data.size(), sender);
     if (length <= 0) {
       break;
     }
     if (length < 2) {
       continue;
     }
+    ed2k::Endpoint endpoint;
+    endpoint.host = sender.addr;
+    endpoint.port = sender.port;
+    std::string raw(reinterpret_cast<const char*>(data.data()),
+                    reinterpret_cast<const char*>(data.data()) + length);
+    std::unique_ptr<ed2k::KadObfuscatedDatagram> obfuscatedContext;
+    ed2k::KadObfuscatedDatagram parsed;
+    if (tryDecodeKadObfuscatedDatagram(parsed, endpoint, raw)) {
+      raw.swap(parsed.datagram);
+      obfuscatedContext.reset(new ed2k::KadObfuscatedDatagram(parsed));
+      length = raw.size();
+      data.fill(0);
+      std::copy(raw.begin(), raw.end(), data.begin());
+      A2_LOG_DEBUG(
+          fmt("Received obfuscated ED2K Kad UDP packet from %s:%u payload=%lu receiverKey=%u senderKey=%u.",
+              endpoint.host.c_str(), endpoint.port,
+              static_cast<unsigned long>(length),
+              obfuscatedContext->receiverVerifyKey,
+              obfuscatedContext->senderVerifyKey));
+    }
     ed2k::PacketHeader header;
     if (!ed2k::readDatagramHeader(
-            header, reinterpret_cast<const char*>(data.data()),
-            static_cast<size_t>(length)) ||
+            header, raw.data(), static_cast<size_t>(length)) ||
         (header.protocol != ed2k::KAD_PROTOCOL &&
          header.protocol != ed2k::PROTO_EDONKEY &&
          header.protocol != ed2k::PROTO_EMULE &&
@@ -511,11 +725,11 @@ void Ed2kKadCommand::receivePackets()
         header.payloadSize() + 2 != static_cast<size_t>(length)) {
       continue;
     }
-    ed2k::Endpoint endpoint;
-    endpoint.host = sender.addr;
-    endpoint.port = sender.port;
-    std::string payload(reinterpret_cast<const char*>(data.data()) + 2,
-                        reinterpret_cast<const char*>(data.data()) + length);
+    A2_LOG_DEBUG(fmt(
+        "Received ED2K UDP packet from %s:%u protocol=0x%02x opcode=0x%02x payload=%lu.",
+        sender.addr.c_str(), sender.port, header.protocol, header.opcode,
+        static_cast<unsigned long>(header.payloadSize())));
+    std::string payload(raw.data() + 2, raw.data() + length);
     if (header.protocol == ed2k::PROTO_PACKED) {
       std::string inflated;
       if (!ed2k::inflatePackedPacketPayload(inflated, payload, 64_k)) {
@@ -529,7 +743,7 @@ void Ed2kKadCommand::receivePackets()
       handleEd2kUdpPacket(endpoint, header.opcode, payload);
     }
     else {
-      handlePacket(endpoint, header.opcode, payload);
+      handlePacket(endpoint, obfuscatedContext.get(), header.opcode, payload);
     }
   }
 }
@@ -637,6 +851,14 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
                                   uint8_t opcode,
                                   const std::string& payload)
 {
+  handlePacket(endpoint, nullptr, opcode, payload);
+}
+
+void Ed2kKadCommand::handlePacket(
+    const ed2k::Endpoint& endpoint,
+    const ed2k::KadObfuscatedDatagram* context, uint8_t opcode,
+    const std::string& payload)
+{
   auto attrs = getEd2kAttrs(requestGroup_->getDownloadContext());
   if (!attrs->kadRoutingTable) {
     return;
@@ -646,15 +868,21 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
     if (payload.size() >= ed2k::HASH_LENGTH + 3) {
       requesterId.assign(payload.begin(), payload.begin() + ed2k::HASH_LENGTH);
     }
+    const auto kadClientId = ed2k::ed2kHashToKadId(attrs->clientHash);
     const auto contacts =
         requesterId.empty()
-            ? attrs->kadRoutingTable->findClosest(attrs->clientHash, 20,
-                                                  false)
+            ? attrs->kadRoutingTable->findClosest(kadClientId, 20, false)
             : attrs->kadRoutingTable->findClosestExcluding(
-                  attrs->clientHash, requesterId, 20, false);
-    queuePacket(endpoint, ed2k::KAD_BOOTSTRAP_RES,
-                ed2k::createKadBootstrapResponsePayload(
-                    attrs->clientHash, localEd2kTcpPort(e_), 8, contacts));
+                  kadClientId, requesterId, 20, false);
+    auto response = ed2k::createKadBootstrapResponsePayload(
+        kadClientId, localEd2kTcpPort(e_), 8, contacts);
+    if (context) {
+      queueKadResponsePacket(endpoint, *context, ed2k::KAD_BOOTSTRAP_RES,
+                             response);
+    }
+    else {
+      queuePacket(endpoint, ed2k::KAD_BOOTSTRAP_RES, response);
+    }
     return;
   }
   if (opcode == ed2k::KAD_BOOTSTRAP_RES) {
@@ -670,15 +898,17 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
     sender.udpPort = endpoint.port;
     sender.tcpPort = response.tcpPort;
     sender.version = response.version;
+    sender.udpKey = context ? context->senderVerifyKey : 0;
     attrs->kadRoutingTable->nodeSeen(sender, nowSeconds());
     for (const auto& contact : response.contacts) {
       attrs->kadRoutingTable->heardAbout(contact, nowSeconds());
       if (contact.host == endpoint.host && contact.udpPort == endpoint.port) {
         continue;
       }
-      queuePacket(toEndpoint(contact), ed2k::KAD_HELLO_REQ,
-                  ed2k::createKadHelloPayload(attrs->clientHash,
-                                              localEd2kTcpPort(e_), 8));
+      queueKadContactPacket(contact, ed2k::KAD_HELLO_REQ,
+                            ed2k::createKadHelloPayload(
+                                ed2k::ed2kHashToKadId(attrs->clientHash),
+                                localEd2kTcpPort(e_), 8));
     }
     return;
   }
@@ -691,30 +921,41 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
       contact.udpPort = endpoint.port;
       contact.tcpPort = hello.tcpPort;
       contact.version = hello.version;
+      contact.udpKey = context ? context->senderVerifyKey : 0;
       attrs->kadRoutingTable->nodeSeen(contact, nowSeconds());
     }
     if (opcode == ed2k::KAD_HELLO_REQ) {
-      queuePacket(endpoint, ed2k::KAD_HELLO_RES,
-                  ed2k::createKadHelloPayload(attrs->clientHash,
-                                              localEd2kTcpPort(e_), 8));
+      auto response = ed2k::createKadHelloPayload(
+          ed2k::ed2kHashToKadId(attrs->clientHash), localEd2kTcpPort(e_), 8);
+      if (context) {
+        queueKadResponsePacket(endpoint, *context, ed2k::KAD_HELLO_RES,
+                               response);
+      }
+      else {
+        queuePacket(endpoint, ed2k::KAD_HELLO_RES, response);
+      }
     }
     return;
   }
   if (opcode == ed2k::KAD_REQ) {
     ed2k::KadRequest request;
     if (!ed2k::parseKadRequestPayload(request, payload) ||
-        request.receiverId != attrs->clientHash) {
+        request.receiverId != ed2k::ed2kHashToKadId(attrs->clientHash)) {
       return;
     }
     const auto searchType = request.searchType & 0x1f;
     if (searchType == 0) {
       return;
     }
-    queuePacket(endpoint, ed2k::KAD_RES,
-                ed2k::createKadResponsePayload(
-                    request.targetId,
-                    attrs->kadRoutingTable->findClosest(request.targetId, 32,
-                                                        false)));
+    auto response = ed2k::createKadResponsePayload(
+        request.targetId,
+        attrs->kadRoutingTable->findClosest(request.targetId, 32, false));
+    if (context) {
+      queueKadResponsePacket(endpoint, *context, ed2k::KAD_RES, response);
+    }
+    else {
+      queuePacket(endpoint, ed2k::KAD_RES, response);
+    }
     return;
   }
   if (opcode == ed2k::KAD_RES) {
@@ -759,9 +1000,24 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
         addEd2kSearchResults(attrs, entries, false);
         return;
       }
-      auto peers = ed2k::extractKadSourceEndpoints(result);
-      for (const auto& peer : peers) {
-        addEd2kPeer(attrs, peer, ed2k::PEER_SOURCE_KAD);
+      auto sources = ed2k::extractKadSourceEndpointDetails(result);
+      A2_LOG_DEBUG(fmt("ED2K Kad search response from %s:%u target=%s "
+                       "entries=%lu sources=%lu.",
+                       endpoint.host.c_str(), endpoint.port,
+                       util::toHex(result.targetId).c_str(),
+                       static_cast<unsigned long>(result.entries.size()),
+                       static_cast<unsigned long>(sources.size())));
+      for (const auto& source : sources) {
+        const bool added =
+            addEd2kKadSourcePeer(attrs, source, ed2k::PEER_SOURCE_KAD);
+        A2_LOG_DEBUG(fmt("ED2K Kad source type=%u host=%s tcp=%u udp=%u "
+                         "crypt=%u usable=%s added=%s.",
+                         source.sourceType, source.endpoint.host.c_str(),
+                         source.endpoint.port, source.udpPort,
+                         source.endpoint.cryptOptions,
+                         directKadTcpSourceType(source.sourceType) ? "yes"
+                                                                   : "no",
+                         added ? "yes" : "no"));
       }
       schedulePendingEd2kPeers(requestGroup_, e_);
     }
@@ -790,8 +1046,14 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
       return;
     }
     attrs->kadSourceIndex.store(request.fileId, request.source);
-    queuePacket(endpoint, ed2k::KAD_PUBLISH_RES,
-                ed2k::createKadPublishResultPayload(request.fileId, 1));
+    auto response = ed2k::createKadPublishResultPayload(request.fileId, 1);
+    if (context) {
+      queueKadResponsePacket(endpoint, *context, ed2k::KAD_PUBLISH_RES,
+                             response);
+    }
+    else {
+      queuePacket(endpoint, ed2k::KAD_PUBLISH_RES, response);
+    }
     return;
   }
   if (opcode == ed2k::KAD_SEARCH_SOURCES_REQ) {
@@ -802,9 +1064,16 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
     auto entries = attrs->kadSourceIndex.find(request.targetId,
                                              request.startPosition, 50);
     if (!entries.empty()) {
-      queuePacket(endpoint, ed2k::KAD_SEARCH_RES,
-                  ed2k::createKadSearchResultPayload(
-                      attrs->clientHash, request.targetId, entries));
+      auto response = ed2k::createKadSearchResultPayload(
+          ed2k::ed2kHashToKadId(attrs->clientHash), request.targetId,
+          entries);
+      if (context) {
+        queueKadResponsePacket(endpoint, *context, ed2k::KAD_SEARCH_RES,
+                               response);
+      }
+      else {
+        queuePacket(endpoint, ed2k::KAD_SEARCH_RES, response);
+      }
     }
     return;
   }
@@ -813,12 +1082,24 @@ void Ed2kKadCommand::handlePacket(const ed2k::Endpoint& endpoint,
     if (!ed2k::parseKadFirewalledRequestPayload(request, payload)) {
       return;
     }
-    queuePacket(endpoint, ed2k::KAD_FIREWALLED_RES,
-                ed2k::createKadFirewalledResponsePayload(endpoint.host));
+    auto response = ed2k::createKadFirewalledResponsePayload(endpoint.host);
+    if (context) {
+      queueKadResponsePacket(endpoint, *context, ed2k::KAD_FIREWALLED_RES,
+                             response);
+    }
+    else {
+      queuePacket(endpoint, ed2k::KAD_FIREWALLED_RES, response);
+    }
     return;
   }
   if (opcode == ed2k::KAD_PING) {
-    queuePacket(endpoint, ed2k::KAD_PONG, std::string());
+    if (context) {
+      queueKadResponsePacket(endpoint, *context, ed2k::KAD_PONG,
+                             std::string());
+    }
+    else {
+      queuePacket(endpoint, ed2k::KAD_PONG, std::string());
+    }
     return;
   }
 }
@@ -858,6 +1139,7 @@ bool Ed2kKadCommand::execute()
     queueServerStatusPoll();
     queueServerSourcePoll();
     queueDuePeerReasks(nowSeconds());
+    queueDueKadCallbacks(nowSeconds());
     queueBootstrap();
     if (!requestGroup_->downloadFinished()) {
       if (attrs->searchActive) {

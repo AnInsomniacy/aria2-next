@@ -39,6 +39,7 @@ public:
   bool waitLocalUdpReadable(time_t timeout) const;
 #ifdef A2_TEST_DIR
   size_t testQueueDuePeerReasks(int64_t now) { return queueDuePeerReasks(now); }
+  size_t testQueueDueKadCallbacks(int64_t now) { return queueDueKadCallbacks(now); }
   size_t testQueuedPacketCount() const { return outbox_.size(); }
   const std::pair<ed2k::Endpoint, std::string>& testQueuedPacketAt(
       size_t index) const
@@ -73,11 +74,20 @@ private:
   void queueSourceSearch();
   void queueKeywordSearch();
   size_t queueDuePeerReasks(int64_t now);
+  size_t queueDueKadCallbacks(int64_t now);
   void queueTraversalActions(
       ed2k::KadTraversal& traversal,
       const std::vector<ed2k::KadTraversalAction>& actions);
   void queuePacket(const ed2k::Endpoint& endpoint, uint8_t opcode,
                    const std::string& payload);
+  void queueKadContactPacket(const ed2k::KadContact& contact, uint8_t opcode,
+                             const std::string& payload);
+  void queueKadResponsePacket(const ed2k::Endpoint& endpoint,
+                              const ed2k::KadObfuscatedDatagram& context,
+                              uint8_t opcode, const std::string& payload);
+  bool tryDecodeKadObfuscatedDatagram(ed2k::KadObfuscatedDatagram& parsed,
+                                      const ed2k::Endpoint& endpoint,
+                                      const std::string& raw);
   void queueEd2kUdpPacket(const ed2k::Endpoint& endpoint, uint8_t opcode,
                           const std::string& payload);
   void queueEmuleUdpPacket(const ed2k::Endpoint& endpoint, uint8_t opcode,
@@ -86,6 +96,9 @@ private:
   void receivePackets();
   void handlePacket(const ed2k::Endpoint& endpoint, uint8_t opcode,
                     const std::string& payload);
+  void handlePacket(const ed2k::Endpoint& endpoint,
+                    const ed2k::KadObfuscatedDatagram* context,
+                    uint8_t opcode, const std::string& payload);
   void handleEd2kUdpPacket(const ed2k::Endpoint& endpoint, uint8_t opcode,
                            const std::string& payload);
   int64_t nowSeconds() const;

@@ -13,12 +13,18 @@
 #include "ed2k_kad.h"
 
 #include <algorithm>
+#include <array>
 #include <limits>
 
+#include "ARC4Encryptor.h"
 #include "DlAbortEx.h"
 #include "Ed2kKadState.h"
+#include "MessageDigest.h"
+#include "ed2k_constants.h"
 #include "ed2k_endpoint.h"
 #include "ed2k_hash.h"
+#include "message_digest_helper.h"
+#include "util.h"
 
 namespace aria2 {
 
@@ -27,7 +33,12 @@ namespace ed2k {
 namespace {
 
 constexpr char KAD_ROUTING_STATE_MAGIC[] = "A2ED2KKAD";
-constexpr uint32_t KAD_ROUTING_STATE_VERSION = 3;
+constexpr uint32_t KAD_ROUTING_STATE_VERSION = 6;
+constexpr uint32_t KAD_UDP_SYNC_CLIENT = 0x395f2ec1;
+
+struct KadObfuscationKey {
+  std::string value;
+};
 
 void validateHashLength(const std::string& hash)
 {
@@ -51,6 +62,19 @@ int64_t readInt64(const std::string& payload, size_t& offset)
   return static_cast<int64_t>(readUInt64(readBytes(payload, offset, 8).data()));
 }
 
+std::string ipv4FromKadContactValue(uint32_t ip)
+{
+  return fmt("%u.%u.%u.%u", (ip >> 24) & 0xff, (ip >> 16) & 0xff,
+             (ip >> 8) & 0xff, ip & 0xff);
+}
+
+uint32_t ipv4ToKadContactValue(const std::string& host)
+{
+  const auto ip = ipv4ToEndpointValue(host);
+  return ((ip & 0x000000ffU) << 24) | ((ip & 0x0000ff00U) << 8) |
+         ((ip & 0x00ff0000U) >> 8) | ((ip & 0xff000000U) >> 24);
+}
+
 void appendString(std::string& payload, const std::string& value)
 {
   if (value.size() > std::numeric_limits<uint16_t>::max()) {
@@ -66,6 +90,84 @@ std::string readString(const std::string& payload, size_t& offset)
   return readBytes(payload, offset, size);
 }
 
+std::string kadObfuscationKey(const std::string& targetId,
+                              uint16_t randomKeyPart)
+{
+  validateHashLength(targetId);
+  std::string keyData = kadIdToObfuscationKeyBytes(targetId);
+  keyData += packUInt16(randomKeyPart);
+  auto md5 = MessageDigest::create("md5");
+  std::array<unsigned char, 16> digest;
+  message_digest::digest(digest.data(), digest.size(), md5.get(),
+                         keyData.data(), keyData.size());
+  return std::string(reinterpret_cast<const char*>(digest.data()),
+                     digest.size());
+}
+
+std::string packUInt32Be(uint32_t value)
+{
+  std::string out(4, '\0');
+  out[0] = static_cast<char>(value >> 24);
+  out[1] = static_cast<char>(value >> 16);
+  out[2] = static_cast<char>(value >> 8);
+  out[3] = static_cast<char>(value);
+  return out;
+}
+
+uint32_t readUInt32Be(const char* data)
+{
+  auto bytes = reinterpret_cast<const unsigned char*>(data);
+  return (static_cast<uint32_t>(bytes[0]) << 24) |
+         (static_cast<uint32_t>(bytes[1]) << 16) |
+         (static_cast<uint32_t>(bytes[2]) << 8) |
+         static_cast<uint32_t>(bytes[3]);
+}
+
+std::string kadVerifyKeyObfuscationKey(uint32_t receiverVerifyKey,
+                                       uint16_t randomKeyPart)
+{
+  auto keyData = packUInt32(receiverVerifyKey);
+  keyData += packUInt16(randomKeyPart);
+  auto md5 = MessageDigest::create("md5");
+  std::array<unsigned char, 16> digest;
+  message_digest::digest(digest.data(), digest.size(), md5.get(),
+                         keyData.data(), keyData.size());
+  return std::string(reinterpret_cast<const char*>(digest.data()),
+                     digest.size());
+}
+
+void rc4Crypt(std::string& out, const std::string& data,
+              const std::string& key)
+{
+  ARC4Encryptor rc4;
+  rc4.init(reinterpret_cast<const unsigned char*>(key.data()), key.size());
+  out.resize(data.size());
+  rc4.encrypt(data.size(), reinterpret_cast<unsigned char*>(&out[0]),
+              reinterpret_cast<const unsigned char*>(data.data()));
+}
+
+uint8_t kadObfuscationMarker(bool receiverKeyUsed)
+{
+  return receiverKeyUsed ? 0x0a : 0x08;
+}
+
+bool possibleKadObfuscatedDatagram(const std::string& datagram)
+{
+  if (datagram.size() <= 16) {
+    return false;
+  }
+  const auto marker = static_cast<unsigned char>(datagram[0]);
+  switch (marker) {
+  case PROTO_EDONKEY:
+  case KAD_PROTOCOL:
+  case PROTO_PACKED:
+  case PROTO_EMULE:
+    return false;
+  default:
+    return (marker & 0x01) == 0;
+  }
+}
+
 void appendEndpoint(std::string& payload, const Endpoint& endpoint)
 {
   appendString(payload, endpoint.host);
@@ -78,6 +180,29 @@ Endpoint readStateEndpoint(const std::string& payload, size_t& offset)
   endpoint.host = readString(payload, offset);
   endpoint.port = readUInt16(readBytes(payload, offset, 2).data());
   return endpoint;
+}
+
+void appendKadContact(std::string& payload, const KadContact& contact)
+{
+  validateHashLength(contact.id);
+  payload += contact.id;
+  appendString(payload, contact.host);
+  payload += packUInt16(contact.udpPort);
+  payload += packUInt16(contact.tcpPort);
+  appendByte(payload, contact.version);
+  payload += packUInt32(contact.udpKey);
+}
+
+KadContact readStateKadContact(const std::string& payload, size_t& offset)
+{
+  KadContact contact;
+  contact.id = readBytes(payload, offset, HASH_LENGTH);
+  contact.host = readString(payload, offset);
+  contact.udpPort = readUInt16(readBytes(payload, offset, 2).data());
+  contact.tcpPort = readUInt16(readBytes(payload, offset, 2).data());
+  contact.version = readByte(payload, offset);
+  contact.udpKey = readUInt32(readBytes(payload, offset, 4).data());
+  return contact;
 }
 
 bool validNodesDatContact(const KadContact& contact)
@@ -147,11 +272,45 @@ std::vector<KadRoutingNode> readKadRoutingNodes(const std::string& payload,
 
 } // namespace
 
+std::string ed2kHashToKadId(const std::string& hash)
+{
+  validateHashLength(hash);
+  std::string id;
+  id.reserve(HASH_LENGTH);
+  for (size_t i = 0; i < HASH_LENGTH; i += 4) {
+    id.push_back(hash[i + 3]);
+    id.push_back(hash[i + 2]);
+    id.push_back(hash[i + 1]);
+    id.push_back(hash[i]);
+  }
+  return id;
+}
+
+std::string kadIdToEd2kHash(const std::string& id)
+{
+  return ed2kHashToKadId(id);
+}
+
+std::string kadIdToObfuscationKeyBytes(const std::string& id)
+{
+  validateHashLength(id);
+  std::string key;
+  key.reserve(HASH_LENGTH);
+  for (size_t i = 0; i < HASH_LENGTH; i += 4) {
+    key.push_back(id[i + 3]);
+    key.push_back(id[i + 2]);
+    key.push_back(id[i + 1]);
+    key.push_back(id[i]);
+  }
+  return key;
+}
+
 KadContact readKadContact(const std::string& data, size_t& offset)
 {
   KadContact contact;
   contact.id = readBytes(data, offset, HASH_LENGTH);
-  contact.host = ipv4FromEndpoint(readUInt32(readBytes(data, offset, 4).data()));
+  contact.host =
+      ipv4FromKadContactValue(readUInt32(readBytes(data, offset, 4).data()));
   contact.udpPort = readUInt16(readBytes(data, offset, 2).data());
   contact.tcpPort = readUInt16(readBytes(data, offset, 2).data());
   contact.version = readByte(data, offset);
@@ -162,7 +321,7 @@ std::string packKadContact(const KadContact& contact)
 {
   validateHashLength(contact.id);
   std::string payload = contact.id;
-  payload += packUInt32(ipv4ToEndpointValue(contact.host));
+  payload += packUInt32(ipv4ToKadContactValue(contact.host));
   payload += packUInt16(contact.udpPort);
   payload += packUInt16(contact.tcpPort);
   payload.push_back(static_cast<char>(contact.version));
@@ -384,11 +543,191 @@ bool parseKadFirewalledUdpPayload(KadFirewalledUdp& response,
   return true;
 }
 
+std::string createKadCallbackRequestPayload(const std::string& buddyId,
+                                            const std::string& fileId,
+                                            uint16_t tcpPort)
+{
+  validateHashLength(buddyId);
+  validateHashLength(fileId);
+  return buddyId + fileId + packUInt16(tcpPort);
+}
+
+bool parseKadCallbackRequestPayload(KadCallbackRequest& request,
+                                    const std::string& payload)
+{
+  if (payload.size() != HASH_LENGTH * 2 + 2) {
+    return false;
+  }
+  size_t offset = 0;
+  request.buddyId = readBytes(payload, offset, HASH_LENGTH);
+  request.fileId = readBytes(payload, offset, HASH_LENGTH);
+  request.tcpPort = readUInt16(readBytes(payload, offset, 2).data());
+  return true;
+}
+
+std::string createKadObfuscatedDatagram(const std::string& datagram,
+                                        const KadObfuscationKey& key,
+                                        uint16_t randomKeyPart,
+                                        bool receiverKeyUsed,
+                                        uint32_t receiverVerifyKey,
+                                        uint32_t senderVerifyKey);
+
+bool parseKadObfuscatedDatagram(KadObfuscatedDatagram& parsed,
+                                const std::string& datagram,
+                                const KadObfuscationKey& key);
+
+std::string createKadObfuscatedDatagram(const std::string& datagram,
+                                        const std::string& targetId,
+                                        uint16_t randomKeyPart,
+                                        uint32_t receiverVerifyKey,
+                                        uint32_t senderVerifyKey)
+{
+  validateHashLength(targetId);
+  return createKadObfuscatedDatagram(datagram,
+                                     KadObfuscationKey{
+                                         kadObfuscationKey(targetId,
+                                                           randomKeyPart)},
+                                     randomKeyPart, false, receiverVerifyKey,
+                                     senderVerifyKey);
+}
+
+std::string createKadObfuscatedDatagram(const std::string& datagram,
+                                        uint32_t receiverVerifyKey,
+                                        uint32_t senderVerifyKey,
+                                        uint16_t randomKeyPart)
+{
+  return createKadObfuscatedDatagram(
+      datagram,
+      KadObfuscationKey{
+          kadVerifyKeyObfuscationKey(receiverVerifyKey, randomKeyPart)},
+      randomKeyPart, true, receiverVerifyKey, senderVerifyKey);
+}
+
+std::string createKadObfuscatedDatagram(const std::string& datagram,
+                                        const KadObfuscationKey& key,
+                                        uint16_t randomKeyPart,
+                                        bool receiverKeyUsed,
+                                        uint32_t receiverVerifyKey,
+                                        uint32_t senderVerifyKey)
+{
+  ARC4Encryptor rc4;
+  rc4.init(reinterpret_cast<const unsigned char*>(key.value.data()),
+           key.value.size());
+
+  std::string out;
+  out.reserve(datagram.size() + 16);
+  out.push_back(static_cast<char>(kadObfuscationMarker(receiverKeyUsed)));
+  out += packUInt16(randomKeyPart);
+
+  std::string plain;
+  plain += packUInt32Be(KAD_UDP_SYNC_CLIENT);
+  plain.push_back('\0');
+  plain += packUInt32Be(receiverVerifyKey);
+  plain += packUInt32Be(senderVerifyKey);
+  plain += datagram;
+
+  std::string encrypted(plain.size(), '\0');
+  rc4.encrypt(plain.size(), reinterpret_cast<unsigned char*>(&encrypted[0]),
+              reinterpret_cast<const unsigned char*>(plain.data()));
+  out += encrypted;
+  return out;
+}
+
+bool parseKadObfuscatedDatagram(KadObfuscatedDatagram& parsed,
+                                const std::string& datagram,
+                                const std::string& targetId)
+{
+  if (!possibleKadObfuscatedDatagram(datagram) ||
+      targetId.size() != HASH_LENGTH) {
+    return false;
+  }
+  const auto marker = static_cast<uint8_t>(datagram[0]);
+  if ((marker & 0x03) != 0) {
+    return false;
+  }
+  const auto randomKeyPart = readUInt16(datagram.data() + 1);
+  KadObfuscationKey key{kadObfuscationKey(targetId, randomKeyPart)};
+  return parseKadObfuscatedDatagram(parsed, datagram, key);
+}
+
+bool parseKadObfuscatedDatagram(KadObfuscatedDatagram& parsed,
+                                const std::string& datagram,
+                                uint32_t receiverVerifyKey)
+{
+  if (!possibleKadObfuscatedDatagram(datagram)) {
+    return false;
+  }
+  const auto marker = static_cast<uint8_t>(datagram[0]);
+  if ((marker & 0x03) != 2) {
+    return false;
+  }
+  const auto randomKeyPart = readUInt16(datagram.data() + 1);
+  KadObfuscationKey key{
+      kadVerifyKeyObfuscationKey(receiverVerifyKey, randomKeyPart)};
+  return parseKadObfuscatedDatagram(parsed, datagram, key);
+}
+
+bool parseKadObfuscatedDatagram(KadObfuscatedDatagram& parsed,
+                                const std::string& datagram,
+                                const KadObfuscationKey& key)
+{
+  if (!possibleKadObfuscatedDatagram(datagram)) {
+    return false;
+  }
+  const auto marker = static_cast<uint8_t>(datagram[0]);
+  if ((marker & 0x01) != 0) {
+    return false;
+  }
+  std::string decrypted;
+  rc4Crypt(decrypted, datagram.substr(3), key.value);
+  if (decrypted.size() <= 13 ||
+      readUInt32Be(decrypted.data()) != KAD_UDP_SYNC_CLIENT) {
+    return false;
+  }
+  const auto padLen = static_cast<unsigned char>(decrypted[4]);
+  if (decrypted.size() <= static_cast<size_t>(13 + padLen)) {
+    return false;
+  }
+  size_t offset = 5 + padLen;
+  parsed.receiverVerifyKey = readUInt32Be(decrypted.data() + offset);
+  offset += 4;
+  parsed.senderVerifyKey = readUInt32Be(decrypted.data() + offset);
+  offset += 4;
+  parsed.datagram.assign(decrypted.begin() + offset, decrypted.end());
+  return true;
+}
+
+uint32_t createKadUdpVerifyKey(uint32_t baseKey, const std::string& host)
+{
+  if (baseKey == 0 || host.empty()) {
+    return 0;
+  }
+  uint64_t data =
+      (static_cast<uint64_t>(baseKey) << 32) | ipv4ToEndpointValue(host);
+  std::string keyData;
+  keyData.reserve(8);
+  for (size_t i = 0; i < 8; ++i) {
+    keyData.push_back(static_cast<char>(data >> (i * 8)));
+  }
+
+  auto md5 = MessageDigest::create("md5");
+  std::array<unsigned char, 16> digest;
+  message_digest::digest(digest.data(), digest.size(), md5.get(),
+                         keyData.data(), keyData.size());
+  auto value = readUInt32(reinterpret_cast<const char*>(digest.data())) ^
+               readUInt32(reinterpret_cast<const char*>(digest.data()) + 4) ^
+               readUInt32(reinterpret_cast<const char*>(digest.data()) + 8) ^
+               readUInt32(reinterpret_cast<const char*>(digest.data()) + 12);
+  return value % 0xfffffffeU + 1;
+}
+
 std::string createKadRoutingStatePayload(const KadRoutingSnapshot& snapshot)
 {
   validateHashLength(snapshot.selfId);
   if (snapshot.buckets.size() > std::numeric_limits<uint16_t>::max() ||
       snapshot.routerNodes.size() > std::numeric_limits<uint16_t>::max() ||
+      snapshot.routerContacts.size() >
+          std::numeric_limits<uint16_t>::max() ||
       snapshot.observedAddresses.size() >
           std::numeric_limits<uint16_t>::max()) {
     throw DL_ABORT_EX("ED2K Kad routing state is too large.");
@@ -404,6 +743,7 @@ std::string createKadRoutingStatePayload(const KadRoutingSnapshot& snapshot)
   appendInt64(payload, snapshot.lastSourcePublish);
   appendInt64(payload, snapshot.lastSourceSearch);
   payload += packUInt32(snapshot.sourceSearchCount);
+  payload += packUInt32(snapshot.udpVerifyKey);
   appendByte(payload, snapshot.firewalled ? 1 : 0);
   payload += packUInt16(
       static_cast<uint16_t>(snapshot.observedAddresses.size()));
@@ -413,6 +753,10 @@ std::string createKadRoutingStatePayload(const KadRoutingSnapshot& snapshot)
   payload += packUInt16(static_cast<uint16_t>(snapshot.routerNodes.size()));
   for (const auto& endpoint : snapshot.routerNodes) {
     appendEndpoint(payload, endpoint);
+  }
+  payload += packUInt16(static_cast<uint16_t>(snapshot.routerContacts.size()));
+  for (const auto& contact : snapshot.routerContacts) {
+    appendKadContact(payload, contact);
   }
   payload += packUInt16(static_cast<uint16_t>(snapshot.buckets.size()));
   for (const auto& bucket : snapshot.buckets) {
@@ -435,7 +779,7 @@ bool parseKadRoutingStatePayload(KadRoutingSnapshot& snapshot,
       return false;
     }
     const auto version = readUInt32(readBytes(payload, offset, 4).data());
-    if (version != 1 && version != KAD_ROUTING_STATE_VERSION) {
+    if (version != 1 && (version < 3 || version > KAD_ROUTING_STATE_VERSION)) {
       return false;
     }
     KadRoutingSnapshot parsed;
@@ -451,6 +795,10 @@ bool parseKadRoutingStatePayload(KadRoutingSnapshot& snapshot,
         parsed.sourceSearchCount =
             readUInt32(readBytes(payload, offset, 4).data());
       }
+      if (version >= 6) {
+        parsed.udpVerifyKey =
+            readUInt32(readBytes(payload, offset, 4).data());
+      }
       parsed.firewalled = readByte(payload, offset) != 0;
       const auto observedCount =
           readUInt16(readBytes(payload, offset, 2).data());
@@ -463,6 +811,23 @@ bool parseKadRoutingStatePayload(KadRoutingSnapshot& snapshot,
     parsed.routerNodes.reserve(routerCount);
     for (uint16_t i = 0; i < routerCount; ++i) {
       parsed.routerNodes.push_back(readStateEndpoint(payload, offset));
+    }
+    if (version >= 4) {
+      const auto routerContactCount =
+          readUInt16(readBytes(payload, offset, 2).data());
+      parsed.routerContacts.reserve(routerContactCount);
+      for (uint16_t i = 0; i < routerContactCount; ++i) {
+        KadContact contact;
+        contact.id = readBytes(payload, offset, HASH_LENGTH);
+        contact.host = readString(payload, offset);
+        contact.udpPort = readUInt16(readBytes(payload, offset, 2).data());
+        contact.tcpPort = readUInt16(readBytes(payload, offset, 2).data());
+        contact.version = readByte(payload, offset);
+        if (version >= 5) {
+          contact.udpKey = readUInt32(readBytes(payload, offset, 4).data());
+        }
+        parsed.routerContacts.push_back(contact);
+      }
     }
     const auto bucketCount = readUInt16(readBytes(payload, offset, 2).data());
     parsed.buckets.reserve(bucketCount);

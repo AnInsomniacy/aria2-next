@@ -46,7 +46,9 @@ class Ed2kHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testAichRecoveryData);
   CPPUNIT_TEST(testAichHashTree);
   CPPUNIT_TEST(testAichHashTreeKeepsPartLevel);
+  CPPUNIT_TEST(testKadUInt128ConversionMatchesAMule);
   CPPUNIT_TEST(testKadPacketPayloads);
+  CPPUNIT_TEST(testKadObfuscatedPacketRoundTrip);
   CPPUNIT_TEST(testKadSearchPublishAndFirewallPayloads);
   CPPUNIT_TEST(testKadRoutingStatePayload);
   CPPUNIT_TEST(testServerStatePayload);
@@ -86,7 +88,9 @@ public:
   void testAichRecoveryData();
   void testAichHashTree();
   void testAichHashTreeKeepsPartLevel();
+  void testKadUInt128ConversionMatchesAMule();
   void testKadPacketPayloads();
+  void testKadObfuscatedPacketRoundTrip();
   void testKadSearchPublishAndFirewallPayloads();
   void testKadRoutingStatePayload();
   void testServerStatePayload();
@@ -844,6 +848,51 @@ void Ed2kHelperTest::testKadSourceEndpointPreservesUdpAndCryptMetadata()
   CPPUNIT_ASSERT_EQUAL((uint16_t)4662, endpoint.port);
   CPPUNIT_ASSERT_EQUAL(std::string(HASH_LENGTH, '\x44'), endpoint.userHash);
   CPPUNIT_ASSERT_EQUAL((uint16_t)0x03, endpoint.cryptOptions);
+
+  KadSourceEndpoint source;
+  CPPUNIT_ASSERT(extractKadSourceEndpoint(source, entry));
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.44"), source.endpoint.host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, source.endpoint.port);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, source.udpPort);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)1, source.sourceType);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)0x03, source.endpoint.cryptOptions);
+
+  sourceType.intValue = 3;
+  entry.tags[0] = sourceType;
+  auto buddyHashTagPayload =
+      createStringTag(0xf8, "11111111111111111111111111111111");
+  size_t buddyHashTagOffset = 0;
+  entry.tags.push_back(readTag(buddyHashTagPayload, buddyHashTagOffset));
+  CPPUNIT_ASSERT(extractKadSourceEndpoint(source, entry));
+  CPPUNIT_ASSERT_EQUAL((uint8_t)3, source.sourceType);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, source.udpPort);
+  CPPUNIT_ASSERT_EQUAL(
+      std::string("\x11\x11\x11\x11\x11\x11\x11\x11"
+                  "\x11\x11\x11\x11\x11\x11\x11\x11",
+                  HASH_LENGTH),
+      source.buddyId);
+
+  sourceType.intValue = 5;
+  entry.tags[0] = sourceType;
+  CPPUNIT_ASSERT(extractKadSourceEndpoint(source, entry));
+  CPPUNIT_ASSERT_EQUAL((uint8_t)5, source.sourceType);
+
+  sourceType.intValue = 6;
+  entry.tags[0] = sourceType;
+  CPPUNIT_ASSERT(extractKadSourceEndpoint(source, entry));
+  CPPUNIT_ASSERT_EQUAL((uint8_t)6, source.sourceType);
+
+  KadSearchResult result;
+  result.entries.push_back(entry);
+  auto endpoints = extractKadSourceEndpoints(result);
+  CPPUNIT_ASSERT_EQUAL((size_t)0, endpoints.size());
+
+  sourceType.intValue = 4;
+  result.entries[0].tags[0] = sourceType;
+  endpoints = extractKadSourceEndpoints(result);
+  CPPUNIT_ASSERT_EQUAL((size_t)1, endpoints.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.44"), endpoints[0].host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, endpoints[0].port);
 }
 
 void Ed2kHelperTest::testSourceExchange2Payloads()
@@ -1331,6 +1380,9 @@ void Ed2kHelperTest::testKadPacketPayloads()
   CPPUNIT_ASSERT_EQUAL((uint16_t)4662, parsedBootstrap.tcpPort);
   CPPUNIT_ASSERT_EQUAL((uint8_t)5, parsedBootstrap.version);
   CPPUNIT_ASSERT_EQUAL((size_t)1, parsedBootstrap.contacts.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("0123456789abcdef0123456789abcdef097100cb"
+                                   "4012361205"),
+                       util::toHex(bootstrap.substr(HASH_LENGTH + 5)));
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"),
                        parsedBootstrap.contacts[0].host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4672, parsedBootstrap.contacts[0].udpPort);
@@ -1348,7 +1400,65 @@ void Ed2kHelperTest::testKadPacketPayloads()
   CPPUNIT_ASSERT(parseKadResponsePayload(parsedRes, res));
   CPPUNIT_ASSERT_EQUAL(nodeId, parsedRes.targetId);
   CPPUNIT_ASSERT_EQUAL((size_t)1, parsedRes.contacts.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("0123456789abcdef0123456789abcdef01"
+                                   "0123456789abcdef0123456789abcdef097100cb"
+                                   "4012361205"),
+                       util::toHex(res));
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"), parsedRes.contacts[0].host);
+}
+
+void Ed2kHelperTest::testKadUInt128ConversionMatchesAMule()
+{
+  const auto fileHash = util::fromHex(
+      std::begin("2aab7f0cd4be378d9113557b1d24d8d0"),
+      std::end("2aab7f0cd4be378d9113557b1d24d8d0") - 1);
+  const auto kadId = ed2kHashToKadId(fileHash);
+
+  CPPUNIT_ASSERT_EQUAL(
+      std::string("0c7fab2a8d37bed47b551391d0d8241d"),
+      util::toHex(kadId));
+  CPPUNIT_ASSERT_EQUAL(fileHash, kadIdToEd2kHash(kadId));
+}
+
+void Ed2kHelperTest::testKadObfuscatedPacketRoundTrip()
+{
+  std::string nodeIdHex("0123456789abcdef0123456789abcdef");
+  auto nodeId = util::fromHex(nodeIdHex.begin(), nodeIdHex.end());
+  auto datagram = createDatagram(KAD_PROTOCOL, KAD_BOOTSTRAP_REQ, std::string());
+
+  auto obfuscated = createKadObfuscatedDatagram(datagram, nodeId, 0x1234);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)18, obfuscated.size());
+  CPPUNIT_ASSERT(static_cast<uint8_t>(obfuscated[0]) != KAD_PROTOCOL);
+  CPPUNIT_ASSERT_EQUAL(std::string("3412"),
+                       util::toHex(obfuscated.substr(1, 2)));
+  CPPUNIT_ASSERT_EQUAL(std::string("083412b293d03e733b305ca3307690bc81ba"),
+                       util::toHex(obfuscated));
+
+  KadObfuscatedDatagram parsed;
+  CPPUNIT_ASSERT(parseKadObfuscatedDatagram(parsed, obfuscated, nodeId));
+  CPPUNIT_ASSERT_EQUAL((uint32_t)0, parsed.receiverVerifyKey);
+  CPPUNIT_ASSERT_EQUAL((uint32_t)0, parsed.senderVerifyKey);
+  CPPUNIT_ASSERT_EQUAL(datagram, parsed.datagram);
+
+  const auto amuleNodeKeyPacket = util::fromHex(
+      std::begin("083412b293d03e733b305ca3307690bc81ba"),
+      std::end("083412b293d03e733b305ca3307690bc81ba") - 1);
+  CPPUNIT_ASSERT(parseKadObfuscatedDatagram(parsed, amuleNodeKeyPacket,
+                                           nodeId));
+  CPPUNIT_ASSERT_EQUAL(datagram, parsed.datagram);
+
+  auto verifyKeyPacket =
+      createKadObfuscatedDatagram(datagram, 0x11223344, 0x55667788, 0x1234);
+  CPPUNIT_ASSERT_EQUAL(std::string("0a3412b176a557ea86e681e798844d246823"),
+                       util::toHex(verifyKeyPacket));
+  CPPUNIT_ASSERT(parseKadObfuscatedDatagram(parsed, verifyKeyPacket,
+                                           (uint32_t)0x11223344));
+  CPPUNIT_ASSERT_EQUAL((uint32_t)0x11223344, parsed.receiverVerifyKey);
+  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55667788, parsed.senderVerifyKey);
+  CPPUNIT_ASSERT_EQUAL(datagram, parsed.datagram);
+  CPPUNIT_ASSERT_EQUAL((uint32_t)0xc43989ee,
+                       createKadUdpVerifyKey(0x61726961, "203.0.113.9"));
 }
 
 void Ed2kHelperTest::testKadSearchPublishAndFirewallPayloads()
@@ -1424,6 +1534,14 @@ void Ed2kHelperTest::testKadSearchPublishAndFirewallPayloads()
       fwRes, createKadFirewalledResponsePayload("203.0.113.9")));
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"), fwRes.ipAddress);
 
+  KadCallbackRequest callbackReq;
+  CPPUNIT_ASSERT(parseKadCallbackRequestPayload(
+      callbackReq,
+      createKadCallbackRequestPayload(sourceId, fileId, 4662)));
+  CPPUNIT_ASSERT_EQUAL(sourceId, callbackReq.buddyId);
+  CPPUNIT_ASSERT_EQUAL(fileId, callbackReq.fileId);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, callbackReq.tcpPort);
+
   KadFirewalledUdp fwUdp;
   CPPUNIT_ASSERT(parseKadFirewalledUdpPayload(
       fwUdp, createKadFirewalledUdpPayload(1, 4662)));
@@ -1444,12 +1562,22 @@ void Ed2kHelperTest::testKadRoutingStatePayload()
   snapshot.lastSourcePublish = 600;
   snapshot.lastSourceSearch = 700;
   snapshot.sourceSearchCount = 3;
+  snapshot.udpVerifyKey = 0x61726961;
   snapshot.firewalled = false;
   snapshot.observedAddresses.push_back("203.0.113.55");
   Endpoint router;
   router.host = "203.0.113.1";
   router.port = 4672;
   snapshot.routerNodes.push_back(router);
+  KadContact routerContact;
+  std::string routerIdHex("11111111111111111111111111111111");
+  routerContact.id = util::fromHex(routerIdHex.begin(), routerIdHex.end());
+  routerContact.host = "203.0.113.2";
+  routerContact.udpPort = 4672;
+  routerContact.tcpPort = 4662;
+  routerContact.version = 8;
+  routerContact.udpKey = 0x55667788;
+  snapshot.routerContacts.push_back(routerContact);
   snapshot.buckets.resize(2);
   snapshot.buckets[1].lastActive = 400;
   KadRoutingNode node;
@@ -1481,6 +1609,7 @@ void Ed2kHelperTest::testKadRoutingStatePayload()
   CPPUNIT_ASSERT_EQUAL((int64_t)600, parsed.lastSourcePublish);
   CPPUNIT_ASSERT_EQUAL((int64_t)700, parsed.lastSourceSearch);
   CPPUNIT_ASSERT_EQUAL((uint32_t)3, parsed.sourceSearchCount);
+  CPPUNIT_ASSERT_EQUAL((uint32_t)0x61726961, parsed.udpVerifyKey);
   CPPUNIT_ASSERT(!parsed.firewalled);
   CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.observedAddresses.size());
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.55"),
@@ -1488,6 +1617,13 @@ void Ed2kHelperTest::testKadRoutingStatePayload()
   CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.routerNodes.size());
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.1"), parsed.routerNodes[0].host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4672, parsed.routerNodes[0].port);
+  CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.routerContacts.size());
+  CPPUNIT_ASSERT_EQUAL(routerContact.id, parsed.routerContacts[0].id);
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.2"),
+                       parsed.routerContacts[0].host);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)8, parsed.routerContacts[0].version);
+  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55667788,
+                       parsed.routerContacts[0].udpKey);
   CPPUNIT_ASSERT_EQUAL((size_t)2, parsed.buckets.size());
   CPPUNIT_ASSERT_EQUAL((int64_t)400, parsed.buckets[1].lastActive);
   CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.buckets[1].live.size());
@@ -1628,6 +1764,21 @@ void Ed2kHelperTest::testNodesDatParser()
   CPPUNIT_ASSERT_EQUAL((uint16_t)4672, nodes.contacts[0].udpPort);
   CPPUNIT_ASSERT_EQUAL((size_t)1, nodes.verified.size());
   CPPUNIT_ASSERT(nodes.verified[0]);
+
+  std::string amuleV2;
+  amuleV2 += packUInt32(0);
+  amuleV2 += packUInt32(2);
+  amuleV2 += packUInt32(1);
+  amuleV2 += nodeId;
+  amuleV2 += std::string("\x05\x18\x9f\x01", 4);
+  amuleV2 += packUInt16(4672);
+  amuleV2 += packUInt16(4662);
+  amuleV2.push_back('\x08');
+  amuleV2 += packUInt64(0);
+  amuleV2.push_back('\0');
+  CPPUNIT_ASSERT(parseNodesDat(nodes, amuleV2));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, nodes.contacts.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("1.159.24.5"), nodes.contacts[0].host);
 
   std::string normal;
   normal += packUInt32(0);

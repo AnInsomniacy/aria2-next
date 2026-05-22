@@ -14,6 +14,8 @@ class Ed2kKadStateTest : public CppUnit::TestFixture {
   CPPUNIT_TEST_SUITE(Ed2kKadStateTest);
   CPPUNIT_TEST(testRoutingPromotesReplacementOnFailure);
   CPPUNIT_TEST(testRoutingFindClosestAndSnapshot);
+  CPPUNIT_TEST(testRoutingRouterContactKeepsKadMetadata);
+  CPPUNIT_TEST(testRoutingFindsKnownContactByEndpoint);
   CPPUNIT_TEST(testRoutingFindClosestExcludesRequester);
   CPPUNIT_TEST(testRoutingBootstrapAndRefresh);
   CPPUNIT_TEST(testKadSourceSearchCadence);
@@ -26,6 +28,8 @@ class Ed2kKadStateTest : public CppUnit::TestFixture {
 public:
   void testRoutingPromotesReplacementOnFailure();
   void testRoutingFindClosestAndSnapshot();
+  void testRoutingRouterContactKeepsKadMetadata();
+  void testRoutingFindsKnownContactByEndpoint();
   void testRoutingFindClosestExcludesRequester();
   void testRoutingBootstrapAndRefresh();
   void testKadSourceSearchCadence();
@@ -115,6 +119,59 @@ void Ed2kKadStateTest::testRoutingFindClosestAndSnapshot()
   restored.restore(table.snapshot());
   CPPUNIT_ASSERT_EQUAL((size_t)3, restored.liveSize());
   CPPUNIT_ASSERT_EQUAL((size_t)1, restored.getRouterNodes().size());
+}
+
+void Ed2kKadStateTest::testRoutingRouterContactKeepsKadMetadata()
+{
+  auto self = hashFromHex("00000000000000000000000000000000");
+  KadRoutingTable table(self, 10);
+  auto contact = contactFromHex("00000000000000000000000000000009",
+                                "203.0.113.9", 4672);
+  contact.udpKey = 0x55667788;
+
+  table.addRouterNode(contact);
+  table.addRouterNode(contact);
+
+  auto routers = table.getRouterContacts();
+  CPPUNIT_ASSERT_EQUAL((size_t)1, routers.size());
+  CPPUNIT_ASSERT_EQUAL(contact.id, routers[0].id);
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"), routers[0].host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, routers[0].udpPort);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, routers[0].tcpPort);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)8, routers[0].version);
+  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55667788, routers[0].udpKey);
+
+  KadRoutingTable restored(self, 10);
+  restored.restore(table.snapshot());
+  routers = restored.getRouterContacts();
+  CPPUNIT_ASSERT_EQUAL((size_t)1, routers.size());
+  CPPUNIT_ASSERT_EQUAL(contact.id, routers[0].id);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)8, routers[0].version);
+  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55667788, routers[0].udpKey);
+}
+
+void Ed2kKadStateTest::testRoutingFindsKnownContactByEndpoint()
+{
+  auto self = hashFromHex("00000000000000000000000000000000");
+  KadRoutingTable table(self, 10);
+  auto live = contactFromHex("00000000000000000000000000000009",
+                             "203.0.113.9", 4672);
+  auto replacement = contactFromHex("0000000000000000000000000000000a",
+                                    "203.0.113.10", 4673);
+  auto router = contactFromHex("0000000000000000000000000000000b",
+                               "203.0.113.11", 4674);
+  table.nodeSeen(live, 10);
+  table.heardAbout(replacement, 11);
+  table.addRouterNode(router);
+
+  KadContact found;
+  CPPUNIT_ASSERT(table.findByEndpoint(found, endpoint("203.0.113.9", 4672)));
+  CPPUNIT_ASSERT_EQUAL(live.id, found.id);
+  CPPUNIT_ASSERT(table.findByEndpoint(found, endpoint("203.0.113.10", 4673)));
+  CPPUNIT_ASSERT_EQUAL(replacement.id, found.id);
+  CPPUNIT_ASSERT(table.findByEndpoint(found, endpoint("203.0.113.11", 4674)));
+  CPPUNIT_ASSERT_EQUAL(router.id, found.id);
+  CPPUNIT_ASSERT(!table.findByEndpoint(found, endpoint("203.0.113.12", 4675)));
 }
 
 void Ed2kKadStateTest::testRoutingFindClosestExcludesRequester()

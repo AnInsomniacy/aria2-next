@@ -110,7 +110,11 @@ std::vector<KadRoutingNode>::const_iterator findNode(
 void updateNode(KadRoutingNode& node, const KadContact& contact, bool confirmed,
                 int64_t now)
 {
+  const auto oldUdpKey = node.contact.udpKey;
   node.contact = contact;
+  if (node.contact.udpKey == 0) {
+    node.contact.udpKey = oldUdpKey;
+  }
   node.lastSeen = now;
   if (node.firstSeen == 0) {
     node.firstSeen = now;
@@ -312,9 +316,68 @@ void KadRoutingTable::addRouterNode(const Endpoint& endpoint)
   }
 }
 
+void KadRoutingTable::addRouterNode(const KadContact& contact)
+{
+  if (!validRoutingContact(contact)) {
+    return;
+  }
+  Endpoint endpoint;
+  endpoint.host = contact.host;
+  endpoint.port = contact.udpPort;
+  addRouterNode(endpoint);
+  auto existing =
+      std::find_if(routerContacts_.begin(), routerContacts_.end(),
+                   [&](const KadContact& item) {
+                     return sameContact(item, contact) ||
+                            sameEndpoint(item, contact);
+                   });
+  if (existing == routerContacts_.end()) {
+    routerContacts_.push_back(contact);
+    return;
+  }
+  *existing = contact;
+}
+
 std::vector<Endpoint> KadRoutingTable::getRouterNodes() const
 {
   return routerNodes_;
+}
+
+std::vector<KadContact> KadRoutingTable::getRouterContacts() const
+{
+  return routerContacts_;
+}
+
+bool KadRoutingTable::findByEndpoint(KadContact& contact,
+                                     const Endpoint& endpoint) const
+{
+  for (const auto& bucket : buckets_) {
+    for (const auto& node : bucket.live) {
+      if (node.contact.host == endpoint.host &&
+          node.contact.udpPort == endpoint.port) {
+        contact = node.contact;
+        return true;
+      }
+    }
+    for (const auto& node : bucket.replacements) {
+      if (node.contact.host == endpoint.host &&
+          node.contact.udpPort == endpoint.port) {
+        contact = node.contact;
+        return true;
+      }
+    }
+  }
+  auto router =
+      std::find_if(routerContacts_.begin(), routerContacts_.end(),
+                   [&](const KadContact& item) {
+                     return item.host == endpoint.host &&
+                            item.udpPort == endpoint.port;
+                   });
+  if (router == routerContacts_.end()) {
+    return false;
+  }
+  contact = *router;
+  return true;
 }
 
 KadRoutingSnapshot KadRoutingTable::snapshot() const
@@ -325,6 +388,7 @@ KadRoutingSnapshot KadRoutingTable::snapshot() const
   snapshot.lastRefresh = lastRefresh_;
   snapshot.lastSelfRefresh = lastSelfRefresh_;
   snapshot.routerNodes = routerNodes_;
+  snapshot.routerContacts = routerContacts_;
   snapshot.buckets.reserve(buckets_.size());
   for (const auto& bucket : buckets_) {
     KadRoutingBucketSnapshot item;
@@ -340,6 +404,7 @@ void KadRoutingTable::restore(const KadRoutingSnapshot& snapshot)
 {
   validateId(snapshot.selfId);
   routerNodes_ = snapshot.routerNodes;
+  routerContacts_ = snapshot.routerContacts;
   lastBootstrap_ = snapshot.lastBootstrap;
   lastRefresh_ = snapshot.lastRefresh;
   lastSelfRefresh_ = snapshot.lastSelfRefresh;
@@ -475,6 +540,9 @@ void KadTraversal::addContact(const KadContact& contact)
     }
     if (i->contact.version == 0) {
       i->contact.version = contact.version;
+    }
+    if (i->contact.udpKey == 0) {
+      i->contact.udpKey = contact.udpKey;
     }
     return;
   }

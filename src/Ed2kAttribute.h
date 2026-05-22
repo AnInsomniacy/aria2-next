@@ -16,6 +16,7 @@
 #include "ContextAttribute.h"
 #include "Ed2kKadState.h"
 #include "ed2k_aich.h"
+#include "ed2k_kad_search.h"
 #include "ed2k_link.h"
 #include "ed2k_peer.h"
 #include "ed2k_search.h"
@@ -55,6 +56,7 @@ struct Ed2kAttribute : public ContextAttribute {
   int64_t lastKadSourcePublish = 0;
   int64_t lastKadSourceSearch = 0;
   uint32_t kadSourceSearchCount = 0;
+  uint32_t kadUdpVerifyKey = 0;
   std::vector<std::string> kadObservedAddresses;
   bool kadFirewalled = true;
   size_t nextServerIndex = 0;
@@ -67,6 +69,9 @@ Ed2kAttribute* getEd2kAttrs(const std::shared_ptr<DownloadContext>& dctx);
 bool addEd2kPeer(Ed2kAttribute* attrs, const ed2k::Endpoint& peer);
 bool addEd2kPeer(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
                  uint32_t sourceFlag);
+bool addEd2kKadSourcePeer(Ed2kAttribute* attrs,
+                          const ed2k::KadSourceEndpoint& source,
+                          uint32_t sourceFlag);
 bool addEd2kFoundSource(Ed2kAttribute* attrs, const ed2k::FoundSource& source,
                         uint32_t sourceFlag, bool callbackRequested);
 size_t mergeEd2kServerSources(Ed2kAttribute* attrs,
@@ -80,6 +85,7 @@ ed2k::PeerState* getEd2kPeerState(Ed2kAttribute* attrs,
 std::string normalizeEd2kClientHash(std::string clientHash);
 std::string createEd2kClientHash();
 std::string getOrCreateEd2kClientHash(Option* option);
+uint32_t createEd2kKadUdpVerifyKey();
 bool markEd2kPeerQueued(Ed2kAttribute* attrs, const ed2k::Endpoint& peer,
                         uint16_t rank,
                         const std::vector<bool>& partStatus);

@@ -199,11 +199,47 @@ std::string datagramBodyOf(const std::string& datagram)
   return datagram.substr(2);
 }
 
+std::string decodeKadDatagram(const std::string& datagram,
+                              const std::string& contactId)
+{
+  ed2k::KadObfuscatedDatagram parsed;
+  if (ed2k::parseKadObfuscatedDatagram(parsed, datagram, contactId)) {
+    return parsed.datagram;
+  }
+  return datagram;
+}
+
+std::string decodeKadDatagramWithKey(const std::string& datagram,
+                                     uint32_t udpKey)
+{
+  ed2k::KadObfuscatedDatagram parsed;
+  if (ed2k::parseKadObfuscatedDatagram(parsed, datagram, udpKey)) {
+    return parsed.datagram;
+  }
+  return datagram;
+}
+
 ReceivedDatagram readDatagramWithOpcode(SocketCore& socket,
                                         DownloadEngine& engine, uint8_t opcode)
 {
   for (int i = 0; i < MAX_ENGINE_TICKS; ++i) {
     auto datagram = readDatagramFrom(socket, engine);
+    if (datagramHeaderOf(datagram.data).opcode == opcode) {
+      return datagram;
+    }
+  }
+  CPPUNIT_FAIL("Expected ED2K Kad datagram opcode was not received.");
+  return ReceivedDatagram();
+}
+
+ReceivedDatagram readKadDatagramWithOpcode(SocketCore& socket,
+                                           DownloadEngine& engine,
+                                           uint8_t opcode,
+                                           const std::string& contactId)
+{
+  for (int i = 0; i < MAX_ENGINE_TICKS; ++i) {
+    auto datagram = readDatagramFrom(socket, engine);
+    datagram.data = decodeKadDatagram(datagram.data, contactId);
     if (datagramHeaderOf(datagram.data).opcode == opcode) {
       return datagram;
     }
@@ -232,6 +268,8 @@ class Ed2kCommandTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testPendingConnectDrainsAfterHalt);
   CPPUNIT_TEST(testForceHaltDrainsIdleKadGroup);
   CPPUNIT_TEST(testKadBootstrapSourceSearchAddsPeer);
+  CPPUNIT_TEST(testKadDecodesReceiverKeyObfuscatedResponse);
+  CPPUNIT_TEST(testKadDecodesSelfIdObfuscatedResponse);
   CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -241,6 +279,8 @@ public:
   void testPendingConnectDrainsAfterHalt();
   void testForceHaltDrainsIdleKadGroup();
   void testKadBootstrapSourceSearchAddsPeer();
+  void testKadDecodesReceiverKeyObfuscatedResponse();
+  void testKadDecodesSelfIdObfuscatedResponse();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(Ed2kCommandTest);
@@ -641,6 +681,7 @@ void Ed2kCommandTest::testKadBootstrapSourceSearchAddsPeer()
   auto routerAddr = routerSocket.getAddrInfo();
 
   auto attrs = getEd2kAttrs(dctx);
+  const auto kadFileId = ed2k::ed2kHashToKadId(attrs->link.hash);
   attrs->kadRoutingTable =
       std::make_shared<ed2k::KadRoutingTable>(std::string(16, '\x55'));
   ed2k::Endpoint routerEndpoint;
@@ -671,29 +712,29 @@ void Ed2kCommandTest::testKadBootstrapSourceSearchAddsPeer()
       kadUdpPort);
   runEngineTicks(engine, 1);
 
-  auto kadReq = readDatagram(routerSocket, engine);
+  auto kadReq = decodeKadDatagram(readDatagram(routerSocket, engine), remoteId);
   auto kadReqHeader = datagramHeaderOf(kadReq);
   CPPUNIT_ASSERT_EQUAL(ed2k::KAD_PROTOCOL, kadReqHeader.protocol);
   CPPUNIT_ASSERT_EQUAL(ed2k::KAD_REQ, kadReqHeader.opcode);
   ed2k::KadRequest parsedKadReq;
   CPPUNIT_ASSERT(ed2k::parseKadRequestPayload(parsedKadReq,
                                               datagramBodyOf(kadReq)));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)ed2k::KAD_FIND_NODE,
+  CPPUNIT_ASSERT_EQUAL((uint8_t)ed2k::KAD_FIND_VALUE,
                        parsedKadReq.searchType);
-  CPPUNIT_ASSERT_EQUAL(attrs->link.hash, parsedKadReq.targetId);
+  CPPUNIT_ASSERT_EQUAL(kadFileId, parsedKadReq.targetId);
 
   writeDatagram(
       routerSocket,
       ed2k::createDatagram(ed2k::KAD_PROTOCOL, ed2k::KAD_RES,
                            ed2k::createKadResponsePayload(
-                               attrs->link.hash,
+                               kadFileId,
                                std::vector<ed2k::KadContact>())),
       kadUdpPort);
   runEngineTicks(engine, 1);
 
   auto sourceSearchDatagram =
-      readDatagramWithOpcode(routerSocket, engine,
-                             ed2k::KAD_SEARCH_SOURCES_REQ);
+      readKadDatagramWithOpcode(routerSocket, engine,
+                                ed2k::KAD_SEARCH_SOURCES_REQ, remoteId);
   CPPUNIT_ASSERT_EQUAL(kadUdpPort, sourceSearchDatagram.sender.port);
   auto sourceSearchHeader = datagramHeaderOf(sourceSearchDatagram.data);
   CPPUNIT_ASSERT_EQUAL(ed2k::KAD_PROTOCOL, sourceSearchHeader.protocol);
@@ -702,7 +743,7 @@ void Ed2kCommandTest::testKadBootstrapSourceSearchAddsPeer()
   ed2k::KadSearchSourcesRequest searchRequest;
   CPPUNIT_ASSERT(ed2k::parseKadSearchSourcesRequestPayload(
       searchRequest, datagramBodyOf(sourceSearchDatagram.data)));
-  CPPUNIT_ASSERT_EQUAL(attrs->link.hash, searchRequest.targetId);
+  CPPUNIT_ASSERT_EQUAL(kadFileId, searchRequest.targetId);
 
   ed2k::Endpoint source;
   source.host = "203.0.113.44";
@@ -718,7 +759,7 @@ void Ed2kCommandTest::testKadBootstrapSourceSearchAddsPeer()
   CPPUNIT_ASSERT(ed2k::parseKadSearchResultPayload(
       localResult,
       ed2k::createKadSearchResultPayload(
-          remoteId, attrs->link.hash,
+          remoteId, kadFileId,
           std::vector<ed2k::KadSearchEntry>{publishRequest.source})));
   auto localPeers = ed2k::extractKadSourceEndpoints(localResult);
   CPPUNIT_ASSERT_EQUAL((size_t)1, localPeers.size());
@@ -727,7 +768,7 @@ void Ed2kCommandTest::testKadBootstrapSourceSearchAddsPeer()
       ed2k::createDatagram(
           ed2k::KAD_PROTOCOL, ed2k::KAD_SEARCH_RES,
           ed2k::createKadSearchResultPayload(
-              remoteId, attrs->link.hash,
+              remoteId, kadFileId,
               std::vector<ed2k::KadSearchEntry>{publishRequest.source})),
       sourceSearchDatagram.sender.port);
   for (int i = 0; i < MAX_ENGINE_TICKS && attrs->peers.empty(); ++i) {
@@ -737,6 +778,118 @@ void Ed2kCommandTest::testKadBootstrapSourceSearchAddsPeer()
   CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->peers.size());
   CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.44"), attrs->peers[0].host);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4662, attrs->peers[0].port);
+  engine.requestHalt();
+}
+
+void Ed2kCommandTest::testKadDecodesReceiverKeyObfuscatedResponse()
+{
+  auto option = createOption();
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option.get());
+  auto dctx = createEd2kContext();
+  auto group = createRequestGroup(option, dctx);
+  engine.setRequestGroupMan(
+      make_unique<RequestGroupMan>(
+          std::vector<std::shared_ptr<RequestGroup>>{group}, 5,
+          option.get()));
+  engine.getRequestGroupMan()->setKeepRunning(true);
+  engine.getRequestGroupMan()->addRequestGroup(group);
+  group->setRequestGroupMan(engine.getRequestGroupMan().get());
+
+  SocketCore routerSocket(SOCK_DGRAM);
+  routerSocket.bind("127.0.0.1", 0, AF_INET);
+  routerSocket.setBlockingMode();
+  auto routerAddr = routerSocket.getAddrInfo();
+
+  const auto remoteId = std::string(16, '\x33');
+  auto attrs = getEd2kAttrs(dctx);
+  attrs->kadRoutingTable =
+      std::make_shared<ed2k::KadRoutingTable>(std::string(16, '\x55'));
+  attrs->kadRoutingTable->addRouterNode(
+      createKadContact(remoteId, routerAddr.port));
+
+  auto command = make_unique<Ed2kKadCommand>(engine.newCUID(), group.get(),
+                                             &engine);
+  auto commandPtr = command.get();
+  engine.addCommand(std::move(command));
+
+  auto bootstrapReq = readDatagramFrom(routerSocket, engine);
+  ed2k::KadObfuscatedDatagram parsedReq;
+  CPPUNIT_ASSERT(ed2k::parseKadObfuscatedDatagram(parsedReq, bootstrapReq.data,
+                                                  remoteId));
+  CPPUNIT_ASSERT(parsedReq.senderVerifyKey != 0);
+
+  writeDatagram(
+      routerSocket,
+      ed2k::createKadObfuscatedDatagram(
+          ed2k::createDatagram(
+              ed2k::KAD_PROTOCOL, ed2k::KAD_BOOTSTRAP_RES,
+              ed2k::createKadBootstrapResponsePayload(
+                  remoteId, 4662, 8,
+                  std::vector<ed2k::KadContact>{
+                      createKadContact(remoteId, routerAddr.port)})),
+          parsedReq.senderVerifyKey, 0x55667788, 0x1234),
+      commandPtr->getLocalUdpPort());
+  runEngineTicks(engine, 1);
+
+  auto kadReq = decodeKadDatagram(readDatagram(routerSocket, engine), remoteId);
+  auto kadReqHeader = datagramHeaderOf(kadReq);
+  CPPUNIT_ASSERT_EQUAL(ed2k::KAD_PROTOCOL, kadReqHeader.protocol);
+  CPPUNIT_ASSERT_EQUAL(ed2k::KAD_REQ, kadReqHeader.opcode);
+  engine.requestHalt();
+}
+
+void Ed2kCommandTest::testKadDecodesSelfIdObfuscatedResponse()
+{
+  auto option = createOption();
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option.get());
+  auto dctx = createEd2kContext();
+  auto group = createRequestGroup(option, dctx);
+  engine.setRequestGroupMan(
+      make_unique<RequestGroupMan>(
+          std::vector<std::shared_ptr<RequestGroup>>{group}, 5,
+          option.get()));
+  engine.getRequestGroupMan()->setKeepRunning(true);
+  engine.getRequestGroupMan()->addRequestGroup(group);
+  group->setRequestGroupMan(engine.getRequestGroupMan().get());
+
+  SocketCore routerSocket(SOCK_DGRAM);
+  routerSocket.bind("127.0.0.1", 0, AF_INET);
+  routerSocket.setBlockingMode();
+  auto routerAddr = routerSocket.getAddrInfo();
+
+  const auto remoteId = std::string(16, '\x33');
+  auto attrs = getEd2kAttrs(dctx);
+  const auto localKadId = ed2k::ed2kHashToKadId(attrs->clientHash);
+  attrs->kadRoutingTable =
+      std::make_shared<ed2k::KadRoutingTable>(std::string(16, '\x55'));
+  attrs->kadRoutingTable->addRouterNode(
+      createKadContact(remoteId, routerAddr.port));
+
+  auto command = make_unique<Ed2kKadCommand>(engine.newCUID(), group.get(),
+                                             &engine);
+  auto commandPtr = command.get();
+  engine.addCommand(std::move(command));
+
+  readDatagramFrom(routerSocket, engine);
+  writeDatagram(
+      routerSocket,
+      ed2k::createKadObfuscatedDatagram(
+          ed2k::createDatagram(
+              ed2k::KAD_PROTOCOL, ed2k::KAD_BOOTSTRAP_RES,
+              ed2k::createKadBootstrapResponsePayload(
+                  remoteId, 4662, 8,
+                  std::vector<ed2k::KadContact>{
+                      createKadContact(remoteId, routerAddr.port)})),
+          localKadId, 0x1234),
+      commandPtr->getLocalUdpPort());
+  runEngineTicks(engine, 1);
+
+  auto kadReq = decodeKadDatagram(readDatagram(routerSocket, engine), remoteId);
+  auto kadReqHeader = datagramHeaderOf(kadReq);
+  CPPUNIT_ASSERT_EQUAL(ed2k::KAD_PROTOCOL, kadReqHeader.protocol);
+  CPPUNIT_ASSERT_EQUAL(ed2k::KAD_REQ, kadReqHeader.opcode);
   engine.requestHalt();
 }
 
