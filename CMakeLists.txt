@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(
   aria2
-  VERSION 2.1.3
+  VERSION 2.1.4
   DESCRIPTION "High speed download utility"
   HOMEPAGE_URL "https://github.com/AnInsomniacy/aria2-next"
   LANGUAGES C CXX)
