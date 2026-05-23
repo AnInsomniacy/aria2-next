@@ -1,0 +1,4 @@
+id,status,checkpoint,scope,target_files,acceptance,verification,notes
+CM-016.1,pending,Audit torrent ingress residue,"Torrent magnet bencode helper inventory","src/*torrent*; src/*bencode*; src/*magnet*; cmake/Sources.cmake","Remaining torrent, magnet, and bencode helpers are mapped as retained ingress, moved to libtorrent, or deleted.","Pending.","Do not reintroduce native BT runtime."
+CM-016.2,pending,Remove obsolete helpers,"Native torrent helper cleanup","source and test files identified by audit","Helpers that libtorrent can own directly are deleted with stale tests removed.","Pending.","Keep only public ingress parsing if still needed before libtorrent add_torrent."
+CM-016.3,pending,Verify BT boundary,"BT tests and smoke","tests; /Users/sekiro/Desktop/aria2-next-current artifacts","BitTorrent still downloads through libtorrent and stale native residue scans pass.","Pending.","Use the existing libtorrent tracker as baseline."
