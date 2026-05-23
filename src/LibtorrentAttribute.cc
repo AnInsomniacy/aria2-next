@@ -31,6 +31,25 @@ LibtorrentAttribute::LibtorrentAttribute(SourceType sourceType,
 
 LibtorrentAttribute::~LibtorrentAttribute() = default;
 
+bool LibtorrentAttribute::hasResumeData() const { return !resumeData.empty(); }
+
+const std::string& LibtorrentAttribute::getResumeData() const
+{
+  return resumeData;
+}
+
+void LibtorrentAttribute::setResumeData(std::string data)
+{
+  resumeData = std::move(data);
+}
+
+std::string LibtorrentAttribute::takeResumeData()
+{
+  auto data = std::move(resumeData);
+  resumeData.clear();
+  return data;
+}
+
 LibtorrentAttribute* getLibtorrentAttrs(DownloadContext* dctx)
 {
   return static_cast<LibtorrentAttribute*>(

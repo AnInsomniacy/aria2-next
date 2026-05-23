@@ -48,6 +48,7 @@ struct LibtorrentAttribute : public ContextAttribute {
   std::string torrentData;
   std::vector<std::string> webSeedUris;
   Status status;
+  std::string resumeData;
 
   LibtorrentAttribute(SourceType sourceType, std::string sourceUri,
                       std::string torrentData,
@@ -56,6 +57,11 @@ struct LibtorrentAttribute : public ContextAttribute {
 
   LibtorrentAttribute(const LibtorrentAttribute&) = delete;
   LibtorrentAttribute& operator=(const LibtorrentAttribute&) = delete;
+
+  bool hasResumeData() const;
+  const std::string& getResumeData() const;
+  void setResumeData(std::string data);
+  std::string takeResumeData();
 };
 
 LibtorrentAttribute* getLibtorrentAttrs(DownloadContext* dctx);

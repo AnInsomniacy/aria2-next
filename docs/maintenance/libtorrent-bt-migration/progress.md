@@ -75,7 +75,7 @@ Remaining: Start BTM-005 status, RPC, console, verified progress, and
 false-completion cleanup.
 Blocked: none.
 
-2026-05-23 BTM-005 active
+2026-05-23 BTM-005 verified
 Changed: Added libtorrent status storage to `LibtorrentAttribute`, updated
 `LibtorrentCommand` to refresh verified libtorrent total, completed, upload,
 speed, connection, info-hash, bitfield, seeding, and metadata state, and made
@@ -88,6 +88,25 @@ fields sourced from libtorrent. `build/libtorrent-positive/aria2_tests` passed
 with `OK (1140)`. `git diff --check CMakeLists.txt cmake src tests
 docs/maintenance/libtorrent-bt-migration` passed. CSV parser check passed with
 `CSV OK 13`.
-Remaining: Run BTM-005.3 public tail-completion smoke under
-`/Users/sekiro/Desktop/aria2-next-current`, then continue BTM-006 resume data.
+Public smoke under `/Users/sekiro/Desktop/aria2-next-current` completed the
+Debian netinst torrent, returned an empty active RPC result after completion,
+and removed the `.aria2` control file.
+Remaining: Continue BTM-006 resume data and native BT persistence cleanup.
+Blocked: none.
+
+2026-05-23 BTM-006 active
+Changed: Added libtorrent resume data storage to `LibtorrentAttribute`, added a
+libtorrent-specific `.aria2` control file that stores libtorrent fast-resume
+data instead of native BT in-flight pieces, loads that data before adding the
+torrent, and requests resume data on pause, shutdown, and completion while
+waiting briefly for the async alert before removing the torrent.
+Verified: `testLibtorrentResumeDataRoundTrip` covers the local resume data
+round trip. Public Debian netinst smoke saved
+`downloads/debian-netinst.torrent.aria2` after interrupt, loaded it on restart,
+advanced from 304611328 bytes to 562036736 bytes, then completed 791674880
+bytes and removed the control file. `cmake --build build/libtorrent-positive
+--target aria2_tests -- -j2 && build/libtorrent-positive/aria2_tests` passed
+with `OK (1141)`.
+Remaining: Run magnet-metadata smoke when practical, then remove obsolete
+native BT progress persistence in BTM-006.3 or BTM-008.
 Blocked: none.

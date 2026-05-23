@@ -32,6 +32,7 @@ class RequestGroupTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCreateInitialCommandUsesLibtorrentRuntime);
   CPPUNIT_TEST(testLibtorrentCommandLoadsTorrentMetadata);
   CPPUNIT_TEST(testLibtorrentVerifiedProgressOverridesPieceStorage);
+  CPPUNIT_TEST(testLibtorrentResumeDataRoundTrip);
 #endif // ENABLE_BITTORRENT
   CPPUNIT_TEST_SUITE_END();
 
@@ -49,6 +50,7 @@ public:
   void testCreateInitialCommandUsesLibtorrentRuntime();
   void testLibtorrentCommandLoadsTorrentMetadata();
   void testLibtorrentVerifiedProgressOverridesPieceStorage();
+  void testLibtorrentResumeDataRoundTrip();
 #endif // ENABLE_BITTORRENT
 };
 
@@ -279,6 +281,30 @@ void RequestGroupTest::testLibtorrentVerifiedProgressOverridesPieceStorage()
   CPPUNIT_ASSERT(!group.downloadFinished());
   CPPUNIT_ASSERT_EQUAL((int64_t)100_k, group.getTotalLength());
   CPPUNIT_ASSERT_EQUAL((int64_t)99_k, group.getCompletedLength());
+}
+
+void RequestGroupTest::testLibtorrentResumeDataRoundTrip()
+{
+  auto ctx = std::make_shared<DownloadContext>(1_k, 100_k, "torrent.bin");
+  auto attrs = make_unique<LibtorrentAttribute>(
+      LibtorrentAttribute::SourceType::MAGNET,
+      "magnet:?xt=urn:btih:0101010101010101010101010101010101010101", "",
+      std::vector<std::string>{});
+  auto attrsPtr = attrs.get();
+  ctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
+
+  const std::string resumeData("libtorrent fast resume");
+  attrsPtr->setResumeData(resumeData);
+  CPPUNIT_ASSERT(attrsPtr->hasResumeData());
+  CPPUNIT_ASSERT_EQUAL(resumeData, attrsPtr->getResumeData());
+
+  auto saved = attrsPtr->takeResumeData();
+  CPPUNIT_ASSERT_EQUAL(resumeData, saved);
+  CPPUNIT_ASSERT(!attrsPtr->hasResumeData());
+
+  attrsPtr->setResumeData(saved);
+  CPPUNIT_ASSERT(attrsPtr->hasResumeData());
+  CPPUNIT_ASSERT_EQUAL(resumeData, attrsPtr->getResumeData());
 }
 #endif // ENABLE_BITTORRENT
 

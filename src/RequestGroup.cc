@@ -71,6 +71,7 @@
 #include "Option.h"
 #include "FileEntry.h"
 #include "LibtorrentAttribute.h"
+#include "LibtorrentProgressInfoFile.h"
 #include "Request.h"
 #include "FileAllocationIterator.h"
 #include "fmt.h"
@@ -365,6 +366,12 @@ void RequestGroup::createInitialCommand(
       throw DOWNLOAD_FAILURE_EXCEPTION(
           "Cancel BitTorrent download in dry-run context.");
     }
+    auto progressInfoFile =
+        std::make_shared<LibtorrentProgressInfoFile>(downloadContext_);
+    if (progressInfoFile->exists()) {
+      progressInfoFile->load();
+    }
+    progressInfoFile_ = progressInfoFile;
     commands.push_back(make_unique<LibtorrentCommand>(e->newCUID(), this, e));
     e->setNoWait(true);
     return;

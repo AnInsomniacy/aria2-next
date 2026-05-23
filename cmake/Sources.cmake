@@ -436,6 +436,8 @@ set(ARIA2_SOURCES_BASE
   src/LibtorrentAttribute.h
   src/LibtorrentCommand.cc
   src/LibtorrentCommand.h
+  src/LibtorrentProgressInfoFile.cc
+  src/LibtorrentProgressInfoFile.h
   src/LibtorrentSession.cc
   src/LibtorrentSession.h
   src/Signature.cc

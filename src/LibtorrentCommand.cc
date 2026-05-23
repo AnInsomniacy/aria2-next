@@ -32,9 +32,11 @@
 #include <libtorrent/alert_types.hpp>
 #include <libtorrent/load_torrent.hpp>
 #include <libtorrent/magnet_uri.hpp>
+#include <libtorrent/read_resume_data.hpp>
 #include <libtorrent/sha1_hash.hpp>
 #include <libtorrent/torrent_flags.hpp>
 #include <libtorrent/torrent_status.hpp>
+#include <libtorrent/write_resume_data.hpp>
 
 namespace aria2 {
 
@@ -63,6 +65,24 @@ createAddTorrentParams(const LibtorrentAttribute* attrs, const Option* option)
                                         error_code::MAGNET_PARSE_ERROR);
     }
     break;
+  }
+
+  if (attrs->hasResumeData()) {
+    lt::error_code ec;
+    auto resumeParams = lt::read_resume_data(
+        lt::span<char const>(attrs->getResumeData().data(),
+                             static_cast<int>(attrs->getResumeData().size())),
+        ec);
+    if (!ec) {
+      resumeParams.save_path = option->get(PREF_DIR);
+      resumeParams.url_seeds.assign(attrs->webSeedUris.begin(),
+                                    attrs->webSeedUris.end());
+      params = std::move(resumeParams);
+    }
+    else {
+      A2_LOG_WARN(fmt("Ignoring invalid libtorrent resume data: %s",
+                      ec.message().c_str()));
+    }
   }
 
   params.save_path = option->get(PREF_DIR);
@@ -119,6 +139,8 @@ LibtorrentCommand::LibtorrentCommand(cuid_t cuid, RequestGroup* requestGroup,
       session_(&engine->getLibtorrentSession()),
       completedLength_(0),
       uploadedLength_(0),
+      resumeDataRequestTimer_(Timer::zero()),
+      resumeDataRequested_(false),
       torrentAdded_(false)
 {
   setStatusActive();
@@ -138,6 +160,12 @@ void LibtorrentCommand::preProcess()
   if (requestGroup_->isHaltRequested() || getDownloadEngine()->isHaltRequested()) {
     if (handle_.is_valid()) {
       handle_.pause(lt::torrent_handle::graceful_pause);
+      requestResumeData();
+    }
+    pollAlerts();
+    if (resumeDataRequested_ &&
+        resumeDataRequestTimer_.difference() < std::chrono::seconds(3)) {
+      return;
     }
     enableExit();
     return;
@@ -183,6 +211,16 @@ void LibtorrentCommand::pollAlerts()
     }
     else if (auto fileAlert = lt::alert_cast<lt::file_error_alert>(alert)) {
       failDownload(fileAlert->error.message());
+    }
+    else if (auto resumeAlert =
+                 lt::alert_cast<lt::save_resume_data_alert>(alert)) {
+      storeResumeData(resumeAlert->params);
+    }
+    else if (auto resumeError =
+                 lt::alert_cast<lt::save_resume_data_failed_alert>(alert)) {
+      resumeDataRequested_ = false;
+      A2_LOG_WARN(fmt("Failed to save libtorrent resume data: %s",
+                      resumeError->error.message().c_str()));
     }
     else if (lt::alert_cast<lt::metadata_received_alert>(alert)) {
       A2_LOG_INFO(fmt("GID#%s - BitTorrent metadata received by libtorrent.",
@@ -241,8 +279,32 @@ void LibtorrentCommand::updateStatus()
   }
 
   if (status.is_seeding || status.is_finished) {
+    requestResumeData();
     finishDownload();
   }
+}
+
+void LibtorrentCommand::requestResumeData()
+{
+  if (!handle_.is_valid() || resumeDataRequested_) {
+    return;
+  }
+  try {
+    handle_.save_resume_data();
+    resumeDataRequested_ = true;
+    resumeDataRequestTimer_.reset();
+  }
+  catch (const std::exception& ex) {
+    A2_LOG_WARN(fmt("Failed to request libtorrent resume data: %s", ex.what()));
+  }
+}
+
+void LibtorrentCommand::storeResumeData(const lt::add_torrent_params& params)
+{
+  auto attrs = getLibtorrentAttrs(requestGroup_->getDownloadContext());
+  auto data = lt::write_resume_data_buf(params);
+  attrs->setResumeData(std::string(data.begin(), data.end()));
+  resumeDataRequested_ = false;
 }
 
 void LibtorrentCommand::finishDownload()

@@ -14,6 +14,7 @@
 #define D_LIBTORRENT_COMMAND_H
 
 #include "TimeBasedCommand.h"
+#include "TimerA2.h"
 
 #include <libtorrent/torrent_handle.hpp>
 
@@ -30,11 +31,15 @@ private:
   libtorrent::torrent_handle handle_;
   int64_t completedLength_;
   int64_t uploadedLength_;
+  Timer resumeDataRequestTimer_;
+  bool resumeDataRequested_;
   bool torrentAdded_;
 
   void addTorrent();
   void pollAlerts();
   void updateStatus();
+  void requestResumeData();
+  void storeResumeData(const libtorrent::add_torrent_params& params);
   void finishDownload();
   void failDownload(const std::string& message);
 
