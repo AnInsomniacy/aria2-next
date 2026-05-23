@@ -300,7 +300,36 @@ set(HAVE_LIBCURL 1)
 
 aria2_pkg_check(OPENSSL "openssl>=${ARIA2_MIN_OPENSSL_VERSION}")
 aria2_pkg_check(LIBTORRENT_RASTERBAR "libtorrent-rasterbar")
-find_package(Boost ${ARIA2_MIN_BOOST_VERSION} REQUIRED COMPONENTS json)
+find_package(Boost ${ARIA2_MIN_BOOST_VERSION} CONFIG QUIET COMPONENTS json)
+if(NOT Boost_FOUND)
+  find_path(Boost_INCLUDE_DIR
+    NAMES boost/version.hpp boost/json.hpp boost/json/src.hpp)
+  if(Boost_INCLUDE_DIR)
+    file(READ "${Boost_INCLUDE_DIR}/boost/version.hpp" _boost_version_h)
+    string(REGEX MATCH
+      "#define BOOST_VERSION[ \t]+([0-9]+)"
+      _boost_version_match "${_boost_version_h}")
+    if(_boost_version_match)
+      set(_boost_version_number "${CMAKE_MATCH_1}")
+      math(EXPR _boost_major "${_boost_version_number} / 100000")
+      math(EXPR _boost_minor "(${_boost_version_number} / 100) % 1000")
+      math(EXPR _boost_patch "${_boost_version_number} % 100")
+      set(Boost_VERSION
+        "${_boost_major}.${_boost_minor}.${_boost_patch}")
+      if(Boost_VERSION VERSION_GREATER_EQUAL ARIA2_MIN_BOOST_VERSION)
+        set(Boost_FOUND TRUE)
+        set(ARIA2_BOOST_HEADER_ONLY TRUE)
+        add_library(Boost::headers INTERFACE IMPORTED)
+        target_include_directories(Boost::headers INTERFACE
+          "${Boost_INCLUDE_DIR}")
+        add_library(Boost::json INTERFACE IMPORTED)
+        target_link_libraries(Boost::json INTERFACE Boost::headers)
+        target_compile_definitions(Boost::json INTERFACE
+          ARIA2_BOOST_JSON_HEADER_ONLY=1)
+      endif()
+    endif()
+  endif()
+endif()
 
 if(OPENSSL_FOUND)
   set(HAVE_OPENSSL 1)

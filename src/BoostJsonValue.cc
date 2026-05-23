@@ -12,6 +12,9 @@
 /* copyright --> */
 #include "BoostJsonValue.h"
 
+#ifdef ARIA2_BOOST_JSON_HEADER_ONLY
+#include <boost/json/src.hpp>
+#endif // ARIA2_BOOST_JSON_HEADER_ONLY
 #include <boost/json.hpp>
 
 #include "ValueBase.h"
