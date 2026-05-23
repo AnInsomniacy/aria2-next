@@ -2349,7 +2349,12 @@ For information on the *secret* parameter, see :ref:`rpc_auth`.
     Total length of the download in bytes.
 
   ``completedLength``
-    Completed length of the download in bytes.
+    Verified completed length of the download in bytes. In-flight piece bytes
+    are not included until the piece is accepted by storage.
+
+  ``inFlightCompletedLength``
+    Completed in-flight piece bytes that are downloaded but not yet verified as
+    completed storage progress.
 
   ``uploadLength``
     Uploaded length of the download in bytes.
@@ -2659,13 +2664,8 @@ REMOVEME    >>> from pprint import pprint
     File size in bytes.
 
   ``completedLength``
-    Completed length of this file in bytes.  Please note that it is
-    possible that sum of ``completedLength`` is less than the
-    ``completedLength`` returned by the :func:`aria2.tellStatus` method.
-    This is because ``completedLength`` in
-    :func:`aria2.getFiles`
-    only includes completed pieces. On the other hand, ``completedLength``
-    in :func:`aria2.tellStatus` also includes partially completed pieces.
+    Verified completed length of this file in bytes. In-flight piece bytes are
+    excluded until the piece is accepted by storage.
 
   ``selected``
     ``true`` if this file is selected by :option:`--select-file` option. If

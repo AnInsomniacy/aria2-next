@@ -330,19 +330,22 @@ int64_t DefaultPieceStorage::getFilteredTotalLength()
 
 int64_t DefaultPieceStorage::getCompletedLength()
 {
-  int64_t completedLength =
-      bitfieldMan_->getCompletedLength() + getInFlightPieceCompletedLength();
-  int64_t totalLength = getTotalLength();
-  if (completedLength > totalLength) {
-    completedLength = totalLength;
-  }
-  return completedLength;
+  return bitfieldMan_->getCompletedLength();
+}
+
+int64_t DefaultPieceStorage::getInFlightCompletedLength()
+{
+  return getInFlightPieceCompletedLength();
 }
 
 int64_t DefaultPieceStorage::getFilteredCompletedLength()
 {
-  return bitfieldMan_->getFilteredCompletedLength() +
-         getInFlightPieceFilteredCompletedLength();
+  return bitfieldMan_->getFilteredCompletedLength();
+}
+
+int64_t DefaultPieceStorage::getFilteredInFlightCompletedLength()
+{
+  return getInFlightPieceFilteredCompletedLength();
 }
 
 int64_t DefaultPieceStorage::getInFlightPieceCompletedLength() const

@@ -101,6 +101,7 @@ const char KEY_ERROR_MESSAGE[] = "errorMessage";
 const char KEY_STATUS[] = "status";
 const char KEY_TOTAL_LENGTH[] = "totalLength";
 const char KEY_COMPLETED_LENGTH[] = "completedLength";
+const char KEY_IN_FLIGHT_COMPLETED_LENGTH[] = "inFlightCompletedLength";
 const char KEY_DOWNLOAD_SPEED[] = "downloadSpeed";
 const char KEY_UPLOAD_SPEED[] = "uploadSpeed";
 const char KEY_UPLOAD_LENGTH[] = "uploadLength";
@@ -816,9 +817,13 @@ void gatherProgressCommon(Dict* entryDict,
     entryDict->put(KEY_TOTAL_LENGTH, util::itos(group->getTotalLength()));
   }
   if (requested_key(keys, KEY_COMPLETED_LENGTH)) {
-    // This is "filtered" total length if --select-file is used.
+    // This is verified completed length and filtered if --select-file is used.
     entryDict->put(KEY_COMPLETED_LENGTH,
                    util::itos(group->getCompletedLength()));
+  }
+  if (requested_key(keys, KEY_IN_FLIGHT_COMPLETED_LENGTH)) {
+    entryDict->put(KEY_IN_FLIGHT_COMPLETED_LENGTH,
+                   util::itos(group->getInFlightCompletedLength()));
   }
   TransferStat stat = group->calculateStat();
   if (requested_key(keys, KEY_DOWNLOAD_SPEED)) {
@@ -1009,6 +1014,10 @@ void gatherStoppedDownload(Dict* entryDict,
   }
   if (requested_key(keys, KEY_COMPLETED_LENGTH)) {
     entryDict->put(KEY_COMPLETED_LENGTH, util::itos(ds->completedLength));
+  }
+  if (requested_key(keys, KEY_IN_FLIGHT_COMPLETED_LENGTH)) {
+    entryDict->put(KEY_IN_FLIGHT_COMPLETED_LENGTH,
+                   util::itos(ds->inFlightCompletedLength));
   }
   if (requested_key(keys, KEY_UPLOAD_LENGTH)) {
     entryDict->put(KEY_UPLOAD_LENGTH, util::itos(ds->uploadLength));

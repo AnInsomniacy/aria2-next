@@ -20,6 +20,7 @@
 #include "array_fun.h"
 #include "download_helper.h"
 #include "FileEntry.h"
+#include "Piece.h"
 #include "PieceStorage.h"
 #include "RpcMethodFactory.h"
 #include "Ed2kAttribute.h"
@@ -74,6 +75,7 @@ class RpcMethodTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testChangeOptionLibtorrentSelectFile);
 #endif // ENABLE_BITTORRENT
   CPPUNIT_TEST(testGatherProgressCommon);
+  CPPUNIT_TEST(testGatherProgressCommonSeparatesInFlightProgress);
   CPPUNIT_TEST(testChangePosition);
   CPPUNIT_TEST(testChangePosition_fail);
   CPPUNIT_TEST(testGetSessionInfo);
@@ -140,6 +142,7 @@ public:
   void testChangeOptionLibtorrentSelectFile();
 #endif // ENABLE_BITTORRENT
   void testGatherProgressCommon();
+  void testGatherProgressCommonSeparatesInFlightProgress();
   void testChangePosition();
   void testChangePosition_fail();
   void testGetSessionInfo();
@@ -1158,6 +1161,35 @@ void RpcMethodTest::testGatherProgressCommon()
 
   CPPUNIT_ASSERT_EQUAL((size_t)1, entry->size());
   CPPUNIT_ASSERT(entry->containsKey("gid"));
+}
+
+void RpcMethodTest::testGatherProgressCommonSeparatesInFlightProgress()
+{
+  auto dctx = std::make_shared<DownloadContext>(1_m, 256_m, "file.bin");
+  auto group =
+      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
+  group->setDownloadContext(dctx);
+  group->initPieceStorage();
+  group->getPieceStorage()->markPiecesDone(250_m);
+
+  std::vector<std::shared_ptr<Piece>> inFlightPieces;
+  for (int i = 0; i < 2; ++i) {
+    auto p = std::make_shared<Piece>(250 + i, 1_m);
+    for (int j = 0; j < 32; ++j) {
+      p->completeBlock(j);
+    }
+    inFlightPieces.push_back(p);
+  }
+  group->getPieceStorage()->addInFlightPiece(inFlightPieces);
+
+  auto entry = Dict::g();
+  gatherProgressCommon(entry.get(), group,
+                       {"completedLength", "inFlightCompletedLength"});
+
+  CPPUNIT_ASSERT_EQUAL(std::string("262144000"),
+                       getString(entry.get(), "completedLength"));
+  CPPUNIT_ASSERT_EQUAL(std::string("1048576"),
+                       getString(entry.get(), "inFlightCompletedLength"));
 }
 
 void RpcMethodTest::testChangePosition()

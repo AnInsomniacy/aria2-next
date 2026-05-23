@@ -243,6 +243,8 @@ public:
 
   int64_t getCompletedLength() const;
 
+  int64_t getInFlightCompletedLength() const;
+
   inline int64_t getPendingLength() const
   {
     return getTotalLength() - getCompletedLength();

@@ -7,6 +7,7 @@
 #include "Option.h"
 #include "DownloadContext.h"
 #include "FileEntry.h"
+#include "Piece.h"
 #include "PieceStorage.h"
 #include "DefaultProgressInfoFile.h"
 #include "File.h"
@@ -31,6 +32,7 @@ class RequestGroupTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testTryAutoFileRenaming);
   CPPUNIT_TEST(testCreateDownloadResult);
   CPPUNIT_TEST(testLoadAndOpenFileRestartFromScratch);
+  CPPUNIT_TEST(testCompletedLengthReportsVerifiedStorageOnly);
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForHttp);
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForFtpFamily);
 #ifdef ENABLE_BITTORRENT
@@ -53,6 +55,7 @@ public:
   void testTryAutoFileRenaming();
   void testCreateDownloadResult();
   void testLoadAndOpenFileRestartFromScratch();
+  void testCompletedLengthReportsVerifiedStorageOnly();
   void testInitiateConnectionFactoryUsesCurlForHttp();
   void testInitiateConnectionFactoryUsesCurlForFtpFamily();
 #ifdef ENABLE_BITTORRENT
@@ -206,6 +209,29 @@ void RequestGroupTest::testLoadAndOpenFileRestartFromScratch()
 
   CPPUNIT_ASSERT_EQUAL((int64_t)0, group.getCompletedLength());
   CPPUNIT_ASSERT_EQUAL((int64_t)0, File(path).size());
+}
+
+void RequestGroupTest::testCompletedLengthReportsVerifiedStorageOnly()
+{
+  auto ctx = std::make_shared<DownloadContext>(1_m, 256_m, "file.bin");
+  RequestGroup group(GroupId::create(), option_);
+  group.setDownloadContext(ctx);
+  group.initPieceStorage();
+  group.getPieceStorage()->markPiecesDone(250_m);
+
+  std::vector<std::shared_ptr<Piece>> inFlightPieces;
+  for (int i = 0; i < 2; ++i) {
+    auto p = std::make_shared<Piece>(250 + i, 1_m);
+    for (int j = 0; j < 32; ++j) {
+      p->completeBlock(j);
+    }
+    inFlightPieces.push_back(p);
+  }
+  group.getPieceStorage()->addInFlightPiece(inFlightPieces);
+
+  CPPUNIT_ASSERT_EQUAL((int64_t)250_m, group.getCompletedLength());
+  CPPUNIT_ASSERT_EQUAL((int64_t)1_m,
+                       group.getPieceStorage()->getInFlightCompletedLength());
 }
 
 void RequestGroupTest::testInitiateConnectionFactoryUsesCurlForHttp()

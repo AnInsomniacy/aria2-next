@@ -109,7 +109,11 @@ public:
 
   virtual int64_t getCompletedLength() = 0;
 
+  virtual int64_t getInFlightCompletedLength() = 0;
+
   virtual int64_t getFilteredCompletedLength() = 0;
+
+  virtual int64_t getFilteredInFlightCompletedLength() = 0;
 
   virtual void setupFileFilter() = 0;
 

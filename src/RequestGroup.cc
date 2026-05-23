@@ -784,6 +784,24 @@ int64_t RequestGroup::getCompletedLength() const
   return pieceStorage_->getCompletedLength();
 }
 
+int64_t RequestGroup::getInFlightCompletedLength() const
+{
+#ifdef ENABLE_BITTORRENT
+  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+    return 0;
+  }
+#endif // ENABLE_BITTORRENT
+  if (!pieceStorage_) {
+    return 0;
+  }
+
+  if (pieceStorage_->isSelectiveDownloadingMode()) {
+    return pieceStorage_->getFilteredInFlightCompletedLength();
+  }
+
+  return pieceStorage_->getInFlightCompletedLength();
+}
+
 void RequestGroup::validateFilename(const std::string& expectedFilename,
                                     const std::string& actualFilename) const
 {
@@ -1042,6 +1060,7 @@ std::shared_ptr<DownloadResult> RequestGroup::createDownloadResult() const
   res->metadataInfo = metadataInfo_;
   res->totalLength = getTotalLength();
   res->completedLength = getCompletedLength();
+  res->inFlightCompletedLength = getInFlightCompletedLength();
   res->uploadLength = st.allTimeUploadLength;
   if (pieceStorage_ && pieceStorage_->getBitfieldLength() > 0) {
     res->bitfield.assign(pieceStorage_->getBitfield(),

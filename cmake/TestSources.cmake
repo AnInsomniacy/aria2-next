@@ -14,6 +14,7 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/SegmentTest.cc
   tests/GrowSegmentTest.cc
   tests/SingleFileAllocationIteratorTest.cc
+  tests/StorageTruthTest.cc
   tests/DefaultProgressInfoFileTest.cc
   tests/RequestGroupTest.cc
   tests/UtilTest1.cc

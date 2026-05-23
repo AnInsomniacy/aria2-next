@@ -606,13 +606,9 @@ struct FileData {
    */
   int64_t length;
   /**
-   * The completed length of this file in bytes. Please note that it
-   * is possible that sum of |completedLength| is less than the return
-   * value of :func:`DownloadHandle::getCompletedLength()`
-   * function. This is because the |completedLength| only calculates
-   * completed pieces. On the other hand,
-   * :func:`DownloadHandle::getCompletedLength()` takes into account
-   * of partially completed piece.
+   * The verified completed length of this file in bytes. In-flight piece
+   * bytes are not included until the piece is completed and accepted by
+   * storage.
    */
   int64_t completedLength;
   /**

@@ -123,10 +123,14 @@ public:
 
   virtual int64_t getCompletedLength() CXX11_OVERRIDE;
 
+  virtual int64_t getInFlightCompletedLength() CXX11_OVERRIDE;
+
   virtual int64_t getFilteredCompletedLength() CXX11_OVERRIDE
   {
     return getCompletedLength();
   }
+
+  virtual int64_t getFilteredInFlightCompletedLength() CXX11_OVERRIDE;
 
   virtual void setupFileFilter() CXX11_OVERRIDE {}
 

@@ -83,7 +83,11 @@ public:
 
   int64_t getCompletedLength() CXX11_OVERRIDE { return 0; }
 
+  int64_t getInFlightCompletedLength() CXX11_OVERRIDE { return 0; }
+
   int64_t getFilteredCompletedLength() CXX11_OVERRIDE { return 0; }
+
+  int64_t getFilteredInFlightCompletedLength() CXX11_OVERRIDE { return 0; }
 
   void initStorage() CXX11_OVERRIDE {}
 

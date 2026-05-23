@@ -159,11 +159,20 @@ bool UnknownLengthPieceStorage::isPieceUsed(size_t index)
 
 int64_t UnknownLengthPieceStorage::getCompletedLength()
 {
-  // TODO we have to return actual completed length here?
+  return totalLength_;
+}
+
+int64_t UnknownLengthPieceStorage::getInFlightCompletedLength()
+{
   if (piece_) {
     return piece_->getLength();
   }
-  return totalLength_;
+  return 0;
+}
+
+int64_t UnknownLengthPieceStorage::getFilteredInFlightCompletedLength()
+{
+  return getInFlightCompletedLength();
 }
 
 std::shared_ptr<DiskAdaptor> UnknownLengthPieceStorage::getDiskAdaptor()

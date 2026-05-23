@@ -168,3 +168,9 @@ Changed: Centralized direct TLS and crypto ownership on OpenSSL. Removed GnuTLS,
 Verified: `cmake --preset default` passed. `cmake --build --preset default` passed. `ctest --preset default --output-on-failure` passed. Focused MessageDigest, FeatureConfig, SocketCore, and ED2K MD4/AICH/obfuscation tests passed. HTTPS smoke under `/Users/sekiro/Desktop/aria2-next-current/cm013-https-smoke` completed with certificate checking enabled. Packaging script syntax checks, CSV parser check, stale backend scans, and `git diff --check` passed.
 Remaining: Start CM-014 modern storage and completion truth.
 Blocked: none.
+
+2026-05-23 CM-014 verified
+Changed: Split non-BitTorrent storage progress into verified `completedLength` and separate `inFlightCompletedLength`. Updated PieceStorage, DefaultPieceStorage, UnknownLengthPieceStorage, RequestGroup, DownloadResult, JSON-RPC status output, public API comments, and manual docs. Added focused `StorageTruthTest` plus RequestGroup and RPC coverage for false-completion prevention.
+Verified: `cmake --build --preset default` passed. Full `ctest --preset default --output-on-failure` passed. Focused StorageTruth, RequestGroup, RpcMethod, DefaultProgressInfoFile, Ed2kCommand, and ED2K transfer reclaim/parallel block tests passed. CSV parser check and `git diff --check` passed.
+Remaining: Start CM-015 ED2K bridge onto modern runtime, storage, crypto, and status boundaries.
+Blocked: none.

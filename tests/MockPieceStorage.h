@@ -99,6 +99,8 @@ public:
     return completedLength;
   }
 
+  virtual int64_t getInFlightCompletedLength() CXX11_OVERRIDE { return 0; }
+
   void setCompletedLength(int64_t completedLength)
   {
     this->completedLength = completedLength;
@@ -107,6 +109,11 @@ public:
   virtual int64_t getFilteredCompletedLength() CXX11_OVERRIDE
   {
     return filteredCompletedLength;
+  }
+
+  virtual int64_t getFilteredInFlightCompletedLength() CXX11_OVERRIDE
+  {
+    return 0;
   }
 
   void setFilteredCompletedLength(int64_t completedLength)
