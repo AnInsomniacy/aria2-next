@@ -493,58 +493,9 @@ set(ARIA2_SOURCES_ENABLE_SSL
   src/TLSSession.h
 )
 
-set(ARIA2_SOURCES_HAVE_WINTLS
-  src/WinTLSContext.cc
-  src/WinTLSContext.h
-  src/WinTLSSession.cc
-  src/WinTLSSession.h
-)
-
-set(ARIA2_SOURCES_USE_INTERNAL_MD
-  src/InternalMessageDigestImpl.cc
-  src/crypto_hash.cc
-  src/crypto_hash.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBGNUTLS
-  src/LibgnutlsTLSContext.cc
-  src/LibgnutlsTLSContext.h
-  src/LibgnutlsTLSSession.cc
-  src/LibgnutlsTLSSession.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBGCRYPT
-  src/LibgcryptARC4Encryptor.cc
-  src/LibgcryptARC4Encryptor.h
-  src/LibgcryptDHKeyExchange.cc
-  src/LibgcryptDHKeyExchange.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBGCRYPT__USE_LIBGCRYPT_MD
-  src/LibgcryptMessageDigestImpl.cc
-)
-
-set(ARIA2_SOURCES_HAVE_LIBNETTLE
-  src/LibnettleARC4Encryptor.cc
-  src/LibnettleARC4Encryptor.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBNETTLE__USE_LIBNETTLE_MD
-  src/LibnettleMessageDigestImpl.cc
-)
-
-set(ARIA2_SOURCES_HAVE_LIBGMP
-  src/a2gmp.cc
-  src/a2gmp.h
-  src/LibgmpDHKeyExchange.cc
-  src/LibgmpDHKeyExchange.h
-)
-
 set(ARIA2_SOURCES_HAVE_OPENSSL
   src/LibsslARC4Encryptor.cc
   src/LibsslARC4Encryptor.h
-  src/LibsslDHKeyExchange.cc
-  src/LibsslDHKeyExchange.h
 )
 
 set(ARIA2_SOURCES_HAVE_OPENSSL_TLS
@@ -554,7 +505,7 @@ set(ARIA2_SOURCES_HAVE_OPENSSL_TLS
   src/LibsslTLSSession.h
 )
 
-set(ARIA2_SOURCES_HAVE_OPENSSL__USE_OPENSSL_MD
+set(ARIA2_SOURCES_HAVE_OPENSSL_DIGEST
   src/LibsslMessageDigestImpl.cc
 )
 
@@ -590,12 +541,6 @@ set(ARIA2_SOURCES_ENABLE_BITTORRENT
   src/magnet.h
   src/MemoryBencodePreDownloadHandler.h
   src/ValueBaseBencodeParser.h
-)
-
-set(ARIA2_SOURCES_ENABLE_BITTORRENT__USE_INTERNAL_BIGNUM
-)
-
-set(ARIA2_SOURCES_ENABLE_BITTORRENT__USE_INTERNAL_ARC4
 )
 
 set(ARIA2_SOURCES_NOT_HAVE_ASCTIME_R

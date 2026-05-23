@@ -102,7 +102,6 @@ jobs:
           . packaging/dependencies.env
           . packaging/scripts/common.sh
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
-          curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256"
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
@@ -118,17 +117,6 @@ jobs:
           ./configure --prefix=$PREFIX --static
           make -j$(nproc)
           sudo make install
-
-      - name: Build expat
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile linux
-          tar xf "$EXPAT_ARCHIVE" && cd "expat-$EXPAT_VERSION"
-          CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-          ./configure --disable-shared --enable-static --prefix=$PREFIX
-          make -j$(nproc)
-          sudo make install
-
 
       - name: Build c-ares
         run: |
@@ -183,10 +171,6 @@ jobs:
           cmake -S . -B build/release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARIA2_ENABLE_STATIC=ON \
-            -DARIA2_WITH_GNUTLS=OFF \
-            -DARIA2_WITH_OPENSSL=ON \
-            -DARIA2_WITH_LIBXML2=OFF \
-            -DARIA2_WITH_EXPAT=ON \
             -DARIA2_WITH_CARES=ON \
             -DARIA2_WITH_ZLIB=ON \
             -DARIA2_WITH_LIBSSH2=ON \
@@ -240,7 +224,6 @@ jobs:
           . packaging/dependencies.env
           . packaging/scripts/common.sh
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
-          curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256"
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
@@ -256,17 +239,6 @@ jobs:
           ./configure --prefix=$PREFIX --static
           make -j$(nproc)
           sudo make install
-
-      - name: Build expat
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile linux
-          tar xf "$EXPAT_ARCHIVE" && cd "expat-$EXPAT_VERSION"
-          CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-          ./configure --disable-shared --enable-static --prefix=$PREFIX
-          make -j$(nproc)
-          sudo make install
-
 
       - name: Build c-ares
         run: |
@@ -321,10 +293,6 @@ jobs:
           cmake -S . -B build/release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARIA2_ENABLE_STATIC=ON \
-            -DARIA2_WITH_GNUTLS=OFF \
-            -DARIA2_WITH_OPENSSL=ON \
-            -DARIA2_WITH_LIBXML2=OFF \
-            -DARIA2_WITH_EXPAT=ON \
             -DARIA2_WITH_CARES=ON \
             -DARIA2_WITH_ZLIB=ON \
             -DARIA2_WITH_LIBSSH2=ON \
@@ -376,7 +344,6 @@ jobs:
           . packaging/dependencies.env
           . packaging/scripts/common.sh
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
-          curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256"
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
@@ -392,17 +359,6 @@ jobs:
           ./configure --prefix=$PREFIX --static
           make -j$(sysctl -n hw.ncpu)
           make install
-
-      - name: Build expat
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile macos
-          tar xf "$EXPAT_ARCHIVE" && cd "expat-$EXPAT_VERSION"
-          CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-          ./configure --disable-shared --enable-static --prefix=$PREFIX
-          make -j$(sysctl -n hw.ncpu)
-          make install
-
 
       - name: Build c-ares
         run: |
@@ -457,16 +413,9 @@ jobs:
           cmake -S . -B build/release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARIA2_ENABLE_STATIC=ON \
-            -DARIA2_WITH_OPENSSL=ON \
-            -DARIA2_WITH_GNUTLS=OFF \
-            -DARIA2_WITH_LIBXML2=OFF \
-            -DARIA2_WITH_EXPAT=ON \
             -DARIA2_WITH_CARES=ON \
             -DARIA2_WITH_ZLIB=ON \
             -DARIA2_WITH_LIBSSH2=ON \
-            -DARIA2_WITH_GMP=OFF \
-            -DARIA2_WITH_LIBGCRYPT=OFF \
-            -DARIA2_WITH_LIBNETTLE=OFF \
             -DARIA2_CA_BUNDLE=/etc/ssl/cert.pem \
             -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
             -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
@@ -514,7 +463,6 @@ jobs:
           . packaging/dependencies.env
           . packaging/scripts/common.sh
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
-          curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256"
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
@@ -530,17 +478,6 @@ jobs:
           ./configure --prefix=$PREFIX --static
           make -j$(sysctl -n hw.ncpu)
           make install
-
-      - name: Build expat
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile macos
-          tar xf "$EXPAT_ARCHIVE" && cd "expat-$EXPAT_VERSION"
-          CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-          ./configure --disable-shared --enable-static --prefix=$PREFIX
-          make -j$(sysctl -n hw.ncpu)
-          make install
-
 
       - name: Build c-ares
         run: |
@@ -595,16 +532,9 @@ jobs:
           cmake -S . -B build/release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DARIA2_ENABLE_STATIC=ON \
-            -DARIA2_WITH_OPENSSL=ON \
-            -DARIA2_WITH_GNUTLS=OFF \
-            -DARIA2_WITH_LIBXML2=OFF \
-            -DARIA2_WITH_EXPAT=ON \
             -DARIA2_WITH_CARES=ON \
             -DARIA2_WITH_ZLIB=ON \
             -DARIA2_WITH_LIBSSH2=ON \
-            -DARIA2_WITH_GMP=OFF \
-            -DARIA2_WITH_LIBGCRYPT=OFF \
-            -DARIA2_WITH_LIBNETTLE=OFF \
             -DARIA2_CA_BUNDLE=/etc/ssl/cert.pem \
             -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
             -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
@@ -656,26 +586,12 @@ jobs:
         run: |
           . packaging/dependencies.env
           . packaging/scripts/common.sh
-          curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256"
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
           curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
           curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
-
-      - name: Build expat
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile windows
-          tar xf "$EXPAT_ARCHIVE" && cd "expat-$EXPAT_VERSION"
-          CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-          ./configure \
-            --disable-shared --enable-static \
-            --prefix=$PREFIX --host=$HOST \
-            --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)
-          sudo make -j$(nproc) install
-
 
       - name: Build zlib
         run: |
@@ -764,16 +680,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DARIA2_ENABLE_STATIC=ON \
             -DARIA2_WITH_CARES=ON \
-            -DARIA2_WITH_GNUTLS=OFF \
-            -DARIA2_WITH_OPENSSL=OFF \
-            -DARIA2_WITH_WINTLS=ON \
-            -DARIA2_WITH_LIBXML2=OFF \
-            -DARIA2_WITH_EXPAT=ON \
             -DARIA2_WITH_ZLIB=ON \
-            -DARIA2_WITH_GMP=OFF \
             -DARIA2_WITH_LIBSSH2=ON \
-            -DARIA2_WITH_LIBGCRYPT=OFF \
-            -DARIA2_WITH_LIBNETTLE=OFF \
             -DARIA2_RELEASE_SIZE_OPTIMIZED=ON \
             -DCMAKE_PREFIX_PATH="$PREFIX" \
             -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
@@ -832,27 +740,12 @@ jobs:
         run: |
           . packaging/dependencies.env
           . packaging/scripts/common.sh
-          curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256"
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
           curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
           curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
-
-      - name: Build expat
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile windows
-          tar xf "$EXPAT_ARCHIVE" && cd "expat-$EXPAT_VERSION"
-          CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-          ./configure \
-            --disable-shared --enable-static \
-            --prefix=$PREFIX --host=$HOST \
-            --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE) \
-            CC="$CC" CXX="$CXX"
-          sudo env "PATH=$PATH" make -j$(nproc) install
-
 
       - name: Build zlib
         run: |
@@ -944,16 +837,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DARIA2_ENABLE_STATIC=ON \
             -DARIA2_WITH_CARES=ON \
-            -DARIA2_WITH_GNUTLS=OFF \
-            -DARIA2_WITH_OPENSSL=OFF \
-            -DARIA2_WITH_WINTLS=ON \
-            -DARIA2_WITH_LIBXML2=OFF \
-            -DARIA2_WITH_EXPAT=ON \
             -DARIA2_WITH_ZLIB=ON \
-            -DARIA2_WITH_GMP=OFF \
             -DARIA2_WITH_LIBSSH2=ON \
-            -DARIA2_WITH_LIBGCRYPT=OFF \
-            -DARIA2_WITH_LIBNETTLE=OFF \
             -DARIA2_RELEASE_SIZE_OPTIMIZED=ON \
             -DCMAKE_PREFIX_PATH="$PREFIX" \
             -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \

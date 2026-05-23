@@ -313,13 +313,17 @@ aria2_pkg_check(OPENSSL "openssl>=${ARIA2_MIN_OPENSSL_VERSION}")
 aria2_pkg_check(LIBTORRENT_RASTERBAR "libtorrent-rasterbar")
 find_package(Boost ${ARIA2_MIN_BOOST_VERSION} REQUIRED COMPONENTS json)
 
-if(ARIA2_ENABLE_SSL AND OPENSSL_FOUND)
+if(OPENSSL_FOUND)
   set(HAVE_OPENSSL 1)
-  set(ENABLE_SSL 1)
-elseif(ARIA2_ENABLE_SSL)
+else()
   message(FATAL_ERROR
-    "SSL/TLS support requires OpenSSL ${ARIA2_MIN_OPENSSL_VERSION} or newer. "
-    "Install OpenSSL development files or configure with -DARIA2_ENABLE_SSL=OFF.")
+    "aria2-next requires OpenSSL ${ARIA2_MIN_OPENSSL_VERSION} or newer for "
+    "TLS, message digests, and ED2K obfuscation. Install OpenSSL development "
+    "files.")
+endif()
+
+if(ARIA2_ENABLE_SSL)
+  set(ENABLE_SSL 1)
 endif()
 
 if(HAVE_OPENSSL)
@@ -330,10 +334,6 @@ if(HAVE_OPENSSL)
   check_function_exists(EVP_sha384 HAVE_EVP_SHA384)
   check_function_exists(EVP_sha512 HAVE_EVP_SHA512)
   cmake_pop_check_state()
-endif()
-
-if(HAVE_OPENSSL)
-  set(USE_OPENSSL_MD 1)
 endif()
 
 if(ARIA2_ENABLE_BITTORRENT)

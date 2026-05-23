@@ -902,8 +902,7 @@ bool SocketCore::tlsHandshake(TLSContext* tlsctx, const std::string& hostname)
       tlsSession_.reset();
       throw DL_ABORT_EX(fmt(EX_SSL_INIT_FAILURE, error.c_str()));
     }
-    // Check hostname is not numeric and it includes ".". Setting
-    // "localhost" will produce TLS alert with GNUTLS.
+    // Check hostname is not numeric and it includes ".".
     if (tlsctx->getSide() == TLS_CLIENT && !util::isNumericHost(hostname) &&
         hostname.find(".") != std::string::npos) {
       rv = tlsSession_->setSNIHostname(hostname);

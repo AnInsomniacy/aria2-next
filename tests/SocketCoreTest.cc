@@ -22,9 +22,6 @@ class SocketCoreTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testVerifyHostname);
 #ifdef ENABLE_SSL
   CPPUNIT_TEST(testClientTlsHandshakeRemoteCloseIsRetriable);
-#ifdef HAVE_WINTLS
-  CPPUNIT_TEST(testWinTlsContextAllowsTls13Minimum);
-#endif // HAVE_WINTLS
 #endif // ENABLE_SSL
   CPPUNIT_TEST_SUITE_END();
 
@@ -41,9 +38,6 @@ public:
   void testVerifyHostname();
 #ifdef ENABLE_SSL
   void testClientTlsHandshakeRemoteCloseIsRetriable();
-#ifdef HAVE_WINTLS
-  void testWinTlsContextAllowsTls13Minimum();
-#endif // HAVE_WINTLS
 #endif // ENABLE_SSL
 };
 
@@ -280,15 +274,6 @@ void SocketCoreTest::testClientTlsHandshakeRemoteCloseIsRetriable()
   CPPUNIT_ASSERT_THROW(client.tlsConnect("example.org"), DlRetryEx);
 }
 
-#ifdef HAVE_WINTLS
-void SocketCoreTest::testWinTlsContextAllowsTls13Minimum()
-{
-  std::shared_ptr<TLSContext> tlsContext(
-      TLSContext::make(TLS_CLIENT, TLS_PROTO_TLS13));
-
-  CPPUNIT_ASSERT(tlsContext->good());
-}
-#endif // HAVE_WINTLS
 #endif // ENABLE_SSL
 
 } // namespace aria2

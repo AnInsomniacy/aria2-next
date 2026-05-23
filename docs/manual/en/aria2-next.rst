@@ -389,17 +389,9 @@ HTTP Specific Options
 
   .. note::
 
-    If you build with OpenSSL or the recent version of GnuTLS which
-    has ``gnutls_certificate_set_x509_system_trust()`` function and
-    the library is properly configured to locate the system-wide CA
-    certificates store, aria2 will automatically load those
-    certificates at the startup. If that system lookup fails, a CA bundle
-    configured at build time is used as the backend fallback.
-
-  .. note::
-
-    *WinTLS* does not support this option. Instead you will
-    have to import the certificate into the OS trust store.
+    OpenSSL builds automatically try to load the system certificate store at
+    startup. If system lookup fails, a CA bundle configured at build time is
+    used as the backend fallback.
 
 .. option:: --certificate=<FILE>
 
@@ -412,10 +404,6 @@ HTTP Specific Options
 
   When using PEM, you have to specify the private key via :option:`--private-key`
   as well.
-
-  .. note::
-    *WinTLS* does not support PEM files at the moment. Users have to use PKCS12
-    files.
 
 .. option:: --check-certificate [true|false]
 
@@ -888,10 +876,6 @@ RPC Options
 
   When using PEM, you have to specify the private key via :option:`--rpc-private-key`
   as well. Use :option:`--rpc-secure` option to enable encryption.
-
-  .. note::
-    *WinTLS* does not support PEM files at the moment. Users have to use PKCS12
-    files.
 
 .. option:: --rpc-listen-all [true|false]
 
@@ -3669,13 +3653,6 @@ Verify SSL/TLS servers using given CA certificates
 
   $ aria2-next --ca-certificate=/path/to/ca-certificates.crt --check-certificate https://host/file
 
-.. note::
-
-  This option is only available when aria2 was compiled against GnuTLS or
-  OpenSSL.
-  WinTLS will always use the system certificate store. Instead of
-  ``--ca-certificate`` install the certificate in that store.
-
 RPC
 ~~~
 
@@ -3693,8 +3670,8 @@ Specify a server PKC12 file:
   The file specified in :option:`--rpc-certificate` must be contain one PKCS12
   encoded certificate and key. The password must be blank.
 
-Alternatively, when PEM files are supported (GnuTLS and OpenSSL), specify the
-server certificate file and private key file as follows:
+Alternatively, specify the server certificate file and private key file as
+follows:
 
 .. code-block:: console
 

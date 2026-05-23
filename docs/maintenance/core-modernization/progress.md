@@ -162,3 +162,9 @@ syntax checks passed. CSV parser check passed for tracker files. `git diff
 --check` passed.
 Remaining: Start CM-013 crypto TLS cleanup.
 Blocked: none.
+
+2026-05-23 CM-013 verified
+Changed: Centralized direct TLS and crypto ownership on OpenSSL. Removed GnuTLS, WinTLS, nettle, libgcrypt, GMP, internal digest, internal ARC4, and DHKeyExchange residue. Kept ED2K's narrow native MD4 helper and mapped MD5, SHA-1/AICH, and RC4 obfuscation through OpenSSL-backed paths. Cleaned public docs, release workflow, Dockerfiles, Windows package note, and dependency records.
+Verified: `cmake --preset default` passed. `cmake --build --preset default` passed. `ctest --preset default --output-on-failure` passed. Focused MessageDigest, FeatureConfig, SocketCore, and ED2K MD4/AICH/obfuscation tests passed. HTTPS smoke under `/Users/sekiro/Desktop/aria2-next-current/cm013-https-smoke` completed with certificate checking enabled. Packaging script syntax checks, CSV parser check, stale backend scans, and `git diff --check` passed.
+Remaining: Start CM-014 modern storage and completion truth.
+Blocked: none.
