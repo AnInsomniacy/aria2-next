@@ -48,14 +48,14 @@ class RequestGroup;
 
 namespace rpc {
 
-class WebSocketSession {};
+class RpcWebSocketSession {};
 
 class WebSocketSessionMan {
 public:
   WebSocketSessionMan() = default;
   ~WebSocketSessionMan() = default;
-  void addSession(const std::shared_ptr<WebSocketSession>& wsSession) {}
-  void removeSession(const std::shared_ptr<WebSocketSession>& wsSession) {}
+  void addSession(const std::shared_ptr<RpcWebSocketSession>& session) {}
+  void removeSession(const std::shared_ptr<RpcWebSocketSession>& session) {}
   void addNotification(const std::string& method, const RequestGroup* group) {}
 };
 

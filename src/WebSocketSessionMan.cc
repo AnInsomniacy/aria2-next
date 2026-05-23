@@ -37,11 +37,10 @@
 #include <algorithm>
 #include <cassert>
 
-#include "WebSocketSession.h"
 #include "RequestGroup.h"
+#include "RpcWebSocketSession.h"
 #include "json.h"
 #include "util.h"
-#include "WebSocketInteractionCommand.h"
 #include "LogFactory.h"
 
 namespace aria2 {
@@ -53,23 +52,23 @@ WebSocketSessionMan::WebSocketSessionMan() {}
 WebSocketSessionMan::~WebSocketSessionMan() = default;
 
 void WebSocketSessionMan::addSession(
-    const std::shared_ptr<WebSocketSession>& wsSession)
+    const std::shared_ptr<RpcWebSocketSession>& session)
 {
   A2_LOG_DEBUG("WebSocket session added.");
-  sessions_.insert(wsSession);
+  sessions_.insert(session);
 }
 
 void WebSocketSessionMan::removeSession(
-    const std::shared_ptr<WebSocketSession>& wsSession)
+    const std::shared_ptr<RpcWebSocketSession>& session)
 {
   A2_LOG_DEBUG("WebSocket session removed.");
-  sessions_.erase(wsSession);
+  sessions_.erase(session);
 }
 
 size_t WebSocketSessionMan::countNotificationRecipients() const
 {
   return std::count_if(sessions_.begin(), sessions_.end(),
-                       [](const std::shared_ptr<WebSocketSession>& session) {
+                       [](const std::shared_ptr<RpcWebSocketSession>& session) {
                          return session->isAuthorized();
                        });
 }
@@ -90,8 +89,7 @@ void WebSocketSessionMan::addNotification(const std::string& method,
     if (!session->isAuthorized()) {
       continue;
     }
-    session->addTextMessage(msg, false);
-    session->getCommand()->updateWriteCheck();
+    session->sendText(msg);
   }
 }
 

@@ -49,23 +49,24 @@ class RequestGroup;
 
 namespace rpc {
 
-class WebSocketSession;
+class RpcWebSocketSession;
 
 class WebSocketSessionMan : public DownloadEventListener {
 public:
-  typedef std::set<std::shared_ptr<WebSocketSession>, RefLess<WebSocketSession>>
-      WebSocketSessions;
+  typedef std::set<std::shared_ptr<RpcWebSocketSession>,
+                   RefLess<RpcWebSocketSession>>
+      Sessions;
   WebSocketSessionMan();
   ~WebSocketSessionMan();
-  void addSession(const std::shared_ptr<WebSocketSession>& wsSession);
-  void removeSession(const std::shared_ptr<WebSocketSession>& wsSession);
+  void addSession(const std::shared_ptr<RpcWebSocketSession>& session);
+  void removeSession(const std::shared_ptr<RpcWebSocketSession>& session);
   size_t countNotificationRecipients() const;
   void addNotification(const std::string& method, const RequestGroup* group);
   virtual void onEvent(DownloadEvent event,
                        const RequestGroup* group) CXX11_OVERRIDE;
 
 private:
-  WebSocketSessions sessions_;
+  Sessions sessions_;
 };
 
 } // namespace rpc

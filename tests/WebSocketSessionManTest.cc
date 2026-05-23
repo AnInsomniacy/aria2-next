@@ -2,13 +2,16 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
+#include "AsioRuntime.h"
 #include "DownloadEngine.h"
 #include "Option.h"
 #include "RequestGroup.h"
+#include "RpcWebSocketSession.h"
 #include "SelectEventPoll.h"
 #include "SocketCore.h"
-#include "WebSocketSession.h"
 #include "prefs.h"
+
+#include <boost/beast/http.hpp>
 
 namespace aria2 {
 
@@ -43,8 +46,10 @@ void WebSocketSessionManTest::testSessionRequiresAuthorizationWhenRpcSecretIsSet
 {
   option_->put(PREF_RPC_SECRET, "secret");
 
-  auto session = std::make_shared<WebSocketSession>(
-      std::make_shared<SocketCore>(), e_.get());
+  boost::asio::ip::tcp::socket socket(e_->getRuntime().ioContext());
+  boost::beast::http::request<boost::beast::http::string_body> request;
+  auto session = std::make_shared<RpcWebSocketSession>(std::move(socket),
+                                                       e_.get(), request);
 
   CPPUNIT_ASSERT(!session->isAuthorized());
 }
@@ -54,10 +59,13 @@ void WebSocketSessionManTest::testNotificationRecipientsExcludeUnauthorizedSessi
   option_->put(PREF_RPC_SECRET, "secret");
 
   WebSocketSessionMan sessionMan;
-  auto unauthorizedSession = std::make_shared<WebSocketSession>(
-      std::make_shared<SocketCore>(), e_.get());
-  auto authorizedSession = std::make_shared<WebSocketSession>(
-      std::make_shared<SocketCore>(), e_.get());
+  boost::beast::http::request<boost::beast::http::string_body> request;
+  boost::asio::ip::tcp::socket socket1(e_->getRuntime().ioContext());
+  auto unauthorizedSession = std::make_shared<RpcWebSocketSession>(
+      std::move(socket1), e_.get(), request);
+  boost::asio::ip::tcp::socket socket2(e_->getRuntime().ioContext());
+  auto authorizedSession = std::make_shared<RpcWebSocketSession>(
+      std::move(socket2), e_.get(), request);
   authorizedSession->markAuthorized();
   sessionMan.addSession(unauthorizedSession);
   sessionMan.addSession(authorizedSession);

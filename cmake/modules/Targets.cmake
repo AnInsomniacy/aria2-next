@@ -94,20 +94,6 @@ endif()
 
 list(REMOVE_DUPLICATES ARIA2_CORE_SOURCES)
 
-add_library(wslay STATIC
-  third_party/wslay/lib/wslay_event.c
-  third_party/wslay/lib/wslay_frame.c
-  third_party/wslay/lib/wslay_net.c
-  third_party/wslay/lib/wslay_queue.c)
-target_include_directories(wslay
-  PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/wslay/lib/includes
-    ${CMAKE_CURRENT_BINARY_DIR}/third_party/wslay/lib/includes
-  PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/third_party/wslay/lib
-    ${CMAKE_CURRENT_BINARY_DIR})
-target_compile_definitions(wslay PRIVATE HAVE_CONFIG_H WSLAY_VERSION="${PROJECT_VERSION}")
-
 if(ENABLE_LIBARIA2)
   add_library(aria2_core ${ARIA2_CORE_SOURCES})
   set_target_properties(aria2_core PROPERTIES OUTPUT_NAME aria2)
@@ -124,9 +110,6 @@ target_include_directories(aria2_core
     ${CMAKE_CURRENT_BINARY_DIR}/src/includes
   PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/lib)
-if(ENABLE_WEBSOCKET)
-  target_link_libraries(aria2_core PUBLIC wslay)
-endif()
 if(HAVE_ZLIB)
   aria2_add_pkg_target(aria2_core ZLIB)
 endif()
@@ -182,7 +165,7 @@ add_executable(aria2-next src/main.cc)
 target_link_libraries(aria2-next PRIVATE aria2_core)
 
 if(ARIA2_RELEASE_SIZE_OPTIMIZED)
-  foreach(target wslay aria2_core aria2-next)
+  foreach(target aria2_core aria2-next)
     target_compile_options(${target} PRIVATE
       $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-Os>
       $<$<COMPILE_LANG_AND_ID:C,GNU,Clang,AppleClang>:-ffunction-sections>
@@ -202,7 +185,7 @@ endif()
 if(ARIA2_RELEASE_LTO)
   check_ipo_supported(RESULT aria2_ipo_supported OUTPUT aria2_ipo_output LANGUAGES C CXX)
   if(aria2_ipo_supported)
-    set_property(TARGET wslay aria2_core aria2-next PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    set_property(TARGET aria2_core aria2-next PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
   else()
     message(WARNING "ARIA2_RELEASE_LTO requested but IPO is not supported: ${aria2_ipo_output}")
   endif()

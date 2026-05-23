@@ -472,10 +472,8 @@ set(ARIA2_SOURCES_MINGW_BUILD
 )
 
 set(ARIA2_SOURCES_ENABLE_WEBSOCKET
-  src/WebSocketInteractionCommand.cc
-  src/WebSocketInteractionCommand.h
-  src/WebSocketSession.cc
-  src/WebSocketSession.h
+  src/RpcWebSocketSession.cc
+  src/RpcWebSocketSession.h
   src/WebSocketSessionMan.cc
   src/WebSocketSessionMan.h
 )

@@ -18,6 +18,7 @@
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
+#include <boost/beast/websocket.hpp>
 #include <boost/system/error_code.hpp>
 
 #include "AsioRuntime.h"
@@ -25,6 +26,7 @@
 #include "LogFactory.h"
 #include "Option.h"
 #include "RpcHttpHandler.h"
+#include "RpcWebSocketSession.h"
 #include "TimeA2.h"
 #include "fmt.h"
 #include "message.h"
@@ -36,6 +38,7 @@ namespace aria2 {
 namespace asio = boost::asio;
 namespace beast = boost::beast;
 namespace http = beast::http;
+namespace websocket = beast::websocket;
 using tcp = asio::ip::tcp;
 
 namespace {
@@ -116,6 +119,14 @@ private:
                          const boost::system::error_code& ec, std::size_t) {
       self->timer_.cancel();
       if (!ec) {
+        if (websocket::is_upgrade(self->req_) &&
+            self->req_.target() == "/jsonrpc") {
+          std::make_shared<rpc::RpcWebSocketSession>(
+              std::move(self->socket_), self->engine_, std::move(self->req_))
+              ->start();
+          self->engine_->wakeRuntime();
+          return;
+        }
         self->write();
       }
     });
