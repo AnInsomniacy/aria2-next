@@ -71,8 +71,6 @@ set(ARIA2_SOURCES_BASE
   src/console.h
   src/ConsoleStatCalc.cc
   src/ConsoleStatCalc.h
-  src/ContentTypeRequestGroupCriteria.cc
-  src/ContentTypeRequestGroupCriteria.h
   src/Context.cc
   src/Context.h
   src/ContextAttribute.cc
@@ -121,14 +119,8 @@ set(ARIA2_SOURCES_BASE
   src/DownloadEngineFactory.h
   src/DownloadFailureException.cc
   src/DownloadFailureException.h
-  src/DownloadHandler.cc
-  src/DownloadHandler.h
-  src/DownloadHandlerConstants.cc
-  src/DownloadHandlerConstants.h
   src/DownloadResult.cc
   src/DownloadResult.h
-  src/download_handlers.cc
-  src/download_handlers.h
   src/download_helper.cc
   src/download_helper.h
   src/Ed2kAttribute.cc
@@ -251,8 +243,6 @@ set(ARIA2_SOURCES_BASE
   src/Logger.h
   src/LongestSequencePieceSelector.cc
   src/LongestSequencePieceSelector.h
-  src/MemoryBufferPreDownloadHandler.h
-  src/MemoryPreDownloadHandler.h
   src/message.h
   src/MessageDigest.cc
   src/MessageDigest.h
@@ -309,8 +299,6 @@ set(ARIA2_SOURCES_BASE
   src/PieceStorage.h
   src/Platform.cc
   src/Platform.h
-  src/PostDownloadHandler.h
-  src/PreDownloadHandler.h
   src/prefs.cc
   src/prefs.h
   src/ProgressAwareEntry.h
@@ -329,7 +317,6 @@ set(ARIA2_SOURCES_BASE
   src/Request.h
   src/RequestGroup.cc
   src/RequestGroup.h
-  src/RequestGroupCriteria.h
   src/RequestGroupEntry.cc
   src/RequestGroupEntry.h
   src/RequestGroupMan.cc
@@ -602,13 +589,4 @@ set(ARIA2_SOURCES_HAVE_KQUEUE
 set(ARIA2_SOURCES_HAVE_LIBUV
   src/LibuvEventPoll.cc
   src/LibuvEventPoll.h
-)
-
-set(ARIA2_SOURCES_ENABLE_LIBARIA2
-  src/ApiCallbackDownloadEventListener.cc
-  src/ApiCallbackDownloadEventListener.h
-  src/aria2api.cc
-  src/aria2api.h
-  src/KeepRunningCommand.cc
-  src/KeepRunningCommand.h
 )

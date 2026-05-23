@@ -473,8 +473,6 @@ PrefPtr PREF_MAX_UPLOAD_LIMIT = makePref("max-upload-limit");
 PrefPtr PREF_TORRENT_FILE = makePref("torrent-file");
 // values: 1*digit
 PrefPtr PREF_LISTEN_PORT = makePref("listen-port");
-// values: true | false | mem
-PrefPtr PREF_FOLLOW_TORRENT = makePref("follow-torrent");
 // values: 1*digit * = makePref(  = makePref(,|-) 1*digit);
 PrefPtr PREF_SELECT_FILE = makePref("select-file");
 // values: 1*digit

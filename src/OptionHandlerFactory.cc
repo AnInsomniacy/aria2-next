@@ -1583,16 +1583,6 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
   }
   {
     OptionHandler* op(
-        new ParameterOptionHandler(PREF_FOLLOW_TORRENT, TEXT_FOLLOW_TORRENT,
-                                   A2_V_TRUE, {A2_V_TRUE, V_MEM, A2_V_FALSE}));
-    op->addTag(TAG_BITTORRENT);
-    op->setInitialOption(true);
-    op->setChangeGlobalOption(true);
-    op->setChangeOptionForReserved(true);
-    handlers.push_back(op);
-  }
-  {
-    OptionHandler* op(
         new IndexOutOptionHandler(PREF_INDEX_OUT, TEXT_INDEX_OUT, 'O'));
     op->addTag(TAG_BITTORRENT);
     op->setInitialOption(true);

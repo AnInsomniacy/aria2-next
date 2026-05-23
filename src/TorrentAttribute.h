@@ -40,7 +40,7 @@
 #include <string>
 #include <vector>
 
-#include <aria2/aria2.h>
+#include "InternalTypes.h"
 #include "a2time.h"
 
 namespace aria2 {

@@ -38,7 +38,7 @@
 #include <cstring>
 #include <sstream>
 
-#include <aria2/aria2.h>
+#include "InternalTypes.h"
 #include "Option.h"
 #include "prefs.h"
 #include "OptionParser.h"

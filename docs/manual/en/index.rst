@@ -13,5 +13,4 @@ Contents:
 
    aria2-next
    overview
-   libaria2
    technical-notes

@@ -29,6 +29,5 @@ case "$1" in
     build nobt -DARIA2_ENABLE_BITTORRENT=OFF
     build noepoll -DARIA2_ENABLE_EPOLL=OFF
     build noepoll_nocares -DARIA2_ENABLE_EPOLL=OFF -DARIA2_WITH_CARES=OFF
-    build libaria2 -DARIA2_ENABLE_LIBARIA2=ON
     ;;
 esac

@@ -452,7 +452,6 @@ void CurlDownloadCommand::prepareKnownLengthStorage(int64_t length)
         util::applyDir(getOption()->get(PREF_DIR), suffixPath));
     getFileEntry()->setSuffixPath(suffixPath);
   }
-  getRequestGroup()->preDownloadProcessing();
   getRequestGroup()->adjustFilename(
       std::make_shared<NullProgressInfoFile>());
   getRequestGroup()->initPieceStorage();

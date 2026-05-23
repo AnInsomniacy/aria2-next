@@ -41,7 +41,6 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/ProtocolDetectorTest.cc
   tests/ExceptionTest.cc
   tests/FmtTest.cc
-  tests/DownloadHandlersTest.cc
   tests/DownloadEngineTest.cc
   tests/SignatureTest.cc
   tests/ServerStatManTest.cc
@@ -122,8 +121,4 @@ set(ARIA2_TEST_SOURCES_ENABLE_ASYNC_DNS
 
 set(ARIA2_TEST_SOURCES_NOT_HAVE_TIMEGM
   tests/TimegmTest.cc
-)
-
-set(ARIA2_TEST_SOURCES_ENABLE_LIBARIA2
-  tests/Aria2ApiTest.cc
 )

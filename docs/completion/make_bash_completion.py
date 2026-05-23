@@ -93,7 +93,6 @@ _aria2_next()
                      '--log-level',
                      '--uri-selector',
                      '--event-poll',
-                     '--follow-torrent',
                      '--stream-piece-selector',
                      '--download-result',
                      '--min-tls-version',

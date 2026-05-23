@@ -425,8 +425,6 @@ extern PrefPtr PREF_MAX_UPLOAD_LIMIT;
 extern PrefPtr PREF_TORRENT_FILE;
 // values: 1*digit
 extern PrefPtr PREF_LISTEN_PORT;
-// values: true | false | mem
-extern PrefPtr PREF_FOLLOW_TORRENT;
 // values: 1*digit *( (,|-) 1*digit)
 extern PrefPtr PREF_SELECT_FILE;
 // values: 1*digit ['.' [ 1*digit ] ]

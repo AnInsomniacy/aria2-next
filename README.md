@@ -18,7 +18,7 @@ aria2 is remarkable open source software. For over a decade it has been one of t
 
 But upstream development has slowed dramatically in recent years. Dependencies grew stale, builds broke on modern platforms, and a backlog of bugs went unaddressed. We picked up the baton: migrated the codebase to a modern build framework, triaged and fixed a substantial number of upstream issues, and introduced ED2K protocol support for the first time. A full audit trail is preserved in [`docs/maintenance/upstream-issue-review/matrix.csv`](docs/maintenance/upstream-issue-review/matrix.csv).
 
-Aria2 Next is an actively maintained aria2-compatible engine for everyone, and it is also the embedded engine used by [Motrix Next](https://github.com/AnInsomniacy/motrix-next). Original interfaces, including options, configuration, sessions, JSON-RPC, and libaria2, remain intact so downstream projects get a seamless upgrade. The focus is straightforward: release reliability, current dependency baselines, and ongoing compatibility fixes. Same engine, renewed foundation.
+Aria2 Next is an actively maintained download engine for everyone, and it is also the sidecar engine used by [Motrix Next](https://github.com/AnInsomniacy/motrix-next). The maintained surface is the `aria2-next` executable, aria2-style configuration and session files, and JSON-RPC. The focus is straightforward: modern transfer backends, release reliability, current dependency baselines, and ongoing compatibility fixes.
 
 ## Native ED2K/eMule Support
 
@@ -33,7 +33,7 @@ Aria2 Next includes native ED2K/eMule support reimplemented inside aria2's exist
 | Configuration | aria2 config file format |
 | Sessions | aria2 session and input file conventions |
 | RPC | aria2 JSON-RPC methods and response shapes |
-| Library | public libaria2 headers under `src/includes/aria2/` |
+| Library | no public C++ embedding API |
 
 Motrix Next embeds this engine, but release artifacts are ordinary aria2-compatible binaries.
 
@@ -94,7 +94,7 @@ cmake --build build/default
 ctest --test-dir build/default --output-on-failure
 ```
 
-Common options include `ARIA2_ENABLE_BITTORRENT`, `ARIA2_ENABLE_WEBSOCKET`, `ARIA2_ENABLE_LIBARIA2`, `ARIA2_ENABLE_STATIC`, `ARIA2_RELEASE_SIZE_OPTIMIZED`, `ARIA2_RELEASE_LTO`, `ARIA2_WITH_CARES`, and `ARIA2_WITH_ZLIB`.
+Common options include `ARIA2_ENABLE_BITTORRENT`, `ARIA2_ENABLE_WEBSOCKET`, `ARIA2_ENABLE_STATIC`, `ARIA2_RELEASE_SIZE_OPTIMIZED`, `ARIA2_RELEASE_LTO`, `ARIA2_WITH_CARES`, and `ARIA2_WITH_ZLIB`.
 
 Async DNS builds require c-ares 1.34.6 or newer.
 
@@ -143,7 +143,6 @@ The same file records versions, archive names, download URLs, and SHA-256 hashes
 | `CMakePresets.json` | Standard configure, build, and test presets |
 | `cmake/` | CMake modules, source inventories, and generated config templates |
 | `src/` | aria2 command-line client and core implementation |
-| `src/includes/aria2/` | public libaria2 headers |
 | `tests/` | CppUnit test suite registered through CTest |
 | `docs/` | manual sources, completion tooling, and maintenance records |
 | `packaging/` | release dependencies, cross-build scripts, Dockerfiles, and package assets |

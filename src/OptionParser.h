@@ -42,7 +42,7 @@
 #include <iosfwd>
 #include <memory>
 
-#include <aria2/aria2.h>
+#include "InternalTypes.h"
 
 #include "prefs.h"
 

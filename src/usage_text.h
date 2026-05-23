@@ -267,17 +267,6 @@
     "                              ',' and '-' can be used together.")
 #define TEXT_TORRENT_FILE                                               \
   _(" -T, --torrent-file=TORRENT_FILE  The path to the .torrent file.")
-#define TEXT_FOLLOW_TORRENT                                             \
-  _(" --follow-torrent=true|false|mem If true or mem is specified, when a file\n" \
-    "                              whose suffix is .torrent or content type is\n" \
-    "                              application/x-bittorrent is downloaded, aria2\n" \
-    "                              parses it as a torrent file and downloads files\n" \
-    "                              mentioned in it.\n"                  \
-    "                              If mem is specified, a torrent file is not\n" \
-    "                              written to the disk, but is just kept in memory.\n" \
-    "                              If false is specified, the .torrent file is\n" \
-    "                              downloaded to the disk, but is not parsed as a\n" \
-    "                              torrent and its contents are not downloaded.")
 #define TEXT_LISTEN_PORT                                                \
   _(" --listen-port=PORT...        Set TCP port number for BitTorrent downloads.\n" \
     "                              Multiple ports can be specified by using ',',\n" \

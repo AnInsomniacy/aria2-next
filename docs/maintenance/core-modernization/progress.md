@@ -186,3 +186,19 @@ Changed: Tightened the libtorrent boundary after native BT runtime removal. `.to
 Verified: `cmake --build --preset default --target aria2_tests` passed. Focused DownloadHelper torrent, select-file, tracker, and magnet tracker tests passed. Focused RpcMethod addTorrent and libtorrent select-file tests passed. `DownloadHandlersTest`, `BittorrentHelperTest`, and `Bencode2Test` passed. Stale scans found no removed bencode writer, ValueBase torrent ingress, libtorrent priority helper, or native BT runtime fallback residue.
 Remaining: Start CM-017 option docs and compatibility claim pruning.
 Blocked: none.
+
+2026-05-23 CM-017 verified
+Changed: Pruned stale option, documentation, completion, handler, and public
+API compatibility residue. Removed `follow-torrent`, the obsolete
+pre/post-download handler framework, removed native backend options, the
+optional public C++ library API, its examples, manual page, pkg-config
+template, build switch, install rules, source inventory, and API test. Moved
+the small internal CLI/RPC type set into `src/InternalTypes.h`.
+Verified: `cmake --build --preset default --target aria2_tests` passed.
+Focused OptionHandler, OptionParser, FeatureConfig, and RequestGroup tests
+passed. `build/default/aria2-next --help=#all` stale-option scan passed.
+Source, manual, README, completion, CMake, tools, tests, and examples scans
+found no removed option, handler framework, or public library residue.
+Completion shell syntax and `git diff --check` passed.
+Remaining: Start CM-018 packaging and release dependency closure.
+Blocked: none.

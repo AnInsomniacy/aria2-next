@@ -37,7 +37,6 @@
 #include <cassert>
 #include <algorithm>
 
-#include "PostDownloadHandler.h"
 #include "DownloadEngine.h"
 #include "SegmentMan.h"
 #include "NullProgressInfoFile.h"
@@ -61,13 +60,10 @@
 #include "RequestGroupMan.h"
 #include "DefaultProgressInfoFile.h"
 #include "DefaultPieceStorage.h"
-#include "download_handlers.h"
 #include "Ed2kAttribute.h"
 #include "Ed2kCommand.h"
 #include "Ed2kListenCommand.h"
 #include "Ed2kKadCommand.h"
-#include "MemoryBufferPreDownloadHandler.h"
-#include "DownloadHandlerConstants.h"
 #include "Option.h"
 #include "FileEntry.h"
 #include "LibtorrentAttribute.h"
@@ -78,7 +74,6 @@
 #include "A2STR.h"
 #include "URISelector.h"
 #include "InorderURISelector.h"
-#include "RequestGroupCriteria.h"
 #include "CheckIntegrityCommand.h"
 #include "ChecksumCheckIntegrityEntry.h"
 #ifdef ENABLE_BITTORRENT
@@ -119,10 +114,6 @@ RequestGroup::RequestGroup(const std::shared_ptr<GroupId>& gid,
       seedOnly_(false)
 {
   fileAllocationEnabled_ = option_->get(PREF_FILE_ALLOCATION) != V_NONE;
-  if (!option_->getAsBool(PREF_DRY_RUN)) {
-    initializePreDownloadHandler();
-    initializePostDownloadHandler();
-  }
 }
 
 RequestGroup::~RequestGroup() = default;
@@ -924,61 +915,6 @@ void RequestGroup::releaseRuntimeResource(DownloadEngine* e)
   seedOnly_ = false;
 }
 
-void RequestGroup::preDownloadProcessing()
-{
-  A2_LOG_DEBUG(fmt("Finding PreDownloadHandler for path %s.",
-                   getFirstFilePath().c_str()));
-  try {
-    for (const auto& pdh : preDownloadHandlers_) {
-      if (pdh->canHandle(this)) {
-        pdh->execute(this);
-        return;
-      }
-    }
-  }
-  catch (RecoverableException& ex) {
-    A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, ex);
-    return;
-  }
-
-  A2_LOG_DEBUG("No PreDownloadHandler found.");
-  return;
-}
-
-void RequestGroup::postDownloadProcessing(
-    std::vector<std::shared_ptr<RequestGroup>>& groups)
-{
-  A2_LOG_DEBUG(fmt("Finding PostDownloadHandler for path %s.",
-                   getFirstFilePath().c_str()));
-  try {
-    for (const auto& pdh : postDownloadHandlers_) {
-      if (pdh->canHandle(this)) {
-        pdh->getNextRequestGroups(groups, this);
-        return;
-      }
-    }
-  }
-  catch (RecoverableException& ex) {
-    A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, ex);
-  }
-
-  A2_LOG_DEBUG("No PostDownloadHandler found.");
-}
-
-void RequestGroup::initializePreDownloadHandler()
-{
-#ifdef ENABLE_BITTORRENT
-  if (option_->get(PREF_FOLLOW_TORRENT) == V_MEM) {
-    preDownloadHandlers_.push_back(
-        download_handlers::getBtPreDownloadHandler());
-  }
-#endif // ENABLE_BITTORRENT
-}
-
-void RequestGroup::initializePostDownloadHandler()
-{
-}
-
 bool RequestGroup::isDependencyResolved()
 {
   if (!dependency_) {
@@ -997,20 +933,6 @@ void RequestGroup::setDiskWriterFactory(
 {
   diskWriterFactory_ = diskWriterFactory;
 }
-
-void RequestGroup::addPostDownloadHandler(const PostDownloadHandler* handler)
-{
-  postDownloadHandlers_.push_back(handler);
-}
-
-void RequestGroup::addPreDownloadHandler(const PreDownloadHandler* handler)
-{
-  preDownloadHandlers_.push_back(handler);
-}
-
-void RequestGroup::clearPostDownloadHandler() { postDownloadHandlers_.clear(); }
-
-void RequestGroup::clearPreDownloadHandler() { preDownloadHandlers_.clear(); }
 
 void RequestGroup::setPieceStorage(
     const std::shared_ptr<PieceStorage>& pieceStorage)

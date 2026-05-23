@@ -17,9 +17,6 @@ if(CPPUNIT_FOUND)
   if(NOT HAVE_TIMEGM)
     list(APPEND ARIA2_TEST_SOURCES ${ARIA2_TEST_SOURCES_NOT_HAVE_TIMEGM})
   endif()
-  if(ENABLE_LIBARIA2)
-    list(APPEND ARIA2_TEST_SOURCES ${ARIA2_TEST_SOURCES_ENABLE_LIBARIA2})
-  endif()
   if(NOT ENABLE_WEBSOCKET)
     list(REMOVE_ITEM ARIA2_TEST_SOURCES tests/WebSocketSessionManTest.cc)
   endif()
@@ -30,10 +27,8 @@ if(CPPUNIT_FOUND)
   target_include_directories(aria2_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/tests
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/includes
     ${CMAKE_CURRENT_SOURCE_DIR}/lib
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_CURRENT_BINARY_DIR}/src/includes)
+    ${CMAKE_CURRENT_BINARY_DIR})
   target_link_libraries(aria2_tests PRIVATE aria2_core PkgConfig::CPPUNIT)
   add_test(NAME aria2_tests COMMAND aria2_tests)
   set_tests_properties(aria2_tests PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

@@ -64,7 +64,6 @@
 #include "SegList.h"
 #include "LibtorrentAttribute.h"
 #include "bencode2.h"
-#include "download_handlers.h"
 #include "ed2k_hash.h"
 #include "ed2k_kad.h"
 #include "ed2k_link.h"

@@ -396,14 +396,6 @@ public:
           else {
             group->saveControlFile();
           }
-          std::vector<std::shared_ptr<RequestGroup>> nextGroups;
-          group->postDownloadProcessing(nextGroups);
-          if (!nextGroups.empty()) {
-            A2_LOG_DEBUG(fmt("Adding %lu RequestGroups as a result of"
-                             " PostDownloadHandler.",
-                             static_cast<unsigned long>(nextGroups.size())));
-            e_->getRequestGroupMan()->insertReservedGroup(0, nextGroups);
-          }
         }
         else {
           A2_LOG_NOTICE(

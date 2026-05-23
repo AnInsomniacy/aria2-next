@@ -34,8 +34,8 @@ been ported where it fits aria2-next, while obsolete legacy structures were
 removed or replaced with existing compatible integration surfaces.
 
 The maintained fork is located at https://github.com/AnInsomniacy/aria2-next.
-It preserves aria2 command-line, configuration, session, JSON-RPC, and
-libaria2 compatibility.
+It preserves the maintained aria2-style command-line, configuration, session,
+and JSON-RPC surfaces.
 
 See the upstream `aria2 Online Manual
 <https://aria2.github.io/manual/en/html/>`_ to learn how to use aria2.
@@ -187,9 +187,11 @@ toolchain file or explicit ``CMAKE_SYSTEM_NAME``, compiler, prefix, and
 Windows cross-build implementation. It assumes the following libraries have been
 built for cross-compilation:
 
-* c-ares
 * zlib
-* libssh2
+* libcurl
+* OpenSSL
+* Boost
+* libtorrent-rasterbar
 * cppunit
 
 Some environment variables can be adjusted to change build settings:
@@ -207,9 +209,7 @@ Some environment variables can be adjusted to change build settings:
   ``PKG_CONFIG_LIBDIR``.
 
 For example, a 64-bit Windows build uses ``-DCMAKE_SYSTEM_NAME=Windows`` with
-``x86_64-w64-mingw32-gcc`` and ``x86_64-w64-mingw32-g++``. If you want an
-installable libaria2 build, enable ``-DARIA2_ENABLE_LIBARIA2=ON`` and prepare
-matching shared or static external libraries.
+``x86_64-w64-mingw32-gcc`` and ``x86_64-w64-mingw32-g++``.
 
 Cross-compiling Android binary
 ------------------------------
@@ -224,10 +224,11 @@ The maintained release workflow and Android Dockerfile are the reference Android
 cross-build implementations. They assume the following libraries have been built
 for cross-compilation:
 
-* c-ares
+* libcurl
 * openssl
 * zlib
-* libssh2
+* Boost
+* libtorrent-rasterbar
 
 Build the dependency libraries as static libraries and install them under a
 single Android prefix. Then configure aria2 with CMake using the Android NDK
@@ -315,16 +316,6 @@ WebSocket
 
 The WebSocket server embedded in aria2 implements the specification
 defined in RFC 6455. The supported protocol version is 13.
-
-libaria2
---------
-
-The libaria2 is a C++ library that offers aria2 functionality to the
-client code. Currently, libaria2 is not built by default. To enable
-libaria2, use ``-DARIA2_ENABLE_LIBARIA2=ON`` CMake option.  By default,
-only the shared library is built. To build a static library, use
-``-DARIA2_ENABLE_STATIC=ON`` CMake option as well. See libaria2
-documentation to know how to use API.
 
 References
 ----------

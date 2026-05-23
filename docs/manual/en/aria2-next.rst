@@ -422,14 +422,6 @@ HTTP Specific Options
     itself is gzipped file. aria2 inflates them anyway because of the
     response header.
 
-.. option:: --http-auth-challenge [true|false]
-
-  Send HTTP authorization header only when it is requested by the
-  server. If ``false`` is set, then authorization header is always sent
-  to the server.  There is an exception: if user name and password are
-  embedded in URI, authorization header is always sent to the server
-  regardless of this option.  Default: ``false``
-
 .. option:: --http-no-cache [true|false]
 
    Send ``Cache-Control: no-cache`` and ``Pragma: no-cache`` header to avoid
@@ -514,14 +506,7 @@ HTTP Specific Options
 
 .. option:: --load-cookies=<FILE>
 
-  Load Cookies from FILE using the Firefox3 format (SQLite3),
-  Chromium/Google Chrome (SQLite3) and the
-  Mozilla/Firefox(1.x/2.x)/Netscape format.
-
-  .. note::
-
-    If aria2 is built without libsqlite3, then it doesn't support Firefox3
-    and Chromium/Google Chrome cookie format.
+  Load cookies from FILE using libcurl's cookie engine.
 
 .. option:: --save-cookies=<FILE>
 
@@ -594,20 +579,6 @@ FTP/SFTP Specific Options
   .. note::
 
     This option is ignored for SFTP transfer.
-
-.. option:: --ftp-reuse-connection [true|false]
-
-  Reuse connection in FTP.
-  Default: ``true``
-
-.. option:: --ssh-host-key-md=<TYPE>=<DIGEST>
-
-  Set checksum for SSH host public key. TYPE is hash type. The
-  supported hash type is ``sha-1`` or ``md5``. DIGEST is hex
-  digest. For example:
-  ``sha-1=b030503d4de4539dc7885e6f0f5e256704edf4c3``.  This option can
-  be used to validate server's public key when SFTP is used. If this
-  option is not set, which is default, no validation takes place.
 
 BitTorrent File Selection
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -763,17 +734,6 @@ These options configure libtorrent-backed torrent and magnet downloads.
   feature is disabled for that download even if ``true`` is given.
   Default: ``true``
 
-.. option:: --follow-torrent=true|false|mem
-
-  If ``true`` or ``mem`` is specified, when a file whose suffix is ``.torrent`` or content
-  type is ``application/x-bittorrent`` is downloaded, aria2 parses it as a torrent
-  file and downloads files mentioned in it.
-  If ``mem`` is specified, a torrent file is not written to the disk, but is just
-  kept in memory.
-  If ``false`` is specified, the ``.torrent`` file is downloaded to the disk, but
-  is not parsed as a torrent and its contents are not downloaded.
-  Default: ``true``
-
 .. option:: -O, --index-out=<INDEX>=<PATH>
 
   Set file path for file with index=INDEX. You can find the file index
@@ -865,18 +825,6 @@ RPC Options
   RPC response.
   Default: ``false``
 
-.. option:: --rpc-certificate=<FILE>
-
-  Use the certificate in FILE for RPC server. The certificate must be
-  either in PKCS12 (.p12, .pfx) or in PEM format.
-
-  PKCS12 files must contain the certificate, a key and optionally a chain
-  of additional certificates. Only PKCS12 files with a blank import password
-  can be opened!
-
-  When using PEM, you have to specify the private key via :option:`--rpc-private-key`
-  as well. Use :option:`--rpc-secure` option to enable encryption.
-
 .. option:: --rpc-listen-all [true|false]
 
   Listen incoming JSON-RPC requests on all network interfaces. If false
@@ -892,22 +840,6 @@ RPC Options
   Set max size of JSON-RPC request. If aria2 detects the request is
   more than SIZE bytes, it drops connection. Default: ``2M``
 
-.. option:: --rpc-passwd=<PASSWD>
-
-  Set JSON-RPC password.
-
-  .. Warning::
-
-    :option:`--rpc-passwd` option will be deprecated in the future
-    release. Migrate to :option:`--rpc-secret` option as soon as
-    possible.
-
-.. option:: --rpc-private-key=<FILE>
-
-  Use the private key in FILE for RPC server.  The private key must be
-  decrypted and in PEM format. Use :option:`--rpc-secure` option to
-  enable encryption. See also :option:`--rpc-certificate` option.
-
 .. option:: --rpc-save-upload-metadata [true|false]
 
   Save the uploaded torrent metadata in the directory
@@ -921,24 +853,6 @@ RPC Options
 
    Set RPC secret authorization token. Read :ref:`rpc_auth` to know
    how this option value is used.
-
-.. option:: --rpc-secure [true|false]
-
-  RPC transport will be encrypted by SSL/TLS.  The RPC clients must
-  use https scheme to access the server. For WebSocket client, use wss
-  scheme. Use :option:`--rpc-certificate` and
-  :option:`--rpc-private-key` options to specify the server
-  certificate and private key.
-
-.. option:: --rpc-user=<USER>
-
-  Set JSON-RPC user.
-
-  .. Warning::
-
-    :option:`--rpc-user` option will be deprecated in the future
-    release. Migrate to :option:`--rpc-secret` option as soon as
-    possible.
 
 Advanced Options
 ~~~~~~~~~~~~~~~~
@@ -1785,8 +1699,6 @@ user's home directory:
 * :option:`on-download-pause <--on-download-pause>`
 * :option:`out <--out>`
 * :option:`private-key <--private-key>`
-* :option:`rpc-certificate <--rpc-certificate>`
-* :option:`rpc-private-key <--rpc-private-key>`
 * :option:`save-cookies <--save-cookies>`
 * :option:`save-session <--save-session>`
 * :option:`server-stat-if <--server-stat-if>`
@@ -1907,21 +1819,18 @@ of URIs. These optional lines must start with white space(s).
   * :option:`enable-mmap <--enable-mmap>`
   * :option:`enable-peer-exchange <--enable-peer-exchange>`
   * :option:`file-allocation <--file-allocation>`
-  * :option:`follow-torrent <--follow-torrent>`
   * :option:`force-save <--force-save>`
   * :option:`ftp-passwd <--ftp-passwd>`
   * :option:`ftp-pasv <-p>`
   * :option:`ftp-proxy <--ftp-proxy>`
   * :option:`ftp-proxy-passwd <--ftp-proxy-passwd>`
   * :option:`ftp-proxy-user <--ftp-proxy-user>`
-  * :option:`ftp-reuse-connection <--ftp-reuse-connection>`
   * :option:`ftp-type <--ftp-type>`
   * :option:`ftp-user <--ftp-user>`
   * :option:`gid <--gid>`
   * :option:`hash-check-only <--hash-check-only>`
   * :option:`header <--header>`
   * :option:`http-accept-gzip <--http-accept-gzip>`
-  * :option:`http-auth-challenge <--http-auth-challenge>`
   * :option:`http-no-cache <--http-no-cache>`
   * :option:`http-passwd <--http-passwd>`
   * :option:`http-proxy <--http-proxy>`
@@ -1961,7 +1870,6 @@ of URIs. These optional lines must start with white space(s).
   * :option:`seed-time <--seed-time>`
   * :option:`select-file <--select-file>`
   * :option:`split <-s>`
-  * :option:`ssh-host-key-md <--ssh-host-key-md>`
   * :option:`stream-piece-selector <--stream-piece-selector>`
   * :option:`timeout <-t>`
   * :option:`uri-selector <--uri-selector>`
@@ -3465,13 +3373,6 @@ notification method. Following notification methods are defined.
 
 BitTorrent Download
 ~~~~~~~~~~~~~~~~~~~
-Download files using a remote BitTorrent file
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. code-block:: console
-
-  $ aria2-next --follow-torrent=mem "http://host/file.torrent"
-
-
 Download using a local torrent file
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. code-block:: console
@@ -3522,12 +3423,6 @@ Only download specific files (usually called "selected download")
 .. note::
 
   The index is printed to the console using -S option.
-
-Download a .torrent file, but do not download the torrent
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.. code-block:: console
-
-  $ aria2-next --follow-torrent=false "http://host/file.torrent"
 
 Specify the output file name
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3659,30 +3554,6 @@ Verify SSL/TLS servers using given CA certificates
 .. code-block:: console
 
   $ aria2-next --ca-certificate=/path/to/ca-certificates.crt --check-certificate https://host/file
-
-RPC
-~~~
-
-Encrypt RPC traffic with SSL/TLS
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Specify a server PKC12 file:
-
-.. code-block:: console
-
-  $ aria2-next --enable-rpc --rpc-certificate=/path/to/server.p12 --rpc-secure
-
-.. note::
-
-  The file specified in :option:`--rpc-certificate` must be contain one PKCS12
-  encoded certificate and key. The password must be blank.
-
-Alternatively, specify the server certificate file and private key file as
-follows:
-
-.. code-block:: console
-
-  $ aria2-next --enable-rpc --rpc-certificate=/path/to/server.crt --rpc-private-key=/path/to/server.key --rpc-secure
 
 And more advanced features
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

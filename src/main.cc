@@ -40,7 +40,7 @@
 #  include <shellapi.h>
 #endif // __MINGW32__
 
-#include <aria2/aria2.h>
+#include "InternalTypes.h"
 #include "Context.h"
 #include "MultiUrlRequestInfo.h"
 #include "message.h"

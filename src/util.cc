@@ -76,7 +76,6 @@
 #include "A2STR.h"
 #include "array_fun.h"
 #include "bitfield.h"
-#include "DownloadHandlerConstants.h"
 #include "RequestGroup.h"
 #include "LogFactory.h"
 #include "Logger.h"
