@@ -28,8 +28,8 @@ them in parallel. The usage is::
 
       Download given URIs in parallel in the current directory.
 
-The source code uses C++11 features, so C++11 enabled compiler is
-required. GCC 4.7 works well here.
+The source code uses C++14 features, so a C++14 enabled compiler is
+required.
 
 OK, let's look into the source code. First, include aria2.h header
 file::

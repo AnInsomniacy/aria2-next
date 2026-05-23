@@ -2,7 +2,7 @@
 
 This directory owns release packaging, cross-compilation helpers, Docker build contexts, platform package resources, and release dependency metadata.
 
-`dependencies.env` is the authoritative dependency source for maintained release automation. It records versions, archive names, URLs, and SHA-256 hashes for downloaded release inputs.
+`dependencies.env` is the authoritative dependency source for maintained release automation. It records versions, archive names, URLs, and SHA-256 hashes for downloaded release inputs, including libtorrent-rasterbar and Boost for the maintained BitTorrent backend.
 
 ## Layout
 
@@ -14,9 +14,9 @@ This directory owns release packaging, cross-compilation helpers, Docker build c
 | `scripts/` | Release packaging helpers |
 | `dependencies.env` | Maintained dependency baseline and source archive hashes |
 
-Supported packaging paths build this repository checkout through CMake. Third-party dependencies may use their own upstream build systems while they are being built as release dependencies.
+Supported packaging paths build this repository checkout through CMake. Third-party dependencies may use their own upstream build systems while they are being built as release dependencies. BitTorrent support is built through libtorrent-rasterbar only; release packaging does not build or ship the removed native BitTorrent engine.
 
-Official release builds use `packaging/scripts/release-size-profile` to apply size-oriented compiler flags, per-function and per-data sections, and platform linker dead-code elimination. The profile is used by GitHub release jobs and Docker cross-build images so portable artifacts keep the maintained dependency baseline without retaining avoidable unused code.
+Official release builds use `packaging/scripts/release-size-profile` to apply size-oriented compiler flags, per-function and per-data sections, and platform linker dead-code elimination. The profile is used by GitHub release jobs and Docker cross-build images so portable artifacts keep the maintained dependency baseline without retaining avoidable unused code. `packaging/scripts/common.sh` also owns the shared Boost header installation and static libtorrent-rasterbar build helper used by release jobs and Docker cross-build images.
 
 GitHub Release assets are standalone executable binaries named `aria2-next-<version>-<platform>-<architecture>`, plus a SHA-256 checksum file. Source code and license material are provided by the GitHub release tag source archives.
 

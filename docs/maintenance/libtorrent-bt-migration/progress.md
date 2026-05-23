@@ -180,3 +180,27 @@ Tests/aria2::rpc::RpcMethodTest'` passed with `OK (46)`.
 `build/libtorrent-positive/aria2_tests` passed with `OK (820)`.
 Remaining: Start BTM-010 docs, completion, packaging, and release-path updates.
 Blocked: none.
+
+2026-05-23 BTM-010 verified
+Changed: Updated the manual, technical notes, libaria2 notes, packaging docs,
+release workflow, MinGW and Android release Dockerfiles, and release dependency
+records for the libtorrent-only BitTorrent backend. Added Boost 1.91.0 and
+libtorrent-rasterbar 2.0.12 to `packaging/dependencies.env`, added shared
+release helpers for Boost headers and static libtorrent builds, and pinned
+libtorrent's OpenSSL discovery to the release prefix to avoid host library
+leakage.
+Verified: `bash -n packaging/scripts/common.sh packaging/scripts/mingw-release
+packaging/scripts/android-release scripts/release.sh scripts/bump-version.sh
+tools/build_test.sh` passed. `.github/workflows/release.yml` and
+`.github/workflows/ci.yml` parsed with Python YAML. `git diff --check
+.github/workflows/release.yml packaging docs/manual
+docs/maintenance/libtorrent-bt-migration` passed. CSV parser check over
+`docs/maintenance/libtorrent-bt-migration/**/*.csv` passed. Local helper smoke
+under `/Users/sekiro/Desktop/aria2-next-current` downloaded verified Boost and
+libtorrent archives, built prefix OpenSSL 3.5.6, installed Boost headers, built
+static libtorrent-rasterbar 2.0.12, and `pkg-config --libs --static
+libtorrent-rasterbar` reported only the prefix library path plus framework and
+OpenSSL link flags.
+Remaining: Start BTM-011 final default build, CTest, version command, and
+sequential public BitTorrent smoke validation.
+Blocked: none.

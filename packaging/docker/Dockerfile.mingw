@@ -32,7 +32,9 @@ RUN . packaging/dependencies.env && \
     curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256" && \
     curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256" && \
     curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256" && \
-    curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
+    curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256" && \
+    curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256" && \
+    curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
 
 RUN . packaging/dependencies.env && \
     . packaging/scripts/release-size-profile windows && \
@@ -108,6 +110,20 @@ RUN . packaging/dependencies.env && \
       PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
       LIBS="-lws2_32 -lcrypt32" && \
     make -j"$(nproc)" install
+
+RUN . packaging/dependencies.env && \
+    . packaging/scripts/common.sh && \
+    install_boost_headers
+
+RUN . packaging/dependencies.env && \
+    . packaging/scripts/common.sh && \
+    . packaging/scripts/release-size-profile windows && \
+    ARIA2_BUILD_JOBS="$(nproc)" build_libtorrent_rasterbar \
+      -DCMAKE_SYSTEM_NAME=Windows \
+      -DCMAKE_C_COMPILER="$HOST-gcc" \
+      -DCMAKE_CXX_COMPILER="$HOST-g++" \
+      -DCMAKE_RC_COMPILER="$HOST-windres" \
+      -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
 
 COPY . /aria2
 WORKDIR /aria2

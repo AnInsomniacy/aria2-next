@@ -107,6 +107,8 @@ jobs:
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
+          curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
+          curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
 
       - name: Build zlib
         run: |
@@ -170,6 +172,19 @@ jobs:
             PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
           make -j$(nproc)
           sudo make install
+
+      - name: Build Boost headers
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          install_boost_headers
+
+      - name: Build libtorrent-rasterbar
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile linux
+          ARIA2_BUILD_JOBS=$(nproc) build_libtorrent_rasterbar
 
       - name: Build aria2
         run: |
@@ -241,6 +256,8 @@ jobs:
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
+          curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
+          curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
 
       - name: Build zlib
         run: |
@@ -304,6 +321,19 @@ jobs:
             PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
           make -j$(nproc)
           sudo make install
+
+      - name: Build Boost headers
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          install_boost_headers
+
+      - name: Build libtorrent-rasterbar
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile linux
+          ARIA2_BUILD_JOBS=$(nproc) build_libtorrent_rasterbar
 
       - name: Build aria2
         run: |
@@ -373,6 +403,8 @@ jobs:
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
+          curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
+          curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
 
       - name: Build zlib
         run: |
@@ -436,6 +468,19 @@ jobs:
             PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
           make -j$(sysctl -n hw.ncpu)
           make install
+
+      - name: Build Boost headers
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          install_boost_headers
+
+      - name: Build libtorrent-rasterbar
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile macos
+          ARIA2_BUILD_JOBS=$(sysctl -n hw.ncpu) build_libtorrent_rasterbar
 
       - name: Build aria2
         run: |
@@ -507,6 +552,8 @@ jobs:
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
+          curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
+          curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
 
       - name: Build zlib
         run: |
@@ -570,6 +617,19 @@ jobs:
             PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig"
           make -j$(sysctl -n hw.ncpu)
           make install
+
+      - name: Build Boost headers
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          install_boost_headers
+
+      - name: Build libtorrent-rasterbar
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile macos
+          ARIA2_BUILD_JOBS=$(sysctl -n hw.ncpu) build_libtorrent_rasterbar
 
       - name: Build aria2
         run: |
@@ -646,6 +706,8 @@ jobs:
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
+          curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
+          curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
 
       - name: Build expat
         run: |
@@ -727,6 +789,24 @@ jobs:
             PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
             LIBS="-lws2_32 -lcrypt32"
           sudo make -j$(nproc) install
+
+      - name: Build Boost headers
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          install_boost_headers
+
+      - name: Build libtorrent-rasterbar
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile windows
+          ARIA2_BUILD_JOBS=$(nproc) build_libtorrent_rasterbar \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_C_COMPILER=$HOST-gcc \
+            -DCMAKE_CXX_COMPILER=$HOST-g++ \
+            -DCMAKE_RC_COMPILER=$HOST-windres \
+            -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
 
       - name: Build aria2
         run: |
@@ -815,6 +895,8 @@ jobs:
           curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
+          curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
+          curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
 
       - name: Build expat
         run: |
@@ -899,6 +981,25 @@ jobs:
             PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
             LIBS="-lws2_32 -lcrypt32"
           sudo env "PATH=$PATH" make -j$(nproc) install
+
+      - name: Build Boost headers
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          install_boost_headers
+
+      - name: Build libtorrent-rasterbar
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile windows
+          ARIA2_BUILD_JOBS=$(nproc) build_libtorrent_rasterbar \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_C_COMPILER=$CC \
+            -DCMAKE_CXX_COMPILER=$CXX \
+            -DCMAKE_AR=$AR \
+            -DCMAKE_RANLIB=$RANLIB \
+            -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
 
       - name: Build aria2
         run: |

@@ -701,6 +701,9 @@ ED2K Specific Options
 BitTorrent Specific Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+aria2-next uses libtorrent-rasterbar as its only BitTorrent backend.
+These options configure libtorrent-backed torrent and magnet downloads.
+
 .. option:: --bt-detach-seed-only [true|false]
 
   Exclude seed only downloads when counting concurrent active
@@ -743,10 +746,8 @@ BitTorrent Specific Options
 
 .. option:: --bt-require-crypto [true|false]
 
-  If ``true`` is given, aria2 doesn't accept and establish connection with legacy
-  BitTorrent handshake(\\19BitTorrent protocol).
-  Thus aria2 always uses Obfuscation handshake.
-  Default: ``false``
+  Require encrypted BitTorrent peer connections. If ``true`` is given,
+  aria2-next rejects unencrypted peer traffic. Default: ``false``
 
 .. option:: --bt-stop-timeout=<SEC>
 
@@ -1900,11 +1901,9 @@ shell and then aria2-next.
 dht.dat
 ~~~~~~~~
 
-Unless the legacy file paths ``$HOME/.aria2/dht.dat`` and
-``$HOME/.aria2/dht6.dat`` are pointing to existing files, the routing
-table of IPv4 DHT is saved to the path
-``$XDG_CACHE_HOME/aria2/dht.dat`` and the routing table of IPv6 DHT is
-saved to the path ``$XDG_CACHE_HOME/aria2/dht6.dat``.
+BitTorrent DHT state is owned by libtorrent-rasterbar. The legacy native
+``dht.dat`` and ``dht6.dat`` routing table formats are not used by the
+libtorrent-backed BitTorrent engine.
 
 Netrc
 ~~~~~

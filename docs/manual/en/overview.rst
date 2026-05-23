@@ -119,8 +119,7 @@ features                  dependency
 ======================== ========================================
 HTTPS                    OpenSSL or GnuTLS or Windows
 SFTP                     libssh2
-BitTorrent               None. Optional: libnettle+libgmp or libgcrypt
-                         or OpenSSL (see note)
+BitTorrent               libtorrent-rasterbar and Boost headers
 ED2K                     None
 Metalink                 libxml2 or Expat.
 Checksum                 None. Optional: OpenSSL or libnettle or libgcrypt
@@ -181,19 +180,17 @@ To enable async DNS support, you need c-ares.
 How to build
 ------------
 
-aria2 is primarily written in C++. Initially, it was written based on
-C++98/C++03 standard features. We are now migrating aria2 to the C++11
-standard. The current source code requires a C++11 aware compiler. For
-well-known compilers, such as g++ and clang, the ``-std=c++11`` or
-``-std=c++0x`` flag must be supported.
+aria2 is primarily written in C++. aria2-next currently requires a
+C++14-aware compiler because BitTorrent support is provided by
+libtorrent-rasterbar.
 
 To build aria2 from the source package, you need the following
 development packages (package name may vary depending on the
 distribution you use):
 
-* libgnutls-dev    (Required for HTTPS, BitTorrent, Checksum support)
-* nettle-dev       (Required for BitTorrent, Checksum support)
-* libgmp-dev       (Required for BitTorrent)
+* libtorrent-rasterbar-dev (Required for BitTorrent support)
+* libboost-dev     (Required for BitTorrent support)
+* libgnutls-dev    (Required for HTTPS and Checksum support)
 * libssh2-1-dev    (Required for SFTP support)
 * libc-ares-dev    (Required for async DNS support)
 * libxml2-dev      (Required for Metalink support)
@@ -201,10 +198,10 @@ distribution you use):
 * libsqlite3-dev   (Required for Firefox3/Chromium cookie support)
 * pkg-config       (Required to detect installed libraries)
 
-You can use libgcrypt-dev instead of nettle-dev and libgmp-dev:
+You can use libgcrypt-dev instead of nettle-dev:
 
-* libgpg-error-dev (Required for BitTorrent, Checksum support)
-* libgcrypt-dev    (Required for BitTorrent, Checksum support)
+* libgpg-error-dev (Required for Checksum support)
+* libgcrypt-dev    (Required for Checksum support)
 
 You can use libssl-dev instead of
 libgnutls-dev, nettle-dev, libgmp-dev, libgpg-error-dev and libgcrypt-dev:
@@ -218,7 +215,7 @@ You can use libexpat1-dev instead of libxml2-dev:
 On Fedora you need the following packages: gcc, gcc-c++, kernel-devel,
 libgcrypt-devel, libxml2-devel, openssl-devel, cppunit
 
-Source builds require CMake, Ninja, pkg-config, a C++11 compiler, and the
+Source builds require CMake, Ninja, pkg-config, a C++14 compiler, and the
 development packages for the features you want to enable. Modern maintained
 builds require OpenSSL 3.5 LTS or newer when the OpenSSL backend is selected.
 Install the documentation toolchain if you want to build the manual and man
@@ -357,6 +354,11 @@ The HTML version manual is also available
 BitTorrent
 -----------
 
+aria2-next uses libtorrent-rasterbar as its only BitTorrent backend.
+Torrent files and magnet links are routed through libtorrent for peer
+protocol, DHT, PEX, local peer discovery, UDP trackers, piece picking,
+endgame behavior, disk I/O, metadata exchange, and resume state.
+
 About file names
 ~~~~~~~~~~~~~~~~
 The file name of the downloaded file is determined as follows:
@@ -380,22 +382,12 @@ needed. By default, aria2 opens at most 100 files mentioned in
 The number of files to open simultaneously can be controlled by
 ``--bt-max-open-files`` option.
 
-DHT
-~~~
+DHT and UDP tracker
+~~~~~~~~~~~~~~~~~~~
 
-aria2 supports mainline compatible DHT. By default, the routing table
-for IPv4 DHT is saved to ``$XDG_CACHE_HOME/aria2/dht.dat`` and the
-routing table for IPv6 DHT is saved to
-``$XDG_CACHE_HOME/aria2/dht6.dat`` unless files exist at
-``$HOME/.aria2/dht.dat`` or ``$HOME/.aria2/dht6.dat``. aria2 uses the
-same port number to listen on for both IPv4 and IPv6 DHT.
-
-UDP tracker
-~~~~~~~~~~~
-
-UDP tracker support is enabled when IPv4 DHT is enabled.  The port
-number of the UDP tracker is shared with DHT. Use ``--dht-listen-port``
-option to change the port number.
+libtorrent-rasterbar owns the DHT and UDP tracker implementation. Use
+``--enable-dht`` and ``--dht-listen-port`` to control the DHT session
+and UDP listening ports exposed through aria2-next.
 
 Other things should be noted
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -511,6 +503,7 @@ References
 * `BitTorrent: Multitracker Metadata Extension <http://www.bittorrent.org/beps/bep_0012.html>`_
 * `BitTorrent: UDP Tracker Protocol for BitTorrent <http://www.bittorrent.org/beps/bep_0015.html>`_
   and `BitTorrent udp-tracker protocol specification <http://www.rasterbar.com/products/libtorrent/udp_tracker_protocol.html>`_.
+* `libtorrent-rasterbar <https://www.libtorrent.org/>`_
 * `BitTorrent: WebSeed - HTTP/FTP Seeding (GetRight style) <http://www.bittorrent.org/beps/bep_0019.html>`_
 * `BitTorrent: Private Torrents <http://www.bittorrent.org/beps/bep_0027.html>`_
 * `BitTorrent: BitTorrent DHT Extensions for IPv6 <http://www.bittorrent.org/beps/bep_0032.html>`_
