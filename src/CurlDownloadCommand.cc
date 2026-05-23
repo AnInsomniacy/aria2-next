@@ -18,6 +18,8 @@
 #include <vector>
 
 #include "CurlSession.h"
+#include "AuthConfig.h"
+#include "AuthConfigFactory.h"
 #include "DiskAdaptor.h"
 #include "DownloadContext.h"
 #include "DownloadEngine.h"
@@ -180,11 +182,23 @@ std::vector<std::string> splitCumulativeOption(const std::string& value)
               false, false);
   return entries;
 }
+
+bool isFtpFamily(const std::string& protocol)
+{
+  return protocol == "ftp" || protocol == "ftps" || protocol == "sftp" ||
+         protocol == "scp";
+}
 } // namespace
 
 void CurlDownloadCommand::applyRequestOptions()
 {
   auto option = getOption();
+  const auto& protocol = getRequest()->getProtocol();
+
+  curl_easy_setopt(easy_, CURLOPT_PROTOCOLS_STR,
+                   "http,https,ftp,ftps,sftp,scp");
+  curl_easy_setopt(easy_, CURLOPT_REDIR_PROTOCOLS_STR,
+                   "http,https,ftp,ftps,sftp,scp");
   curl_easy_setopt(easy_, CURLOPT_USERAGENT,
                    option->get(PREF_USER_AGENT).c_str());
 
@@ -211,7 +225,7 @@ void CurlDownloadCommand::applyRequestOptions()
                      static_cast<long>(option->getAsInt(PREF_TIMEOUT)));
   }
 
-  if (!option->blank(PREF_HTTP_USER)) {
+  if (!isFtpFamily(protocol) && !option->blank(PREF_HTTP_USER)) {
     std::string userpwd = option->get(PREF_HTTP_USER);
     userpwd += ":";
     userpwd += option->get(PREF_HTTP_PASSWD);
@@ -219,7 +233,11 @@ void CurlDownloadCommand::applyRequestOptions()
     curl_easy_setopt(easy_, CURLOPT_HTTPAUTH, CURLAUTH_ANY);
   }
 
-  proxyUri_ = getProxyUri(getRequest()->getProtocol(), option.get());
+  if (isFtpFamily(protocol)) {
+    applyFtpFamilyOptions();
+  }
+
+  proxyUri_ = getProxyUri(protocol, option.get());
   if (!proxyUri_.empty() &&
       !inNoProxy(getRequest(), option->get(PREF_NO_PROXY))) {
     curl_easy_setopt(easy_, CURLOPT_PROXY, proxyUri_.c_str());
@@ -228,7 +246,7 @@ void CurlDownloadCommand::applyRequestOptions()
     }
   }
 
-  if (getRequest()->getProtocol() == "https") {
+  if (protocol == "https" || protocol == "ftps") {
     const auto verify = option->getAsBool(PREF_CHECK_CERTIFICATE) ? 1L : 0L;
     curl_easy_setopt(easy_, CURLOPT_SSL_VERIFYPEER, verify);
     curl_easy_setopt(easy_, CURLOPT_SSL_VERIFYHOST, verify ? 2L : 0L);
@@ -246,6 +264,10 @@ void CurlDownloadCommand::applyRequestOptions()
     }
   }
 
+  if (protocol == "ftps") {
+    curl_easy_setopt(easy_, CURLOPT_USE_SSL, CURLUSESSL_ALL);
+  }
+
   requestHeaders_ = splitCumulativeOption(option->get(PREF_HEADER));
   if (option->getAsBool(PREF_HTTP_NO_CACHE)) {
     requestHeaders_.push_back("Cache-Control: no-cache");
@@ -254,6 +276,32 @@ void CurlDownloadCommand::applyRequestOptions()
   appendHeaders(headerList_, requestHeaders_);
   if (headerList_) {
     curl_easy_setopt(easy_, CURLOPT_HTTPHEADER, headerList_);
+  }
+}
+
+void CurlDownloadCommand::applyFtpFamilyOptions()
+{
+  auto option = getOption();
+  auto authConfig =
+      getDownloadEngine()->getAuthConfigFactory()->createAuthConfig(
+          getRequest(), option.get());
+  if (authConfig) {
+    curl_easy_setopt(easy_, CURLOPT_USERNAME, authConfig->getUser().c_str());
+    curl_easy_setopt(easy_, CURLOPT_PASSWORD,
+                     authConfig->getPassword().c_str());
+  }
+
+  if (option->get(PREF_FTP_TYPE) == V_ASCII) {
+    curl_easy_setopt(easy_, CURLOPT_TRANSFERTEXT, 1L);
+  }
+  if (!option->getAsBool(PREF_FTP_PASV)) {
+    curl_easy_setopt(easy_, CURLOPT_FTPPORT, "-");
+  }
+  if ((getRequest()->getProtocol() == "sftp" ||
+       getRequest()->getProtocol() == "scp") &&
+      !option->blank(PREF_PRIVATE_KEY)) {
+    curl_easy_setopt(easy_, CURLOPT_SSH_PRIVATE_KEYFILE,
+                     option->get(PREF_PRIVATE_KEY).c_str());
   }
 }
 
@@ -269,6 +317,12 @@ void CurlDownloadCommand::finish(CURLcode result)
   finished_ = true;
   long status = 0;
   curl_easy_getinfo(easy_, CURLINFO_RESPONSE_CODE, &status);
+  curl_off_t contentLength = -1;
+  if (curl_easy_getinfo(easy_, CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,
+                        &contentLength) == CURLE_OK &&
+      contentLength >= 0) {
+    responseLength_ = contentLength;
+  }
 
   if (result != CURLE_OK) {
     throw DOWNLOAD_FAILURE_EXCEPTION(

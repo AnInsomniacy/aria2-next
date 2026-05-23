@@ -58,7 +58,6 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/CookieTest.cc
   tests/CookieStorageTest.cc
   tests/TimeTest.cc
-  tests/FtpConnectionTest.cc
   tests/OptionParserTest.cc
   tests/DNSCacheTest.cc
   tests/DownloadHelperTest.cc

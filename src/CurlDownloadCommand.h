@@ -40,6 +40,7 @@ private:
 
   void initialize();
   void applyRequestOptions();
+  void applyFtpFamilyOptions();
   void applyMetadataProbeOptions();
   void finish(CURLcode result);
   bool finishMetadataProbe(long status);

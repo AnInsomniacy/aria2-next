@@ -90,7 +90,9 @@ AuthConfigFactory::createAuthConfig(const std::shared_ptr<Request>& request,
     }
   }
   else if (request->getProtocol() == "ftp" ||
-           request->getProtocol() == "sftp") {
+           request->getProtocol() == "ftps" ||
+           request->getProtocol() == "sftp" ||
+           request->getProtocol() == "scp") {
     if (!request->getUsername().empty()) {
       if (request->hasPassword()) {
         return AuthConfig::create(request->getUsername(),

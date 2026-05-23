@@ -63,7 +63,8 @@ bool ProtocolDetector::isStreamProtocol(const std::string& uri) const
 
   auto protocol = uri::getFieldString(us, USR_SCHEME, uri.c_str());
   return util::strieq(protocol, "http") || util::strieq(protocol, "https") ||
-         util::strieq(protocol, "ftp") || util::strieq(protocol, "sftp");
+         util::strieq(protocol, "ftp") || util::strieq(protocol, "ftps") ||
+         util::strieq(protocol, "sftp") || util::strieq(protocol, "scp");
 }
 
 bool ProtocolDetector::guessEd2kLink(const std::string& uri) const

@@ -434,7 +434,6 @@ bool HttpResponseCommand::handleOtherEncoding(
 
     // TODO Known issue: if .aria2 file exists, it will not be deleted
     // on successful verification, because .aria2 file is not loaded.
-    // See also FtpNegotiationCommand::onFileSizeDetermined()
     if (getDownloadContext()->isChecksumVerificationNeeded()) {
       A2_LOG_DEBUG("Zero length file exists. Verify checksum.");
       auto entry = make_unique<ChecksumCheckIntegrityEntry>(getRequestGroup());
@@ -464,7 +463,6 @@ bool HttpResponseCommand::handleOtherEncoding(
     A2_LOG_DEBUG("File length becomes zero and it means download completed.");
     // TODO Known issue: if .aria2 file exists, it will not be deleted
     // on successful verification, because .aria2 file is not loaded.
-    // See also FtpNegotiationCommand::onFileSizeDetermined()
     if (getDownloadContext()->isChecksumVerificationNeeded()) {
       A2_LOG_DEBUG("Verify checksum for zero-length file");
       auto entry = make_unique<ChecksumCheckIntegrityEntry>(getRequestGroup());

@@ -225,22 +225,6 @@ set(ARIA2_SOURCES_BASE
   src/FillRequestGroupCommand.h
   src/fmt.cc
   src/fmt.h
-  src/FtpConnection.cc
-  src/FtpConnection.h
-  src/FtpDownloadCommand.cc
-  src/FtpDownloadCommand.h
-  src/FtpFinishDownloadCommand.cc
-  src/FtpFinishDownloadCommand.h
-  src/FtpInitiateConnectionCommand.cc
-  src/FtpInitiateConnectionCommand.h
-  src/FtpNegotiationCommand.cc
-  src/FtpNegotiationCommand.h
-  src/FtpNegotiationConnectChain.h
-  src/FtpTunnelRequestCommand.cc
-  src/FtpTunnelRequestCommand.h
-  src/FtpTunnelRequestConnectChain.h
-  src/FtpTunnelResponseCommand.cc
-  src/FtpTunnelResponseCommand.h
   src/GenericParser.h
   src/GeomStreamPieceSelector.cc
   src/GeomStreamPieceSelector.h
@@ -677,18 +661,6 @@ set(ARIA2_SOURCES_HAVE_SQLITE3
   src/Sqlite3CookieParser.h
   src/Sqlite3CookieParserImpl.cc
   src/Sqlite3CookieParserImpl.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBSSH2
-  src/SSHSession.cc
-  src/SSHSession.h
-  src/SftpNegotiationCommand.cc
-  src/SftpNegotiationCommand.h
-  src/SftpNegotiationConnectChain.h
-  src/SftpDownloadCommand.cc
-  src/SftpDownloadCommand.h
-  src/SftpFinishDownloadCommand.cc
-  src/SftpFinishDownloadCommand.h
 )
 
 set(ARIA2_SOURCES_ENABLE_ASYNC_DNS
