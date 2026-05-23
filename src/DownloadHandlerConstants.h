@@ -41,10 +41,6 @@ namespace aria2 {
 
 // These methods returns NULL-terminated list of c-strings.
 
-const char* const* getMetalinkExtensions();
-
-const char* const* getMetalinkContentTypes();
-
 const char* const* getBtExtensions();
 
 const char* const* getBtContentTypes();

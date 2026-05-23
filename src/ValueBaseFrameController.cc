@@ -32,21 +32,19 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "XmlRpcRequestParserController.h"
+#include "ValueBaseFrameController.h"
 
 #include <cassert>
 
 namespace aria2 {
 
-namespace rpc {
-
-void XmlRpcRequestParserController::pushFrame()
+void ValueBaseFrameController::pushFrame()
 {
   frameStack_.push(std::move(currentFrame_));
   currentFrame_ = StateFrame();
 }
 
-void XmlRpcRequestParserController::popStructFrame()
+void ValueBaseFrameController::popDictFrame()
 {
   assert(!frameStack_.empty());
 
@@ -60,7 +58,7 @@ void XmlRpcRequestParserController::popStructFrame()
   currentFrame_ = std::move(parentFrame);
 }
 
-void XmlRpcRequestParserController::popArrayFrame()
+void ValueBaseFrameController::popArrayFrame()
 {
   assert(!frameStack_.empty());
 
@@ -74,47 +72,39 @@ void XmlRpcRequestParserController::popArrayFrame()
   currentFrame_ = std::move(parentFrame);
 }
 
-void XmlRpcRequestParserController::setCurrentFrameValue(
+void ValueBaseFrameController::setCurrentFrameValue(
     std::unique_ptr<ValueBase> value)
 {
   currentFrame_.value_ = std::move(value);
 }
 
-void XmlRpcRequestParserController::setCurrentFrameName(std::string name)
+void ValueBaseFrameController::setCurrentFrameName(std::string name)
 {
   currentFrame_.name_ = std::move(name);
 }
 
 const std::unique_ptr<ValueBase>&
-XmlRpcRequestParserController::getCurrentFrameValue() const
+ValueBaseFrameController::getCurrentFrameValue() const
 {
   return currentFrame_.value_;
 }
 
-std::unique_ptr<ValueBase> XmlRpcRequestParserController::popCurrentFrameValue()
+std::unique_ptr<ValueBase> ValueBaseFrameController::popCurrentFrameValue()
 {
   return std::move(currentFrame_.value_);
 }
 
-void XmlRpcRequestParserController::reset()
+void ValueBaseFrameController::reset()
 {
   while (!frameStack_.empty()) {
     frameStack_.pop();
   }
   currentFrame_.reset();
-  methodName_.clear();
 }
 
-void XmlRpcRequestParserController::setMethodName(std::string methodName)
-{
-  methodName_ = std::move(methodName);
-}
-
-void XmlRpcRequestParserController::setAllowEmptyMemberName(bool b)
+void ValueBaseFrameController::setAllowEmptyMemberName(bool b)
 {
   allowEmptyMemberName_ = b;
 }
-
-} // namespace rpc
 
 } // namespace aria2

@@ -70,8 +70,6 @@ bool any_not_authorized(const InputIterator begin, const InputIterator end)
   return std::any_of(begin, end, not_authorized);
 }
 
-std::string toXml(const RpcResponse& response, bool gzip = false);
-
 // Encodes RPC response in JSON. If callback is not empty, the
 // resulting string is JSONP.
 std::string toJson(const RpcResponse& response, const std::string& callback,

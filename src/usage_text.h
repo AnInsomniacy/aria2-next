@@ -195,8 +195,8 @@
 #define TEXT_CHECK_INTEGRITY                                            \
   _(" -V, --check-integrity[=true|false] Check file integrity by validating piece\n" \
     "                              hashes or a hash of entire file. This option has\n" \
-    "                              effect only in BitTorrent, Metalink downloads\n" \
-    "                              with checksums or HTTP(S)/FTP downloads with\n" \
+    "                              effect only in BitTorrent downloads with\n" \
+    "                              checksums or HTTP(S)/FTP downloads with\n" \
     "                              --checksum option. If piece hashes are provided,\n" \
     "                              this option can detect damaged portions of a file\n" \
     "                              and re-download them. If a hash of entire file is\n" \
@@ -235,7 +235,7 @@
     "                              for details. See also --deferred-input option.")
 #define TEXT_MAX_CONCURRENT_DOWNLOADS                                   \
   _(" -j, --max-concurrent-downloads=N Set maximum number of parallel downloads for\n" \
-    "                              every static (HTTP/FTP) URL, torrent and metalink.\n" \
+    "                              every static (HTTP/FTP) URL and torrent.\n" \
     "                              See also --split and --optimize-concurrent-downloads options.")
 #define TEXT_OPTIMIZE_CONCURRENT_DOWNLOADS\
   _(" --optimize-concurrent-downloads[=true|false|A:B] Optimizes the number of\n" \
@@ -257,19 +257,14 @@
 #define TEXT_SAVE_COOKIES                                               \
   _(" --save-cookies=FILE          Save cookies to FILE using libcurl.")
 #define TEXT_SHOW_FILES                                                 \
-  _(" -S, --show-files[=true|false] Print file listing of .torrent, .meta4 and\n" \
-    "                              .metalink file and exit. More detailed\n" \
-    "                              information will be listed in case of torrent\n" \
-    "                              file.")
+  _(" -S, --show-files[=true|false] Print file listing of .torrent file and exit.")
 #define TEXT_SELECT_FILE                                                \
   _(" --select-file=INDEX...       Set file to download by specifying its index.\n" \
     "                              You can find the file index using the\n" \
     "                              --show-files option. Multiple indexes can be\n" \
     "                              specified by using ',', for example: \"3,6\".\n" \
     "                              You can also use '-' to specify a range: \"1-5\".\n" \
-    "                              ',' and '-' can be used together.\n" \
-    "                              When used with the -M option, index may vary\n" \
-    "                              depending on the query(see --metalink-* options).")
+    "                              ',' and '-' can be used together.")
 #define TEXT_TORRENT_FILE                                               \
   _(" -T, --torrent-file=TORRENT_FILE  The path to the .torrent file.")
 #define TEXT_FOLLOW_TORRENT                                             \
@@ -336,56 +331,10 @@
     "                              handshake.")
 #define TEXT_BT_MAX_OPEN_FILES                                          \
   _(" --bt-max-open-files=NUM      Specify maximum number of files to open in\n" \
-    "                              multi-file BitTorrent/Metalink downloads\n" \
-    "                              globally.")
+    "                              multi-file BitTorrent downloads globally.")
 #define TEXT_BT_MAX_PEERS                                               \
   _(" --bt-max-peers=NUM           Specify the maximum number of peers per torrent.\n" \
     "                              0 means unlimited.")
-#define TEXT_METALINK_FILE                                              \
-  _(" -M, --metalink-file=METALINK_FILE The file path to the .meta4 and .metalink\n" \
-    "                              file. Reads input from stdin when '-' is\n" \
-    "                              specified.")
-#define TEXT_METALINK_SERVERS                                           \
-  _(" -C, --metalink-servers=NUM_SERVERS The number of servers to connect to\n" \
-    "                              simultaneously. Some Metalinks regulate the\n" \
-    "                              number of servers to connect. aria2 strictly\n" \
-    "                              respects them. This means that if Metalink defines\n" \
-    "                              the maxconnections attribute lower than\n" \
-    "                              NUM_SERVERS, then aria2 uses the value of\n" \
-    "                              maxconnections attribute instead of NUM_SERVERS.\n" \
-    "                              See also -s and -j options.")
-#define TEXT_METALINK_VERSION                                           \
-  _(" --metalink-version=VERSION   The version of the file to download.")
-#define TEXT_METALINK_LANGUAGE                                          \
-  _(" --metalink-language=LANGUAGE The language of the file to download.")
-#define TEXT_METALINK_OS                                                \
-  _(" --metalink-os=OS             The operating system of the file to download.")
-#define TEXT_METALINK_LOCATION                                          \
-  _(" --metalink-location=LOCATION[,...] The location of the preferred server.\n" \
-    "                              A comma-delimited list of locations is\n" \
-    "                              acceptable.")
-#define TEXT_METALINK_PREFERRED_PROTOCOL                                \
-  _(" --metalink-preferred-protocol=PROTO Specify preferred protocol. Specify 'none'\n" \
-    "                              if you don't have any preferred protocol.")
-#define TEXT_FOLLOW_METALINK                                            \
-  _(" --follow-metalink=true|false|mem If true or mem is specified, when a file\n" \
-    "                              whose suffix is .meta4 or .metalink, or content\n" \
-    "                              type of application/metalink4+xml or\n" \
-    "                              application/metalink+xml is downloaded, aria2\n" \
-    "                              parses it as a metalink file and downloads files\n" \
-    "                              mentioned in it.\n"                  \
-    "                              If mem is specified, a metalink file is not\n" \
-    "                              written to the disk, but is just kept in memory.\n" \
-    "                              If false is specified, the .metalink file is\n" \
-    "                              downloaded to the disk, but is not parsed as a\n" \
-    "                              metalink file and its contents are not\n" \
-    "                              downloaded.")
-#define TEXT_METALINK_ENABLE_UNIQUE_PROTOCOL                            \
-  _(" --metalink-enable-unique-protocol[=true|false] If true is given and several\n" \
-    "                              protocols are available for a mirror in a metalink\n" \
-    "                              file, aria2 uses one of them.\n"     \
-    "                              Use --metalink-preferred-protocol option to\n" \
-    "                              specify the preference of protocol.")
 #define TEXT_VERSION                                                    \
   _(" -v, --version                Print the version number and exit.")
 #define TEXT_HELP                                                       \
@@ -642,8 +591,8 @@
   _(" --save-session=FILE          Save error/unfinished downloads to FILE on exit.\n" \
     "                              You can pass this output file to aria2-next with -i\n" \
     "                              option on restart. Please note that downloads\n" \
-    "                              added by aria2.addTorrent and aria2.addMetalink\n" \
-    "                              RPC method and whose metadata could not be saved\n" \
+    "                              added by aria2.addTorrent RPC method and whose\n" \
+    "                              metadata could not be saved\n" \
     "                              as a file will not be saved. Downloads removed\n" \
     "                              using aria2.remove and aria2.forceRemove will not\n" \
     "                              be saved.")
@@ -715,28 +664,23 @@
     "                              /etc/resolv.conf and user does not have the\n" \
     "                              permission to create it.")
 #define TEXT_ENABLE_RPC                                               \
-  _(" --enable-rpc[=true|false]    Enable JSON-RPC/XML-RPC server.\n" \
+  _(" --enable-rpc[=true|false]    Enable JSON-RPC server.\n" \
     "                              It is strongly recommended to set secret\n" \
     "                              authorization token using --rpc-secret option.\n" \
     "                              See also --rpc-listen-port option.")
 #define TEXT_RPC_MAX_REQUEST_SIZE                                   \
-  _(" --rpc-max-request-size=SIZE  Set max size of JSON-RPC/XML-RPC request. If aria2\n" \
+  _(" --rpc-max-request-size=SIZE  Set max size of JSON-RPC request. If aria2\n" \
     "                              detects the request is more than SIZE bytes, it\n" \
     "                              drops connection.")
 #define TEXT_RPC_LISTEN_ALL                                         \
-  _(" --rpc-listen-all[=true|false] Listen incoming JSON-RPC/XML-RPC requests on all\n" \
+  _(" --rpc-listen-all[=true|false] Listen incoming JSON-RPC requests on all\n" \
     "                              network interfaces. If false is given, listen only\n" \
     "                              on local loopback interface.")
 #define TEXT_RPC_LISTEN_PORT                                        \
-  _(" --rpc-listen-port=PORT       Specify a port number for JSON-RPC/XML-RPC server\n" \
+  _(" --rpc-listen-port=PORT       Specify a port number for JSON-RPC server\n" \
     "                              to listen to.")
 #define TEXT_SHOW_CONSOLE_READOUT                                       \
   _(" --show-console-readout[=true|false] Show console readout.")
-#define TEXT_METALINK_BASE_URI                  \
-  _(" --metalink-base-uri=URI      Specify base URI to resolve relative URI in\n" \
-    "                              metalink:url and metalink:metaurl element in a\n" \
-    "                              metalink file stored in local disk. If URI points\n" \
-    "                              to a directory, URI must end with '/'.")
 #define TEXT_STREAM_PIECE_SELECTOR              \
   _(" --stream-piece-selector=SELECTOR Specify piece selection algorithm\n" \
     "                              used in HTTP/FTP download. Piece means fixed\n" \
@@ -806,9 +750,7 @@
   _(" --piece-length=LENGTH        Set a piece length for HTTP/FTP downloads. This\n" \
     "                              is the boundary when aria2 splits a file. All\n" \
     "                              splits occur at multiple of this length. This\n" \
-    "                              option will be ignored in BitTorrent downloads.\n" \
-    "                              It will be also ignored if Metalink file\n" \
-    "                              contains piece hashes.")
+    "                              option will be ignored in BitTorrent downloads.")
 #define TEXT_STOP_WITH_PROCESS                                          \
   _(" --stop-with-process=PID      Stop application when process PID is not running.\n" \
     "                              This is useful if aria2 process is forked from a\n" \
@@ -827,15 +769,15 @@
 #define TEXT_ENABLE_MMAP                        \
   _(" --enable-mmap[=true|false]   Map files into memory.")
 #define TEXT_RPC_SAVE_UPLOAD_METADATA                                   \
-  _(" --rpc-save-upload-metadata[=true|false] Save the uploaded torrent or\n" \
-    "                              metalink metadata in the directory specified\n" \
+  _(" --rpc-save-upload-metadata[=true|false] Save the uploaded torrent\n" \
+    "                              metadata in the directory specified\n" \
     "                              by --dir option. The filename consists of\n" \
     "                              SHA-1 hash hex string of metadata plus\n" \
     "                              extension. For torrent, the extension is\n" \
-    "                              '.torrent'. For metalink, it is '.meta4'.\n" \
+    "                              '.torrent'.\n" \
     "                              If false is given to this option, the\n" \
-    "                              downloads added by aria2.addTorrent or\n" \
-    "                              aria2.addMetalink will not be saved by\n" \
+    "                              downloads added by aria2.addTorrent will not\n" \
+    "                              be saved by\n" \
     "                              --save-session option.")
 #define TEXT_FORCE_SAVE                         \
   _(" --force-save[=true|false]    Save download with --save-session option even\n" \
@@ -911,7 +853,7 @@
     "                              download. There are 3 types of metadata\n" \
     "                              downloads in aria2: (1) downloading .torrent\n" \
     "                              file. (2) downloading torrent metadata using\n" \
-    "                              magnet link. (3) downloading metalink file.\n" \
+    "                              magnet link.\n" \
     "                              These metadata downloads will generate downloads\n" \
     "                              using their metadata. This option pauses these\n" \
     "                              subsequent downloads. This option is effective\n" \

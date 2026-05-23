@@ -88,7 +88,7 @@ void showUsage(const std::string& keyword,
                const std::shared_ptr<OptionParser>& oparser, const Console& out)
 {
   out->printf(_("Usage: aria2-next [OPTIONS] [URI | MAGNET | ED2K_LINK |"
-                " TORRENT_FILE | METALINK_FILE]..."));
+                " TORRENT_FILE]..."));
   out->printf("\n");
   if (keyword.empty()) {
     // Very short version of usage.
@@ -142,7 +142,7 @@ void showUsage(const std::string& keyword,
     }
   }
   if (keyword == strHelpTag(TAG_BASIC)) {
-    out->printf("URI, MAGNET, ED2K_LINK, TORRENT_FILE, METALINK_FILE:\n");
+    out->printf("URI, MAGNET, ED2K_LINK, TORRENT_FILE:\n");
     out->printf(
         _(" You can specify multiple HTTP(S)/FTP URIs. Unless you specify -Z "
           "option, all\n"
@@ -150,8 +150,8 @@ void showUsage(const std::string& keyword,
     out->printf("\n");
     out->printf(_(" You can also specify arbitrary number of BitTorrent Magnet "
                   "URIs, ED2K file\n"
-                  " links, torrent/metalink files stored in a local drive. "
-                  "Please note that they\n"
+                  " links and torrent files stored in a local drive. Please "
+                  "note that they\n"
                   " are always treated as a separate download."));
     out->printf("\n\n");
     out->printf(_(" You can specify both torrent file with -T option and URIs. "

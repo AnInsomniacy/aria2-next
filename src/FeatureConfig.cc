@@ -40,12 +40,6 @@
 #ifdef HAVE_ZLIB
 #  include <zlib.h>
 #endif // HAVE_ZLIB
-#ifdef HAVE_LIBXML2
-#  include <libxml/xmlversion.h>
-#endif // HAVE_LIBXML2
-#ifdef HAVE_LIBEXPAT
-#  include <expat.h>
-#endif // HAVE_LIBEXPAT
 #ifdef HAVE_LIBGNUTLS
 #  include <gnutls/gnutls.h>
 #endif // HAVE_LIBGNUTLS
@@ -155,22 +149,6 @@ const char* strSupportedFeature(int feature)
     return "Message Digest";
     break;
 
-  case (FEATURE_METALINK):
-#ifdef ENABLE_METALINK
-    return "Metalink";
-#else  // !ENABLE_METALINK
-    return nullptr;
-#endif // !ENABLE_METALINK
-    break;
-
-  case (FEATURE_XML_RPC):
-#ifdef ENABLE_XML_RPC
-    return "XML-RPC";
-#else  // !ENABLE_XML_RPC
-    return nullptr;
-#endif // !ENABLE_XML_RPC
-    break;
-
   default:
     return nullptr;
   }
@@ -182,13 +160,6 @@ std::string usedLibs()
 #ifdef HAVE_ZLIB
   res += "zlib/" ZLIB_VERSION " ";
 #endif // HAVE_ZLIB
-#ifdef HAVE_LIBXML2
-  res += "libxml2/" LIBXML_DOTTED_VERSION " ";
-#endif // HAVE_LIBXML2
-#ifdef HAVE_LIBEXPAT
-  res += fmt("expat/%d.%d.%d ", XML_MAJOR_VERSION, XML_MINOR_VERSION,
-             XML_MICRO_VERSION);
-#endif // HAVE_LIBEXPAT
 #ifdef HAVE_WINTLS
   res += "WinTLS ";
 #endif // HAVE_WINTLS

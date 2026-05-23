@@ -37,23 +37,6 @@
 namespace aria2 {
 
 namespace {
-constexpr const char* METALINK_EXTENSIONS[] = {".metalink", // Metalink3Spec
-                                               ".meta4",    // Metalink4Spec
-                                               nullptr};
-} // namespace
-
-const char* const* getMetalinkExtensions() { return METALINK_EXTENSIONS; }
-
-namespace {
-constexpr const char* METALINK_CONTENT_TYPES[] = {
-    "application/metalink4+xml", // Metalink4Spec
-    "application/metalink+xml",  // Metalink3Spec
-    nullptr};
-} // namespace
-
-const char* const* getMetalinkContentTypes() { return METALINK_CONTENT_TYPES; }
-
-namespace {
 constexpr const char* BT_EXTENSIONS[] = {".torrent", nullptr};
 } // namespace
 

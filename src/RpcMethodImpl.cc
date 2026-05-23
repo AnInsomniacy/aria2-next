@@ -441,69 +441,6 @@ std::unique_ptr<ValueBase> AddTorrentRpcMethod::process(const RpcRequest& req,
 }
 #endif // ENABLE_BITTORRENT
 
-#ifdef ENABLE_METALINK
-std::unique_ptr<ValueBase> AddMetalinkRpcMethod::process(const RpcRequest& req,
-                                                         DownloadEngine* e)
-{
-  const String* metalinkParam = checkRequiredParam<String>(req, 0);
-  const Dict* optsParam = checkParam<Dict>(req, 1);
-  const Integer* posParam = checkParam<Integer>(req, 2);
-
-  std::unique_ptr<String> tempMetalinkParam;
-  if (req.jsonRpc) {
-    tempMetalinkParam = String::g(
-        base64::decode(metalinkParam->s().begin(), metalinkParam->s().end()));
-    metalinkParam = tempMetalinkParam.get();
-  }
-  auto requestOption = std::make_shared<Option>(*e->getOption());
-  gatherRequestOption(requestOption.get(), optsParam);
-
-  bool posGiven = checkPosParam(posParam);
-  size_t pos = posGiven ? posParam->i() : 0;
-
-  std::vector<std::shared_ptr<RequestGroup>> result;
-  std::string filename;
-  if (requestOption->getAsBool(PREF_RPC_SAVE_UPLOAD_METADATA)) {
-    // TODO RFC5854 Metalink has the extension .meta4 and Metalink
-    // Version 3 uses .metalink extension. We use .meta4 for both
-    // RFC5854 Metalink and Version 3. aria2 can detect which of which
-    // by reading content rather than extension.
-    filename = util::applyDir(requestOption->get(PREF_DIR),
-                              getHexSha1(metalinkParam->s()) + ".meta4");
-    // Save uploaded data in order to save this download in
-    // --save-session file.
-    if (util::saveAs(filename, metalinkParam->s(), true)) {
-      A2_LOG_INFO(
-          fmt("Uploaded metalink data was saved as %s", filename.c_str()));
-      requestOption->put(PREF_METALINK_FILE, filename);
-      createRequestGroupForMetalink(result, requestOption);
-    }
-    else {
-      A2_LOG_INFO(fmt("Uploaded metalink data was not saved."
-                      " Failed to write file %s",
-                      filename.c_str()));
-      createRequestGroupForMetalink(result, requestOption, metalinkParam->s());
-    }
-  }
-  else {
-    createRequestGroupForMetalink(result, requestOption, metalinkParam->s());
-  }
-  auto gids = List::g();
-  if (!result.empty()) {
-    if (posGiven) {
-      e->getRequestGroupMan()->insertReservedGroup(pos, result);
-    }
-    else {
-      e->getRequestGroupMan()->addReservedGroup(result);
-    }
-    for (auto& i : result) {
-      gids->append(GroupId::toHex(i->getGID()));
-    }
-  }
-  return std::move(gids);
-}
-#endif // ENABLE_METALINK
-
 namespace {
 std::unique_ptr<ValueBase> removeDownload(const RpcRequest& req,
                                           DownloadEngine* e, bool forceRemove)
@@ -1787,15 +1724,6 @@ void changeOption(const std::shared_ptr<RequestGroup>& group,
         fileEntry->setPath(A2STR::NIL);
       }
       else {
-        fileEntry->setPath(util::applyDir(grOption->get(PREF_DIR),
-                                          fileEntry->getSuffixPath()));
-      }
-    }
-    else if (group->getMetadataInfo()) {
-      // In case of Metalink
-      for (auto& fileEntry : dctx->getFileEntries()) {
-        // PREF_OUT is not applicable to Metalink.  We have always
-        // suffixPath set.
         fileEntry->setPath(util::applyDir(grOption->get(PREF_DIR),
                                           fileEntry->getSuffixPath()));
       }

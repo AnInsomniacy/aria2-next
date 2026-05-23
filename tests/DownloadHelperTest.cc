@@ -115,10 +115,6 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnetTrackers);
 #endif // ENABLE_BITTORRENT
 
-#ifdef ENABLE_METALINK
-  CPPUNIT_TEST(testCreateRequestGroupForUri_Metalink);
-  CPPUNIT_TEST(testCreateRequestGroupForMetalink);
-#endif // ENABLE_METALINK
 
   CPPUNIT_TEST_SUITE_END();
 
@@ -192,10 +188,6 @@ public:
   void testCreateRequestGroupForUri_LibtorrentMagnetTrackers();
 #endif // ENABLE_BITTORRENT
 
-#ifdef ENABLE_METALINK
-  void testCreateRequestGroupForUri_Metalink();
-  void testCreateRequestGroupForMetalink();
-#endif // ENABLE_METALINK
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(DownloadHelperTest);
@@ -2383,51 +2375,6 @@ void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentMagnetTrackers()
 }
 #endif // ENABLE_BITTORRENT
 
-#ifdef ENABLE_METALINK
-void DownloadHelperTest::testCreateRequestGroupForUri_Metalink()
-{
-  std::vector<std::string> uris{"http://alpha/file", "http://bravo/file",
-                                "http://charlie/file", A2_TEST_DIR "/test.xml"};
-  option_->put(PREF_MAX_CONNECTION_PER_SERVER, "1");
-  option_->put(PREF_SPLIT, "2");
-  option_->put(PREF_DIR, "/tmp");
-  option_->put(PREF_OUT, "file.out");
-  {
-    std::vector<std::shared_ptr<RequestGroup>> result;
-
-    createRequestGroupForUri(result, option_, uris);
-
-// group1: http://alpha/file, ...
-// group2-7: 6 file entry in Metalink and 1 torrent file download
-#  ifdef ENABLE_BITTORRENT
-    CPPUNIT_ASSERT_EQUAL((size_t)7, result.size());
-#  else  // !ENABLE_BITTORRENT
-    CPPUNIT_ASSERT_EQUAL((size_t)6, result.size());
-#  endif // !ENABLE_BITTORRENT
-
-    std::shared_ptr<RequestGroup> group = result[0];
-    auto xuris = group->getDownloadContext()->getFirstFileEntry()->getUris();
-    CPPUNIT_ASSERT_EQUAL((size_t)3, xuris.size());
-    for (size_t i = 0; i < 3; ++i) {
-      CPPUNIT_ASSERT_EQUAL(uris[i], xuris[i]);
-    }
-    CPPUNIT_ASSERT_EQUAL(2, group->getNumConcurrentCommand());
-    std::shared_ptr<DownloadContext> ctx = group->getDownloadContext();
-    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/file.out"), ctx->getBasePath());
-
-    std::shared_ptr<RequestGroup> aria2052Group = result[1];
-    CPPUNIT_ASSERT_EQUAL(1, // because of maxconnections attribute
-                         aria2052Group->getNumConcurrentCommand());
-    std::shared_ptr<DownloadContext> aria2052Ctx =
-        aria2052Group->getDownloadContext();
-    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/aria2-0.5.2.tar.bz2"),
-                         aria2052Ctx->getBasePath());
-
-    std::shared_ptr<RequestGroup> aria2051Group = result[2];
-    CPPUNIT_ASSERT_EQUAL(2, aria2051Group->getNumConcurrentCommand());
-  }
-}
-#endif // ENABLE_METALINK
 
 void DownloadHelperTest::testCreateRequestGroupForUriList()
 {
@@ -2461,35 +2408,5 @@ void DownloadHelperTest::testCreateRequestGroupForUriList()
   CPPUNIT_ASSERT_EQUAL(std::string(), fileISOCtx->getBasePath());
 }
 
-#ifdef ENABLE_METALINK
-void DownloadHelperTest::testCreateRequestGroupForMetalink()
-{
-  option_->put(PREF_SPLIT, "5");
-  option_->put(PREF_METALINK_FILE, A2_TEST_DIR "/test.xml");
-  option_->put(PREF_DIR, "/tmp");
-  option_->put(PREF_OUT, "file.out");
-  {
-    std::vector<std::shared_ptr<RequestGroup>> result;
-
-    createRequestGroupForMetalink(result, option_);
-
-#  ifdef ENABLE_BITTORRENT
-    CPPUNIT_ASSERT_EQUAL((size_t)6, result.size());
-#  else  // !ENABLE_BITTORRENT
-    CPPUNIT_ASSERT_EQUAL((size_t)5, result.size());
-#  endif // !ENABLE_BITTORRENT
-    std::shared_ptr<RequestGroup> group = result[0];
-    auto uris = group->getDownloadContext()->getFirstFileEntry()->getUris();
-    std::sort(uris.begin(), uris.end());
-    CPPUNIT_ASSERT_EQUAL((size_t)2, uris.size());
-    CPPUNIT_ASSERT_EQUAL(std::string("ftp://ftphost/aria2-0.5.2.tar.bz2"),
-                         uris[0]);
-    CPPUNIT_ASSERT_EQUAL(std::string("http://httphost/aria2-0.5.2.tar.bz2"),
-                         uris[1]);
-    // See numConcurrentCommand is 1 because of maxconnections attribute.
-    CPPUNIT_ASSERT_EQUAL(1, group->getNumConcurrentCommand());
-  }
-}
-#endif // ENABLE_METALINK
 
 } // namespace aria2

@@ -44,10 +44,7 @@
 namespace aria2 {
 
 class ValueBase;
-
-namespace rpc {
-class XmlRpcRequestParserController;
-} // namespace rpc
+class ValueBaseFrameController;
 
 class ValueBaseStructParserState;
 
@@ -109,7 +106,7 @@ public:
   void setAllowEmptyMemberName(bool b);
 
 private:
-  std::unique_ptr<rpc::XmlRpcRequestParserController> ctrl_;
+  std::unique_ptr<ValueBaseFrameController> ctrl_;
   std::stack<ValueBaseStructParserState*> stateStack_;
   SessionData sessionData_;
 };

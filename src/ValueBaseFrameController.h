@@ -2,7 +2,7 @@
 /*
  * aria2 - The high speed download utility
  *
- * Copyright (C) 2012 Tatsuhiro Tsujikawa
+ * Copyright (C) 2009 Tatsuhiro Tsujikawa
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,39 +32,54 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#ifndef D_XML2_XML_PARSER_H
-#define D_XML2_XML_PARSER_H
+#ifndef D_VALUE_BASE_FRAME_CONTROLLER_H
+#define D_VALUE_BASE_FRAME_CONTROLLER_H
 
 #include "common.h"
 
-#include <sys/types.h>
+#include <stack>
+#include <string>
 
-#include <libxml/parser.h>
-
-#include "XmlParser.h"
+#include "ValueBase.h"
 
 namespace aria2 {
 
-namespace xml {
-
-class XmlParser {
-public:
-  // This object does not delete psm.
-  XmlParser(ParserStateMachine* psm);
-  ~XmlParser();
-  ssize_t parseUpdate(const char* data, size_t size);
-  ssize_t parseFinal(const char* data, size_t size);
-  int reset();
-
+class ValueBaseFrameController {
 private:
-  ParserStateMachine* psm_;
-  SessionData sessionData_;
-  xmlParserCtxtPtr ctx_;
-  int lastError_;
-};
+  struct StateFrame {
+    std::unique_ptr<ValueBase> value_;
+    std::string name_;
 
-} // namespace xml
+    bool validMember(bool allowEmptyMemberName) const
+    {
+      return value_ && (allowEmptyMemberName || !name_.empty());
+    }
+
+    void reset()
+    {
+      value_.reset();
+      name_.clear();
+    }
+  };
+
+  std::stack<StateFrame> frameStack_;
+  StateFrame currentFrame_;
+  bool allowEmptyMemberName_;
+
+public:
+  ValueBaseFrameController() : allowEmptyMemberName_(false) {}
+
+  void pushFrame();
+  void popDictFrame();
+  void popArrayFrame();
+  void setCurrentFrameValue(std::unique_ptr<ValueBase> value);
+  void setCurrentFrameName(std::string name);
+  const std::unique_ptr<ValueBase>& getCurrentFrameValue() const;
+  std::unique_ptr<ValueBase> popCurrentFrameValue();
+  void setAllowEmptyMemberName(bool b);
+  void reset();
+};
 
 } // namespace aria2
 
-#endif // D_XML2_XML_PARSER_H
+#endif // D_VALUE_BASE_FRAME_CONTROLLER_H

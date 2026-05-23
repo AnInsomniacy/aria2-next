@@ -21,17 +21,11 @@
 /* Define to 1 if BitTorrent support is enabled. */
 #cmakedefine ENABLE_BITTORRENT @ENABLE_BITTORRENT@
 
-/* Define to 1 if Metalink support is enabled. */
-#cmakedefine ENABLE_METALINK @ENABLE_METALINK@
-
 /* Define to 1 if ssl support is enabled. */
 #cmakedefine ENABLE_SSL @ENABLE_SSL@
 
 /* Define 1 if WebSocket support is enabled. */
 #cmakedefine ENABLE_WEBSOCKET @ENABLE_WEBSOCKET@
-
-/* Define to 1 if XML-RPC support is enabled. */
-#cmakedefine ENABLE_XML_RPC @ENABLE_XML_RPC@
 
 /* Define to 1 if the system has the type `struct timespec'. */
 #cmakedefine HAVE_A2_STRUCT_TIMESPEC @HAVE_A2_STRUCT_TIMESPEC@
@@ -170,9 +164,6 @@
 /* Define to 1 if you have libcares. */
 #cmakedefine HAVE_LIBCARES @HAVE_LIBCARES@
 
-/* Define to 1 if you have libexpat. */
-#cmakedefine HAVE_LIBEXPAT @HAVE_LIBEXPAT@
-
 /* Define to 1 if you have libcurl. */
 #cmakedefine HAVE_LIBCURL @HAVE_LIBCURL@
 
@@ -182,9 +173,6 @@
 
 /* Define to 1 if you have libuv. */
 #cmakedefine HAVE_LIBUV @HAVE_LIBUV@
-
-/* Define to 1 if you have libxml2. */
-#cmakedefine HAVE_LIBXML2 @HAVE_LIBXML2@
 
 /* Define to 1 if you have the <limits.h> header file. */
 #cmakedefine HAVE_LIMITS_H @HAVE_LIMITS_H@

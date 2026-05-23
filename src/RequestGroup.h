@@ -83,10 +83,8 @@ public:
   };
 
 private:
-  // If this download is a part of another download(for example,
-  // downloading torrent file described in Metalink file), this field
-  // has the GID of parent RequestGroup. 0 means this is a parent
-  // RequestGroup.
+  // If this download is a part of another download, this field has the GID of
+  // parent RequestGroup. 0 means this is a parent RequestGroup.
   a2_gid_t belongsToGID_;
 
   std::shared_ptr<GroupId> gid_;

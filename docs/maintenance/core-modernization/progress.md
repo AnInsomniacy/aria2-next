@@ -145,3 +145,20 @@ Changed: Added `BoostJsonValue` as the Boost.JSON conversion boundary for intern
 Verified: `cmake --preset default` passed. `cmake --build --preset default` passed. `build/default/aria2_tests 'All Tests/aria2::JsonTest'` passed. `build/default/aria2_tests 'All Tests/aria2::rpc::RpcResponseTest'` passed. `build/default/aria2_tests 'All Tests/aria2::RpcHttpHandlerTest'` passed. `build/default/aria2_tests 'All Tests/aria2::rpc::WebSocketSessionManTest'` passed. `build/default/aria2_tests 'All Tests/aria2::rpc::RpcMethodTest/aria2::rpc::RpcMethodTest::testAuthorize'` passed. CSV parser check passed for 22 tracker files. Stale scans found no old custom JSON parser or writer references outside tracker history.
 Remaining: Start CM-012 XML-RPC removal and Metalink decision.
 Blocked: none.
+
+2026-05-23 CM-012 verified
+Changed: Removed XML-RPC, Metalink3, Metalink4, libxml2, Expat, XML parser
+wrappers, XML parser state machines, Metalink request creation, RPC
+`addMetalink`, libaria2 `addMetalink`, follow-metalink handling, Metalink
+protocol detection, related options, stale tests, public manual references,
+completion entries, packaging Expat builds, and XML dependency feature flags.
+Added `ValueBaseFrameController` to keep the remaining ValueBase struct parser
+independent of XML-specific parser infrastructure.
+Verified: `cmake --preset default` passed. `cmake --build --preset default`
+passed. `ctest --preset default --output-on-failure` passed. Public stale scans
+found no XML-RPC, Metalink, Expat, or libxml2 residue in source, tests, CMake,
+README, packaging, completion, or manual docs. Completion and packaging script
+syntax checks passed. CSV parser check passed for tracker files. `git diff
+--check` passed.
+Remaining: Start CM-013 crypto TLS cleanup.
+Blocked: none.

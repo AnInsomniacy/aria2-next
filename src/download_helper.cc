@@ -40,7 +40,6 @@
 #include "RequestGroup.h"
 #include "Option.h"
 #include "prefs.h"
-#include "Metalink2RequestGroup.h"
 #include "ProtocolDetector.h"
 #include "paramed_string.h"
 #include "UriListParser.h"
@@ -420,7 +419,6 @@ createEd2kRequestGroup(const std::string& ed2kUri,
     restoreEd2kKadOperationalState(attrs.get(), kadSnapshot);
   }
   dctx->setAttribute(CTX_ATTR_ED2K, std::move(attrs));
-  dctx->setAcceptMetalink(false);
   rg->setDownloadContext(dctx);
   const auto peerConnections =
       option->definedLocal(PREF_SPLIT)
@@ -511,7 +509,6 @@ createEd2kSearchRequestGroup(const ed2k::SearchQuery& query,
     }
   }
   dctx->setAttribute(CTX_ATTR_ED2K, std::move(attrs));
-  dctx->setAcceptMetalink(false);
   rg->setDownloadContext(dctx);
   rg->setNumConcurrentCommand(option->getAsInt(PREF_SPLIT));
   if (option->getAsBool(PREF_ENABLE_RPC)) {
@@ -521,7 +518,7 @@ createEd2kSearchRequestGroup(const ed2k::SearchQuery& query,
   return rg;
 }
 
-#if defined(ENABLE_BITTORRENT) || defined(ENABLE_METALINK)
+#ifdef ENABLE_BITTORRENT
 namespace {
 std::shared_ptr<MetadataInfo>
 createMetadataInfo(const std::shared_ptr<GroupId>& gid, const std::string& uri)
@@ -536,7 +533,7 @@ std::shared_ptr<MetadataInfo> createMetadataInfoDataOnly()
   return std::make_shared<MetadataInfo>();
 }
 } // namespace
-#endif // ENABLE_BITTORRENT || ENABLE_METALINK
+#endif // ENABLE_BITTORRENT
 
 #ifdef ENABLE_BITTORRENT
 
@@ -602,7 +599,6 @@ createLibtorrentRequestGroup(LibtorrentAttribute::SourceType sourceType,
   auto attrs = make_unique<LibtorrentAttribute>(sourceType, sourceUri,
                                                 torrentData, webSeedUris);
   dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-  dctx->setAcceptMetalink(false);
   rg->setDownloadContext(dctx);
   rg->setFileAllocationEnabled(false);
   rg->setPreLocalFileCheckEnabled(false);
@@ -706,25 +702,6 @@ void createRequestGroupForBitTorrent(
 
 #endif // ENABLE_BITTORRENT
 
-#ifdef ENABLE_METALINK
-void createRequestGroupForMetalink(
-    std::vector<std::shared_ptr<RequestGroup>>& result,
-    const std::shared_ptr<Option>& option, const std::string& metalinkData)
-{
-  if (metalinkData.empty()) {
-    Metalink2RequestGroup().generate(result, option->get(PREF_METALINK_FILE),
-                                     option,
-                                     option->get(PREF_METALINK_BASE_URI));
-  }
-  else {
-    auto dw = std::make_shared<ByteArrayDiskWriter>();
-    dw->setString(metalinkData);
-    Metalink2RequestGroup().generate(result, dw, option,
-                                     option->get(PREF_METALINK_BASE_URI));
-  }
-}
-#endif // ENABLE_METALINK
-
 namespace {
 class AccRequestGroup {
 private:
@@ -799,24 +776,6 @@ public:
         }
       }
     }
-#ifdef ENABLE_METALINK
-    else if (!ignoreLocalPath_ && detector_.guessMetalinkFile(uri)) {
-      try {
-        Metalink2RequestGroup().generate(requestGroups_, uri, option_,
-                                         option_->get(PREF_METALINK_BASE_URI));
-      }
-      catch (RecoverableException& e) {
-        if (throwOnError_) {
-          throw;
-        }
-        else {
-          // error occurred while parsing metalink file.
-          // We simply ignore it.
-          A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
-        }
-      }
-    }
-#endif // ENABLE_METALINK
     else {
       if (throwOnError_) {
         throw DL_ABORT_EX(fmt(MSG_UNRECOGNIZED_URI, uri.c_str()));
@@ -883,7 +842,7 @@ void createRequestGroupForUri(
         }
       }
     }
-    // process remaining URIs(local metalink, BitTorrent files)
+    // process remaining URIs(local BitTorrent files)
     std::for_each(
         strmProtoEnd, std::end(nargs),
         AccRequestGroup(result, option, ignoreLocalPath, throwOnError));

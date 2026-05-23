@@ -52,12 +52,6 @@ class RpcMethodTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testAddTorrent_notBase64Torrent);
   CPPUNIT_TEST(testAddTorrent_withPosition);
 #endif // ENABLE_BITTORRENT
-#ifdef ENABLE_METALINK
-  CPPUNIT_TEST(testAddMetalink);
-  CPPUNIT_TEST(testAddMetalink_withoutMetalink);
-  CPPUNIT_TEST(testAddMetalink_notBase64Metalink);
-  CPPUNIT_TEST(testAddMetalink_withPosition);
-#endif // ENABLE_METALINK
   CPPUNIT_TEST(testGetOption);
   CPPUNIT_TEST(testChangeOption);
   CPPUNIT_TEST(testChangeOption_withBadOption);
@@ -124,12 +118,6 @@ public:
   void testAddTorrent_notBase64Torrent();
   void testAddTorrent_withPosition();
 #endif // ENABLE_BITTORRENT
-#ifdef ENABLE_METALINK
-  void testAddMetalink();
-  void testAddMetalink_withoutMetalink();
-  void testAddMetalink_notBase64Metalink();
-  void testAddMetalink_withPosition();
-#endif // ENABLE_METALINK
   void testGetOption();
   void testChangeOption();
   void testChangeOption_withBadOption();
@@ -469,133 +457,6 @@ void RpcMethodTest::testAddTorrent_withPosition()
 
 #endif // ENABLE_BITTORRENT
 
-#ifdef ENABLE_METALINK
-namespace {
-RpcRequest createAddMetalinkReq()
-{
-  auto req = createReq(AddMetalinkRpcMethod::getMethodName());
-  req.params->append(readFile(A2_TEST_DIR "/2files.metalink"));
-  return req;
-}
-} // namespace
-
-void RpcMethodTest::testAddMetalink()
-{
-  File(e_->getOption()->get(PREF_DIR) +
-       "/c908634fbc257fd56f0114912c2772aeeb4064f4.meta4")
-      .remove();
-  AddMetalinkRpcMethod m;
-  {
-    // Saving upload metadata is disabled by option.
-    auto res = m.execute(createAddMetalinkReq(), e_.get());
-    CPPUNIT_ASSERT_EQUAL(0, res.code);
-    const List* resParams = downcast<List>(res.param);
-    CPPUNIT_ASSERT_EQUAL((size_t)2, resParams->size());
-    a2_gid_t gid1, gid2;
-    CPPUNIT_ASSERT_EQUAL(
-        0, GroupId::toNumericId(
-               gid1, downcast<String>(resParams->get(0))->s().c_str()));
-    CPPUNIT_ASSERT_EQUAL(
-        0, GroupId::toNumericId(
-               gid2, downcast<String>(resParams->get(1))->s().c_str()));
-    CPPUNIT_ASSERT(!File(e_->getOption()->get(PREF_DIR) +
-                         "/c908634fbc257fd56f0114912c2772aeeb4064f4.meta4")
-                        .exists());
-  }
-  e_->getOption()->put(PREF_RPC_SAVE_UPLOAD_METADATA, A2_V_TRUE);
-  {
-    auto res = m.execute(createAddMetalinkReq(), e_.get());
-    CPPUNIT_ASSERT_EQUAL(0, res.code);
-    const List* resParams = downcast<List>(res.param);
-    CPPUNIT_ASSERT_EQUAL((size_t)2, resParams->size());
-    a2_gid_t gid3, gid4;
-    CPPUNIT_ASSERT_EQUAL(
-        0, GroupId::toNumericId(
-               gid3, downcast<String>(resParams->get(0))->s().c_str()));
-    CPPUNIT_ASSERT_EQUAL(
-        0, GroupId::toNumericId(
-               gid4, downcast<String>(resParams->get(1))->s().c_str()));
-    CPPUNIT_ASSERT(File(e_->getOption()->get(PREF_DIR) +
-                        "/c908634fbc257fd56f0114912c2772aeeb4064f4.meta4")
-                       .exists());
-
-    auto tar = findReservedGroup(e_->getRequestGroupMan().get(), gid3);
-    CPPUNIT_ASSERT(tar);
-    CPPUNIT_ASSERT_EQUAL(e_->getOption()->get(PREF_DIR) +
-                             "/aria2-5.0.0.tar.bz2",
-                         tar->getFirstFilePath());
-    auto deb = findReservedGroup(e_->getRequestGroupMan().get(), gid4);
-    CPPUNIT_ASSERT(deb);
-    CPPUNIT_ASSERT_EQUAL(e_->getOption()->get(PREF_DIR) + "/aria2-5.0.0.deb",
-                         deb->getFirstFilePath());
-  }
-  {
-    auto req = createAddMetalinkReq();
-    // with options
-    std::string dir = A2_TEST_OUT_DIR "/aria2_RpcMethodTest_testAddMetalink";
-    File(dir).mkdirs();
-    auto opt = Dict::g();
-    opt->put(PREF_DIR->k, dir);
-    File(dir + "/c908634fbc257fd56f0114912c2772aeeb4064f4.meta4").remove();
-    req.params->append(std::move(opt));
-
-    auto res = m.execute(std::move(req), e_.get());
-    CPPUNIT_ASSERT_EQUAL(0, res.code);
-    const List* resParams = downcast<List>(res.param);
-    CPPUNIT_ASSERT_EQUAL((size_t)2, resParams->size());
-    a2_gid_t gid5;
-    CPPUNIT_ASSERT_EQUAL(
-        0, GroupId::toNumericId(
-               gid5, downcast<String>(resParams->get(0))->s().c_str()));
-    CPPUNIT_ASSERT_EQUAL(dir + "/aria2-5.0.0.tar.bz2",
-                         findReservedGroup(e_->getRequestGroupMan().get(), gid5)
-                             ->getFirstFilePath());
-    CPPUNIT_ASSERT(
-        File(dir + "/c908634fbc257fd56f0114912c2772aeeb4064f4.meta4").exists());
-  }
-}
-
-void RpcMethodTest::testAddMetalink_withoutMetalink()
-{
-  AddMetalinkRpcMethod m;
-  auto res =
-      m.execute(createReq(AddMetalinkRpcMethod::getMethodName()), e_.get());
-  CPPUNIT_ASSERT_EQUAL(1, res.code);
-}
-
-void RpcMethodTest::testAddMetalink_notBase64Metalink()
-{
-  AddMetalinkRpcMethod m;
-  auto req = createReq(AddMetalinkRpcMethod::getMethodName());
-  req.params->append("not metalink");
-  auto res = m.execute(std::move(req), e_.get());
-  CPPUNIT_ASSERT_EQUAL(1, res.code);
-}
-
-void RpcMethodTest::testAddMetalink_withPosition()
-{
-  AddUriRpcMethod m1;
-  auto req1 = createReq(AddUriRpcMethod::getMethodName());
-  auto urisParam1 = List::g();
-  urisParam1->append("http://uri");
-  req1.params->append(std::move(urisParam1));
-  auto res1 = m1.execute(std::move(req1), e_.get());
-  CPPUNIT_ASSERT_EQUAL(0, res1.code);
-
-  AddMetalinkRpcMethod m2;
-  auto req2 = createReq(AddMetalinkRpcMethod::getMethodName());
-  req2.params->append(readFile(A2_TEST_DIR "/2files.metalink"));
-  req2.params->append(Dict::g());
-  req2.params->append(Integer::g(0));
-  auto res2 = m2.execute(std::move(req2), e_.get());
-  CPPUNIT_ASSERT_EQUAL(0, res2.code);
-
-  CPPUNIT_ASSERT_EQUAL(
-      e_->getOption()->get(PREF_DIR) + "/aria2-5.0.0.tar.bz2",
-      getReservedGroup(e_->getRequestGroupMan().get(), 0)->getFirstFilePath());
-}
-
-#endif // ENABLE_METALINK
 
 void RpcMethodTest::testGetOption()
 {

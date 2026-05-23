@@ -27,24 +27,12 @@ COPY packaging/scripts/release-size-profile /deps/packaging/scripts/release-size
 
 RUN . packaging/dependencies.env && \
     . packaging/scripts/common.sh && \
-    curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256" && \
     curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256" && \
     curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256" && \
     curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256" && \
     curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256" && \
     curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256" && \
     curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
-
-RUN . packaging/dependencies.env && \
-    . packaging/scripts/release-size-profile windows && \
-    tar xf "$EXPAT_ARCHIVE" && \
-    cd "expat-$EXPAT_VERSION" && \
-    CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-    ./configure \
-      --disable-shared --enable-static \
-      --prefix="$PREFIX" --host="$HOST" \
-      --build="$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)" && \
-    make -j"$(nproc)" install
 
 RUN . packaging/dependencies.env && \
     . packaging/scripts/release-size-profile windows && \
@@ -129,8 +117,6 @@ RUN . packaging/scripts/release-size-profile windows && \
       -DARIA2_WITH_GNUTLS=OFF \
       -DARIA2_WITH_OPENSSL=OFF \
       -DARIA2_WITH_WINTLS=ON \
-      -DARIA2_WITH_LIBXML2=OFF \
-      -DARIA2_WITH_EXPAT=ON \
       -DARIA2_WITH_ZLIB=ON \
       -DARIA2_WITH_GMP=OFF \
       -DARIA2_WITH_LIBSSH2=ON \

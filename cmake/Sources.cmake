@@ -261,8 +261,6 @@ set(ARIA2_SOURCES_BASE
   src/message_digest_helper.h
   src/MetadataInfo.cc
   src/MetadataInfo.h
-  src/MetalinkHttpEntry.cc
-  src/MetalinkHttpEntry.h
   src/MultiDiskAdaptor.cc
   src/MultiDiskAdaptor.h
   src/MultiFileAllocationIterator.cc
@@ -440,6 +438,8 @@ set(ARIA2_SOURCES_BASE
   src/ValueBase.cc
   src/ValueBase.h
   src/ValueBaseDiskWriter.h
+  src/ValueBaseFrameController.cc
+  src/ValueBaseFrameController.h
   src/ValueBaseStructParserState.h
   src/ValueBaseStructParserStateImpl.cc
   src/ValueBaseStructParserStateImpl.h
@@ -454,8 +454,6 @@ set(ARIA2_SOURCES_BASE
   src/WrDiskCache.h
   src/WrDiskCacheEntry.cc
   src/WrDiskCacheEntry.h
-  src/XmlRpcRequestParserController.cc
-  src/XmlRpcRequestParserController.h
   src/OpenedFileCounter.cc
   src/OpenedFileCounter.h
   src/SHA1IOFile.cc
@@ -478,34 +476,6 @@ set(ARIA2_SOURCES_ENABLE_WEBSOCKET
 
 set(ARIA2_SOURCES_NOT_ENABLE_WEBSOCKET
   src/NullWebSocketSessionMan.h
-)
-
-set(ARIA2_SOURCES_HAVE_SOME_XMLLIB
-  src/ParserStateMachine.h
-  src/XmlAttr.cc
-  src/XmlAttr.h
-  src/XmlParser.cc
-  src/XmlParser.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBXML2
-  src/Xml2XmlParser.cc
-  src/Xml2XmlParser.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBEXPAT
-  src/ExpatXmlParser.cc
-  src/ExpatXmlParser.h
-)
-
-set(ARIA2_SOURCES_ENABLE_XML_RPC
-  src/XmlRpcDiskWriter.cc
-  src/XmlRpcDiskWriter.h
-  src/XmlRpcRequestParserState.h
-  src/XmlRpcRequestParserStateImpl.cc
-  src/XmlRpcRequestParserStateImpl.h
-  src/XmlRpcRequestParserStateMachine.cc
-  src/XmlRpcRequestParserStateMachine.h
 )
 
 set(ARIA2_SOURCES_HAVE_SOME_FALLOCATE
@@ -626,37 +596,6 @@ set(ARIA2_SOURCES_ENABLE_BITTORRENT__USE_INTERNAL_BIGNUM
 )
 
 set(ARIA2_SOURCES_ENABLE_BITTORRENT__USE_INTERNAL_ARC4
-)
-
-set(ARIA2_SOURCES_ENABLE_METALINK
-  src/Metalink2RequestGroup.cc
-  src/Metalink2RequestGroup.h
-  src/MetalinkTorrentDependency.cc
-  src/MetalinkTorrentDependency.h
-  src/MetalinkEntry.cc
-  src/MetalinkEntry.h
-  src/Metalinker.cc
-  src/Metalinker.h
-  src/MetalinkMetaurl.cc
-  src/MetalinkMetaurl.h
-  src/MetalinkParserController.cc
-  src/MetalinkParserController.h
-  src/MetalinkParserState.cc
-  src/MetalinkParserState.h
-  src/MetalinkParserStateImpl.cc
-  src/MetalinkParserStateImpl.h
-  src/MetalinkParserStateMachine.cc
-  src/MetalinkParserStateMachine.h
-  src/MetalinkParserStateV3Impl.cc
-  src/MetalinkParserStateV3Impl.h
-  src/MetalinkParserStateV4Impl.cc
-  src/MetalinkParserStateV4Impl.h
-  src/MetalinkPostDownloadHandler.cc
-  src/MetalinkPostDownloadHandler.h
-  src/MetalinkResource.cc
-  src/MetalinkResource.h
-  src/metalink_helper.cc
-  src/metalink_helper.h
 )
 
 set(ARIA2_SOURCES_NOT_HAVE_ASCTIME_R

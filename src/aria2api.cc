@@ -288,46 +288,6 @@ int addUri(Session* session, A2Gid* gid, const std::vector<std::string>& uris,
   return 0;
 }
 
-int addMetalink(Session* session, std::vector<A2Gid>* gids,
-                const std::string& metalinkFile, const KeyVals& options,
-                int position)
-{
-#ifdef ENABLE_METALINK
-  auto& e = session->context->reqinfo->getDownloadEngine();
-  auto requestOption = std::make_shared<Option>(*e->getOption());
-  std::vector<std::shared_ptr<RequestGroup>> result;
-  try {
-    apiGatherRequestOption(requestOption.get(), options,
-                           OptionParser::getInstance());
-    requestOption->put(PREF_METALINK_FILE, metalinkFile);
-    createRequestGroupForMetalink(result, requestOption);
-  }
-  catch (RecoverableException& e) {
-    A2_LOG_INFO_EX(EX_EXCEPTION_CAUGHT, e);
-    return -1;
-  }
-  if (!result.empty()) {
-    if (position >= 0) {
-      e->getRequestGroupMan()->insertReservedGroup(position, result);
-    }
-    else {
-      e->getRequestGroupMan()->addReservedGroup(result);
-    }
-    if (gids) {
-      for (std::vector<std::shared_ptr<RequestGroup>>::const_iterator
-               i = result.begin(),
-               eoi = result.end();
-           i != eoi; ++i) {
-        (*gids).push_back((*i)->getGID());
-      }
-    }
-  }
-  return 0;
-#else  // !ENABLE_METALINK
-  return -1;
-#endif // !ENABLE_METALINK
-}
-
 int addTorrent(Session* session, A2Gid* gid, const std::string& torrentFile,
                const std::vector<std::string>& webSeedUris,
                const KeyVals& options, int position)

@@ -48,13 +48,6 @@ namespace download_handlers {
 
 const PreDownloadHandler* getMemoryPreDownloadHandler();
 
-#ifdef ENABLE_METALINK
-
-const PreDownloadHandler* getMetalinkPreDownloadHandler();
-const PostDownloadHandler* getMetalinkPostDownloadHandler();
-
-#endif // ENABLE_METALINK
-
 #ifdef ENABLE_BITTORRENT
 
 const PreDownloadHandler* getBtPreDownloadHandler();

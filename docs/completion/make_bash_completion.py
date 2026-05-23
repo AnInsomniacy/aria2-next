@@ -89,8 +89,6 @@ _aria2_next()
     # Complete pre-defined option arguments
     for long_opt in ['--ftp-type',
                      '--proxy-method',
-                     '--metalink-preferred-protocol',
-                     '--follow-metalink',
                      '--file-allocation',
                      '--log-level',
                      '--uri-selector',
@@ -111,7 +109,6 @@ _aria2_next()
     output_value_case_dir_comp(out,'|'.join([opt.long_opt for opt in dir_opts]))
     # Complete specific file type
     output_value_case_file_comp(out, '--torrent-file', ['torrent'])
-    output_value_case_file_comp(out, '--metalink-file', ['meta4', 'metalink'])
     out.write("""\
     esac
 """)
@@ -147,7 +144,7 @@ _aria2_next()
     # If no option found for completion then complete with files.
     out.write("""\
         *)
-            _filedir '@(torrent|meta4|metalink|text|txt|list|lst)'
+            _filedir '@(torrent|text|txt|list|lst)'
             [ ${#COMPREPLY[@]} -eq 0 ] && _filedir
             return 0
     esac

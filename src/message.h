@@ -130,7 +130,6 @@
 #define MSG_ALLOCATION_COMPLETED "%ld seconds to allocate %" PRId64 " byte(s)"
 #define MSG_FILE_ALLOCATION_DISPATCH                    \
   "Dispatching FileAllocationCommand for CUID#%" PRId64 "."
-#define MSG_METALINK_QUEUEING _("Metalink: Queueing %s for download.")
 #define MSG_FILE_DOWNLOAD_COMPLETED _("Download complete: %s")
 #define MSG_SEEDING_END _("Seeding is over.")
 #define MSG_NO_CHUNK_CHECKSUM _("No chunk to verify.")
@@ -146,7 +145,6 @@
 #define MSG_STRING_INTEGER_CONVERSION_FAILURE _("Failed to convert string into value: %s")
 #define MSG_RESOURCE_NOT_FOUND _("Resource not found")
 #define MSG_FILE_RENAMED _("File already exists. Renamed to %s.")
-#define MSG_CANNOT_PARSE_METALINK _("Cannot parse metalink XML file. XML may be malformed.")
 #define MSG_TOO_SMALL_PAYLOAD_SIZE _("Too small payload size for %s, size=%lu.")
 #define MSG_REMOVED_DEFUNCT_CONTROL_FILE _("Removed the defunct control file %s because the download file %s doesn't exist.")
 #define MSG_SHARE_RATIO_REPORT _("Your share ratio was %.1f, uploaded/downloaded=%sB/%sB")
@@ -194,10 +192,8 @@
     " protocol. The integrity and confidentiality of the connection might be" \
     " compromised.\nProtocol: %s, Peer: %s")
 #define MSG_SHOW_FILES _("Printing the contents of file '%s'...")
-#define MSG_NOT_TORRENT_METALINK _("This file is neither Torrent nor Metalink" \
-                                   " file. Skipping.")
+#define MSG_NOT_TORRENT _("This file is not a Torrent file. Skipping.")
 #define MSG_GID_NOT_PROVIDED "GID is not provided."
-#define MSG_CANNOT_PARSE_XML_RPC_REQUEST "Failed to parse xml-rpc request."
 #define MSG_GOOD_BYE_SEEDER "Client is in seed state: Good Bye Seeder;)"
 #define MSG_NOT_FILE _("Is '%s' a file?")
 #define MSG_INTERFACE_NOT_FOUND _("Failed to find given interface %s,"  \

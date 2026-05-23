@@ -307,9 +307,6 @@ error_code::Value option_processing(Option& op, bool standalone,
 #ifdef ENABLE_BITTORRENT
       op.blank(PREF_TORRENT_FILE) &&
 #endif // ENABLE_BITTORRENT
-#ifdef ENABLE_METALINK
-      op.blank(PREF_METALINK_FILE) &&
-#endif // ENABLE_METALINK
       op.blank(PREF_INPUT_FILE)) {
     if (uris.empty()) {
       global::cerr()->printf(MSG_URI_REQUIRED);

@@ -33,11 +33,7 @@
  */
 /* copyright --> */
 #include "rpc_helper.h"
-#include "XmlParser.h"
 #include "RpcRequest.h"
-#include "XmlRpcRequestParserStateMachine.h"
-#include "message.h"
-#include "DlAbortEx.h"
 #include "DownloadEngine.h"
 #include "RpcMethod.h"
 #include "RpcResponse.h"
@@ -48,24 +44,6 @@
 namespace aria2 {
 
 namespace rpc {
-
-#ifdef ENABLE_XML_RPC
-RpcRequest xmlParseMemory(const char* xml, size_t size)
-{
-  XmlRpcRequestParserStateMachine psm;
-  if (xml::XmlParser(&psm).parseFinal(xml, size) < 0) {
-    throw DL_ABORT_EX(MSG_CANNOT_PARSE_XML_RPC_REQUEST);
-  }
-  std::unique_ptr<List> params;
-  if (downcast<List>(psm.getCurrentFrameValue())) {
-    params.reset(static_cast<List*>(psm.popCurrentFrameValue().release()));
-  }
-  else {
-    params = List::g();
-  }
-  return {psm.getMethodName(), std::move(params)};
-}
-#endif // ENABLE_XML_RPC
 
 RpcResponse createJsonRpcErrorResponse(int code, const std::string& msg,
                                        std::unique_ptr<ValueBase> id)

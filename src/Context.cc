@@ -74,10 +74,6 @@
 #ifdef ENABLE_BITTORRENT
 #  include "bittorrent_helper.h"
 #endif // ENABLE_BITTORRENT
-#ifdef ENABLE_METALINK
-#  include "metalink_helper.h"
-#  include "MetalinkEntry.h"
-#endif // ENABLE_METALINK
 
 extern char* optarg;
 extern int optind, opterr, optopt;
@@ -96,21 +92,7 @@ void showTorrentFile(const std::string& uri)
 } // namespace
 #endif // ENABLE_BITTORRENT
 
-#ifdef ENABLE_METALINK
-namespace {
-void showMetalinkFile(const std::string& uri, const std::shared_ptr<Option>& op)
-{
-  auto fileEntries = MetalinkEntry::toFileEntry(
-      metalink::parseAndQuery(uri, op.get(), op->get(PREF_METALINK_BASE_URI)));
-  util::toStream(std::begin(fileEntries), std::end(fileEntries),
-                 *global::cout());
-  global::cout()->write("\n");
-  global::cout()->flush();
-}
-} // namespace
-#endif // ENABLE_METALINK
-
-#if defined(ENABLE_BITTORRENT) || defined(ENABLE_METALINK)
+#ifdef ENABLE_BITTORRENT
 namespace {
 void showFiles(const std::vector<std::string>& uris,
                const std::shared_ptr<Option>& op)
@@ -127,14 +109,8 @@ void showFiles(const std::vector<std::string>& uris,
       }
       else
 #  endif // ENABLE_BITTORRENT
-#  ifdef ENABLE_METALINK
-          if (dt.guessMetalinkFile(uri)) {
-        showMetalinkFile(uri, op);
-      }
-      else
-#  endif // ENABLE_METALINK
       {
-        printf("%s\n\n", MSG_NOT_TORRENT_METALINK);
+        printf("%s\n\n", MSG_NOT_TORRENT);
       }
     }
     catch (RecoverableException& e) {
@@ -143,7 +119,7 @@ void showFiles(const std::vector<std::string>& uris,
   }
 }
 } // namespace
-#endif // ENABLE_BITTORRENT || ENABLE_METALINK
+#endif // ENABLE_BITTORRENT
 
 extern error_code::Value option_processing(Option& option, bool standalone,
                                            std::vector<std::string>& uris,
@@ -254,18 +230,6 @@ Context::Context(bool standalone, int argc, char** argv, const KeyVals& options)
   }
   else
 #endif // ENABLE_BITTORRENT
-#ifdef ENABLE_METALINK
-      if (!op->blank(PREF_METALINK_FILE)) {
-    if (op->get(PREF_SHOW_FILES) == A2_V_TRUE) {
-      showMetalinkFile(op->get(PREF_METALINK_FILE), op);
-      return;
-    }
-    else {
-      createRequestGroupForMetalink(requestGroups, op);
-    }
-  }
-  else
-#endif // ENABLE_METALINK
     if (!op->blank(PREF_INPUT_FILE)) {
       if (op->getAsBool(PREF_DEFERRED_INPUT)) {
         uriListParser = openUriListParser(op->get(PREF_INPUT_FILE));
@@ -273,12 +237,12 @@ Context::Context(bool standalone, int argc, char** argv, const KeyVals& options)
       else {
         createRequestGroupForUriList(requestGroups, op);
       }
-#if defined(ENABLE_BITTORRENT) || defined(ENABLE_METALINK)
+#ifdef ENABLE_BITTORRENT
     }
     else if (op->get(PREF_SHOW_FILES) == A2_V_TRUE) {
       showFiles(args, op);
       return;
-#endif // ENABLE_METALINK || ENABLE_METALINK
+#endif // ENABLE_BITTORRENT
     }
     else {
       createRequestGroupForUri(requestGroups, op, args, false, false, true);

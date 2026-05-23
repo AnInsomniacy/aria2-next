@@ -45,17 +45,17 @@ CPPUNIT_TEST_SUITE_REGISTRATION(SessionSerializerTest);
 
 void SessionSerializerTest::testSave()
 {
-#if defined(ENABLE_BITTORRENT) && defined(ENABLE_METALINK)
+#if defined(ENABLE_BITTORRENT)
   std::vector<std::string> uris{
       "http://localhost/file", "http://mirror/file",
-      A2_TEST_DIR "/test.torrent", A2_TEST_DIR "/serialize_session.meta4",
+      A2_TEST_DIR "/test.torrent",
       "magnet:?xt=urn:btih:248D0A1CD08284299DE78D5C1ED359BB46717D8C"};
   std::vector<std::shared_ptr<RequestGroup>> result;
   std::shared_ptr<Option> option(new Option());
   option->put(PREF_DIR, "/tmp");
   createRequestGroupForUri(result, option, uris);
-  CPPUNIT_ASSERT_EQUAL((size_t)5, result.size());
-  result[4]->getOption()->put(PREF_PAUSE, A2_V_TRUE);
+  CPPUNIT_ASSERT_EQUAL((size_t)3, result.size());
+  result[2]->getOption()->put(PREF_PAUSE, A2_V_TRUE);
   option->put(PREF_MAX_DOWNLOAD_RESULT, "10");
   RequestGroupMan rgman{result, 1, option.get()};
   SessionSerializer s(&rgman);
@@ -126,23 +126,15 @@ void SessionSerializerTest::testSave()
   std::getline(ss, line);
   CPPUNIT_ASSERT_EQUAL(uris[3], line);
   std::getline(ss, line);
-  // local metalink download does not save meaningful GID
-  CPPUNIT_ASSERT(fmt(" gid=%s", GroupId::toHex(result[2]->getGID()).c_str()) !=
-                 line);
-  std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(std::string(" dir=/tmp"), line);
-  std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(uris[4], line);
-  std::getline(ss, line);
   CPPUNIT_ASSERT_EQUAL(
-      fmt(" gid=%s", GroupId::toHex(result[4]->getGID()).c_str()), line);
+      fmt(" gid=%s", GroupId::toHex(result[2]->getGID()).c_str()), line);
   std::getline(ss, line);
   CPPUNIT_ASSERT_EQUAL(std::string(" dir=/tmp"), line);
   std::getline(ss, line);
   CPPUNIT_ASSERT_EQUAL(std::string(" pause=true"), line);
   std::getline(ss, line);
   CPPUNIT_ASSERT(!ss);
-#endif // defined(ENABLE_BITTORRENT) && defined(ENABLE_METALINK)
+#endif // defined(ENABLE_BITTORRENT)
 }
 
 void SessionSerializerTest::testSaveErrorDownload()

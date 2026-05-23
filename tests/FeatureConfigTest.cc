@@ -72,14 +72,6 @@ void FeatureConfigTest::testFeatureSummary()
 
       "Message Digest",
 
-#ifdef ENABLE_METALINK
-      "Metalink",
-#endif // ENABLE_METALINK
-
-#ifdef ENABLE_XML_RPC
-      "XML-RPC",
-#endif // ENABLE_XML_RPC
-
   };
 
   std::string featuresString =

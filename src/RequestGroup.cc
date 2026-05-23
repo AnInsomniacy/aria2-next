@@ -84,9 +84,6 @@
 #ifdef ENABLE_BITTORRENT
 #  include "LibtorrentCommand.h"
 #endif // ENABLE_BITTORRENT
-#ifdef ENABLE_METALINK
-#  include "MetalinkPostDownloadHandler.h"
-#endif // ENABLE_METALINK
 
 namespace aria2 {
 
@@ -958,23 +955,10 @@ void RequestGroup::initializePreDownloadHandler()
         download_handlers::getBtPreDownloadHandler());
   }
 #endif // ENABLE_BITTORRENT
-#ifdef ENABLE_METALINK
-  if (option_->get(PREF_FOLLOW_METALINK) == V_MEM) {
-    preDownloadHandlers_.push_back(
-        download_handlers::getMetalinkPreDownloadHandler());
-  }
-#endif // ENABLE_METALINK
 }
 
 void RequestGroup::initializePostDownloadHandler()
 {
-#ifdef ENABLE_METALINK
-  if (option_->getAsBool(PREF_FOLLOW_METALINK) ||
-      option_->get(PREF_FOLLOW_METALINK) == V_MEM) {
-    postDownloadHandlers_.push_back(
-        download_handlers::getMetalinkPostDownloadHandler());
-  }
-#endif // ENABLE_METALINK
 }
 
 bool RequestGroup::isDependencyResolved()

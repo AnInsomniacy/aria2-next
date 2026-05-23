@@ -15,11 +15,6 @@ class DownloadHandlersTest : public CppUnit::TestFixture {
 
   CPPUNIT_TEST_SUITE(DownloadHandlersTest);
   CPPUNIT_TEST(testGetMemoryPreDownloadHandler);
-#ifdef ENABLE_METALINK
-  CPPUNIT_TEST(testGetMetalinkPreDownloadHandler_extension);
-  CPPUNIT_TEST(testGetMetalinkPreDownloadHandler_contentType);
-#endif // ENABLE_METALINK
-
 #ifdef ENABLE_BITTORRENT
   CPPUNIT_TEST(testGetBtPreDownloadHandler_extension);
   CPPUNIT_TEST(testGetBtPreDownloadHandler_contentType);
@@ -33,11 +28,6 @@ private:
 public:
   void setUp() { option_ = std::make_shared<Option>(); }
   void testGetMemoryPreDownloadHandler();
-#ifdef ENABLE_METALINK
-  void testGetMetalinkPreDownloadHandler_extension();
-  void testGetMetalinkPreDownloadHandler_contentType();
-#endif // ENABLE_METALINK
-
 #ifdef ENABLE_BITTORRENT
   void testGetBtPreDownloadHandler_extension();
   void testGetBtPreDownloadHandler_contentType();
@@ -51,39 +41,6 @@ void DownloadHandlersTest::testGetMemoryPreDownloadHandler()
   CPPUNIT_ASSERT(
       download_handlers::getMemoryPreDownloadHandler()->canHandle(nullptr));
 }
-
-#ifdef ENABLE_METALINK
-
-void DownloadHandlersTest::testGetMetalinkPreDownloadHandler_extension()
-{
-  auto dctx = std::make_shared<DownloadContext>(0, 0, "test.metalink");
-  RequestGroup rg(GroupId::create(), option_);
-  rg.setDownloadContext(dctx);
-
-  auto handler = download_handlers::getMetalinkPreDownloadHandler();
-
-  CPPUNIT_ASSERT(handler->canHandle(&rg));
-
-  dctx->getFirstFileEntry()->setPath("test.metalink2");
-  CPPUNIT_ASSERT(!handler->canHandle(&rg));
-}
-
-void DownloadHandlersTest::testGetMetalinkPreDownloadHandler_contentType()
-{
-  auto dctx = std::make_shared<DownloadContext>(0, 0, "test");
-  dctx->getFirstFileEntry()->setContentType("application/metalink+xml");
-  RequestGroup rg(GroupId::create(), option_);
-  rg.setDownloadContext(dctx);
-
-  auto handler = download_handlers::getMetalinkPreDownloadHandler();
-
-  CPPUNIT_ASSERT(handler->canHandle(&rg));
-
-  dctx->getFirstFileEntry()->setContentType("application/octet-stream");
-  CPPUNIT_ASSERT(!handler->canHandle(&rg));
-}
-
-#endif // ENABLE_METALINK
 
 #ifdef ENABLE_BITTORRENT
 

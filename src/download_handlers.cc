@@ -37,9 +37,6 @@
 #include "ContentTypeRequestGroupCriteria.h"
 #include "MemoryBufferPreDownloadHandler.h"
 #include "a2functional.h"
-#ifdef ENABLE_METALINK
-#  include "MetalinkPostDownloadHandler.h"
-#endif // ENABLE_METALINK
 #ifdef ENABLE_BITTORRENT
 #  include "MemoryBencodePreDownloadHandler.h"
 #endif // ENABLE_BITTORRENT
@@ -59,34 +56,6 @@ const PreDownloadHandler* getMemoryPreDownloadHandler()
   }
   return memoryPreDownloadHandler.get();
 }
-
-#ifdef ENABLE_METALINK
-
-namespace {
-std::unique_ptr<PreDownloadHandler> metalinkPreDownloadHandler;
-std::unique_ptr<PostDownloadHandler> metalinkPostDownloadHandler;
-} // namespace
-
-const PreDownloadHandler* getMetalinkPreDownloadHandler()
-{
-  if (!metalinkPreDownloadHandler) {
-    metalinkPreDownloadHandler = make_unique<MemoryBufferPreDownloadHandler>();
-    metalinkPreDownloadHandler->setCriteria(
-        make_unique<ContentTypeRequestGroupCriteria>(getMetalinkContentTypes(),
-                                                     getMetalinkExtensions()));
-  }
-  return metalinkPreDownloadHandler.get();
-}
-
-const PostDownloadHandler* getMetalinkPostDownloadHandler()
-{
-  if (!metalinkPostDownloadHandler) {
-    metalinkPostDownloadHandler = make_unique<MetalinkPostDownloadHandler>();
-  }
-  return metalinkPostDownloadHandler.get();
-}
-
-#endif // ENABLE_METALINK
 
 #ifdef ENABLE_BITTORRENT
 

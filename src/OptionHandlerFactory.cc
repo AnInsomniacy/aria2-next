@@ -129,7 +129,6 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
                                                OptionHandler::OPT_ARG, 'V'));
     op->addTag(TAG_BASIC);
     op->addTag(TAG_BITTORRENT);
-    op->addTag(TAG_METALINK);
     op->addTag(TAG_FILE);
     op->addTag(TAG_CHECKSUM);
     op->setInitialOption(true);
@@ -477,7 +476,6 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
                                                OptionHandler::OPT_ARG));
     op->addTag(TAG_ADVANCED);
     op->addTag(TAG_BITTORRENT);
-    op->addTag(TAG_METALINK);
     op->addTag(TAG_FILE);
     op->addTag(TAG_CHECKSUM);
     op->setInitialOption(true);
@@ -735,7 +733,6 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
     OptionHandler* op(new BooleanOptionHandler(
         PREF_REALTIME_CHUNK_CHECKSUM, TEXT_REALTIME_CHUNK_CHECKSUM, A2_V_TRUE,
         OptionHandler::OPT_ARG));
-    op->addTag(TAG_METALINK);
     op->addTag(TAG_CHECKSUM);
     op->setInitialOption(true);
     op->setChangeGlobalOption(true);
@@ -1201,15 +1198,6 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
     handlers.push_back(op);
   }
   {
-    OptionHandler* op(new DefaultOptionHandler(PREF_METALINK_LOCATION,
-                                               TEXT_METALINK_LOCATION));
-    op->addTag(TAG_METALINK);
-    op->setInitialOption(true);
-    op->setChangeGlobalOption(true);
-    op->setChangeOptionForReserved(true);
-    handlers.push_back(op);
-  }
-  {
     OptionHandler* op(new LocalFilePathOptionHandler(
         PREF_PRIVATE_KEY, TEXT_PRIVATE_KEY, NO_DEFAULT_VALUE,
         /* acceptStdin = */ false, 0, /* mustExist = */ false));
@@ -1457,13 +1445,12 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
     op->setChangeOptionForReserved(true);
     handlers.push_back(op);
   }
-// BitTorrent/Metalink Options
-#if defined(ENABLE_BITTORRENT) || defined(ENABLE_METALINK)
+// BitTorrent Options
+#ifdef ENABLE_BITTORRENT
   {
     OptionHandler* op(new IntegerRangeOptionHandler(
         PREF_SELECT_FILE, TEXT_SELECT_FILE, NO_DEFAULT_VALUE, 1, 1_m));
     op->addTag(TAG_BITTORRENT);
-    op->addTag(TAG_METALINK);
     op->setInitialOption(true);
     op->setChangeOptionForReserved(true);
     handlers.push_back(op);
@@ -1474,10 +1461,9 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
                                                OptionHandler::OPT_ARG, 'S'));
     op->addTag(TAG_BASIC);
     op->addTag(TAG_BITTORRENT);
-    op->addTag(TAG_METALINK);
     handlers.push_back(op);
   }
-#endif // ENABLE_BITTORRENT || ENABLE_METALINK
+#endif // ENABLE_BITTORRENT
 // BitTorrent Specific Options
 #ifdef ENABLE_BITTORRENT
   {
@@ -1676,82 +1662,6 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
     handlers.push_back(op);
   }
 #endif // ENABLE_BITTORRENT
-// Metalink Specific Options
-#ifdef ENABLE_METALINK
-  {
-    OptionHandler* op(
-        new ParameterOptionHandler(PREF_FOLLOW_METALINK, TEXT_FOLLOW_METALINK,
-                                   A2_V_TRUE, {A2_V_TRUE, V_MEM, A2_V_FALSE}));
-    op->addTag(TAG_METALINK);
-    op->setInitialOption(true);
-    op->setChangeGlobalOption(true);
-    op->setChangeOptionForReserved(true);
-    handlers.push_back(op);
-  }
-  {
-    OptionHandler* op(new DefaultOptionHandler(
-        PREF_METALINK_BASE_URI, TEXT_METALINK_BASE_URI, NO_DEFAULT_VALUE));
-    op->addTag(TAG_METALINK);
-    op->setInitialOption(true);
-    op->setChangeGlobalOption(true);
-    handlers.push_back(op);
-  }
-  {
-    OptionHandler* op(
-        new BooleanOptionHandler(PREF_METALINK_ENABLE_UNIQUE_PROTOCOL,
-                                 TEXT_METALINK_ENABLE_UNIQUE_PROTOCOL,
-                                 A2_V_TRUE, OptionHandler::OPT_ARG));
-    op->addTag(TAG_METALINK);
-    op->setInitialOption(true);
-    op->setChangeGlobalOption(true);
-    op->setChangeOptionForReserved(true);
-    handlers.push_back(op);
-  }
-  {
-    OptionHandler* op(new LocalFilePathOptionHandler(
-        PREF_METALINK_FILE, TEXT_METALINK_FILE, NO_DEFAULT_VALUE, true, 'M'));
-    op->addTag(TAG_BASIC);
-    op->addTag(TAG_METALINK);
-    handlers.push_back(op);
-  }
-  {
-    OptionHandler* op(new DefaultOptionHandler(PREF_METALINK_LANGUAGE,
-                                               TEXT_METALINK_LANGUAGE));
-    op->addTag(TAG_METALINK);
-    op->setInitialOption(true);
-    op->setChangeGlobalOption(true);
-    op->setChangeOptionForReserved(true);
-    handlers.push_back(op);
-  }
-  {
-    OptionHandler* op(
-        new DefaultOptionHandler(PREF_METALINK_OS, TEXT_METALINK_OS));
-    op->addTag(TAG_METALINK);
-    op->setInitialOption(true);
-    op->setChangeGlobalOption(true);
-    op->setChangeOptionForReserved(true);
-    handlers.push_back(op);
-  }
-  {
-    OptionHandler* op(new ParameterOptionHandler(
-        PREF_METALINK_PREFERRED_PROTOCOL, TEXT_METALINK_PREFERRED_PROTOCOL,
-        V_NONE, {V_HTTP, V_HTTPS, V_FTP, V_NONE}));
-    op->addTag(TAG_METALINK);
-    op->setInitialOption(true);
-    op->setChangeGlobalOption(true);
-    op->setChangeOptionForReserved(true);
-    handlers.push_back(op);
-  }
-  {
-    OptionHandler* op(
-        new DefaultOptionHandler(PREF_METALINK_VERSION, TEXT_METALINK_VERSION));
-    op->addTag(TAG_METALINK);
-    op->setInitialOption(true);
-    op->setChangeGlobalOption(true);
-    op->setChangeOptionForReserved(true);
-    handlers.push_back(op);
-  }
-#endif // ENABLE_METALINK
   // Version Option
   {
     OptionHandler* op(new DefaultOptionHandler(PREF_VERSION, TEXT_VERSION,

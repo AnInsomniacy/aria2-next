@@ -94,10 +94,6 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/Ed2kSharedStoreTest.cc
 )
 
-set(ARIA2_TEST_SOURCES_ENABLE_XML_RPC
-  tests/XmlRpcRequestParserControllerTest.cc
-)
-
 set(ARIA2_TEST_SOURCES_HAVE_SOME_FALLOCATE
   tests/FallocFileAllocationIteratorTest.cc
 )
@@ -117,16 +113,6 @@ set(ARIA2_TEST_SOURCES_ENABLE_BITTORRENT
   tests/Bencode2Test.cc
   tests/ValueBaseBencodeParserTest.cc
   tests/LibtorrentSeedPolicyTest.cc
-)
-
-set(ARIA2_TEST_SOURCES_ENABLE_METALINK
-  tests/MetalinkerTest.cc
-  tests/MetalinkEntryTest.cc
-  tests/Metalink2RequestGroupTest.cc
-  tests/MetalinkPostDownloadHandlerTest.cc
-  tests/MetalinkHelperTest.cc
-  tests/MetalinkParserControllerTest.cc
-  tests/MetalinkProcessorTest.cc
 )
 
 set(ARIA2_TEST_SOURCES_ENABLE_ASYNC_DNS

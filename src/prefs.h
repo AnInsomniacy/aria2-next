@@ -468,28 +468,6 @@ extern PrefPtr PREF_BT_DETACH_SEED_ONLY;
 // values: true | false
 extern PrefPtr PREF_BT_FORCE_ENCRYPTION;
 
-/**
- * Metalink related preferences
- */
-// values: a string that your file system recognizes as a file name.
-extern PrefPtr PREF_METALINK_FILE;
-// values: a string
-extern PrefPtr PREF_METALINK_VERSION;
-// values: a string
-extern PrefPtr PREF_METALINK_LANGUAGE;
-// values: a string
-extern PrefPtr PREF_METALINK_OS;
-// values: a string
-extern PrefPtr PREF_METALINK_LOCATION;
-// values: true | false | mem
-extern PrefPtr PREF_FOLLOW_METALINK;
-// values: http | https | ftp | none
-extern PrefPtr PREF_METALINK_PREFERRED_PROTOCOL;
-// values: true | false
-extern PrefPtr PREF_METALINK_ENABLE_UNIQUE_PROTOCOL;
-// values: a string
-extern PrefPtr PREF_METALINK_BASE_URI;
-
 } // namespace aria2
 
 #endif // D_PREFS_H
