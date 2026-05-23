@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.25)
 
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
+endif()
+
 project(
   aria2
   VERSION 2.1.4

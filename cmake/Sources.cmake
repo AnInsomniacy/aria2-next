@@ -432,6 +432,12 @@ set(ARIA2_SOURCES_BASE
   src/ServerStatMan.h
   src/SessionSerializer.cc
   src/SessionSerializer.h
+  src/LibtorrentAttribute.cc
+  src/LibtorrentAttribute.h
+  src/LibtorrentCommand.cc
+  src/LibtorrentCommand.h
+  src/LibtorrentSession.cc
+  src/LibtorrentSession.h
   src/Signature.cc
   src/Signature.h
   src/SimpleRandomizer.cc

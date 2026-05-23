@@ -46,6 +46,8 @@ struct ContextAttribute {
 enum ContextAttributeType {
   // For BitTorrent
   CTX_ATTR_BT,
+  // For libtorrent-rasterbar BitTorrent
+  CTX_ATTR_LIBTORRENT,
   // For ED2K
   CTX_ATTR_ED2K,
   // Max value of attribute type to use allocate vector to hold

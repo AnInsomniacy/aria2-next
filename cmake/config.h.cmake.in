@@ -198,6 +198,9 @@
 /* Define to 1 if you have libssh2. */
 #cmakedefine HAVE_LIBSSH2 @HAVE_LIBSSH2@
 
+/* Define to 1 if you have libtorrent-rasterbar. */
+#cmakedefine HAVE_LIBTORRENT_RASTERBAR @HAVE_LIBTORRENT_RASTERBAR@
+
 /* Define to 1 if you have libuv. */
 #cmakedefine HAVE_LIBUV @HAVE_LIBUV@
 

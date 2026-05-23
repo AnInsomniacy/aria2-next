@@ -67,6 +67,7 @@ class EventPoll;
 class Command;
 #ifdef ENABLE_BITTORRENT
 class BtRegistry;
+class LibtorrentSession;
 #endif // ENABLE_BITTORRENT
 #ifdef ENABLE_WEBSOCKET
 namespace rpc {
@@ -133,6 +134,7 @@ private:
 
 #ifdef ENABLE_BITTORRENT
   std::unique_ptr<BtRegistry> btRegistry_;
+  std::unique_ptr<LibtorrentSession> libtorrentSession_;
 #endif // ENABLE_BITTORRENT
 
   CUIDCounter cuidCounter_;
@@ -315,6 +317,8 @@ public:
   {
     return btRegistry_;
   }
+
+  LibtorrentSession& getLibtorrentSession();
 #endif // ENABLE_BITTORRENT
 
   cuid_t newCUID();

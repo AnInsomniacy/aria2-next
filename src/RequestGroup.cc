@@ -87,6 +87,7 @@
 #include "ChecksumCheckIntegrityEntry.h"
 #ifdef ENABLE_BITTORRENT
 #  include "bittorrent_helper.h"
+#  include "LibtorrentCommand.h"
 #  include "BtRegistry.h"
 #  include "BtCheckIntegrityEntry.h"
 #  include "DefaultPeerStorage.h"
@@ -352,6 +353,16 @@ void RequestGroup::createInitialCommand(
     return;
   }
 #ifdef ENABLE_BITTORRENT
+  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+    if (option_->getAsBool(PREF_DRY_RUN)) {
+      throw DOWNLOAD_FAILURE_EXCEPTION(
+          "Cancel BitTorrent download in dry-run context.");
+    }
+    commands.push_back(make_unique<LibtorrentCommand>(e->newCUID(), this, e));
+    e->setNoWait(true);
+    return;
+  }
+
   if (downloadContext_->hasAttribute(CTX_ATTR_BT)) {
     auto torrentAttrs = bittorrent::getTorrentAttrs(downloadContext_);
     bool metadataGetMode = torrentAttrs->metadata.empty();

@@ -161,7 +161,6 @@ set(ARIA2_TEST_SOURCES_ENABLE_BITTORRENT
   tests/ShareRatioSeedCriteriaTest.cc
   tests/BtRegistryTest.cc
   tests/BtDependencyTest.cc
-  tests/BtPostDownloadHandlerTest.cc
   tests/TimeSeedCriteriaTest.cc
   tests/BtExtendedMessageTest.cc
   tests/HandshakeExtensionMessageTest.cc
@@ -171,7 +170,6 @@ set(ARIA2_TEST_SOURCES_ENABLE_BITTORRENT
   tests/UTMetadataRejectExtensionMessageTest.cc
   tests/UTMetadataRequestTrackerTest.cc
   tests/UTMetadataRequestFactoryTest.cc
-  tests/UTMetadataPostDownloadHandlerTest.cc
   tests/MagnetTest.cc
   tests/DefaultBtMessageFactoryTest.cc
   tests/DefaultExtensionMessageFactoryTest.cc

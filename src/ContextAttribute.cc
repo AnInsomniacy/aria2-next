@@ -41,6 +41,8 @@ const char* strContextAttributeType(ContextAttributeType key)
   switch (key) {
   case CTX_ATTR_BT:
     return "BitTorrent";
+  case CTX_ATTR_LIBTORRENT:
+    return "libtorrent-rasterbar";
   case CTX_ATTR_ED2K:
     return "ED2K";
   default:

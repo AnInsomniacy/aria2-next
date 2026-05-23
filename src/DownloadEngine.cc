@@ -69,6 +69,7 @@
 #include "wallclock.h"
 #ifdef ENABLE_BITTORRENT
 #  include "BtRegistry.h"
+#  include "LibtorrentSession.h"
 #endif // ENABLE_BITTORRENT
 #ifdef ENABLE_WEBSOCKET
 #  include "WebSocketSessionMan.h"
@@ -645,6 +646,16 @@ void DownloadEngine::setCheckIntegrityMan(
 {
   checkIntegrityMan_ = std::move(ciman);
 }
+
+#ifdef ENABLE_BITTORRENT
+LibtorrentSession& DownloadEngine::getLibtorrentSession()
+{
+  if (!libtorrentSession_) {
+    libtorrentSession_ = make_unique<LibtorrentSession>(option_);
+  }
+  return *libtorrentSession_;
+}
+#endif // ENABLE_BITTORRENT
 
 #ifdef ENABLE_WEBSOCKET
 void DownloadEngine::setWebSocketSessionMan(

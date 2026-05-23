@@ -28,6 +28,7 @@
 #ifdef ENABLE_BITTORRENT
 #  include "BtRegistry.h"
 #  include "BtRuntime.h"
+#  include "LibtorrentAttribute.h"
 #  include "bittorrent_helper.h"
 #endif // ENABLE_BITTORRENT
 
@@ -399,17 +400,13 @@ void RpcMethodTest::testAddTorrent()
 
     auto group = findReservedGroup(e_->getRequestGroupMan().get(), gid);
     CPPUNIT_ASSERT(group);
-    CPPUNIT_ASSERT_EQUAL(e_->getOption()->get(PREF_DIR) +
-                             "/aria2-0.8.2.tar.bz2",
-                         group->getFirstFilePath());
-    CPPUNIT_ASSERT_EQUAL((size_t)1, group->getDownloadContext()
-                                        ->getFirstFileEntry()
-                                        ->getRemainingUris()
-                                        .size());
+    auto dctx = group->getDownloadContext();
+    CPPUNIT_ASSERT(dctx->hasAttribute(CTX_ATTR_LIBTORRENT));
+    CPPUNIT_ASSERT(!dctx->hasAttribute(CTX_ATTR_BT));
+    auto attrs = getLibtorrentAttrs(dctx);
+    CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->webSeedUris.size());
     CPPUNIT_ASSERT_EQUAL(std::string("http://localhost/aria2-0.8.2.tar.bz2"),
-                         group->getDownloadContext()
-                             ->getFirstFileEntry()
-                             ->getRemainingUris()[0]);
+                         attrs->webSeedUris[0]);
   }
   {
     auto req = createAddTorrentReq();
@@ -426,9 +423,9 @@ void RpcMethodTest::testAddTorrent()
     a2_gid_t gid;
     CPPUNIT_ASSERT_EQUAL(
         0, GroupId::toNumericId(gid, downcast<String>(res.param)->s().c_str()));
-    CPPUNIT_ASSERT_EQUAL(dir + "/aria2-0.8.2.tar.bz2",
-                         findReservedGroup(e_->getRequestGroupMan().get(), gid)
-                             ->getFirstFilePath());
+    auto group = findReservedGroup(e_->getRequestGroupMan().get(), gid);
+    CPPUNIT_ASSERT(group->getDownloadContext()->hasAttribute(
+        CTX_ATTR_LIBTORRENT));
     CPPUNIT_ASSERT(
         File(dir + "/0a3893293e27ac0490424c06de4d09242215f0a6.torrent")
             .exists());

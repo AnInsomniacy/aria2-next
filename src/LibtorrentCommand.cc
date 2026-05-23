@@ -1,0 +1,240 @@
+/* <!-- copyright */
+/*
+ * aria2 - The high speed download utility
+ *
+ * Copyright (C) 2026 aria2-next contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ */
+/* copyright --> */
+#include "LibtorrentCommand.h"
+
+#include "DownloadContext.h"
+#include "DownloadEngine.h"
+#include "DownloadFailureException.h"
+#include "DiskAdaptor.h"
+#include "FileEntry.h"
+#include "LibtorrentAttribute.h"
+#include "LibtorrentSession.h"
+#include "LogFactory.h"
+#include "Option.h"
+#include "PieceStorage.h"
+#include "RequestGroup.h"
+#include "error_code.h"
+#include "fmt.h"
+#include "prefs.h"
+#include "util.h"
+
+#include <libtorrent/add_torrent_params.hpp>
+#include <libtorrent/alert_types.hpp>
+#include <libtorrent/load_torrent.hpp>
+#include <libtorrent/magnet_uri.hpp>
+#include <libtorrent/torrent_flags.hpp>
+#include <libtorrent/torrent_status.hpp>
+
+namespace aria2 {
+
+namespace lt = libtorrent;
+
+namespace {
+lt::add_torrent_params
+createAddTorrentParams(const LibtorrentAttribute* attrs, const Option* option)
+{
+  lt::add_torrent_params params;
+  lt::error_code ec;
+
+  switch (attrs->sourceType) {
+  case LibtorrentAttribute::SourceType::TORRENT_FILE:
+    params = lt::load_torrent_file(attrs->sourceUri);
+    break;
+  case LibtorrentAttribute::SourceType::TORRENT_DATA:
+    params = lt::load_torrent_buffer(
+        lt::span<char const>(attrs->torrentData.data(),
+                             static_cast<int>(attrs->torrentData.size())));
+    break;
+  case LibtorrentAttribute::SourceType::MAGNET:
+    params = lt::parse_magnet_uri(attrs->sourceUri, ec);
+    if (ec) {
+      throw DOWNLOAD_FAILURE_EXCEPTION2(ec.message(),
+                                        error_code::MAGNET_PARSE_ERROR);
+    }
+    break;
+  }
+
+  params.save_path = option->get(PREF_DIR);
+  params.url_seeds.assign(attrs->webSeedUris.begin(), attrs->webSeedUris.end());
+  params.flags |= lt::torrent_flags::duplicate_is_error;
+  params.flags &= ~lt::torrent_flags::paused;
+  params.flags &= ~lt::torrent_flags::auto_managed;
+  return params;
+}
+
+void refreshFileShape(RequestGroup* requestGroup, const lt::torrent_status& st)
+{
+  if (!st.has_metadata || !st.handle.is_valid()) {
+    return;
+  }
+
+  auto& dctx = requestGroup->getDownloadContext();
+  if (dctx->knowsTotalLength() && dctx->getTotalLength() == st.total_wanted) {
+    return;
+  }
+
+  auto ti = st.handle.torrent_file();
+  if (!ti) {
+    return;
+  }
+  const auto& files = ti->files();
+  std::vector<std::shared_ptr<FileEntry>> entries;
+  entries.reserve(static_cast<size_t>(files.num_files()));
+  for (auto i = 0; i < files.num_files(); ++i) {
+    auto path = util::applyDir(requestGroup->getOption()->get(PREF_DIR),
+                               files.file_path(i));
+    entries.push_back(std::make_shared<FileEntry>(path, files.file_size(i),
+                                                  files.file_offset(i)));
+  }
+  if (entries.empty()) {
+    return;
+  }
+
+  dctx->setFileEntries(entries.begin(), entries.end());
+  dctx->setBasePath(entries.front()->getPath());
+  dctx->markTotalLengthIsKnown();
+
+  requestGroup->setFileAllocationEnabled(false);
+  requestGroup->dropPieceStorage();
+  requestGroup->initPieceStorage();
+  requestGroup->getPieceStorage()->getDiskAdaptor()->openFile();
+}
+} // namespace
+
+LibtorrentCommand::LibtorrentCommand(cuid_t cuid, RequestGroup* requestGroup,
+                                     DownloadEngine* engine)
+    : TimeBasedCommand(cuid, engine, 1_s),
+      requestGroup_(requestGroup),
+      session_(&engine->getLibtorrentSession()),
+      completedLength_(0),
+      uploadedLength_(0),
+      torrentAdded_(false)
+{
+  setStatusActive();
+  requestGroup_->increaseNumCommand();
+}
+
+LibtorrentCommand::~LibtorrentCommand()
+{
+  if (torrentAdded_) {
+    session_->removeTorrent(handle_);
+  }
+  requestGroup_->decreaseNumCommand();
+}
+
+void LibtorrentCommand::preProcess()
+{
+  if (requestGroup_->isHaltRequested() || getDownloadEngine()->isHaltRequested()) {
+    if (handle_.is_valid()) {
+      handle_.pause(lt::torrent_handle::graceful_pause);
+    }
+    enableExit();
+    return;
+  }
+
+  if (!torrentAdded_) {
+    addTorrent();
+  }
+  pollAlerts();
+  updateStatus();
+}
+
+void LibtorrentCommand::process()
+{
+  if (handle_.is_valid()) {
+    getDownloadEngine()->getLibtorrentSession().nativeSession().
+        post_torrent_updates();
+  }
+}
+
+void LibtorrentCommand::addTorrent()
+{
+  auto attrs = getLibtorrentAttrs(requestGroup_->getDownloadContext());
+  auto params = createAddTorrentParams(attrs, requestGroup_->getOption().get());
+  handle_ = session_->addTorrent(std::move(params));
+  torrentAdded_ = true;
+  A2_LOG_INFO(fmt("GID#%s - Added BitTorrent download to libtorrent.",
+                  requestGroup_->getGroupId()->toHex().c_str()));
+}
+
+void LibtorrentCommand::pollAlerts()
+{
+  std::vector<lt::alert*> alerts;
+  session_->pollAlerts(alerts);
+  for (auto alert : alerts) {
+    if (auto addAlert = lt::alert_cast<lt::add_torrent_alert>(alert)) {
+      if (addAlert->error) {
+        failDownload(addAlert->error.message());
+      }
+    }
+    else if (auto errAlert = lt::alert_cast<lt::torrent_error_alert>(alert)) {
+      failDownload(errAlert->error.message());
+    }
+    else if (auto fileAlert = lt::alert_cast<lt::file_error_alert>(alert)) {
+      failDownload(fileAlert->error.message());
+    }
+    else if (lt::alert_cast<lt::metadata_received_alert>(alert)) {
+      A2_LOG_INFO(fmt("GID#%s - BitTorrent metadata received by libtorrent.",
+                      requestGroup_->getGroupId()->toHex().c_str()));
+    }
+  }
+}
+
+void LibtorrentCommand::updateStatus()
+{
+  if (!handle_.is_valid()) {
+    return;
+  }
+
+  auto status = handle_.status(lt::torrent_handle::query_save_path);
+  refreshFileShape(requestGroup_, status);
+
+  if (status.total_wanted_done > completedLength_) {
+    requestGroup_->getDownloadContext()->updateDownload(
+        static_cast<size_t>(status.total_wanted_done - completedLength_));
+    completedLength_ = status.total_wanted_done;
+  }
+  if (status.total_upload > uploadedLength_) {
+    requestGroup_->getDownloadContext()->updateUploadLength(
+        static_cast<size_t>(status.total_upload - uploadedLength_));
+    uploadedLength_ = status.total_upload;
+  }
+
+  if (requestGroup_->getPieceStorage()) {
+    requestGroup_->getPieceStorage()->markPiecesDone(status.total_wanted_done);
+  }
+
+  if (status.is_seeding || status.is_finished) {
+    finishDownload();
+  }
+}
+
+void LibtorrentCommand::finishDownload()
+{
+  if (requestGroup_->getPieceStorage()) {
+    requestGroup_->getPieceStorage()->markAllPiecesDone();
+  }
+  requestGroup_->getDownloadContext()->resetDownloadStopTime();
+  enableExit();
+}
+
+void LibtorrentCommand::failDownload(const std::string& message)
+{
+  requestGroup_->setLastErrorCode(error_code::UNKNOWN_ERROR, message.c_str());
+  requestGroup_->setHaltRequested(true);
+  A2_LOG_ERROR(fmt("GID#%s - libtorrent error: %s",
+                   requestGroup_->getGroupId()->toHex().c_str(),
+                   message.c_str()));
+}
+
+} // namespace aria2

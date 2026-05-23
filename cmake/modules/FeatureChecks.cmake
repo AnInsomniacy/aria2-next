@@ -327,6 +327,8 @@ aria2_pkg_check(LIBGNUTLS "gnutls>=${ARIA2_MIN_GNUTLS_VERSION}")
 aria2_pkg_check(OPENSSL "openssl>=${ARIA2_MIN_OPENSSL_VERSION}")
 aria2_pkg_check(LIBNETTLE "nettle>=${ARIA2_MIN_LIBNETTLE_VERSION}")
 aria2_pkg_check(LIBGCRYPT "libgcrypt>=${ARIA2_MIN_LIBGCRYPT_VERSION}")
+aria2_pkg_check(LIBTORRENT_RASTERBAR "libtorrent-rasterbar")
+find_package(Boost QUIET)
 
 if(LIBNETTLE_FOUND)
   cmake_push_check_state(RESET)
@@ -418,6 +420,19 @@ if(NOT HAVE_LIBNETTLE AND NOT HAVE_LIBGCRYPT AND NOT HAVE_OPENSSL)
 endif()
 
 if(ARIA2_ENABLE_BITTORRENT)
+  if(NOT LIBTORRENT_RASTERBAR_FOUND)
+    message(FATAL_ERROR
+      "BitTorrent support now requires libtorrent-rasterbar. "
+      "Install libtorrent-rasterbar development files or configure with "
+      "-DARIA2_ENABLE_BITTORRENT=OFF.")
+  endif()
+  if(NOT Boost_FOUND)
+    message(FATAL_ERROR
+      "BitTorrent support now requires Boost headers for "
+      "libtorrent-rasterbar. Install Boost development files or configure "
+      "with -DARIA2_ENABLE_BITTORRENT=OFF.")
+  endif()
+  set(HAVE_LIBTORRENT_RASTERBAR 1)
   set(ENABLE_BITTORRENT 1)
 endif()
 if(HAVE_LIBXML2 OR HAVE_LIBEXPAT)

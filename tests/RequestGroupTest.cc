@@ -2,6 +2,8 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
+#include "Command.h"
+#include "DownloadEngine.h"
 #include "Option.h"
 #include "DownloadContext.h"
 #include "FileEntry.h"
@@ -10,6 +12,12 @@
 #include "File.h"
 #include "TestUtil.h"
 #include "DownloadResult.h"
+#include "RequestGroupMan.h"
+#include "SelectEventPoll.h"
+#ifdef ENABLE_BITTORRENT
+#  include "LibtorrentAttribute.h"
+#  include "LibtorrentCommand.h"
+#endif // ENABLE_BITTORRENT
 
 namespace aria2 {
 
@@ -20,6 +28,10 @@ class RequestGroupTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testTryAutoFileRenaming);
   CPPUNIT_TEST(testCreateDownloadResult);
   CPPUNIT_TEST(testLoadAndOpenFileRestartFromScratch);
+#ifdef ENABLE_BITTORRENT
+  CPPUNIT_TEST(testCreateInitialCommandUsesLibtorrentRuntime);
+  CPPUNIT_TEST(testLibtorrentCommandLoadsTorrentMetadata);
+#endif // ENABLE_BITTORRENT
   CPPUNIT_TEST_SUITE_END();
 
 private:
@@ -32,6 +44,10 @@ public:
   void testTryAutoFileRenaming();
   void testCreateDownloadResult();
   void testLoadAndOpenFileRestartFromScratch();
+#ifdef ENABLE_BITTORRENT
+  void testCreateInitialCommandUsesLibtorrentRuntime();
+  void testLibtorrentCommandLoadsTorrentMetadata();
+#endif // ENABLE_BITTORRENT
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(RequestGroupTest);
@@ -176,5 +192,69 @@ void RequestGroupTest::testLoadAndOpenFileRestartFromScratch()
   CPPUNIT_ASSERT_EQUAL((int64_t)0, group.getCompletedLength());
   CPPUNIT_ASSERT_EQUAL((int64_t)0, File(path).size());
 }
+
+#ifdef ENABLE_BITTORRENT
+void RequestGroupTest::testCreateInitialCommandUsesLibtorrentRuntime()
+{
+  option_->put(PREF_DIR, A2_TEST_OUT_DIR);
+  option_->put(PREF_DRY_RUN, A2_V_FALSE);
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{}, 1, option_.get()));
+
+  auto ctx = std::make_shared<DownloadContext>(0, 0, "magnet");
+  ctx->setAttribute(
+      CTX_ATTR_LIBTORRENT,
+      make_unique<LibtorrentAttribute>(
+          LibtorrentAttribute::SourceType::MAGNET,
+          "magnet:?xt=urn:btih:3D366ED505B977FC61C9A6EE01E96329", "",
+          std::vector<std::string>{}));
+
+  RequestGroup group(GroupId::create(), option_);
+  group.setDownloadContext(ctx);
+
+  std::vector<std::unique_ptr<Command>> commands;
+  group.createInitialCommand(commands, &engine);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, commands.size());
+  CPPUNIT_ASSERT(dynamic_cast<LibtorrentCommand*>(commands[0].get()));
+}
+
+void RequestGroupTest::testLibtorrentCommandLoadsTorrentMetadata()
+{
+  option_->put(PREF_DIR, A2_TEST_OUT_DIR);
+  option_->put(PREF_DRY_RUN, A2_V_FALSE);
+  option_->put(PREF_LISTEN_PORT, "0");
+  option_->put(PREF_DHT_LISTEN_PORT, "0");
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  auto rgman = make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{}, 1, option_.get());
+  auto rgmanPtr = rgman.get();
+  engine.setRequestGroupMan(std::move(rgman));
+
+  auto ctx = std::make_shared<DownloadContext>(0, 0, "torrent");
+  ctx->setAttribute(
+      CTX_ATTR_LIBTORRENT,
+      make_unique<LibtorrentAttribute>(
+          LibtorrentAttribute::SourceType::TORRENT_FILE,
+          A2_TEST_DIR "/single.torrent", "", std::vector<std::string>{}));
+
+  RequestGroup group(GroupId::create(), option_);
+  group.setRequestGroupMan(rgmanPtr);
+  group.setDownloadContext(ctx);
+
+  LibtorrentCommand command(engine.newCUID(), &group, &engine);
+  command.preProcess();
+
+  CPPUNIT_ASSERT(ctx->knowsTotalLength());
+  CPPUNIT_ASSERT(ctx->getTotalLength() > 0);
+  CPPUNIT_ASSERT(ctx->getFirstFileEntry()->getPath().find(A2_TEST_OUT_DIR) ==
+                 0);
+}
+#endif // ENABLE_BITTORRENT
 
 } // namespace aria2
