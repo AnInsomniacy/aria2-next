@@ -47,6 +47,8 @@ struct LibtorrentAttribute : public ContextAttribute {
   std::string sourceUri;
   std::string torrentData;
   std::vector<std::string> webSeedUris;
+  std::vector<int> filePriorities;
+  bool filePrioritiesApplied = false;
   Status status;
   std::string resumeData;
 
@@ -67,6 +69,8 @@ struct LibtorrentAttribute : public ContextAttribute {
 LibtorrentAttribute* getLibtorrentAttrs(DownloadContext* dctx);
 LibtorrentAttribute*
 getLibtorrentAttrs(const std::shared_ptr<DownloadContext>& dctx);
+std::vector<int>
+createLibtorrentFilePriorities(const std::shared_ptr<DownloadContext>& dctx);
 
 } // namespace aria2
 

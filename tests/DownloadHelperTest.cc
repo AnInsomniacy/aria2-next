@@ -44,6 +44,7 @@
 #include "util.h"
 #include "FileEntry.h"
 #ifdef ENABLE_BITTORRENT
+#  include "LibtorrentAttribute.h"
 #  include "bittorrent_helper.h"
 #endif // ENABLE_BITTORRENT
 
@@ -108,6 +109,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
 
 #ifdef ENABLE_BITTORRENT
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentTorrent);
+  CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentTorrentSelectFile);
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnet);
 #endif // ENABLE_BITTORRENT
 
@@ -182,6 +184,7 @@ public:
 
 #ifdef ENABLE_BITTORRENT
   void testCreateRequestGroupForUri_LibtorrentTorrent();
+  void testCreateRequestGroupForUri_LibtorrentTorrentSelectFile();
   void testCreateRequestGroupForUri_LibtorrentMagnet();
 #endif // ENABLE_BITTORRENT
 
@@ -2295,6 +2298,24 @@ void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentTorrent()
     CPPUNIT_ASSERT_EQUAL(std::string(A2_TEST_DIR "/test.torrent"),
                          torrentGroup->getMetadataInfo()->getUri());
   }
+}
+
+void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentTorrentSelectFile()
+{
+  std::vector<std::string> uris{A2_TEST_DIR "/test.torrent"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_SELECT_FILE, "2");
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  auto dctx = result[0]->getDownloadContext();
+  CPPUNIT_ASSERT(dctx->hasAttribute(CTX_ATTR_LIBTORRENT));
+  auto attrs = getLibtorrentAttrs(dctx);
+  CPPUNIT_ASSERT_EQUAL((size_t)2, attrs->filePriorities.size());
+  CPPUNIT_ASSERT_EQUAL(0, attrs->filePriorities[0]);
+  CPPUNIT_ASSERT_EQUAL(4, attrs->filePriorities[1]);
 }
 
 void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentMagnet()

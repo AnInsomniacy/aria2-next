@@ -127,3 +127,17 @@ docs/maintenance/libtorrent-bt-migration` passed. CSV parser check passed with
 Remaining: Map file priorities, pause/resume/remove details, and seed ratio or
 seed time policy before closing BTM-007.
 Blocked: none.
+
+2026-05-23 BTM-007 active
+Changed: Mapped `--select-file` and RPC `select-file` changes to libtorrent
+file priorities. Torrent-file requests derive priorities before `add_torrent`,
+runtime RPC changes update stored priorities, and metadata refresh applies
+stored priorities once metadata exists.
+Verified: `testCreateRequestGroupForUri_LibtorrentTorrentSelectFile`,
+`testChangeOptionLibtorrentSelectFile`, `All Tests/aria2::DownloadHelperTest`,
+`All Tests/aria2::rpc::RpcMethodTest`, and
+`All Tests/aria2::RequestGroupTest` passed.
+`build/libtorrent-positive/aria2_tests` passed with `OK (1144)`.
+Remaining: Map pause/resume/remove details and seed ratio or seed time policy
+before closing BTM-007.
+Blocked: none.

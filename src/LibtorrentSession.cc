@@ -19,6 +19,7 @@
 
 #include <libtorrent/add_torrent_params.hpp>
 #include <libtorrent/alert.hpp>
+#include <libtorrent/download_priority.hpp>
 #include <libtorrent/settings_pack.hpp>
 #include <libtorrent/session_params.hpp>
 
@@ -161,6 +162,22 @@ void LibtorrentSession::setTorrentMaxConnections(a2_gid_t gid, int limit)
   if (itr != handles_.end() && itr->second.is_valid()) {
     itr->second.set_max_connections(limit == 0 ? -1 : limit);
   }
+}
+
+void LibtorrentSession::setTorrentFilePriorities(
+    a2_gid_t gid, const std::vector<int>& priorities)
+{
+  auto itr = handles_.find(gid);
+  if (itr == handles_.end() || !itr->second.is_valid() || priorities.empty()) {
+    return;
+  }
+
+  std::vector<lt::download_priority_t> mapped;
+  mapped.reserve(priorities.size());
+  for (auto priority : priorities) {
+    mapped.push_back(static_cast<lt::download_priority_t>(priority));
+  }
+  itr->second.prioritize_files(mapped);
 }
 
 void LibtorrentSession::pollAlerts(std::vector<lt::alert*>& alerts)

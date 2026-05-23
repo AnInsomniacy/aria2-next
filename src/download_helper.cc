@@ -542,6 +542,24 @@ std::shared_ptr<MetadataInfo> createMetadataInfoDataOnly()
 #ifdef ENABLE_BITTORRENT
 
 namespace {
+void setLibtorrentFilePriorities(LibtorrentAttribute* attrs,
+                                 const std::shared_ptr<Option>& option,
+                                 const ValueBase* torrent)
+{
+  if (!torrent || !option->defined(PREF_SELECT_FILE)) {
+    return;
+  }
+
+  auto dctx = std::make_shared<DownloadContext>();
+  bittorrent::loadFromMemory(torrent, dctx, option, attrs->webSeedUris,
+                             attrs->sourceUri.empty() ? "torrent"
+                                                      : attrs->sourceUri);
+  auto sgl = util::parseIntSegments(option->get(PREF_SELECT_FILE));
+  sgl.normalize();
+  dctx->setFileFilter(std::move(sgl));
+  attrs->filePriorities = createLibtorrentFilePriorities(dctx);
+}
+
 std::shared_ptr<RequestGroup>
 createLibtorrentRequestGroup(LibtorrentAttribute::SourceType sourceType,
                              const std::string& sourceUri,
@@ -567,10 +585,9 @@ createLibtorrentRequestGroup(LibtorrentAttribute::SourceType sourceType,
                                                 util::escapePath(displayName)),
                                   0, 0));
   dctx->setFileEntries(entries.begin(), entries.end());
-  dctx->setAttribute(
-      CTX_ATTR_LIBTORRENT,
-      make_unique<LibtorrentAttribute>(sourceType, sourceUri, torrentData,
-                                       webSeedUris));
+  auto attrs = make_unique<LibtorrentAttribute>(sourceType, sourceUri,
+                                                torrentData, webSeedUris);
+  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
   dctx->setAcceptMetalink(false);
   rg->setDownloadContext(dctx);
   rg->setFileAllocationEnabled(false);
@@ -597,10 +614,13 @@ createBtRequestGroup(const std::string& metaInfoUri,
                        error_code::BENCODE_PARSE_ERROR);
   }
   std::string torrentData = bencode2::encode(torrent);
-  return createLibtorrentRequestGroup(
+  auto rg = createLibtorrentRequestGroup(
       metaInfoUri.empty() ? LibtorrentAttribute::SourceType::TORRENT_DATA
                           : LibtorrentAttribute::SourceType::TORRENT_FILE,
       metaInfoUri, torrentData, auxUris, optionTemplate);
+  auto attrs = getLibtorrentAttrs(rg->getDownloadContext());
+  setLibtorrentFilePriorities(attrs, rg->getOption(), torrent);
+  return rg;
 }
 } // namespace
 

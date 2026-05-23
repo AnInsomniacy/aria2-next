@@ -52,6 +52,8 @@ public:
   void setTorrentDownloadLimit(a2_gid_t gid, int limit);
   void setTorrentUploadLimit(a2_gid_t gid, int limit);
   void setTorrentMaxConnections(a2_gid_t gid, int limit);
+  void setTorrentFilePriorities(a2_gid_t gid,
+                                const std::vector<int>& priorities);
 
   void pollAlerts(std::vector<libtorrent::alert*>& alerts);
 

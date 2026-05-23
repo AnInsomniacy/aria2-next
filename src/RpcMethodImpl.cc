@@ -1873,6 +1873,17 @@ void changeOption(const std::shared_ptr<RequestGroup>& group,
     auto sgl = util::parseIntSegments(grOption->get(PREF_SELECT_FILE));
     sgl.normalize();
     dctx->setFileFilter(std::move(sgl));
+#ifdef ENABLE_BITTORRENT
+    if (dctx->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+      auto attrs = getLibtorrentAttrs(dctx);
+      attrs->filePriorities = createLibtorrentFilePriorities(dctx);
+      attrs->filePrioritiesApplied = false;
+      if (auto session = e->getInitializedLibtorrentSession()) {
+        session->setTorrentFilePriorities(group->getGID(),
+                                          attrs->filePriorities);
+      }
+    }
+#endif // ENABLE_BITTORRENT
   }
   if (option.defined(PREF_SPLIT)) {
     group->setNumConcurrentCommand(grOption->getAsInt(PREF_SPLIT));

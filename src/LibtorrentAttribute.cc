@@ -13,6 +13,7 @@
 #include "LibtorrentAttribute.h"
 
 #include "DownloadContext.h"
+#include "FileEntry.h"
 
 #include <utility>
 
@@ -60,6 +61,23 @@ LibtorrentAttribute*
 getLibtorrentAttrs(const std::shared_ptr<DownloadContext>& dctx)
 {
   return getLibtorrentAttrs(dctx.get());
+}
+
+std::vector<int>
+createLibtorrentFilePriorities(const std::shared_ptr<DownloadContext>& dctx)
+{
+  auto& entries = dctx->getFileEntries();
+  if (entries.size() <= 1) {
+    return {};
+  }
+
+  std::vector<int> priorities(entries.size(), 0);
+  for (size_t i = 0; i < entries.size(); ++i) {
+    if (entries[i]->isRequested()) {
+      priorities[i] = 4;
+    }
+  }
+  return priorities;
 }
 
 } // namespace aria2

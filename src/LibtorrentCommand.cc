@@ -87,16 +87,35 @@ createAddTorrentParams(const LibtorrentAttribute* attrs, const Option* option)
 
   params.save_path = option->get(PREF_DIR);
   params.url_seeds.assign(attrs->webSeedUris.begin(), attrs->webSeedUris.end());
+  params.file_priorities.assign(attrs->filePriorities.begin(),
+                                attrs->filePriorities.end());
   params.flags |= lt::torrent_flags::duplicate_is_error;
   params.flags &= ~lt::torrent_flags::paused;
   params.flags &= ~lt::torrent_flags::auto_managed;
   return params;
 }
 
+std::vector<lt::download_priority_t>
+createFilePriorities(const std::vector<int>& priorities)
+{
+  std::vector<lt::download_priority_t> result;
+  result.reserve(priorities.size());
+  for (auto priority : priorities) {
+    result.push_back(static_cast<lt::download_priority_t>(priority));
+  }
+  return result;
+}
+
 void refreshFileShape(RequestGroup* requestGroup, const lt::torrent_status& st)
 {
   if (!st.has_metadata || !st.handle.is_valid()) {
     return;
+  }
+
+  auto attrs = getLibtorrentAttrs(requestGroup->getDownloadContext());
+  if (!attrs->filePriorities.empty() && !attrs->filePrioritiesApplied) {
+    st.handle.prioritize_files(createFilePriorities(attrs->filePriorities));
+    attrs->filePrioritiesApplied = true;
   }
 
   auto& dctx = requestGroup->getDownloadContext();
@@ -191,6 +210,9 @@ void LibtorrentCommand::addTorrent()
   auto attrs = getLibtorrentAttrs(requestGroup_->getDownloadContext());
   auto params = createAddTorrentParams(attrs, requestGroup_->getOption().get());
   handle_ = session_->addTorrent(requestGroup_->getGID(), std::move(params));
+  if (!attrs->filePriorities.empty()) {
+    attrs->filePrioritiesApplied = true;
+  }
   auto option = requestGroup_->getOption();
   handle_.set_download_limit(option->getAsInt(PREF_MAX_DOWNLOAD_LIMIT));
   handle_.set_upload_limit(option->getAsInt(PREF_MAX_UPLOAD_LIMIT));

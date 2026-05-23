@@ -80,6 +80,7 @@ class RpcMethodTest : public CppUnit::TestFixture {
 #ifdef ENABLE_BITTORRENT
   CPPUNIT_TEST(testGatherStoppedDownload_bt);
   CPPUNIT_TEST(testGatherProgressLibtorrentStatus);
+  CPPUNIT_TEST(testChangeOptionLibtorrentSelectFile);
 #endif // ENABLE_BITTORRENT
   CPPUNIT_TEST(testGatherProgressCommon);
 #ifdef ENABLE_BITTORRENT
@@ -155,6 +156,7 @@ public:
 #ifdef ENABLE_BITTORRENT
   void testGatherStoppedDownload_bt();
   void testGatherProgressLibtorrentStatus();
+  void testChangeOptionLibtorrentSelectFile();
 #endif // ENABLE_BITTORRENT
   void testGatherProgressCommon();
 #ifdef ENABLE_BITTORRENT
@@ -1252,6 +1254,38 @@ void RpcMethodTest::testGatherProgressLibtorrentStatus()
   auto infoDict = downcast<Dict>(btDict->get("info"));
   CPPUNIT_ASSERT_EQUAL(std::string("torrent.bin"),
                        downcast<String>(infoDict->get("name"))->s());
+}
+
+void RpcMethodTest::testChangeOptionLibtorrentSelectFile()
+{
+  auto dctx = std::make_shared<DownloadContext>(1_k, 2_k, "torrent");
+  std::vector<std::shared_ptr<FileEntry>> entries;
+  entries.push_back(std::make_shared<FileEntry>("file1", 1_k, 0));
+  entries.push_back(std::make_shared<FileEntry>("file2", 1_k, 1_k));
+  dctx->setFileEntries(entries.begin(), entries.end());
+  auto attrs = make_unique<LibtorrentAttribute>(
+      LibtorrentAttribute::SourceType::TORRENT_FILE,
+      A2_TEST_DIR "/test.torrent", "", std::vector<std::string>{});
+  auto attrsPtr = attrs.get();
+  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
+
+  auto group =
+      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
+  group->setDownloadContext(dctx);
+  e_->getRequestGroupMan()->addReservedGroup(group);
+
+  ChangeOptionRpcMethod m;
+  auto req = createReq(ChangeOptionRpcMethod::getMethodName());
+  req.params->append(GroupId::toHex(group->getGID()));
+  auto opt = Dict::g();
+  opt->put(PREF_SELECT_FILE->k, "2");
+  req.params->append(std::move(opt));
+  auto res = m.execute(std::move(req), e_.get());
+
+  CPPUNIT_ASSERT_EQUAL(0, res.code);
+  CPPUNIT_ASSERT_EQUAL((size_t)2, attrsPtr->filePriorities.size());
+  CPPUNIT_ASSERT_EQUAL(0, attrsPtr->filePriorities[0]);
+  CPPUNIT_ASSERT_EQUAL(4, attrsPtr->filePriorities[1]);
 }
 #endif // ENABLE_BITTORRENT
 
