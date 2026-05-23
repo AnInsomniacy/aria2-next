@@ -51,6 +51,10 @@ public:
   {
     handleEd2kUdpPacket(endpoint, opcode, payload);
   }
+  void testScheduleNextPoll(std::chrono::milliseconds delay)
+  {
+    scheduleNextPoll(delay);
+  }
 #endif // A2_TEST_DIR
 
 private:
@@ -94,6 +98,7 @@ private:
                            const std::string& payload);
   void sendQueuedPackets();
   void receivePackets();
+  void scheduleNextPoll(std::chrono::milliseconds delay);
   void handlePacket(const ed2k::Endpoint& endpoint, uint8_t opcode,
                     const std::string& payload);
   void handlePacket(const ed2k::Endpoint& endpoint,

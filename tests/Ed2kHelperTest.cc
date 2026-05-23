@@ -36,7 +36,6 @@ class Ed2kHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testKadSourceEndpointPreservesUdpAndCryptMetadata);
   CPPUNIT_TEST(testSourceExchange2Payloads);
   CPPUNIT_TEST(testCompressedPartPayloads);
-  CPPUNIT_TEST(testInflateCompressedPartData);
   CPPUNIT_TEST(testCompressedPartInflaterKeepsBlockOwnerAcrossChunks);
   CPPUNIT_TEST(testInflatePackedPacketPayload);
   CPPUNIT_TEST(testEmuleInfoPayload);
@@ -79,7 +78,6 @@ public:
   void testKadSourceEndpointPreservesUdpAndCryptMetadata();
   void testSourceExchange2Payloads();
   void testCompressedPartPayloads();
-  void testInflateCompressedPartData();
   void testCompressedPartInflaterKeepsBlockOwnerAcrossChunks();
   void testInflatePackedPacketPayload();
   void testEmuleInfoPayload();
@@ -1013,34 +1011,6 @@ void Ed2kHelperTest::testCompressedPartPayloads()
   auto bad = fileHash + packUInt32(0) + packUInt32(3) + "tiny";
   CPPUNIT_ASSERT(!parseCompressedPartPayload(header, compressedData, bad,
                                             fileHash, false));
-}
-
-void Ed2kHelperTest::testInflateCompressedPartData()
-{
-  std::string input;
-  for (int i = 0; i < 8192; ++i) {
-    input.push_back(static_cast<char>('A' + (i % 23)));
-  }
-
-  z_stream strm;
-  memset(&strm, 0, sizeof(strm));
-  CPPUNIT_ASSERT_EQUAL(Z_OK, deflateInit(&strm, Z_DEFAULT_COMPRESSION));
-  strm.avail_in = input.size();
-  strm.next_in = reinterpret_cast<unsigned char*>(&input[0]);
-  std::string compressed(compressBound(input.size()), '\0');
-  strm.avail_out = compressed.size();
-  strm.next_out = reinterpret_cast<unsigned char*>(&compressed[0]);
-  CPPUNIT_ASSERT_EQUAL(Z_STREAM_END, deflate(&strm, Z_FINISH));
-  compressed.resize(compressed.size() - strm.avail_out);
-  CPPUNIT_ASSERT_EQUAL(Z_OK, deflateEnd(&strm));
-
-  std::string inflated;
-  CPPUNIT_ASSERT(inflateCompressedPartData(inflated, compressed, input.size()));
-  CPPUNIT_ASSERT_EQUAL(input, inflated);
-
-  CPPUNIT_ASSERT(!inflateCompressedPartData(inflated, compressed,
-                                           input.size() - 1));
-  CPPUNIT_ASSERT(!inflateCompressedPartData(inflated, "not zlib", input.size()));
 }
 
 void Ed2kHelperTest::testCompressedPartInflaterKeepsBlockOwnerAcrossChunks()

@@ -52,9 +52,6 @@ bool parseCompressedPartPayload(CompressedPartHeader& header,
                                 const std::string& payload,
                                 const std::string& expectedFileHash,
                                 bool use64BitOffsets);
-bool inflateCompressedPartData(std::string& inflatedData,
-                               const std::string& compressedData,
-                               size_t maxInflatedLength);
 bool inflatePackedPacketPayload(std::string& inflatedData,
                                 const std::string& compressedData,
                                 size_t maxInflatedLength);

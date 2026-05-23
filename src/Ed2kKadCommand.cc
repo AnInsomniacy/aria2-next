@@ -156,7 +156,7 @@ Ed2kKadCommand::Ed2kKadCommand(cuid_t cuid, RequestGroup* requestGroup,
       lastServerStatusPoll_(0),
       lastServerSourcePoll_(0)
 {
-  setStatusRealtime();
+  setStatus(Command::STATUS_ONESHOT_REALTIME);
   requestGroup_->increaseNumCommand();
 }
 
@@ -1115,6 +1115,13 @@ void Ed2kKadCommand::handlePacket(
   }
 }
 
+void Ed2kKadCommand::scheduleNextPoll(std::chrono::milliseconds delay)
+{
+  e_->scheduleRuntimeWake(delay);
+  setStatus(Command::STATUS_ONESHOT_REALTIME);
+  e_->addCommand(std::unique_ptr<Command>(this));
+}
+
 bool Ed2kKadCommand::execute()
 {
   if (requestGroup_->isHaltRequested() || e_->isHaltRequested() ||
@@ -1171,7 +1178,7 @@ bool Ed2kKadCommand::execute()
   catch (DlAbortEx& e) {
     A2_LOG_INFO_EX("Exception thrown while handling ED2K Kad.", e);
   }
-  e_->addRoutineCommand(std::unique_ptr<Command>(this));
+  scheduleNextPoll(std::chrono::milliseconds(1000));
   return false;
 }
 

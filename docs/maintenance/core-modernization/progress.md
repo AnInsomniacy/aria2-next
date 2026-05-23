@@ -174,3 +174,9 @@ Changed: Split non-BitTorrent storage progress into verified `completedLength` a
 Verified: `cmake --build --preset default` passed. Full `ctest --preset default --output-on-failure` passed. Focused StorageTruth, RequestGroup, RpcMethod, DefaultProgressInfoFile, Ed2kCommand, and ED2K transfer reclaim/parallel block tests passed. CSV parser check and `git diff --check` passed.
 Remaining: Start CM-015 ED2K bridge onto modern runtime, storage, crypto, and status boundaries.
 Blocked: none.
+
+2026-05-23 CM-015 verified
+Changed: Bridged ED2K scheduling further onto the Asio runtime by moving Kad polling from routine-command spin to runtime wake scheduling and waking the runtime when ED2K peer/server work is queued. Added ED2K RPC subfields for verified `completedLength` and separate `inFlightCompletedLength`. Removed the dead ED2K `inflateCompressedPartData` helper and stale test while retaining streaming compressed-part and packed-packet zlib paths.
+Verified: `cmake --build --preset default --target aria2_tests` passed. Focused ED2K helper, Kad state, shared store, command, DownloadHelper, RequestGroupMan ED2K sharing, SessionSerializer ED2K save, and RpcMethod suites passed. Full `cmake --build --preset default`, `ctest --preset default --output-on-failure`, CSV parser check, active source/test stale `inflateCompressedPartData` scan, and `git diff --check` passed.
+Remaining: Start CM-016 libtorrent boundary residue review.
+Blocked: none.

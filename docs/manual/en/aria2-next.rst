@@ -2461,6 +2461,13 @@ For information on the *secret* parameter, see :ref:`rpc_auth`.
     ``length``
       ED2K file length in bytes, when the task has file metadata.
 
+    ``completedLength``
+      Verified completed length for this ED2K task in bytes.
+
+    ``inFlightCompletedLength``
+      Downloaded ED2K piece bytes that are not yet verified as completed
+      storage progress.
+
     ``partHashCount``
       Number of known ED2K MD4 part hashes.
 

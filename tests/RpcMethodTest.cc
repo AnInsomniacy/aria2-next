@@ -998,6 +998,12 @@ void RpcMethodTest::testGatherProgressEd2kStatus()
   CPPUNIT_ASSERT_EQUAL(std::string("ed2k-status.bin"),
                        getString(ed2kStatus, "name"));
   CPPUNIT_ASSERT_EQUAL(std::string("1024"), getString(ed2kStatus, "length"));
+  CPPUNIT_ASSERT(ed2kStatus->containsKey("completedLength"));
+  CPPUNIT_ASSERT(ed2kStatus->containsKey("inFlightCompletedLength"));
+  CPPUNIT_ASSERT_EQUAL(std::string("0"),
+                       getString(ed2kStatus, "completedLength"));
+  CPPUNIT_ASSERT_EQUAL(std::string("0"),
+                       getString(ed2kStatus, "inFlightCompletedLength"));
   CPPUNIT_ASSERT_EQUAL(std::string("1"),
                        getString(ed2kStatus, "partHashCount"));
   CPPUNIT_ASSERT_EQUAL(std::string("2222222222222222222222222222222222222222"),

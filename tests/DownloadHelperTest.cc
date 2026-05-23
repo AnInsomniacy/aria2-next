@@ -25,6 +25,7 @@
 #include "Segment.h"
 #include "SegmentMan.h"
 #include "DefaultProgressInfoFile.h"
+#include "AsioRuntime.h"
 #include "array_fun.h"
 #include "base32.h"
 #include "ed2k_constants.h"
@@ -85,6 +86,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kKadCommandQueuesKadCallback);
   CPPUNIT_TEST(testEd2kKadCommandQueueFullForUnknownUploadReask);
   CPPUNIT_TEST(testEd2kKadCommandAckForUploadingPeerReask);
+  CPPUNIT_TEST(testEd2kKadCommandUsesRuntimeTimer);
   CPPUNIT_TEST(testEd2kSourcePolicyAppliesActiveCap);
   CPPUNIT_TEST(testEd2kServerSourceCadencePolicy);
   CPPUNIT_TEST(testEd2kServerSearchCadencePolicy);
@@ -97,6 +99,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kPeerTransferAcceptsParallelPieceBlocks);
   CPPUNIT_TEST(testEd2kPeerTransferCancelsOwnerAfterParallelHashFailure);
   CPPUNIT_TEST(testEd2kPeerTransferAppliesAichRecoveryData);
+  CPPUNIT_TEST(testEd2kSchedulingWakesRuntime);
   CPPUNIT_TEST(testEd2kSchedulingKeepsInlineSourceLabel);
   CPPUNIT_TEST(testEd2kPeerSchedulingSkipsBackoff);
   CPPUNIT_TEST(testEd2kPeerSchedulingSkipsConnectingPeer);
@@ -158,6 +161,7 @@ public:
   void testEd2kKadCommandQueuesKadCallback();
   void testEd2kKadCommandQueueFullForUnknownUploadReask();
   void testEd2kKadCommandAckForUploadingPeerReask();
+  void testEd2kKadCommandUsesRuntimeTimer();
   void testEd2kSourcePolicyAppliesActiveCap();
   void testEd2kServerSourceCadencePolicy();
   void testEd2kServerSearchCadencePolicy();
@@ -170,6 +174,7 @@ public:
   void testEd2kPeerTransferAcceptsParallelPieceBlocks();
   void testEd2kPeerTransferCancelsOwnerAfterParallelHashFailure();
   void testEd2kPeerTransferAppliesAichRecoveryData();
+  void testEd2kSchedulingWakesRuntime();
   void testEd2kSchedulingKeepsInlineSourceLabel();
   void testEd2kPeerSchedulingSkipsBackoff();
   void testEd2kPeerSchedulingSkipsConnectingPeer();
@@ -1480,6 +1485,36 @@ void DownloadHelperTest::testEd2kKadCommandAckForUploadingPeerReask()
   CPPUNIT_ASSERT_EQUAL((uint16_t)0, ack.rank);
 }
 
+void DownloadHelperTest::testEd2kKadCommandUsesRuntimeTimer()
+{
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_ED2K_SERVER, "203.0.113.10:4661");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_TRUE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  auto command = make_unique<Ed2kKadCommand>(1, group.get(), &engine);
+  auto commandPtr = command.get();
+
+  commandPtr->testScheduleNextPoll(std::chrono::milliseconds(0));
+  command.release();
+  engine.getRuntime().runReady();
+
+  CPPUNIT_ASSERT(engine.getRuntime().wakeRequested());
+}
+
 void DownloadHelperTest::testEd2kSourcePolicyAppliesActiveCap()
 {
   Ed2kAttribute attrs;
@@ -1953,6 +1988,38 @@ void DownloadHelperTest::testEd2kPeerTransferAppliesAichRecoveryData()
   CPPUNIT_ASSERT(!piece->hasBlock(ed2k::EMBLOCK_LENGTH /
                                   piece->getBlockLength()));
   CPPUNIT_ASSERT(!piece->pieceComplete());
+}
+
+void DownloadHelperTest::testEd2kSchedulingWakesRuntime()
+{
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_ED2K_SERVER, "203.0.113.10:4661");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_TRUE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+
+  ed2k::Endpoint peer;
+  peer.host = "203.0.113.20";
+  peer.port = 4662;
+  addEd2kPeer(attrs, peer);
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+
+  schedulePendingEd2kPeers(group.get(), &engine);
+
+  CPPUNIT_ASSERT(engine.getRuntime().wakeRequested());
 }
 
 void DownloadHelperTest::testEd2kSchedulingKeepsInlineSourceLabel()

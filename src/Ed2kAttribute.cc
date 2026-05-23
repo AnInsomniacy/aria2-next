@@ -1255,7 +1255,10 @@ void schedulePendingEd2kServers(RequestGroup* requestGroup, DownloadEngine* e)
 {
   std::vector<std::unique_ptr<Command>> commands;
   schedulePendingEd2kServers(commands, requestGroup, e);
-  e->addCommand(std::move(commands));
+  if (!commands.empty()) {
+    e->wakeRuntime();
+    e->addCommand(std::move(commands));
+  }
 }
 
 void schedulePendingEd2kServers(std::vector<std::unique_ptr<Command>>& commands,
@@ -1321,6 +1324,7 @@ void schedulePendingEd2kPeers(RequestGroup* requestGroup, DownloadEngine* e)
     auto peer = state->endpoint;
     state->dead = false;
     state->connecting = true;
+    e->wakeRuntime();
     e->addCommand(make_unique<Ed2kCommand>(e->newCUID(), requestGroup, e,
                                            peer, false));
   }
@@ -1330,7 +1334,7 @@ void scheduleEd2kPeerCheck(RequestGroup* requestGroup, DownloadEngine* e)
 {
   e->addCommand(
       make_unique<Ed2kPeerScheduleCommand>(e->newCUID(), requestGroup, e));
-  e->setNoWait(true);
+  e->wakeRuntime();
 }
 
 ed2k::KadRoutingSnapshot createEd2kKadSnapshot(const Ed2kAttribute* attrs)

@@ -738,7 +738,9 @@ size_t countEd2kCallbackWaitingPeers(const Ed2kAttribute* attrs)
 }
 
 std::unique_ptr<Dict> createEd2kStatusEntry(const Ed2kAttribute* attrs,
-                                            RequestGroupMan* rgman)
+                                            RequestGroupMan* rgman,
+                                            int64_t completedLength,
+                                            int64_t inFlightCompletedLength)
 {
   auto dict = Dict::g();
   if (!attrs->link.hash.empty()) {
@@ -750,6 +752,9 @@ std::unique_ptr<Dict> createEd2kStatusEntry(const Ed2kAttribute* attrs,
   if (attrs->link.size > 0) {
     dict->put(KEY_LENGTH, util::itos(attrs->link.size));
   }
+  dict->put(KEY_COMPLETED_LENGTH, util::itos(completedLength));
+  dict->put(KEY_IN_FLIGHT_COMPLETED_LENGTH,
+            util::itos(inFlightCompletedLength));
   dict->put("partHashCount", util::uitos(attrs->pieceHashes.size()));
   if (!attrs->aichRootHash.empty()) {
     dict->put("aichRoot", util::toHex(attrs->aichRootHash));
@@ -902,7 +907,10 @@ void gatherProgressCommon(Dict* entryDict,
     if (dctx->hasAttribute(CTX_ATTR_ED2K)) {
       auto attrs = getEd2kAttrs(dctx);
       entryDict->put(KEY_ED2K,
-                     createEd2kStatusEntry(attrs, group->getRequestGroupMan()));
+                     createEd2kStatusEntry(
+                         attrs, group->getRequestGroupMan(),
+                         group->getCompletedLength(),
+                         group->getInFlightCompletedLength()));
     }
   }
 #ifdef ENABLE_BITTORRENT
