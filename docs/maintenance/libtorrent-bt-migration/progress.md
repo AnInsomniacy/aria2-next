@@ -244,3 +244,15 @@ BtConstants, LPD multicast constants, native peer constants, and
 extension_message_test_helper returned no active runtime hits.
 Remaining: Run the final completion audit against the original goal contract.
 Blocked: none.
+
+2026-05-23 BTM-011 verified
+Changed: Added post-cleanup KNOPPIX 9.1 DVD torrent smoke evidence using the
+final binary after orphaned native tracker helper cleanup.
+Verified: Sequential 90 second smoke under
+`/Users/sekiro/Desktop/aria2-next-current/knoppix-final-90s-144051` used
+`/Users/sekiro/Desktop/Test Torrents/KNOPPIX_V9.1DVD-2021-01-25-DE.torrent`.
+At 90 seconds, aria2-next reported 11,239,575 B/s and 738,197,504 bytes
+complete; reference aria2c reported 13,655,276 B/s and 967,782,247 bytes
+complete. Both remained active as expected for this larger torrent.
+Remaining: Run the final completion audit against the original goal contract.
+Blocked: none.
