@@ -32,6 +32,7 @@
 #include <libtorrent/alert_types.hpp>
 #include <libtorrent/load_torrent.hpp>
 #include <libtorrent/magnet_uri.hpp>
+#include <libtorrent/sha1_hash.hpp>
 #include <libtorrent/torrent_flags.hpp>
 #include <libtorrent/torrent_status.hpp>
 
@@ -197,7 +198,32 @@ void LibtorrentCommand::updateStatus()
   }
 
   auto status = handle_.status(lt::torrent_handle::query_save_path);
+  status = handle_.status(lt::torrent_handle::query_save_path |
+                          lt::torrent_handle::query_torrent_file |
+                          lt::torrent_handle::query_name |
+                          lt::torrent_handle::query_pieces);
   refreshFileShape(requestGroup_, status);
+
+  auto attrs = getLibtorrentAttrs(requestGroup_->getDownloadContext());
+  attrs->status.hasStatus = true;
+  attrs->status.complete = status.is_finished || status.is_seeding;
+  attrs->status.seeding = status.is_seeding;
+  attrs->status.hasMetadata = status.has_metadata;
+  attrs->status.totalLength = status.total_wanted;
+  attrs->status.completedLength = status.total_wanted_done;
+  attrs->status.uploadedLength = status.all_time_upload;
+  attrs->status.downloadSpeed = status.download_payload_rate;
+  attrs->status.uploadSpeed = status.upload_payload_rate;
+  attrs->status.connections = status.num_peers;
+  attrs->status.name = status.name;
+  if (!status.info_hashes.v1.is_all_zeros()) {
+    auto hash = status.info_hashes.v1.to_string();
+    attrs->status.infoHash.assign(hash.begin(), hash.end());
+  }
+  if (!status.pieces.empty()) {
+    attrs->status.bitfield.assign(status.pieces.data(),
+                                  status.pieces.num_bytes());
+  }
 
   if (status.total_wanted_done > completedLength_) {
     requestGroup_->getDownloadContext()->updateDownload(

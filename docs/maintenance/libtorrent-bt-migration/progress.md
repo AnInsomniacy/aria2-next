@@ -74,3 +74,20 @@ docs/maintenance/libtorrent-bt-migration` passed. CSV parser check over
 Remaining: Start BTM-005 status, RPC, console, verified progress, and
 false-completion cleanup.
 Blocked: none.
+
+2026-05-23 BTM-005 active
+Changed: Added libtorrent status storage to `LibtorrentAttribute`, updated
+`LibtorrentCommand` to refresh verified libtorrent total, completed, upload,
+speed, connection, info-hash, bitfield, seeding, and metadata state, and made
+`RequestGroup` and RPC progress read libtorrent status before native
+`PieceStorage` for libtorrent-backed downloads.
+Verified: `testLibtorrentVerifiedProgressOverridesPieceStorage` covers the BT
+false-completion path where old PieceStorage is marked complete but libtorrent
+reports incomplete. `testGatherProgressLibtorrentStatus` covers RPC status
+fields sourced from libtorrent. `build/libtorrent-positive/aria2_tests` passed
+with `OK (1140)`. `git diff --check CMakeLists.txt cmake src tests
+docs/maintenance/libtorrent-bt-migration` passed. CSV parser check passed with
+`CSV OK 13`.
+Remaining: Run BTM-005.3 public tail-completion smoke under
+`/Users/sekiro/Desktop/aria2-next-current`, then continue BTM-006 resume data.
+Blocked: none.

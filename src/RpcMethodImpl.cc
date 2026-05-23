@@ -76,6 +76,7 @@
 #ifdef ENABLE_BITTORRENT
 #  include "bittorrent_helper.h"
 #  include "BtRegistry.h"
+#  include "LibtorrentAttribute.h"
 #  include "PeerStorage.h"
 #  include "Peer.h"
 #  include "BtRuntime.h"
@@ -869,6 +870,12 @@ void gatherProgressCommon(Dict* entryDict,
                           const std::vector<std::string>& keys)
 {
   auto& ps = group->getPieceStorage();
+  auto& dctx = group->getDownloadContext();
+#ifdef ENABLE_BITTORRENT
+  auto libtorrentAttrs = dctx->hasAttribute(CTX_ATTR_LIBTORRENT)
+                             ? getLibtorrentAttrs(dctx)
+                             : nullptr;
+#endif // ENABLE_BITTORRENT
   if (requested_key(keys, KEY_GID)) {
     entryDict->put(KEY_GID, GroupId::toHex(group->getGID()).c_str());
   }
@@ -892,9 +899,25 @@ void gatherProgressCommon(Dict* entryDict,
     entryDict->put(KEY_UPLOAD_LENGTH, util::itos(stat.allTimeUploadLength));
   }
   if (requested_key(keys, KEY_CONNECTIONS)) {
+#ifdef ENABLE_BITTORRENT
+    if (libtorrentAttrs) {
+      entryDict->put(KEY_CONNECTIONS,
+                     util::itos(libtorrentAttrs->status.connections));
+    }
+    else
+#endif // ENABLE_BITTORRENT
     entryDict->put(KEY_CONNECTIONS, util::itos(group->getNumConnection()));
   }
   if (requested_key(keys, KEY_BITFIELD)) {
+#ifdef ENABLE_BITTORRENT
+    if (libtorrentAttrs) {
+      if (!libtorrentAttrs->status.bitfield.empty()) {
+        entryDict->put(KEY_BITFIELD,
+                       util::toHex(libtorrentAttrs->status.bitfield));
+      }
+    }
+    else
+#endif // ENABLE_BITTORRENT
     if (ps) {
       if (ps->getBitfieldLength() > 0) {
         entryDict->put(KEY_BITFIELD,
@@ -902,7 +925,6 @@ void gatherProgressCommon(Dict* entryDict,
       }
     }
   }
-  auto& dctx = group->getDownloadContext();
   if (requested_key(keys, KEY_PIECE_LENGTH)) {
     entryDict->put(KEY_PIECE_LENGTH, util::itos(dctx->getPieceLength()));
   }
@@ -946,6 +968,32 @@ void gatherProgressCommon(Dict* entryDict,
                      createEd2kStatusEntry(attrs, group->getRequestGroupMan()));
     }
   }
+#ifdef ENABLE_BITTORRENT
+  if (libtorrentAttrs) {
+    if (requested_key(keys, KEY_INFO_HASH) &&
+        !libtorrentAttrs->status.infoHash.empty()) {
+      entryDict->put(KEY_INFO_HASH,
+                     util::toHex(libtorrentAttrs->status.infoHash));
+    }
+    if (requested_key(keys, KEY_NUM_SEEDERS)) {
+      entryDict->put(KEY_NUM_SEEDERS,
+                     util::itos(libtorrentAttrs->status.seeders));
+    }
+    if (requested_key(keys, KEY_SEEDER)) {
+      entryDict->put(KEY_SEEDER,
+                     libtorrentAttrs->status.seeding ? VLB_TRUE : VLB_FALSE);
+    }
+    if (requested_key(keys, KEY_BITTORRENT)) {
+      auto btDict = Dict::g();
+      auto infoDict = Dict::g();
+      if (!libtorrentAttrs->status.name.empty()) {
+        infoDict->put(KEY_NAME, libtorrentAttrs->status.name);
+      }
+      btDict->put(KEY_INFO, std::move(infoDict));
+      entryDict->put(KEY_BITTORRENT, std::move(btDict));
+    }
+  }
+#endif // ENABLE_BITTORRENT
 }
 
 #ifdef ENABLE_BITTORRENT

@@ -26,10 +26,28 @@ class DownloadContext;
 struct LibtorrentAttribute : public ContextAttribute {
   enum class SourceType { TORRENT_FILE, TORRENT_DATA, MAGNET };
 
+  struct Status {
+    bool hasStatus = false;
+    bool complete = false;
+    bool seeding = false;
+    bool hasMetadata = false;
+    int64_t totalLength = 0;
+    int64_t completedLength = 0;
+    int64_t uploadedLength = 0;
+    int downloadSpeed = 0;
+    int uploadSpeed = 0;
+    int connections = 0;
+    int seeders = 0;
+    std::string bitfield;
+    std::string infoHash;
+    std::string name;
+  };
+
   SourceType sourceType;
   std::string sourceUri;
   std::string torrentData;
   std::vector<std::string> webSeedUris;
+  Status status;
 
   LibtorrentAttribute(SourceType sourceType, std::string sourceUri,
                       std::string torrentData,

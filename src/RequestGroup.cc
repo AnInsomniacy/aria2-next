@@ -70,6 +70,7 @@
 #include "DownloadHandlerConstants.h"
 #include "Option.h"
 #include "FileEntry.h"
+#include "LibtorrentAttribute.h"
 #include "Request.h"
 #include "FileAllocationIterator.h"
 #include "fmt.h"
@@ -178,6 +179,12 @@ bool RequestGroup::isCheckIntegrityReady()
 
 bool RequestGroup::downloadFinished() const
 {
+#ifdef ENABLE_BITTORRENT
+  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+    auto attrs = getLibtorrentAttrs(downloadContext_);
+    return attrs->status.hasStatus && attrs->status.complete;
+  }
+#endif // ENABLE_BITTORRENT
   if (!pieceStorage_) {
     return false;
   }
@@ -984,6 +991,14 @@ std::string RequestGroup::getFirstFilePath() const
 
 int64_t RequestGroup::getTotalLength() const
 {
+#ifdef ENABLE_BITTORRENT
+  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+    auto attrs = getLibtorrentAttrs(downloadContext_);
+    if (attrs->status.hasStatus || attrs->status.totalLength > 0) {
+      return attrs->status.totalLength;
+    }
+  }
+#endif // ENABLE_BITTORRENT
   if (!pieceStorage_) {
     return 0;
   }
@@ -997,6 +1012,14 @@ int64_t RequestGroup::getTotalLength() const
 
 int64_t RequestGroup::getCompletedLength() const
 {
+#ifdef ENABLE_BITTORRENT
+  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+    auto attrs = getLibtorrentAttrs(downloadContext_);
+    if (attrs->status.hasStatus || attrs->status.completedLength > 0) {
+      return attrs->status.completedLength;
+    }
+  }
+#endif // ENABLE_BITTORRENT
   if (!pieceStorage_) {
     return 0;
   }
@@ -1079,6 +1102,15 @@ TransferStat RequestGroup::calculateStat() const
 {
   TransferStat stat = downloadContext_->getNetStat().toTransferStat();
 #ifdef ENABLE_BITTORRENT
+  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+    auto attrs = getLibtorrentAttrs(downloadContext_);
+    if (attrs->status.hasStatus) {
+      stat.downloadSpeed = attrs->status.downloadSpeed;
+      stat.uploadSpeed = attrs->status.uploadSpeed;
+      stat.allTimeUploadLength = attrs->status.uploadedLength;
+    }
+    return stat;
+  }
   if (btRuntime_) {
     stat.allTimeUploadLength =
         btRuntime_->getUploadLengthAtStartup() + stat.sessionUploadLength;
@@ -1292,6 +1324,11 @@ std::shared_ptr<DownloadResult> RequestGroup::createDownloadResult() const
                              pieceStorage_->getBitfieldLength());
   }
 #ifdef ENABLE_BITTORRENT
+  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+    auto attrs = getLibtorrentAttrs(downloadContext_);
+    res->infoHash = attrs->status.infoHash;
+    res->bitfield = attrs->status.bitfield;
+  }
   if (downloadContext_->hasAttribute(CTX_ATTR_BT)) {
     const unsigned char* p = bittorrent::getInfoHash(downloadContext_);
     res->infoHash.assign(p, p + INFO_HASH_LENGTH);
@@ -1410,7 +1447,8 @@ void RequestGroup::setDownloadContext(
 bool RequestGroup::p2pInvolved() const
 {
 #ifdef ENABLE_BITTORRENT
-  return downloadContext_->hasAttribute(CTX_ATTR_BT);
+  return downloadContext_->hasAttribute(CTX_ATTR_BT) ||
+         downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT);
 #else  // !ENABLE_BITTORRENT
   return false;
 #endif // !ENABLE_BITTORRENT
@@ -1433,6 +1471,10 @@ void RequestGroup::enableSeedOnly()
 bool RequestGroup::isSeeder() const
 {
 #ifdef ENABLE_BITTORRENT
+  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+    auto attrs = getLibtorrentAttrs(downloadContext_);
+    return attrs->status.hasStatus && attrs->status.seeding;
+  }
   return downloadContext_->hasAttribute(CTX_ATTR_BT) &&
          !bittorrent::getTorrentAttrs(downloadContext_)->metadata.empty() &&
          downloadFinished();

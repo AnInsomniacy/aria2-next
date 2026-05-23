@@ -20,6 +20,7 @@
 #include "array_fun.h"
 #include "download_helper.h"
 #include "FileEntry.h"
+#include "PieceStorage.h"
 #include "RpcMethodFactory.h"
 #include "Ed2kAttribute.h"
 #include "ed2k_hash.h"
@@ -78,6 +79,7 @@ class RpcMethodTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGatherProgressEd2kStatus);
 #ifdef ENABLE_BITTORRENT
   CPPUNIT_TEST(testGatherStoppedDownload_bt);
+  CPPUNIT_TEST(testGatherProgressLibtorrentStatus);
 #endif // ENABLE_BITTORRENT
   CPPUNIT_TEST(testGatherProgressCommon);
 #ifdef ENABLE_BITTORRENT
@@ -152,6 +154,7 @@ public:
   void testGatherProgressEd2kStatus();
 #ifdef ENABLE_BITTORRENT
   void testGatherStoppedDownload_bt();
+  void testGatherProgressLibtorrentStatus();
 #endif // ENABLE_BITTORRENT
   void testGatherProgressCommon();
 #ifdef ENABLE_BITTORRENT
@@ -1204,6 +1207,51 @@ void RpcMethodTest::testGatherStoppedDownload_bt()
 
   CPPUNIT_ASSERT_EQUAL((int64_t)1000000007,
                        downcast<Integer>(btDict->get("creationDate"))->i());
+}
+
+void RpcMethodTest::testGatherProgressLibtorrentStatus()
+{
+  auto dctx = std::make_shared<DownloadContext>(1_k, 100_k, "torrent.bin");
+  auto attrs = make_unique<LibtorrentAttribute>(
+      LibtorrentAttribute::SourceType::TORRENT_FILE,
+      A2_TEST_DIR "/single.torrent", "", std::vector<std::string>{});
+  attrs->status.hasStatus = true;
+  attrs->status.totalLength = 100_k;
+  attrs->status.completedLength = 99_k;
+  attrs->status.uploadedLength = 7_k;
+  attrs->status.downloadSpeed = 1234;
+  attrs->status.uploadSpeed = 55;
+  attrs->status.connections = 8;
+  attrs->status.seeders = 3;
+  attrs->status.infoHash.assign(20, '\x01');
+  attrs->status.name = "torrent.bin";
+  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
+
+  auto group =
+      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
+  group->setDownloadContext(dctx);
+  group->initPieceStorage();
+  group->getPieceStorage()->markAllPiecesDone();
+
+  auto entry = Dict::g();
+  gatherProgressCommon(entry.get(), group, {});
+
+  CPPUNIT_ASSERT_EQUAL(std::string("102400"),
+                       getString(entry.get(), "totalLength"));
+  CPPUNIT_ASSERT_EQUAL(std::string("101376"),
+                       getString(entry.get(), "completedLength"));
+  CPPUNIT_ASSERT_EQUAL(std::string("1234"),
+                       getString(entry.get(), "downloadSpeed"));
+  CPPUNIT_ASSERT_EQUAL(std::string("55"), getString(entry.get(), "uploadSpeed"));
+  CPPUNIT_ASSERT_EQUAL(std::string("7168"), getString(entry.get(), "uploadLength"));
+  CPPUNIT_ASSERT_EQUAL(std::string("8"), getString(entry.get(), "connections"));
+  CPPUNIT_ASSERT_EQUAL(util::toHex(std::string(20, '\x01')),
+                       getString(entry.get(), "infoHash"));
+  CPPUNIT_ASSERT(entry->containsKey("bittorrent"));
+  auto btDict = downcast<Dict>(entry->get("bittorrent"));
+  auto infoDict = downcast<Dict>(btDict->get("info"));
+  CPPUNIT_ASSERT_EQUAL(std::string("torrent.bin"),
+                       downcast<String>(infoDict->get("name"))->s());
 }
 #endif // ENABLE_BITTORRENT
 
