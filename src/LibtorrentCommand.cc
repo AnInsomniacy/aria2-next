@@ -200,6 +200,7 @@ void refreshFileShape(RequestGroup* requestGroup, const lt::torrent_status& st)
 
   dctx->setFileEntries(entries.begin(), entries.end());
   dctx->setBasePath(entries.front()->getPath());
+  dctx->setPieceLength(ti->piece_length());
   dctx->markTotalLengthIsKnown();
 
   requestGroup->setFileAllocationEnabled(false);

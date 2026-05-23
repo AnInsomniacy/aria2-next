@@ -72,6 +72,7 @@ class RpcMethodTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGatherProgressEd2kStatus);
 #ifdef ENABLE_BITTORRENT
   CPPUNIT_TEST(testGatherProgressLibtorrentStatus);
+  CPPUNIT_TEST(testGatherProgressLibtorrentFilesWithoutNativeBitfield);
   CPPUNIT_TEST(testChangeOptionLibtorrentSelectFile);
 #endif // ENABLE_BITTORRENT
   CPPUNIT_TEST(testGatherProgressCommon);
@@ -139,6 +140,7 @@ public:
   void testGatherProgressEd2kStatus();
 #ifdef ENABLE_BITTORRENT
   void testGatherProgressLibtorrentStatus();
+  void testGatherProgressLibtorrentFilesWithoutNativeBitfield();
   void testChangeOptionLibtorrentSelectFile();
 #endif // ENABLE_BITTORRENT
   void testGatherProgressCommon();
@@ -1080,6 +1082,40 @@ void RpcMethodTest::testGatherProgressLibtorrentStatus()
   auto infoDict = downcast<Dict>(btDict->get("info"));
   CPPUNIT_ASSERT_EQUAL(std::string("torrent.bin"),
                        downcast<String>(infoDict->get("name"))->s());
+}
+
+void RpcMethodTest::testGatherProgressLibtorrentFilesWithoutNativeBitfield()
+{
+  auto dctx = std::make_shared<DownloadContext>(0, 0, "torrent");
+  std::vector<std::shared_ptr<FileEntry>> entries;
+  entries.push_back(std::make_shared<FileEntry>("file1.bin", 2_g, 0));
+  entries.push_back(std::make_shared<FileEntry>("file2.bin", 2_g + 1_m, 2_g));
+  dctx->setFileEntries(entries.begin(), entries.end());
+  dctx->setPieceLength(0);
+
+  auto attrs = make_unique<LibtorrentAttribute>(
+      LibtorrentAttribute::SourceType::TORRENT_FILE,
+      A2_TEST_DIR "/test.torrent", "", std::vector<std::string>{});
+  attrs->status.hasStatus = true;
+  attrs->status.totalLength = 4_g + 1_m;
+  attrs->status.completedLength = 0;
+  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
+
+  auto group =
+      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
+  group->setDownloadContext(dctx);
+
+  auto entry = Dict::g();
+  gatherProgressCommon(entry.get(), group, {"files"});
+
+  const List* files = downcast<List>(entry->get("files"));
+  CPPUNIT_ASSERT_EQUAL((size_t)2, files->size());
+  const Dict* file1 = downcast<Dict>(files->get(0));
+  const Dict* file2 = downcast<Dict>(files->get(1));
+  CPPUNIT_ASSERT_EQUAL(std::string("0"),
+                       downcast<String>(file1->get("completedLength"))->s());
+  CPPUNIT_ASSERT_EQUAL(std::string("0"),
+                       downcast<String>(file2->get("completedLength"))->s());
 }
 
 void RpcMethodTest::testChangeOptionLibtorrentSelectFile()

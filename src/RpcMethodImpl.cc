@@ -624,8 +624,10 @@ void createFileEntry(List* files, InputIterator first, InputIterator last,
     entry->put(KEY_PATH, (*first)->getPath());
     entry->put(KEY_SELECTED, (*first)->isRequested() ? VLB_TRUE : VLB_FALSE);
     entry->put(KEY_LENGTH, util::itos((*first)->getLength()));
-    int64_t completedLength = bf->getOffsetCompletedLength(
-        (*first)->getOffset(), (*first)->getLength());
+    int64_t completedLength = bf ? bf->getOffsetCompletedLength(
+                                      (*first)->getOffset(),
+                                      (*first)->getLength())
+                                 : 0;
     entry->put(KEY_COMPLETED_LENGTH, util::itos(completedLength));
 
     auto uriList = List::g();
@@ -642,6 +644,10 @@ void createFileEntry(List* files, InputIterator first, InputIterator last,
                      int64_t totalLength, int32_t pieceLength,
                      const std::string& bitfield)
 {
+  if (pieceLength <= 0 || totalLength <= 0 || bitfield.empty()) {
+    createFileEntry(files, first, last, static_cast<const BitfieldMan*>(nullptr));
+    return;
+  }
   BitfieldMan bf(pieceLength, totalLength);
   bf.setBitfield(reinterpret_cast<const unsigned char*>(bitfield.data()),
                  bitfield.size());
@@ -895,6 +901,15 @@ void gatherProgressCommon(Dict* entryDict,
   }
   if (requested_key(keys, KEY_FILES)) {
     auto files = List::g();
+#ifdef ENABLE_BITTORRENT
+    if (libtorrentAttrs) {
+      createFileEntry(files.get(), std::begin(dctx->getFileEntries()),
+                      std::end(dctx->getFileEntries()),
+                      libtorrentAttrs->status.totalLength,
+                      dctx->getPieceLength(), libtorrentAttrs->status.bitfield);
+    }
+    else
+#endif // ENABLE_BITTORRENT
     createFileEntry(files.get(), std::begin(dctx->getFileEntries()),
                     std::end(dctx->getFileEntries()), dctx->getTotalLength(),
                     dctx->getPieceLength(), ps);
