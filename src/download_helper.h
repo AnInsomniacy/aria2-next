@@ -53,7 +53,6 @@ class Option;
 class MetadataInfo;
 class DownloadContext;
 class UriListParser;
-class ValueBase;
 class GroupId;
 
 #ifdef ENABLE_BITTORRENT
@@ -67,16 +66,6 @@ void createRequestGroupForBitTorrent(
     std::vector<std::shared_ptr<RequestGroup>>& result,
     const std::shared_ptr<Option>& option, const std::vector<std::string>& uris,
     const std::string& metaInfoUri, const std::string& torrentData = "",
-    bool adjustAnnounceUri = true);
-
-// Create RequestGroup object using already decoded torrent metainfo
-// structure.  If adjustAnnounceUri is true, announce URIs are
-// adjusted using bittorrent::adjustAnnounceUri().  In this function,
-// force-sequential is ignored.
-void createRequestGroupForBitTorrent(
-    std::vector<std::shared_ptr<RequestGroup>>& result,
-    const std::shared_ptr<Option>& option, const std::vector<std::string>& uris,
-    const std::string& metaInfoUri, const ValueBase* torrent,
     bool adjustAnnounceUri = true);
 
 #endif // ENABLE_BITTORRENT

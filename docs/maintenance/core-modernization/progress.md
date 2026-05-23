@@ -180,3 +180,9 @@ Changed: Bridged ED2K scheduling further onto the Asio runtime by moving Kad pol
 Verified: `cmake --build --preset default --target aria2_tests` passed. Focused ED2K helper, Kad state, shared store, command, DownloadHelper, RequestGroupMan ED2K sharing, SessionSerializer ED2K save, and RpcMethod suites passed. Full `cmake --build --preset default`, `ctest --preset default --output-on-failure`, CSV parser check, active source/test stale `inflateCompressedPartData` scan, and `git diff --check` passed.
 Remaining: Start CM-016 libtorrent boundary residue review.
 Blocked: none.
+
+2026-05-23 CM-016 verified
+Changed: Tightened the libtorrent boundary after native BT runtime removal. `.torrent` and RPC addTorrent paths now keep raw torrent bytes as libtorrent ingress data instead of passing decoded `ValueBase` torrent trees through request-group creation. `select-file` is stored as intent and converted into libtorrent file priorities only after torrent metadata is available. Removed obsolete `ValueBase*` torrent ingress, stale `createLibtorrentFilePriorities` and `setLibtorrentFilePriorities` helpers, the BitTorrent-specific bencode memory writer chain, and `ValueBaseBencodeParserTest`.
+Verified: `cmake --build --preset default --target aria2_tests` passed. Focused DownloadHelper torrent, select-file, tracker, and magnet tracker tests passed. Focused RpcMethod addTorrent and libtorrent select-file tests passed. `DownloadHandlersTest`, `BittorrentHelperTest`, and `Bencode2Test` passed. Stale scans found no removed bencode writer, ValueBase torrent ingress, libtorrent priority helper, or native BT runtime fallback residue.
+Remaining: Start CM-017 option docs and compatibility claim pruning.
+Blocked: none.

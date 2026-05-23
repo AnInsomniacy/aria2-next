@@ -74,7 +74,6 @@
 #include "SimpleRandomizer.h"
 #ifdef ENABLE_BITTORRENT
 #  include "bittorrent_helper.h"
-#  include "ValueBaseBencodeParser.h"
 #  include <libtorrent/torrent_info.hpp>
 #endif // ENABLE_BITTORRENT
 
@@ -177,7 +176,7 @@ std::string readLocalFile(const std::string& path)
 {
   BufferedFile fp(path.c_str(), BufferedFile::READ);
   if (!fp) {
-    throw DL_ABORT_EX(fmt("Cannot open ED2K metadata file: %s", path.c_str()));
+    throw DL_ABORT_EX(fmt("Cannot open local file: %s", path.c_str()));
   }
   std::ostringstream out;
   fp.transfer(out);
@@ -553,24 +552,6 @@ void applyTrackerOptions(LibtorrentAttribute* attrs,
   }
 }
 
-void setLibtorrentFilePriorities(LibtorrentAttribute* attrs,
-                                 const std::shared_ptr<Option>& option,
-                                 const ValueBase* torrent)
-{
-  if (!torrent || !option->defined(PREF_SELECT_FILE)) {
-    return;
-  }
-
-  auto dctx = std::make_shared<DownloadContext>();
-  bittorrent::loadFromMemory(torrent, dctx, option, attrs->webSeedUris,
-                             attrs->sourceUri.empty() ? "torrent"
-                                                      : attrs->sourceUri);
-  auto sgl = util::parseIntSegments(option->get(PREF_SELECT_FILE));
-  sgl.normalize();
-  dctx->setFileFilter(std::move(sgl));
-  attrs->filePriorities = createLibtorrentFilePriorities(dctx);
-}
-
 std::shared_ptr<RequestGroup>
 createLibtorrentRequestGroup(LibtorrentAttribute::SourceType sourceType,
                              const std::string& sourceUri,
@@ -598,6 +579,9 @@ createLibtorrentRequestGroup(LibtorrentAttribute::SourceType sourceType,
   dctx->setFileEntries(entries.begin(), entries.end());
   auto attrs = make_unique<LibtorrentAttribute>(sourceType, sourceUri,
                                                 torrentData, webSeedUris);
+  if (option->defined(PREF_SELECT_FILE)) {
+    attrs->selectedFiles = option->get(PREF_SELECT_FILE);
+  }
   dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
   rg->setDownloadContext(dctx);
   rg->setFileAllocationEnabled(false);
@@ -617,22 +601,22 @@ std::shared_ptr<RequestGroup>
 createBtRequestGroup(const std::string& metaInfoUri,
                      const std::shared_ptr<Option>& optionTemplate,
                      const std::vector<std::string>& auxUris,
-                     const ValueBase* torrent, bool adjustAnnounceUri = true)
+                     const std::string& torrentData,
+                     bool adjustAnnounceUri = true)
 {
-  if (!torrent) {
+  if (torrentData.empty()) {
     throw DL_ABORT_EX2("Bencode decoding failed",
                        error_code::BENCODE_PARSE_ERROR);
   }
-  std::string torrentData = bencode2::encode(torrent);
   auto rg = createLibtorrentRequestGroup(
       metaInfoUri.empty() ? LibtorrentAttribute::SourceType::TORRENT_DATA
                           : LibtorrentAttribute::SourceType::TORRENT_FILE,
       metaInfoUri, torrentData, auxUris, optionTemplate);
   auto attrs = getLibtorrentAttrs(rg->getDownloadContext());
-  setLibtorrentFilePriorities(attrs, rg->getOption(), torrent);
   if (adjustAnnounceUri) {
     auto torrentDctx = std::make_shared<DownloadContext>();
-    bittorrent::loadFromMemory(torrent, torrentDctx, rg->getOption(), {},
+    bittorrent::loadFromMemory(torrentData, torrentDctx, rg->getOption(),
+                               std::vector<std::string>(),
                                metaInfoUri.empty() ? "torrent" : metaInfoUri);
     applyTrackerOptions(attrs, rg->getOption(),
                         bittorrent::getTorrentAttrs(torrentDctx));
@@ -662,29 +646,10 @@ void createRequestGroupForBitTorrent(
     const std::string& metaInfoUri, const std::string& torrentData,
     bool adjustAnnounceUri)
 {
-  std::unique_ptr<ValueBase> torrent;
-  bittorrent::ValueBaseBencodeParser parser;
+  std::string data = torrentData;
   if (torrentData.empty()) {
-    torrent = parseFile(parser, metaInfoUri);
+    data = readLocalFile(metaInfoUri);
   }
-  else {
-    ssize_t error;
-    torrent = parser.parseFinal(torrentData.c_str(), torrentData.size(), error);
-  }
-  if (!torrent) {
-    throw DL_ABORT_EX2("Bencode decoding failed",
-                       error_code::BENCODE_PARSE_ERROR);
-  }
-  createRequestGroupForBitTorrent(result, option, uris, metaInfoUri,
-                                  torrent.get(), adjustAnnounceUri);
-}
-
-void createRequestGroupForBitTorrent(
-    std::vector<std::shared_ptr<RequestGroup>>& result,
-    const std::shared_ptr<Option>& option, const std::vector<std::string>& uris,
-    const std::string& metaInfoUri, const ValueBase* torrent,
-    bool adjustAnnounceUri)
-{
   std::vector<std::string> nargs;
   if (option->get(PREF_PARAMETERIZED_URI) == A2_V_TRUE) {
     unfoldURI(nargs, uris);
@@ -694,7 +659,7 @@ void createRequestGroupForBitTorrent(
   }
   // we ignore -Z option here
   size_t numSplit = option->getAsInt(PREF_SPLIT);
-  auto rg = createBtRequestGroup(metaInfoUri, option, nargs, torrent,
+  auto rg = createBtRequestGroup(metaInfoUri, option, nargs, data,
                                  adjustAnnounceUri);
   rg->setNumConcurrentCommand(numSplit);
   result.push_back(rg);
@@ -742,14 +707,9 @@ public:
     }
     else if (!ignoreLocalPath_ && detector_.guessTorrentFile(uri)) {
       try {
-        bittorrent::ValueBaseBencodeParser parser;
-        auto torrent = parseFile(parser, uri);
-        if (!torrent) {
-          throw DL_ABORT_EX2("Bencode decoding failed",
-                             error_code::BENCODE_PARSE_ERROR);
-        }
+        auto torrentData = readLocalFile(uri);
         requestGroups_.push_back(
-            createBtRequestGroup(uri, option_, {}, torrent.get()));
+            createBtRequestGroup(uri, option_, {}, torrentData));
       }
       catch (RecoverableException& e) {
         if (throwOnError_) {

@@ -45,7 +45,6 @@
 
 #include "TorrentAttribute.h"
 #include "a2netcompat.h"
-#include "ValueBase.h"
 #include "util.h"
 #include "DownloadContext.h"
 #include "TimeA2.h"
@@ -92,13 +91,6 @@ void loadFromMemory(const std::string& context,
                     const std::string& overrideName = "");
 
 void loadFromMemory(const std::string& context,
-                    const std::shared_ptr<DownloadContext>& ctx,
-                    const std::shared_ptr<Option>& option,
-                    const std::vector<std::string>& uris,
-                    const std::string& defaultName,
-                    const std::string& overrideName = "");
-
-void loadFromMemory(const ValueBase* torrent,
                     const std::shared_ptr<DownloadContext>& ctx,
                     const std::shared_ptr<Option>& option,
                     const std::vector<std::string>& uris,

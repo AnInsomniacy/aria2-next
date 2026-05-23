@@ -1109,6 +1109,7 @@ void RpcMethodTest::testChangeOptionLibtorrentSelectFile()
   auto res = m.execute(std::move(req), e_.get());
 
   CPPUNIT_ASSERT_EQUAL(0, res.code);
+  CPPUNIT_ASSERT_EQUAL(std::string("2"), attrsPtr->selectedFiles);
   CPPUNIT_ASSERT_EQUAL((size_t)2, attrsPtr->filePriorities.size());
   CPPUNIT_ASSERT_EQUAL(0, attrsPtr->filePriorities[0]);
   CPPUNIT_ASSERT_EQUAL(4, attrsPtr->filePriorities[1]);

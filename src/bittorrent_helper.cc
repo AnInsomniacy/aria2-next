@@ -598,16 +598,6 @@ void loadFromMemory(const std::string& context,
                         defaultName, overrideName, uris);
 }
 
-void loadFromMemory(const ValueBase* torrent,
-                    const std::shared_ptr<DownloadContext>& ctx,
-                    const std::shared_ptr<Option>& option,
-                    const std::vector<std::string>& uris,
-                    const std::string& defaultName,
-                    const std::string& overrideName)
-{
-  processRootDictionary(ctx, torrent, option, defaultName, overrideName, uris);
-}
-
 TorrentAttribute* getTorrentAttrs(const std::shared_ptr<DownloadContext>& dctx)
 {
   return getTorrentAttrs(dctx.get());

@@ -137,6 +137,29 @@ createFilePriorities(const std::vector<int>& priorities)
   return result;
 }
 
+std::vector<int> createSelectedFilePriorities(const std::string& selectedFiles,
+                                              int numFiles)
+{
+  if (selectedFiles.empty() || numFiles <= 1) {
+    return {};
+  }
+
+  auto selected = util::parseIntSegments(selectedFiles);
+  selected.normalize();
+  if (!selected.hasNext()) {
+    return {};
+  }
+
+  std::vector<int> priorities(static_cast<size_t>(numFiles), 0);
+  while (selected.hasNext()) {
+    const auto index = selected.next();
+    if (index >= 1 && index <= numFiles) {
+      priorities[static_cast<size_t>(index - 1)] = 4;
+    }
+  }
+  return priorities;
+}
+
 void refreshFileShape(RequestGroup* requestGroup, const lt::torrent_status& st)
 {
   if (!st.has_metadata || !st.handle.is_valid()) {
@@ -144,11 +167,6 @@ void refreshFileShape(RequestGroup* requestGroup, const lt::torrent_status& st)
   }
 
   auto attrs = getLibtorrentAttrs(requestGroup->getDownloadContext());
-  if (!attrs->filePriorities.empty() && !attrs->filePrioritiesApplied) {
-    st.handle.prioritize_files(createFilePriorities(attrs->filePriorities));
-    attrs->filePrioritiesApplied = true;
-  }
-
   auto& dctx = requestGroup->getDownloadContext();
   if (dctx->knowsTotalLength() && dctx->getTotalLength() == st.total_wanted) {
     return;
@@ -157,6 +175,15 @@ void refreshFileShape(RequestGroup* requestGroup, const lt::torrent_status& st)
   auto ti = st.handle.torrent_file();
   if (!ti) {
     return;
+  }
+  if (!attrs->selectedFiles.empty() && attrs->filePriorities.empty()) {
+    attrs->filePriorities =
+        createSelectedFilePriorities(attrs->selectedFiles,
+                                     ti->files().num_files());
+  }
+  if (!attrs->filePriorities.empty() && !attrs->filePrioritiesApplied) {
+    st.handle.prioritize_files(createFilePriorities(attrs->filePriorities));
+    attrs->filePrioritiesApplied = true;
   }
   const auto& files = ti->files();
   std::vector<std::shared_ptr<FileEntry>> entries;

@@ -112,7 +112,6 @@ set(ARIA2_TEST_SOURCES_ENABLE_BITTORRENT
   tests/BittorrentHelperTest.cc
   tests/MagnetTest.cc
   tests/Bencode2Test.cc
-  tests/ValueBaseBencodeParserTest.cc
   tests/LibtorrentSeedPolicyTest.cc
 )
 

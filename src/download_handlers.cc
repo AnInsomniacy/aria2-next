@@ -37,9 +37,6 @@
 #include "ContentTypeRequestGroupCriteria.h"
 #include "MemoryBufferPreDownloadHandler.h"
 #include "a2functional.h"
-#ifdef ENABLE_BITTORRENT
-#  include "MemoryBencodePreDownloadHandler.h"
-#endif // ENABLE_BITTORRENT
 
 namespace aria2 {
 
@@ -66,8 +63,7 @@ std::unique_ptr<PreDownloadHandler> btPreDownloadHandler;
 const PreDownloadHandler* getBtPreDownloadHandler()
 {
   if (!btPreDownloadHandler) {
-    btPreDownloadHandler =
-        make_unique<bittorrent::MemoryBencodePreDownloadHandler>();
+    btPreDownloadHandler = make_unique<MemoryBufferPreDownloadHandler>();
     btPreDownloadHandler->setCriteria(
         make_unique<ContentTypeRequestGroupCriteria>(getBtContentTypes(),
                                                      getBtExtensions()));

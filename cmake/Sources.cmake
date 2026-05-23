@@ -437,7 +437,6 @@ set(ARIA2_SOURCES_BASE
   src/util_security.h
   src/ValueBase.cc
   src/ValueBase.h
-  src/ValueBaseDiskWriter.h
   src/ValueBaseFrameController.cc
   src/ValueBaseFrameController.h
   src/ValueBaseStructParserState.h
@@ -530,8 +529,6 @@ set(ARIA2_SOURCES_ENABLE_ASYNC_DNS
 set(ARIA2_SOURCES_ENABLE_BITTORRENT
   src/bencode2.cc
   src/bencode2.h
-  src/BencodeDiskWriter.h
-  src/BencodeDiskWriterFactory.h
   src/BencodeParser.cc
   src/BencodeParser.h
   src/bittorrent_helper.cc
@@ -539,7 +536,6 @@ set(ARIA2_SOURCES_ENABLE_BITTORRENT
   src/TorrentMetadataConstants.h
   src/magnet.cc
   src/magnet.h
-  src/MemoryBencodePreDownloadHandler.h
   src/ValueBaseBencodeParser.h
 )
 

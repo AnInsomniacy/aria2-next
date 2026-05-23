@@ -2375,9 +2375,8 @@ void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentTorrentSelectFil
   auto dctx = result[0]->getDownloadContext();
   CPPUNIT_ASSERT(dctx->hasAttribute(CTX_ATTR_LIBTORRENT));
   auto attrs = getLibtorrentAttrs(dctx);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrs->filePriorities.size());
-  CPPUNIT_ASSERT_EQUAL(0, attrs->filePriorities[0]);
-  CPPUNIT_ASSERT_EQUAL(4, attrs->filePriorities[1]);
+  CPPUNIT_ASSERT_EQUAL(std::string("2"), attrs->selectedFiles);
+  CPPUNIT_ASSERT(attrs->filePriorities.empty());
 }
 
 void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentTorrentTrackers()

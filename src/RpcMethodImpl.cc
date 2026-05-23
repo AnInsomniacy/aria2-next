@@ -1705,7 +1705,17 @@ void changeOption(const std::shared_ptr<RequestGroup>& group,
 #ifdef ENABLE_BITTORRENT
     if (dctx->hasAttribute(CTX_ATTR_LIBTORRENT)) {
       auto attrs = getLibtorrentAttrs(dctx);
-      attrs->filePriorities = createLibtorrentFilePriorities(dctx);
+      attrs->selectedFiles = grOption->get(PREF_SELECT_FILE);
+      attrs->filePriorities.clear();
+      auto& entries = dctx->getFileEntries();
+      if (entries.size() > 1) {
+        attrs->filePriorities.assign(entries.size(), 0);
+        for (size_t i = 0; i < entries.size(); ++i) {
+          if (entries[i]->isRequested()) {
+            attrs->filePriorities[i] = 4;
+          }
+        }
+      }
       attrs->filePrioritiesApplied = false;
       if (auto session = e->getInitializedLibtorrentSession()) {
         session->setTorrentFilePriorities(group->getGID(),
