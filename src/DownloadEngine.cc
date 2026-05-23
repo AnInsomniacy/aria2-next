@@ -63,7 +63,7 @@
 #include "Command.h"
 #include "FileAllocationEntry.h"
 #include "CheckIntegrityEntry.h"
-#include "BtProgressInfoFile.h"
+#include "ProgressInfoFile.h"
 #include "DownloadContext.h"
 #include "fmt.h"
 #include "wallclock.h"

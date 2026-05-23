@@ -55,7 +55,7 @@
 #include "LogFactory.h"
 #include "Segment.h"
 #include "DownloadContext.h"
-#include "DefaultBtProgressInfoFile.h"
+#include "DefaultProgressInfoFile.h"
 #include "RequestGroupMan.h"
 #include "DownloadFailureException.h"
 #include "SocketCore.h"
@@ -475,7 +475,7 @@ bool FtpNegotiationCommand::onFileSizeDetermined(int64_t totalLength)
     return true;
   }
   else {
-    auto progressInfoFile = std::make_shared<DefaultBtProgressInfoFile>(
+    auto progressInfoFile = std::make_shared<DefaultProgressInfoFile>(
         getDownloadContext(), nullptr, getOption().get());
     getRequestGroup()->adjustFilename(progressInfoFile);
     getRequestGroup()->initPieceStorage();

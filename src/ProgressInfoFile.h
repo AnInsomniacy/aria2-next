@@ -32,8 +32,8 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#ifndef D_BT_PROGRESS_INFO_FILE_H
-#define D_BT_PROGRESS_INFO_FILE_H
+#ifndef D_PROGRESS_INFO_FILE_H
+#define D_PROGRESS_INFO_FILE_H
 
 #include "common.h"
 
@@ -41,9 +41,9 @@
 
 namespace aria2 {
 
-class BtProgressInfoFile {
+class ProgressInfoFile {
 public:
-  virtual ~BtProgressInfoFile() = default;
+  virtual ~ProgressInfoFile() = default;
 
   virtual std::string getFilename() = 0;
 
@@ -61,4 +61,4 @@ public:
 
 } // namespace aria2
 
-#endif // D_BT_PROGRESS_INFO_FILE_H
+#endif // D_PROGRESS_INFO_FILE_H

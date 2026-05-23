@@ -58,7 +58,7 @@ class Command;
 class DownloadCommand;
 class DownloadContext;
 class PieceStorage;
-class BtProgressInfoFile;
+class ProgressInfoFile;
 class Dependency;
 class PreDownloadHandler;
 class PostDownloadHandler;
@@ -102,7 +102,7 @@ private:
 
   std::shared_ptr<PieceStorage> pieceStorage_;
 
-  std::shared_ptr<BtProgressInfoFile> progressInfoFile_;
+  std::shared_ptr<ProgressInfoFile> progressInfoFile_;
 
   std::shared_ptr<DiskWriterFactory> diskWriterFactory_;
 
@@ -198,7 +198,7 @@ private:
   std::pair<error_code::Value, std::string> downloadResult() const;
 
   void removeDefunctControlFile(
-      const std::shared_ptr<BtProgressInfoFile>& progressInfoFile);
+      const std::shared_ptr<ProgressInfoFile>& progressInfoFile);
 
 public:
   RequestGroup(const std::shared_ptr<GroupId>& gid,
@@ -292,7 +292,7 @@ public:
   void setSegmentMan(const std::shared_ptr<SegmentMan>& segmentMan);
 
   void setProgressInfoFile(
-      const std::shared_ptr<BtProgressInfoFile>& progressInfoFile);
+      const std::shared_ptr<ProgressInfoFile>& progressInfoFile);
 
   void increaseStreamCommand();
 
@@ -392,12 +392,12 @@ public:
   bool downloadFinishedByFileLength();
 
   void loadAndOpenFile(
-      const std::shared_ptr<BtProgressInfoFile>& progressInfoFile,
+      const std::shared_ptr<ProgressInfoFile>& progressInfoFile,
       FileOpenMode fileOpenMode = DEFAULT_FILE_OPEN);
 
   void shouldCancelDownloadForSafety();
 
-  void adjustFilename(const std::shared_ptr<BtProgressInfoFile>& infoFile);
+  void adjustFilename(const std::shared_ptr<ProgressInfoFile>& infoFile);
 
   std::shared_ptr<DownloadResult> createDownloadResult() const;
 

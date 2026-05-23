@@ -54,7 +54,7 @@
 #include "AuthConfig.h"
 #include "DownloadContext.h"
 #include "PieceStorage.h"
-#include "DefaultBtProgressInfoFile.h"
+#include "DefaultProgressInfoFile.h"
 #include "Logger.h"
 #include "LogFactory.h"
 #include "fmt.h"
@@ -161,7 +161,7 @@ bool HttpRequestCommand::executeInternal()
           path = getFileEntry()->getPath();
         }
 
-        File ctrlfile(path + DefaultBtProgressInfoFile::getSuffix());
+        File ctrlfile(path + DefaultProgressInfoFile::getSuffix());
         File file(path);
 
         if (!ctrlfile.exists() && file.exists()) {

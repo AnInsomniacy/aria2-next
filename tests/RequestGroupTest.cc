@@ -8,7 +8,7 @@
 #include "DownloadContext.h"
 #include "FileEntry.h"
 #include "PieceStorage.h"
-#include "DefaultBtProgressInfoFile.h"
+#include "DefaultProgressInfoFile.h"
 #include "File.h"
 #include "TestUtil.h"
 #include "DownloadResult.h"
@@ -182,7 +182,7 @@ void RequestGroupTest::testLoadAndOpenFileRestartFromScratch()
   auto path = std::string(A2_TEST_OUT_DIR) +
               "/aria2_RequestGroupTest_testLoadAndOpenFileRestartFromScratch";
   File(path).remove();
-  File(path + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(path + DefaultProgressInfoFile::getSuffix()).remove();
   createFile(path, 1_k);
 
   option_->put(PREF_CONTINUE, A2_V_TRUE);
@@ -194,7 +194,7 @@ void RequestGroupTest::testLoadAndOpenFileRestartFromScratch()
   group.initPieceStorage();
 
   auto infoFile =
-      std::make_shared<DefaultBtProgressInfoFile>(ctx, group.getPieceStorage(),
+      std::make_shared<DefaultProgressInfoFile>(ctx, group.getPieceStorage(),
                                                   option_.get());
   group.loadAndOpenFile(infoFile, RequestGroup::RESTART_FROM_SCRATCH);
 

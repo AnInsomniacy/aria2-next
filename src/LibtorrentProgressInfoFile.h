@@ -13,7 +13,7 @@
 #ifndef D_LIBTORRENT_PROGRESS_INFO_FILE_H
 #define D_LIBTORRENT_PROGRESS_INFO_FILE_H
 
-#include "BtProgressInfoFile.h"
+#include "ProgressInfoFile.h"
 
 #include <memory>
 #include <string>
@@ -23,7 +23,7 @@ namespace aria2 {
 class DownloadContext;
 class IOFile;
 
-class LibtorrentProgressInfoFile : public BtProgressInfoFile {
+class LibtorrentProgressInfoFile : public ProgressInfoFile {
 private:
   std::shared_ptr<DownloadContext> dctx_;
   std::string filename_;

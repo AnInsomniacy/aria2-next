@@ -32,7 +32,7 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "DefaultBtProgressInfoFile.h"
+#include "DefaultProgressInfoFile.h"
 
 #include <cstring>
 #include <cstdio>
@@ -70,7 +70,7 @@ std::string createFilename(const std::shared_ptr<DownloadContext>& dctx,
 }
 } // namespace
 
-DefaultBtProgressInfoFile::DefaultBtProgressInfoFile(
+DefaultProgressInfoFile::DefaultProgressInfoFile(
     const std::shared_ptr<DownloadContext>& dctx,
     const std::shared_ptr<PieceStorage>& pieceStorage, const Option* option)
     : dctx_(dctx),
@@ -80,9 +80,9 @@ DefaultBtProgressInfoFile::DefaultBtProgressInfoFile(
 {
 }
 
-DefaultBtProgressInfoFile::~DefaultBtProgressInfoFile() = default;
+DefaultProgressInfoFile::~DefaultProgressInfoFile() = default;
 
-void DefaultBtProgressInfoFile::updateFilename()
+void DefaultProgressInfoFile::updateFilename()
 {
   filename_ = createFilename(dctx_, getSuffix());
 }
@@ -93,15 +93,14 @@ void DefaultBtProgressInfoFile::updateFilename()
   }
 
 // Since version 0001, Integers are saved in binary form, network byte order.
-void DefaultBtProgressInfoFile::save(IOFile& fp)
+void DefaultProgressInfoFile::save(IOFile& fp)
 {
   // file version: 16 bits
   // values: '1'
   char version[] = {0x00u, 0x01u};
   WRITE_CHECK(fp, version, sizeof(version));
   // extension: 32 bits
-  // If this is BitTorrent download, then 0x00000001
-  // Otherwise, 0x00000000
+  // Reserved extension flags; legacy BitTorrent info-hash data is no longer written
   char extension[4];
   memset(extension, 0, sizeof(extension));
   WRITE_CHECK(fp, extension, sizeof(extension));
@@ -123,7 +122,6 @@ void DefaultBtProgressInfoFile::save(IOFile& fp)
   WRITE_CHECK(fp, pieceStorage_->getBitfield(),
               pieceStorage_->getBitfieldLength());
   // the number of in-flight piece: 32 bits
-  // TODO implement this
   uint32_t numInFlightPieceNL = htonl(pieceStorage_->countInFlightPiece());
   WRITE_CHECK(fp, &numInFlightPieceNL, sizeof(numInFlightPieceNL));
   std::vector<std::shared_ptr<Piece>> inFlightPieces;
@@ -146,7 +144,7 @@ void DefaultBtProgressInfoFile::save(IOFile& fp)
   }
 }
 
-void DefaultBtProgressInfoFile::save()
+void DefaultProgressInfoFile::save()
 {
   SHA1IOFile sha1io;
 
@@ -187,7 +185,7 @@ void DefaultBtProgressInfoFile::save()
 // It is assumed that integers are saved as:
 // 1) host byte order if version == 0000
 // 2) network byte order if version == 0001
-void DefaultBtProgressInfoFile::load()
+void DefaultProgressInfoFile::load()
 {
   A2_LOG_INFO(fmt(MSG_LOADING_SEGMENT_FILE, filename_.c_str()));
   BufferedFile fp(filename_.c_str(), BufferedFile::READ);
@@ -339,7 +337,7 @@ void DefaultBtProgressInfoFile::load()
   A2_LOG_INFO(MSG_LOADED_SEGMENT_FILE);
 }
 
-void DefaultBtProgressInfoFile::removeFile()
+void DefaultProgressInfoFile::removeFile()
 {
   if (exists()) {
     File f(filename_);
@@ -347,7 +345,7 @@ void DefaultBtProgressInfoFile::removeFile()
   }
 }
 
-bool DefaultBtProgressInfoFile::exists()
+bool DefaultProgressInfoFile::exists()
 {
   File f(filename_);
   if (f.isFile()) {

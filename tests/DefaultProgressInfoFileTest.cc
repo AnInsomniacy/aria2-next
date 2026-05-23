@@ -1,4 +1,4 @@
-#include "DefaultBtProgressInfoFile.h"
+#include "DefaultProgressInfoFile.h"
 
 #include <fstream>
 
@@ -15,9 +15,9 @@
 #include "array_fun.h"
 namespace aria2 {
 
-class DefaultBtProgressInfoFileTest : public CppUnit::TestFixture {
+class DefaultProgressInfoFileTest : public CppUnit::TestFixture {
 
-  CPPUNIT_TEST_SUITE(DefaultBtProgressInfoFileTest);
+  CPPUNIT_TEST_SUITE(DefaultProgressInfoFileTest);
   CPPUNIT_TEST(testSave_nonBt);
   CPPUNIT_TEST(testLoad_nonBt);
 #ifndef WORDS_BIGENDIAN
@@ -56,19 +56,19 @@ public:
 #undef BLOCK_LENGTH
 #define BLOCK_LENGTH 256
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DefaultBtProgressInfoFileTest);
+CPPUNIT_TEST_SUITE_REGISTRATION(DefaultProgressInfoFileTest);
 
 // Because load-nonBt.aria2 is made for little endian systems, exclude
 // testLoad_nonBt_compat() for big endian systems.
 #ifndef WORDS_BIGENDIAN
-void DefaultBtProgressInfoFileTest::testLoad_nonBt_compat()
+void DefaultProgressInfoFileTest::testLoad_nonBt_compat()
 {
   initializeMembers(1_k, 80_k);
 
   std::shared_ptr<DownloadContext> dctx(
       new DownloadContext(1_k, 80_k, A2_TEST_DIR "/load-nonBt"));
 
-  DefaultBtProgressInfoFile infoFile(dctx, pieceStorage_, option_.get());
+  DefaultProgressInfoFile infoFile(dctx, pieceStorage_, option_.get());
 
   CPPUNIT_ASSERT_EQUAL(std::string(A2_TEST_DIR "/load-nonBt.aria2"),
                        infoFile.getFilename());
@@ -106,14 +106,14 @@ void DefaultBtProgressInfoFileTest::testLoad_nonBt_compat()
 }
 #endif // !WORDS_BIGENDIAN
 
-void DefaultBtProgressInfoFileTest::testLoad_nonBt()
+void DefaultProgressInfoFileTest::testLoad_nonBt()
 {
   initializeMembers(1_k, 80_k);
 
   std::shared_ptr<DownloadContext> dctx(
       new DownloadContext(1_k, 80_k, A2_TEST_DIR "/load-nonBt-v0001"));
 
-  DefaultBtProgressInfoFile infoFile(dctx, pieceStorage_, option_.get());
+  DefaultProgressInfoFile infoFile(dctx, pieceStorage_, option_.get());
 
   CPPUNIT_ASSERT_EQUAL(std::string(A2_TEST_DIR "/load-nonBt-v0001.aria2"),
                        infoFile.getFilename());
@@ -150,7 +150,7 @@ void DefaultBtProgressInfoFileTest::testLoad_nonBt()
   CPPUNIT_ASSERT_EQUAL((int64_t)512, piece2->getLength());
 }
 
-void DefaultBtProgressInfoFileTest::testLoad_nonBt_pieceLengthShorter()
+void DefaultProgressInfoFileTest::testLoad_nonBt_pieceLengthShorter()
 {
   initializeMembers(512, 80_k);
   option_->put(PREF_ALLOW_PIECE_LENGTH_CHANGE, A2_V_TRUE);
@@ -158,7 +158,7 @@ void DefaultBtProgressInfoFileTest::testLoad_nonBt_pieceLengthShorter()
   std::shared_ptr<DownloadContext> dctx(
       new DownloadContext(512, 80_k, A2_TEST_DIR "/load-nonBt-v0001"));
 
-  DefaultBtProgressInfoFile infoFile(dctx, pieceStorage_, option_.get());
+  DefaultProgressInfoFile infoFile(dctx, pieceStorage_, option_.get());
 
   CPPUNIT_ASSERT_EQUAL(std::string(A2_TEST_DIR "/load-nonBt-v0001.aria2"),
                        infoFile.getFilename());
@@ -175,7 +175,7 @@ void DefaultBtProgressInfoFileTest::testLoad_nonBt_pieceLengthShorter()
   CPPUNIT_ASSERT_EQUAL((size_t)0, pieceStorage_->countInFlightPiece());
 }
 
-void DefaultBtProgressInfoFileTest::testSave_nonBt()
+void DefaultProgressInfoFileTest::testSave_nonBt()
 {
   initializeMembers(1_k, 80_k);
 
@@ -193,7 +193,7 @@ void DefaultBtProgressInfoFileTest::testSave_nonBt()
   inFlightPieces.push_back(p2);
   pieceStorage_->addInFlightPiece(inFlightPieces);
 
-  DefaultBtProgressInfoFile infoFile(dctx, pieceStorage_, option_.get());
+  DefaultProgressInfoFile infoFile(dctx, pieceStorage_, option_.get());
 
   CPPUNIT_ASSERT_EQUAL(std::string(A2_TEST_OUT_DIR "/save-temp.aria2"),
                        infoFile.getFilename());
@@ -283,12 +283,12 @@ void DefaultBtProgressInfoFileTest::testSave_nonBt()
   CPPUNIT_ASSERT_EQUAL((uint32_t)512, pieceLength2);
 }
 
-void DefaultBtProgressInfoFileTest::testUpdateFilename()
+void DefaultProgressInfoFileTest::testUpdateFilename()
 {
   std::shared_ptr<DownloadContext> dctx(
       new DownloadContext(1_k, 80_k, A2_TEST_DIR "/file1"));
 
-  DefaultBtProgressInfoFile infoFile(dctx, std::shared_ptr<MockPieceStorage>(),
+  DefaultProgressInfoFile infoFile(dctx, std::shared_ptr<MockPieceStorage>(),
                                      nullptr);
   CPPUNIT_ASSERT_EQUAL(std::string(A2_TEST_DIR "/file1.aria2"),
                        infoFile.getFilename());

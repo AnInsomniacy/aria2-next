@@ -24,7 +24,7 @@
 #include "SelectEventPoll.h"
 #include "Segment.h"
 #include "SegmentMan.h"
-#include "DefaultBtProgressInfoFile.h"
+#include "DefaultProgressInfoFile.h"
 #include "array_fun.h"
 #include "base32.h"
 #include "ed2k_constants.h"
@@ -1795,7 +1795,7 @@ void DownloadHelperTest::testEd2kPeerTransferIgnoresDuplicateData()
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-transfer-duplicate";
   const std::string outfile = outdir + "/aria2 next duplicate transfer.bin";
   File(outfile).remove();
-  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
   File(outdir).mkdirs();
 
   const std::string data = "verified ed2k data";
@@ -1829,7 +1829,7 @@ void DownloadHelperTest::testEd2kPeerTransferAcceptsParallelPieceBlocks()
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-transfer-parallel";
   const std::string outfile = outdir + "/aria2 next parallel transfer.bin";
   File(outfile).remove();
-  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
   File(outdir).mkdirs();
 
   const std::string first(Piece::BLOCK_LENGTH, 'a');
@@ -1867,7 +1867,7 @@ void DownloadHelperTest::testEd2kPeerTransferCancelsOwnerAfterParallelHashFailur
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-transfer-parallel-bad";
   const std::string outfile = outdir + "/aria2 next parallel bad transfer.bin";
   File(outfile).remove();
-  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
   File(outdir).mkdirs();
 
   const std::string first(Piece::BLOCK_LENGTH, 'a');
@@ -1906,7 +1906,7 @@ void DownloadHelperTest::testEd2kPeerTransferAppliesAichRecoveryData()
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-transfer-aich-recovery";
   const std::string outfile = outdir + "/aria2 next aich transfer.bin";
   File(outfile).remove();
-  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
   File(outdir).mkdirs();
 
   std::string block0(ed2k::EMBLOCK_LENGTH, 'a');
@@ -1968,7 +1968,7 @@ void DownloadHelperTest::testEd2kSchedulingKeepsInlineSourceLabel()
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-inline-source-label";
   const std::string outfile = outdir + "/aria2 next.bin";
   File(outfile).remove();
-  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
   File(outdir).mkdirs();
 
   std::vector<std::string> uris{

@@ -32,10 +32,10 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#ifndef D_DEFAULT_BT_PROGRESS_INFO_FILE_H
-#define D_DEFAULT_BT_PROGRESS_INFO_FILE_H
+#ifndef D_DEFAULT_PROGRESS_INFO_FILE_H
+#define D_DEFAULT_PROGRESS_INFO_FILE_H
 
-#include "BtProgressInfoFile.h"
+#include "ProgressInfoFile.h"
 
 #include <memory>
 
@@ -46,7 +46,7 @@ class PieceStorage;
 class Option;
 class IOFile;
 
-class DefaultBtProgressInfoFile : public BtProgressInfoFile {
+class DefaultProgressInfoFile : public ProgressInfoFile {
 private:
   std::shared_ptr<DownloadContext> dctx_;
   std::shared_ptr<PieceStorage> pieceStorage_;
@@ -60,11 +60,11 @@ private:
   void save(IOFile& fp);
 
 public:
-  DefaultBtProgressInfoFile(const std::shared_ptr<DownloadContext>& btContext,
+  DefaultProgressInfoFile(const std::shared_ptr<DownloadContext>& dctx,
                             const std::shared_ptr<PieceStorage>& pieceStorage,
                             const Option* option);
 
-  virtual ~DefaultBtProgressInfoFile();
+  virtual ~DefaultProgressInfoFile();
 
   virtual std::string getFilename() CXX11_OVERRIDE { return filename_; }
 
@@ -88,4 +88,4 @@ public:
 
 } // namespace aria2
 
-#endif // D_DEFAULT_BT_PROGRESS_INFO_FILE_H
+#endif // D_DEFAULT_PROGRESS_INFO_FILE_H

@@ -48,7 +48,7 @@ set(ARIA2_SOURCES_BASE
   src/bitfield.h
   src/BitfieldMan.cc
   src/BitfieldMan.h
-  src/BtProgressInfoFile.h
+  src/ProgressInfoFile.h
   src/BufferedFile.cc
   src/BufferedFile.h
   src/ByteArrayDiskWriter.cc
@@ -100,8 +100,8 @@ set(ARIA2_SOURCES_BASE
   src/CUIDCounter.h
   src/DefaultAuthResolver.cc
   src/DefaultAuthResolver.h
-  src/DefaultBtProgressInfoFile.cc
-  src/DefaultBtProgressInfoFile.h
+  src/DefaultProgressInfoFile.cc
+  src/DefaultProgressInfoFile.h
   src/DefaultDiskWriter.cc
   src/DefaultDiskWriter.h
   src/DefaultDiskWriterFactory.cc

@@ -10,7 +10,7 @@
 #include "Ed2kAttribute.h"
 #include "Ed2kKadCommand.h"
 #include "Ed2kListenCommand.h"
-#include "DefaultBtProgressInfoFile.h"
+#include "DefaultProgressInfoFile.h"
 #include "DefaultPieceStorage.h"
 #include "DiskAdaptor.h"
 #include "DownloadResult.h"
@@ -537,7 +537,7 @@ void Ed2kCommandTest::testPeerCommandFinishesGroupAfterLastPart()
   const std::string data = "finished ed2k command data";
   const std::string outfile = A2_TEST_OUT_DIR "/ed2k-command-finished.bin";
   File(outfile).remove();
-  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
 
   auto dctx = std::make_shared<DownloadContext>(
       ed2k::PIECE_LENGTH, static_cast<int64_t>(data.size()), outfile);

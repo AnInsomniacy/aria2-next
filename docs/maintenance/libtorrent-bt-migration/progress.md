@@ -204,3 +204,20 @@ OpenSSL link flags.
 Remaining: Start BTM-011 final default build, CTest, version command, and
 sequential public BitTorrent smoke validation.
 Blocked: none.
+
+2026-05-23 BTM-011 verified
+Changed: Completed final local validation and sequential public BitTorrent
+smoke validation for the libtorrent-only BitTorrent path.
+Verified: `cmake --preset default`, `cmake --build --preset default`, `ctest
+--preset default`, and `build/default/aria2-next --version` passed. The version
+command reported Aria2 Next 2.1.4 with BitTorrent enabled. Sequential public
+Debian 13.5.0 amd64 netinst torrent smoke under
+`/Users/sekiro/Desktop/aria2-next-current/btm011-smoke-140641` completed with
+aria2-next before the 180 second RPC sample, returned an empty active RPC
+result, and produced `OK` console status with 6.9 MiB/s average speed. The
+same torrent completed with Homebrew aria2c before the 90 second RPC sample and
+with a minimal libtorrent-rasterbar 2.0.12 smoke client at 86 seconds. All
+three completed ISO files had SHA-256
+`95838884f5ea6c82421dfe6baaa5a639dbbe6756c1e380f9fe7a7cb0c1949d2a`.
+Remaining: Run the final completion audit against the original goal contract.
+Blocked: none.

@@ -59,7 +59,7 @@
 #include "DlAbortEx.h"
 #include "DownloadFailureException.h"
 #include "RequestGroupMan.h"
-#include "DefaultBtProgressInfoFile.h"
+#include "DefaultProgressInfoFile.h"
 #include "DefaultPieceStorage.h"
 #include "download_handlers.h"
 #include "Ed2kAttribute.h"
@@ -200,7 +200,7 @@ void RequestGroup::closeFile()
 std::unique_ptr<CheckIntegrityEntry>
 RequestGroup::createCheckIntegrityEntry(FileOpenMode fileOpenMode)
 {
-  auto infoFile = std::make_shared<DefaultBtProgressInfoFile>(
+  auto infoFile = std::make_shared<DefaultProgressInfoFile>(
       downloadContext_, pieceStorage_, option_.get());
 
   if (option_->getAsBool(PREF_CHECK_INTEGRITY) &&
@@ -267,11 +267,11 @@ void RequestGroup::createInitialCommand(
               downloadContext_->getBasePath().c_str()),
           error_code::DUPLICATE_DOWNLOAD);
     }
-    auto progressInfoFile = std::make_shared<DefaultBtProgressInfoFile>(
+    auto progressInfoFile = std::make_shared<DefaultProgressInfoFile>(
         downloadContext_, nullptr, option_.get());
     adjustFilename(progressInfoFile);
     initPieceStorage();
-    progressInfoFile = std::make_shared<DefaultBtProgressInfoFile>(
+    progressInfoFile = std::make_shared<DefaultProgressInfoFile>(
         downloadContext_, pieceStorage_, option_.get());
     removeDefunctControlFile(progressInfoFile);
     if (progressInfoFile->exists()) {
@@ -353,7 +353,7 @@ void RequestGroup::createInitialCommand(
       createNextCommand(commands, e, 1);
       return;
     }
-    auto progressInfoFile = std::make_shared<DefaultBtProgressInfoFile>(
+    auto progressInfoFile = std::make_shared<DefaultProgressInfoFile>(
         downloadContext_, nullptr, option_.get());
     adjustFilename(progressInfoFile);
     initPieceStorage();
@@ -383,7 +383,7 @@ void RequestGroup::createInitialCommand(
   if (downloadContext_->getFileEntries().size() > 1) {
     pieceStorage_->setupFileFilter();
   }
-  auto progressInfoFile = std::make_shared<DefaultBtProgressInfoFile>(
+  auto progressInfoFile = std::make_shared<DefaultProgressInfoFile>(
       downloadContext_, pieceStorage_, option_.get());
   removeDefunctControlFile(progressInfoFile);
   // Call Load, Save and file allocation command here
@@ -523,7 +523,7 @@ bool RequestGroup::downloadFinishedByFileLength()
 }
 
 void RequestGroup::adjustFilename(
-    const std::shared_ptr<BtProgressInfoFile>& infoFile)
+    const std::shared_ptr<ProgressInfoFile>& infoFile)
 {
   if (!isPreLocalFileCheckEnabled()) {
     // OK, no need to care about filename.
@@ -565,7 +565,7 @@ void RequestGroup::adjustFilename(
 }
 
 void RequestGroup::removeDefunctControlFile(
-    const std::shared_ptr<BtProgressInfoFile>& progressInfoFile)
+    const std::shared_ptr<ProgressInfoFile>& progressInfoFile)
 {
   // Remove the control file if download file doesn't exist
   if (progressInfoFile->exists() &&
@@ -578,7 +578,7 @@ void RequestGroup::removeDefunctControlFile(
 }
 
 void RequestGroup::loadAndOpenFile(
-    const std::shared_ptr<BtProgressInfoFile>& progressInfoFile,
+    const std::shared_ptr<ProgressInfoFile>& progressInfoFile,
     FileOpenMode fileOpenMode)
 {
   try {
@@ -666,7 +666,7 @@ void RequestGroup::tryAutoFileRenaming()
   for (int i = 1; i < 10000; ++i) {
     auto newfilename = fmt("%s.%d%s", fn.c_str(), i, ext.c_str());
     File newfile(newfilename);
-    File ctrlfile(newfile.getPath() + DefaultBtProgressInfoFile::getSuffix());
+    File ctrlfile(newfile.getPath() + DefaultProgressInfoFile::getSuffix());
     if (!newfile.exists() || (newfile.exists() && ctrlfile.exists())) {
       downloadContext_->getFirstFileEntry()->setPath(newfile.getPath());
       return;
@@ -1022,7 +1022,7 @@ void RequestGroup::setSegmentMan(const std::shared_ptr<SegmentMan>& segmentMan)
 }
 
 void RequestGroup::setProgressInfoFile(
-    const std::shared_ptr<BtProgressInfoFile>& progressInfoFile)
+    const std::shared_ptr<ProgressInfoFile>& progressInfoFile)
 {
   progressInfoFile_ = progressInfoFile;
 }

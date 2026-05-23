@@ -42,7 +42,7 @@
 #include <algorithm>
 #include <utility>
 
-#include "BtProgressInfoFile.h"
+#include "ProgressInfoFile.h"
 #include "RecoverableException.h"
 #include "RequestGroup.h"
 #include "LogFactory.h"
