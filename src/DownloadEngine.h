@@ -65,6 +65,7 @@ class AuthConfigFactory;
 class Request;
 class EventPoll;
 class Command;
+class AsioRuntime;
 #ifdef ENABLE_BITTORRENT
 class LibtorrentSession;
 #endif // ENABLE_BITTORRENT
@@ -85,9 +86,13 @@ class DownloadEngine {
 private:
   void waitData();
 
+  void drainRuntime();
+
   std::string sessionId_;
 
   std::unique_ptr<EventPoll> eventPoll_;
+
+  std::unique_ptr<AsioRuntime> runtime_;
 
   std::unique_ptr<StatCalc> statCalc_;
 
@@ -250,6 +255,12 @@ public:
   void requestForceHalt();
 
   void setNoWait(bool b);
+
+  AsioRuntime& getRuntime();
+
+  void wakeRuntime();
+
+  void scheduleRuntimeWake(std::chrono::milliseconds delay);
 
   void addRoutineCommand(std::unique_ptr<Command> command);
 

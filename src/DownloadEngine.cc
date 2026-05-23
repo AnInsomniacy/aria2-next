@@ -75,6 +75,7 @@
 #endif // ENABLE_WEBSOCKET
 #include "Option.h"
 #include "util_security.h"
+#include "AsioRuntime.h"
 
 namespace aria2 {
 
@@ -96,6 +97,7 @@ constexpr auto DEFAULT_REFRESH_INTERVAL = 1_s;
 
 DownloadEngine::DownloadEngine(std::unique_ptr<EventPoll> eventPoll)
     : eventPoll_(std::move(eventPoll)),
+      runtime_(make_unique<AsioRuntime>()),
       haltRequested_(0),
       noWait_(true),
       refreshInterval_(DEFAULT_REFRESH_INTERVAL),
@@ -183,8 +185,10 @@ int DownloadEngine::run(bool oneshot)
 
 void DownloadEngine::waitData()
 {
+  drainRuntime();
+  const auto runtimeWakeRequested = runtime_->consumeWakeRequest();
   struct timeval tv;
-  if (noWait_) {
+  if (noWait_ || runtimeWakeRequested) {
     tv.tv_sec = tv.tv_usec = 0;
   }
   else {
@@ -194,6 +198,12 @@ void DownloadEngine::waitData()
     tv.tv_usec = t.count() % 1000000;
   }
   eventPoll_->poll(tv);
+  drainRuntime();
+}
+
+void DownloadEngine::drainRuntime()
+{
+  runtime_->runReady();
 }
 
 bool DownloadEngine::addSocketForReadCheck(
@@ -264,12 +274,14 @@ void DownloadEngine::requestHalt()
 {
   haltRequested_ = std::max(haltRequested_, 1);
   requestGroupMan_->halt();
+  wakeRuntime();
 }
 
 void DownloadEngine::requestForceHalt()
 {
   haltRequested_ = std::max(haltRequested_, 2);
   requestGroupMan_->forceHalt();
+  wakeRuntime();
 }
 
 void DownloadEngine::setStatCalc(std::unique_ptr<StatCalc> statCalc)
@@ -292,6 +304,20 @@ bool DownloadEngine::deleteNameResolverCheck(
 #endif // ENABLE_ASYNC_DNS
 
 void DownloadEngine::setNoWait(bool b) { noWait_ = b; }
+
+AsioRuntime& DownloadEngine::getRuntime() { return *runtime_; }
+
+void DownloadEngine::wakeRuntime()
+{
+  runtime_->wake();
+  setNoWait(true);
+  setRefreshInterval(std::chrono::milliseconds(0));
+}
+
+void DownloadEngine::scheduleRuntimeWake(std::chrono::milliseconds delay)
+{
+  runtime_->scheduleWake(delay);
+}
 
 void DownloadEngine::addRoutineCommand(std::unique_ptr<Command> command)
 {

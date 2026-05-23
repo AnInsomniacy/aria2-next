@@ -31,6 +31,8 @@ set(ARIA2_SOURCES_BASE
   src/AdaptiveURISelector.h
   src/AnonDiskWriterFactory.h
   src/array_fun.h
+  src/AsioRuntime.cc
+  src/AsioRuntime.h
   src/AuthConfig.cc
   src/AuthConfig.h
   src/AuthConfigFactory.cc

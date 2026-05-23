@@ -77,3 +77,17 @@ README.md found no removed WinTLS/GnuTLS/nettle/GMP/libgcrypt option or
 generated-config names.
 Remaining: Start CM-004 runtime foundation.
 Blocked: none.
+
+2026-05-23 CM-004 verified
+Changed: Added `AsioRuntime` as the Boost.Asio runtime owner for posted tasks,
+timers, wake requests, cancellation, and shutdown wake bridging. DownloadEngine
+now owns the runtime, drains ready work around the legacy EventPoll bridge,
+wakes the runtime on graceful and force halt, and consumes wake requests after
+forcing one non-blocking poll. Recorded the old EventPoll deletion plan for the
+post-protocol-migration cleanup boundary.
+Verified: `cmake --preset default` passed. `cmake --build --preset default`
+passed. `build/default/aria2_tests 'All Tests/aria2::DownloadEngineTest'`
+passed with 4 tests. CSV parser check passed for 22 tracker files. `git diff
+--check` passed.
+Remaining: Start CM-005 libcurl transfer foundation.
+Blocked: none.
