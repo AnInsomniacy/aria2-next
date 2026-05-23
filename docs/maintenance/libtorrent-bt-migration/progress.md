@@ -233,3 +233,14 @@ complete; reference aria2c reported 11,705,750 B/s and 1,014,476,647 bytes
 complete. Both remained active as expected for this larger torrent.
 Remaining: Run the final completion audit against the original goal contract.
 Blocked: none.
+
+2026-05-23 BTM-008 verified
+Changed: Removed orphaned native tracker and extension-message helper files
+that remained outside the active build, and renamed the small shared constants
+surface to `TorrentMetadataConstants`.
+Verified: `cmake --build --preset default` succeeded. `ctest --preset default`
+passed. Stale orphan scan for AnnounceList, AnnounceTier, UDPTrackerRequest,
+BtConstants, LPD multicast constants, native peer constants, and
+extension_message_test_helper returned no active runtime hits.
+Remaining: Run the final completion audit against the original goal contract.
+Blocked: none.

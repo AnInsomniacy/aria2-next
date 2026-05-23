@@ -75,7 +75,6 @@
 #include "SimpleRandomizer.h"
 #ifdef ENABLE_BITTORRENT
 #  include "bittorrent_helper.h"
-#  include "BtConstants.h"
 #  include "ValueBaseBencodeParser.h"
 #  include <libtorrent/torrent_info.hpp>
 #endif // ENABLE_BITTORRENT

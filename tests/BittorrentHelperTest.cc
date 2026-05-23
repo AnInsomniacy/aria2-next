@@ -8,7 +8,6 @@
 #include "DownloadContext.h"
 #include "util.h"
 #include "RecoverableException.h"
-#include "AnnounceTier.h"
 #include "FixedNumberRandomizer.h"
 #include "FileEntry.h"
 #include "array_fun.h"
@@ -18,7 +17,7 @@
 #include "base32.h"
 #include "Option.h"
 #include "prefs.h"
-#include "BtConstants.h"
+#include "TorrentMetadataConstants.h"
 
 namespace aria2 {
 
@@ -38,8 +37,8 @@ class BittorrentHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGetNameMulti);
   CPPUNIT_TEST(testGetNameSingle);
   CPPUNIT_TEST(testOverrideName);
-  CPPUNIT_TEST(testGetAnnounceTier);
-  CPPUNIT_TEST(testGetAnnounceTierAnnounceList);
+  CPPUNIT_TEST(testGetSingleAnnounceList);
+  CPPUNIT_TEST(testGetMultiAnnounceList);
   CPPUNIT_TEST(testGetPieceLength);
   CPPUNIT_TEST(testGetInfoHashAsString);
   CPPUNIT_TEST(testGetFileEntries_multiFileUrlList);
@@ -91,8 +90,8 @@ public:
   void testGetNameMulti();
   void testGetNameSingle();
   void testOverrideName();
-  void testGetAnnounceTier();
-  void testGetAnnounceTierAnnounceList();
+  void testGetSingleAnnounceList();
+  void testGetMultiAnnounceList();
   void testGetPieceLength();
   void testGetInfoHashAsString();
   void testGetFileEntries_multiFileUrlList();
@@ -258,7 +257,7 @@ void BittorrentHelperTest::testOverrideName()
                        getTorrentAttrs(dctx)->name);
 }
 
-void BittorrentHelperTest::testGetAnnounceTier()
+void BittorrentHelperTest::testGetSingleAnnounceList()
 {
   std::shared_ptr<DownloadContext> dctx(new DownloadContext());
   load(A2_TEST_DIR "/single.torrent", dctx, option_);
@@ -271,7 +270,7 @@ void BittorrentHelperTest::testGetAnnounceTier()
                        attrs->announceList[0][0]);
 }
 
-void BittorrentHelperTest::testGetAnnounceTierAnnounceList()
+void BittorrentHelperTest::testGetMultiAnnounceList()
 {
   std::shared_ptr<DownloadContext> dctx(new DownloadContext());
   load(A2_TEST_DIR "/test.torrent", dctx, option_);

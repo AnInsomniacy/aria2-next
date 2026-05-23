@@ -703,7 +703,7 @@ set(ARIA2_SOURCES_ENABLE_BITTORRENT
   src/BencodeParser.h
   src/bittorrent_helper.cc
   src/bittorrent_helper.h
-  src/BtConstants.h
+  src/TorrentMetadataConstants.h
   src/magnet.cc
   src/magnet.h
   src/MemoryBencodePreDownloadHandler.h

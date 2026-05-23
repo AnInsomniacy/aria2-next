@@ -2,7 +2,7 @@
 /*
  * aria2 - The high speed download utility
  *
- * Copyright (C) 2013 Tatsuhiro Tsujikawa
+ * Copyright (C) 2006 Tatsuhiro Tsujikawa
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,79 +32,21 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#ifndef D_UDP_TRACKER_REQUEST_H
-#define D_UDP_TRACKER_REQUEST_H
+#ifndef D_TORRENT_METADATA_CONSTANTS_H
+#define D_TORRENT_METADATA_CONSTANTS_H
 
 #include "common.h"
 
-#include <string>
-#include <vector>
-#include <memory>
-
-#include "TimerA2.h"
-
 namespace aria2 {
 
-enum UDPTrackerAction {
-  UDPT_ACT_CONNECT = 0,
-  UDPT_ACT_ANNOUNCE = 1,
-  UDPT_ACT_SCRAPE = 2,
-  UDPT_ACT_ERROR = 3
-};
+constexpr size_t INFO_HASH_LENGTH = 20;
 
-enum UDPTrackerError {
-  UDPT_ERR_SUCCESS,
-  UDPT_ERR_TRACKER,
-  UDPT_ERR_TIMEOUT,
-  UDPT_ERR_NETWORK,
-  UDPT_ERR_SHUTDOWN
-};
+constexpr size_t PIECE_HASH_LENGTH = 20;
 
-enum UDPTrackerState { UDPT_STA_PENDING, UDPT_STA_COMPLETE };
+constexpr size_t COMPACT_LEN_IPV4 = 6;
 
-enum UDPTrackerEvent {
-  UDPT_EVT_NONE = 0,
-  UDPT_EVT_COMPLETED = 1,
-  UDPT_EVT_STARTED = 2,
-  UDPT_EVT_STOPPED = 3
-};
-
-struct UDPTrackerReply {
-  int32_t action;
-  uint32_t transactionId;
-  int32_t interval;
-  int32_t leechers;
-  int32_t seeders;
-  std::vector<std::pair<std::string, uint16_t>> peers;
-  UDPTrackerReply();
-};
-
-struct UDPTrackerRequest {
-  std::string remoteAddr;
-  uint16_t remotePort;
-  uint64_t connectionId;
-  int32_t action;
-  uint32_t transactionId;
-  std::string infohash;
-  std::string peerId;
-  int64_t downloaded;
-  int64_t left;
-  int64_t uploaded;
-  int32_t event;
-  uint32_t ip;
-  uint32_t key;
-  int32_t numWant;
-  uint16_t port;
-  uint16_t extensions;
-  int state;
-  int error;
-  Timer dispatched;
-  int failCount;
-  std::shared_ptr<UDPTrackerReply> reply;
-  void* user_data;
-  UDPTrackerRequest();
-};
+constexpr size_t COMPACT_LEN_IPV6 = 18;
 
 } // namespace aria2
 
-#endif // D_UDP_TRACKER_REQUEST_H
+#endif // D_TORRENT_METADATA_CONSTANTS_H
