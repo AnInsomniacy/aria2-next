@@ -1,3 +1,5 @@
+#include "BoostJsonValue.h"
+#include "ValueBase.h"
 #include "json.h"
 
 #include <cppunit/extensions/HelperMacros.h>
@@ -41,21 +43,21 @@ void JsonTest::testEncode()
                                      "\"files\":[\"aria2c\"],"
                                      "\"loc\":80000,"
                                      "\"name\":\"aria2\"}"),
-                         json::encode(dict.get()));
+                         json::serialize(dict.get()));
   }
   {
     auto list = List::g();
     list->append("\"\\/\b\f\n\r\t");
-    CPPUNIT_ASSERT_EQUAL(std::string("[\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"]"),
-                         json::encode(list.get()));
+    CPPUNIT_ASSERT_EQUAL(std::string("[\"\\\"\\\\/\\b\\f\\n\\r\\t\"]"),
+                         json::serialize(list.get()));
   }
   {
     auto list = List::g();
     std::string s;
     s += 0x1Fu;
     list->append(s);
-    CPPUNIT_ASSERT_EQUAL(std::string("[\"\\u001F\"]"),
-                         json::encode(list.get()));
+    CPPUNIT_ASSERT_EQUAL(std::string("[\"\\u001f\"]"),
+                         json::serialize(list.get()));
   }
   {
     auto list = List::g();
@@ -63,7 +65,7 @@ void JsonTest::testEncode()
     list->append(Bool::gFalse());
     list->append(Null::g());
     CPPUNIT_ASSERT_EQUAL(std::string("[true,false,null]"),
-                         json::encode(list.get()));
+                         json::serialize(list.get()));
   }
 }
 

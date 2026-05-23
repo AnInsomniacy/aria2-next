@@ -67,7 +67,6 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/UriSplitTest.cc
   tests/MockSegment.h
   tests/JsonTest.cc
-  tests/ValueBaseJsonParserTest.cc
   tests/RpcResponseTest.cc
   tests/RpcMethodTest.cc
   tests/RpcHttpHandlerTest.cc

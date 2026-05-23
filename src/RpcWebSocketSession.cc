@@ -18,12 +18,13 @@
 #include <boost/beast/websocket.hpp>
 
 #include "A2STR.h"
+#include "BoostJsonValue.h"
 #include "DownloadEngine.h"
 #include "LogFactory.h"
 #include "Option.h"
 #include "RpcResponse.h"
-#include "ValueBaseJsonParser.h"
 #include "WebSocketSessionMan.h"
+#include "fmt.h"
 #include "json.h"
 #include "prefs.h"
 #include "rpc_helper.h"
@@ -38,10 +39,9 @@ namespace websocket = beast::websocket;
 using tcp = boost::asio::ip::tcp;
 
 namespace {
-std::unique_ptr<ValueBase> parseJson(const std::string& body, ssize_t& error)
+std::unique_ptr<ValueBase> parseJson(const std::string& body, bool& ok)
 {
-  return json::ValueBaseJsonParser().parseFinal(body.c_str(), body.size(),
-                                                error);
+  return json::parseValue(body, ok);
 }
 
 bool responseAuthorized(const RpcResponse& res)
@@ -130,9 +130,9 @@ std::string RpcWebSocketSession::processMessage(const std::string& message)
     return toJson(res, A2STR::NIL, false);
   }
 
-  ssize_t error = 0;
-  auto json = parseJson(message, error);
-  if (error < 0) {
+  bool ok = false;
+  auto json = parseJson(message, ok);
+  if (!ok) {
     RpcResponse res(
         createJsonRpcErrorResponse(-32700, "Parse error.", Null::g()));
     return toJson(res, A2STR::NIL, false);

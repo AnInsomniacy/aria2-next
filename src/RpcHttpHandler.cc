@@ -15,10 +15,10 @@
 #include <algorithm>
 
 #include "A2STR.h"
+#include "BoostJsonValue.h"
 #include "DownloadEngine.h"
 #include "Option.h"
 #include "RpcResponse.h"
-#include "ValueBaseJsonParser.h"
 #include "json.h"
 #include "prefs.h"
 #include "rpc_helper.h"
@@ -96,10 +96,9 @@ RpcHttpResponse jsonBatchResponse(const std::vector<rpc::RpcResponse>& results,
   return http;
 }
 
-std::unique_ptr<ValueBase> parseJson(const std::string& body, ssize_t& error)
+std::unique_ptr<ValueBase> parseJson(const std::string& body, bool& ok)
 {
-  return json::ValueBaseJsonParser().parseFinal(body.c_str(), body.size(),
-                                                error);
+  return json::parseValue(body, ok);
 }
 
 RpcHttpResponse processJson(std::unique_ptr<ValueBase> json,
@@ -163,9 +162,9 @@ RpcHttpResponse RpcHttpHandler::handle(const RpcHttpRequest& req) const
       return res;
     }
 
-    ssize_t error = 0;
-    auto json = parseJson(req.body, error);
-    if (error < 0) {
+    bool ok = false;
+    auto json = parseJson(req.body, ok);
+    if (!ok) {
       return jsonResponse(rpc::createJsonRpcErrorResponse(
                               -32700, "Parse error.", Null::g()),
                           A2STR::NIL, gzip);
@@ -175,9 +174,9 @@ RpcHttpResponse RpcHttpHandler::handle(const RpcHttpRequest& req) const
 
   if (req.method == "GET" && path == "/jsonrpc") {
     auto param = json::decodeGetParams(getQuery(req.target));
-    ssize_t error = 0;
-    auto json = parseJson(param.request, error);
-    if (error < 0) {
+    bool ok = false;
+    auto json = parseJson(param.request, ok);
+    if (!ok) {
       return jsonResponse(rpc::createJsonRpcErrorResponse(
                               -32700, "Parse error.", Null::g()),
                           param.callback, gzip);

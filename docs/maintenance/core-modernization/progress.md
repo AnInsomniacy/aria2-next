@@ -139,3 +139,9 @@ Changed: Migrated JSON-RPC WebSocket transport from the native wslay session gra
 Verified: `cmake --build --preset default` passed. `build/default/aria2_tests 'All Tests/aria2::rpc::WebSocketSessionManTest'` passed. `build/default/aria2_tests 'All Tests/aria2::RpcHttpHandlerTest'` passed. `build/default/aria2_tests 'All Tests/aria2::rpc::RpcMethodTest/aria2::rpc::RpcMethodTest::testAuthorize'` passed. Local WebSocket smoke under `/Users/sekiro/Desktop/aria2-next-current/cm010-websocket-smoke` returned `aria2.getVersion` through `ws://127.0.0.1:6891/jsonrpc` with `rpc-secret`. Stale active-source scans found no wslay or old native WebSocket session graph references outside tracker history.
 Remaining: Start CM-011 Boost.JSON migration.
 Blocked: none.
+
+2026-05-23 CM-011 verified
+Changed: Added `BoostJsonValue` as the Boost.JSON conversion boundary for internal `ValueBase` RPC values. Migrated JSON-RPC HTTP and WebSocket request parsing, RPC response serialization, and WebSocket notification serialization to Boost.JSON. Removed `JsonParser`, `JsonDiskWriter`, `ValueBaseJsonParser`, and `ValueBaseJsonParserTest`; retained `json.cc/json.h` only for JSONP GET query shaping.
+Verified: `cmake --preset default` passed. `cmake --build --preset default` passed. `build/default/aria2_tests 'All Tests/aria2::JsonTest'` passed. `build/default/aria2_tests 'All Tests/aria2::rpc::RpcResponseTest'` passed. `build/default/aria2_tests 'All Tests/aria2::RpcHttpHandlerTest'` passed. `build/default/aria2_tests 'All Tests/aria2::rpc::WebSocketSessionManTest'` passed. `build/default/aria2_tests 'All Tests/aria2::rpc::RpcMethodTest/aria2::rpc::RpcMethodTest::testAuthorize'` passed. CSV parser check passed for 22 tracker files. Stale scans found no old custom JSON parser or writer references outside tracker history.
+Remaining: Start CM-012 XML-RPC removal and Metalink decision.
+Blocked: none.

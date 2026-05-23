@@ -242,9 +242,8 @@ set(ARIA2_SOURCES_BASE
   src/IteratableValidator.h
   src/json.cc
   src/json.h
-  src/JsonDiskWriter.h
-  src/JsonParser.cc
-  src/JsonParser.h
+  src/BoostJsonValue.cc
+  src/BoostJsonValue.h
   src/Lock.h
   src/LogFactory.cc
   src/LogFactory.h
@@ -441,7 +440,6 @@ set(ARIA2_SOURCES_BASE
   src/ValueBase.cc
   src/ValueBase.h
   src/ValueBaseDiskWriter.h
-  src/ValueBaseJsonParser.h
   src/ValueBaseStructParserState.h
   src/ValueBaseStructParserStateImpl.cc
   src/ValueBaseStructParserStateImpl.h

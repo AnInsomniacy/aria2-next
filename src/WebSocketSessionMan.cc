@@ -37,9 +37,10 @@
 #include <algorithm>
 #include <cassert>
 
+#include "BoostJsonValue.h"
 #include "RequestGroup.h"
 #include "RpcWebSocketSession.h"
-#include "json.h"
+#include "ValueBase.h"
 #include "util.h"
 #include "LogFactory.h"
 
@@ -84,7 +85,7 @@ void WebSocketSessionMan::addNotification(const std::string& method,
   auto params = List::g();
   params->append(std::move(eventSpec));
   dict->put("params", std::move(params));
-  std::string msg = json::encode(dict.get());
+  std::string msg = json::serialize(dict.get());
   for (auto& session : sessions_) {
     if (!session->isAuthorized()) {
       continue;

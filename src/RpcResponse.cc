@@ -37,8 +37,8 @@
 #include <cassert>
 #include <sstream>
 
+#include "BoostJsonValue.h"
 #include "util.h"
-#include "json.h"
 #ifdef HAVE_ZLIB
 #  include "GZipEncoder.h"
 #endif // HAVE_ZLIB
@@ -160,7 +160,7 @@ OutputStream& encodeJsonAll(OutputStream& o, int code, const ValueBase* param,
     o << callback << "(";
   }
   o << "{\"id\":";
-  json::encode(o, id);
+  o << json::serialize(id);
   o << ",\"jsonrpc\":\"2.0\",";
   if (code == 0) {
     o << "\"result\":";
@@ -168,7 +168,7 @@ OutputStream& encodeJsonAll(OutputStream& o, int code, const ValueBase* param,
   else {
     o << "\"error\":";
   }
-  json::encode(o, param);
+  o << json::serialize(param);
   o << "}";
   if (!callback.empty()) {
     o << ")";
