@@ -50,6 +50,7 @@ class RequestGroupTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testLibtorrentResumeDataRoundTrip);
   CPPUNIT_TEST(testLibtorrentEmptyResumeDataDoesNotOverwriteControlFile);
   CPPUNIT_TEST(testLibtorrentControlFileLoadRestoresResumeStatus);
+  CPPUNIT_TEST(testLibtorrentControlFileLoadRestoresMetadataPauseApplied);
   CPPUNIT_TEST(testLibtorrentSessionTracksActiveTorrent);
   CPPUNIT_TEST(testLibtorrentDuplicateTorrentFailsOnlySecondGroup);
   CPPUNIT_TEST(testLibtorrentMagnetPauseMetadataStopsAfterMetadata);
@@ -81,6 +82,7 @@ public:
   void testLibtorrentResumeDataRoundTrip();
   void testLibtorrentEmptyResumeDataDoesNotOverwriteControlFile();
   void testLibtorrentControlFileLoadRestoresResumeStatus();
+  void testLibtorrentControlFileLoadRestoresMetadataPauseApplied();
   void testLibtorrentSessionTracksActiveTorrent();
   void testLibtorrentDuplicateTorrentFailsOnlySecondGroup();
   void testLibtorrentMagnetPauseMetadataStopsAfterMetadata();
@@ -617,6 +619,40 @@ void RequestGroupTest::testLibtorrentControlFileLoadRestoresResumeStatus()
   CPPUNIT_ASSERT(attrsPtr->resumeStatus.totalLength > 0);
   CPPUNIT_ASSERT_EQUAL(attrsPtr->resumeStatus.totalLength,
                        attrsPtr->resumeStatus.completedLength);
+  File(controlPath).remove();
+}
+
+void RequestGroupTest::testLibtorrentControlFileLoadRestoresMetadataPauseApplied()
+{
+  const std::string controlPath =
+      std::string(A2_TEST_OUT_DIR) +
+      "/0101010101010101010101010101010101010101.aria2";
+  File(controlPath).remove();
+
+  auto torrentParams = lt::load_torrent_file(A2_TEST_DIR "/single.torrent");
+  auto resumeData = lt::write_resume_data_buf(torrentParams);
+
+  auto ctx = std::make_shared<DownloadContext>(1_k, 100_k, "torrent.bin");
+  auto attrs = make_unique<LibtorrentAttribute>(
+      LibtorrentAttribute::SourceType::MAGNET,
+      "magnet:?xt=urn:btih:" +
+          util::toHex(torrentParams.ti->info_hashes().v1.to_string()),
+      "", std::vector<std::string>{}, controlPath,
+      torrentParams.ti->info_hashes().v1.to_string());
+  auto attrsPtr = attrs.get();
+  attrsPtr->pauseAfterMetadata = true;
+  attrsPtr->setResumeData(std::string(resumeData.begin(), resumeData.end()));
+  ctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
+
+  LibtorrentProgressInfoFile controlFile(ctx);
+  controlFile.save();
+  attrsPtr->setResumeData("");
+  attrsPtr->resumeStatus = LibtorrentAttribute::Status();
+  attrsPtr->metadataPauseApplied = false;
+  controlFile.load();
+
+  CPPUNIT_ASSERT(attrsPtr->resumeStatus.hasMetadata);
+  CPPUNIT_ASSERT(attrsPtr->metadataPauseApplied);
   File(controlPath).remove();
 }
 

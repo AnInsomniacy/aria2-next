@@ -251,6 +251,10 @@ void LibtorrentProgressInfoFile::load()
   }
   auto attrs = getLibtorrentAttrs(dctx_);
   storeResumeStatus(attrs, data);
+  if (attrs->sourceType == LibtorrentAttribute::SourceType::MAGNET &&
+      attrs->pauseAfterMetadata && attrs->resumeStatus.hasMetadata) {
+    attrs->metadataPauseApplied = true;
+  }
   attrs->setResumeData(std::move(data));
   A2_LOG_INFO(MSG_LOADED_SEGMENT_FILE);
 }
