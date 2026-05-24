@@ -663,8 +663,9 @@ createBtMagnetRequestGroup(const std::string& magnetLink,
       optionTemplate,
       createBtInfoHashControlFilePath(optionTemplate, torrentAttrs->infoHash),
       torrentAttrs->infoHash);
-  applyTrackerOptions(getLibtorrentAttrs(rg->getDownloadContext()),
-                      rg->getOption(), torrentAttrs.get());
+  auto attrs = getLibtorrentAttrs(rg->getDownloadContext());
+  attrs->pauseAfterMetadata = rg->getOption()->getAsBool(PREF_PAUSE_METADATA);
+  applyTrackerOptions(attrs, rg->getOption(), torrentAttrs.get());
   return rg;
 }
 } // namespace

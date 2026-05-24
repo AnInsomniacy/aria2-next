@@ -117,6 +117,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentTorrentSelectFile);
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentTorrentTrackers);
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnet);
+  CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnetPauseMetadata);
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnetControlFile);
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnetTrackers);
 #endif // ENABLE_BITTORRENT
@@ -194,6 +195,7 @@ public:
   void testCreateRequestGroupForUri_LibtorrentTorrentSelectFile();
   void testCreateRequestGroupForUri_LibtorrentTorrentTrackers();
   void testCreateRequestGroupForUri_LibtorrentMagnet();
+  void testCreateRequestGroupForUri_LibtorrentMagnetPauseMetadata();
   void testCreateRequestGroupForUri_LibtorrentMagnetControlFile();
   void testCreateRequestGroupForUri_LibtorrentMagnetTrackers();
 #endif // ENABLE_BITTORRENT
@@ -2428,6 +2430,28 @@ void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentMagnet()
     CPPUNIT_ASSERT(dctx->hasAttribute(CTX_ATTR_LIBTORRENT));
     CPPUNIT_ASSERT_EQUAL(uris[0], group->getMetadataInfo()->getUri());
   }
+}
+
+void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentMagnetPauseMetadata()
+{
+  std::vector<std::string> uris{
+      "magnet:?xt=urn:btih:248D0A1CD08284299DE78D5C1ED359BB46717D8C&dn=aria2-test"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_PAUSE_METADATA, A2_V_TRUE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  auto attrs = getLibtorrentAttrs(result[0]->getDownloadContext());
+  CPPUNIT_ASSERT(attrs->pauseAfterMetadata);
+
+  std::vector<std::shared_ptr<RequestGroup>> torrents;
+  createRequestGroupForUri(torrents, option_, {A2_TEST_DIR "/test.torrent"});
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, torrents.size());
+  auto torrentAttrs = getLibtorrentAttrs(torrents[0]->getDownloadContext());
+  CPPUNIT_ASSERT(!torrentAttrs->pauseAfterMetadata);
 }
 
 void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentMagnetControlFile()

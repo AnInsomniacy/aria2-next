@@ -164,6 +164,11 @@ createAddTorrentParams(LibtorrentAttribute* attrs, const Option* option)
   }
   params.flags &= ~lt::torrent_flags::paused;
   params.flags &= ~lt::torrent_flags::auto_managed;
+  if (attrs->sourceType == LibtorrentAttribute::SourceType::MAGNET &&
+      attrs->pauseAfterMetadata && !attrs->metadataPauseApplied) {
+    params.flags |= lt::torrent_flags::upload_mode;
+    params.flags |= lt::torrent_flags::default_dont_download;
+  }
   return params;
 }
 
@@ -398,6 +403,14 @@ void refreshFileShape(RequestGroup* requestGroup, const lt::torrent_status& st)
   requestGroup->initPieceStorage();
   requestGroup->getPieceStorage()->getDiskAdaptor()->openFile();
 }
+
+bool shouldApplyMetadataPause(const LibtorrentAttribute* attrs,
+                              const lt::torrent_status& status)
+{
+  return attrs->sourceType == LibtorrentAttribute::SourceType::MAGNET &&
+         attrs->pauseAfterMetadata && !attrs->metadataPauseApplied &&
+         status.has_metadata;
+}
 } // namespace
 
 LibtorrentCommand::LibtorrentCommand(cuid_t cuid, RequestGroup* requestGroup,
@@ -528,6 +541,35 @@ void LibtorrentCommand::updateStatus()
   refreshFileShape(requestGroup_, status);
 
   auto attrs = getLibtorrentAttrs(requestGroup_->getDownloadContext());
+  if (shouldApplyMetadataPause(attrs, status)) {
+    handle_.set_flags(lt::torrent_flags::upload_mode,
+                      lt::torrent_flags::upload_mode);
+    handle_.pause(lt::torrent_handle::graceful_pause);
+    attrs->metadataPauseApplied = true;
+    requestGroup_->setPauseRequested(true);
+    attrs->status.hasStatus = true;
+    attrs->status.complete = false;
+    attrs->status.checking = false;
+    attrs->status.seeding = false;
+    attrs->status.sharing = false;
+    attrs->status.hasMetadata = true;
+    attrs->status.totalLength = status.total_wanted;
+    attrs->status.completedLength = status.total_wanted_done;
+    attrs->status.uploadedLength = status.all_time_upload;
+    attrs->status.downloadSpeed = 0;
+    attrs->status.uploadSpeed = status.upload_payload_rate;
+    attrs->status.connections = status.num_peers;
+    attrs->status.seeders = status.num_seeds;
+    attrs->status.name = status.name;
+    if (!status.info_hashes.v1.is_all_zeros()) {
+      auto hash = status.info_hashes.v1.to_string();
+      attrs->status.infoHash.assign(hash.begin(), hash.end());
+    }
+    syncResumeData();
+    enableExit();
+    return;
+  }
+
   attrs->status.hasStatus = true;
   attrs->status.complete = false;
   attrs->status.checking =

@@ -52,6 +52,7 @@ class RequestGroupTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testLibtorrentControlFileLoadRestoresResumeStatus);
   CPPUNIT_TEST(testLibtorrentSessionTracksActiveTorrent);
   CPPUNIT_TEST(testLibtorrentDuplicateTorrentFailsOnlySecondGroup);
+  CPPUNIT_TEST(testLibtorrentMagnetPauseMetadataStopsAfterMetadata);
 #endif // ENABLE_BITTORRENT
   CPPUNIT_TEST_SUITE_END();
 
@@ -82,6 +83,7 @@ public:
   void testLibtorrentControlFileLoadRestoresResumeStatus();
   void testLibtorrentSessionTracksActiveTorrent();
   void testLibtorrentDuplicateTorrentFailsOnlySecondGroup();
+  void testLibtorrentMagnetPauseMetadataStopsAfterMetadata();
 #endif // ENABLE_BITTORRENT
 };
 
@@ -696,6 +698,55 @@ void RequestGroupTest::testLibtorrentDuplicateTorrentFailsOnlySecondGroup()
   CPPUNIT_ASSERT(secondGroup->isHaltRequested());
   auto result = secondGroup->createDownloadResult();
   CPPUNIT_ASSERT_EQUAL(error_code::DUPLICATE_INFO_HASH, result->result);
+}
+
+void RequestGroupTest::testLibtorrentMagnetPauseMetadataStopsAfterMetadata()
+{
+  option_->put(PREF_DIR, A2_TEST_OUT_DIR);
+  option_->put(PREF_DRY_RUN, A2_V_FALSE);
+  option_->put(PREF_LISTEN_PORT, "0");
+  option_->put(PREF_DHT_LISTEN_PORT, "0");
+
+  auto torrentParams = lt::load_torrent_file(A2_TEST_DIR "/single.torrent");
+  auto magnet = "magnet:?xt=urn:btih:" +
+                util::toHex(torrentParams.ti->info_hashes().v1.to_string());
+  auto ctx = std::make_shared<DownloadContext>(0, 0, "magnet");
+  ctx->markTotalLengthIsUnknown();
+  auto attrs = make_unique<LibtorrentAttribute>(
+      LibtorrentAttribute::SourceType::MAGNET, magnet, "",
+      std::vector<std::string>{},
+      A2_TEST_OUT_DIR "/0101010101010101010101010101010101010101.aria2",
+      torrentParams.ti->info_hashes().v1.to_string());
+  auto attrsPtr = attrs.get();
+  attrsPtr->pauseAfterMetadata = true;
+  ctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
+
+  RequestGroup group(GroupId::create(), option_);
+  group.setDownloadContext(ctx);
+
+  auto eventPoll = make_unique<SelectEventPoll>();
+  auto engine = make_unique<DownloadEngine>(std::move(eventPoll));
+  engine->setOption(option_.get());
+  engine->setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{}, 1, option_.get()));
+  group.setRequestGroupMan(engine->getRequestGroupMan().get());
+  group.setState(RequestGroup::STATE_ACTIVE);
+
+  LibtorrentCommand command(engine->newCUID(), &group, engine.get());
+  command.preProcess();
+  auto handle = engine->getLibtorrentSession().nativeSession().find_torrent(
+      torrentParams.ti->info_hashes().v1);
+  CPPUNIT_ASSERT(handle.is_valid());
+  handle.set_metadata(lt::span<char const>(torrentParams.ti->metadata().get(),
+                                           torrentParams.ti->metadata_size()));
+  command.preProcess();
+
+  CPPUNIT_ASSERT(ctx->knowsTotalLength());
+  CPPUNIT_ASSERT(!ctx->getFileEntries().empty());
+  CPPUNIT_ASSERT_EQUAL((int64_t)0, attrsPtr->status.completedLength);
+  CPPUNIT_ASSERT(attrsPtr->metadataPauseApplied);
+  CPPUNIT_ASSERT(group.isPauseRequested());
+  CPPUNIT_ASSERT(command.execute());
 }
 #endif // ENABLE_BITTORRENT
 

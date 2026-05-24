@@ -80,6 +80,7 @@ class RpcMethodTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGatherProgressLibtorrentAnnounceList);
   CPPUNIT_TEST(testGetPeersLibtorrentPreservesPeerId);
   CPPUNIT_TEST(testChangeOptionLibtorrentSelectFile);
+  CPPUNIT_TEST(testUnpauseLibtorrentMagnetAfterMetadataSelectFile);
 #endif // ENABLE_BITTORRENT
   CPPUNIT_TEST(testGatherProgressCommon);
   CPPUNIT_TEST(testGatherProgressCommonSeparatesInFlightProgress);
@@ -154,6 +155,7 @@ public:
   void testGatherProgressLibtorrentAnnounceList();
   void testGetPeersLibtorrentPreservesPeerId();
   void testChangeOptionLibtorrentSelectFile();
+  void testUnpauseLibtorrentMagnetAfterMetadataSelectFile();
 #endif // ENABLE_BITTORRENT
   void testGatherProgressCommon();
   void testGatherProgressCommonSeparatesInFlightProgress();
@@ -1347,6 +1349,58 @@ void RpcMethodTest::testChangeOptionLibtorrentSelectFile()
 
   CPPUNIT_ASSERT_EQUAL(0, res.code);
   CPPUNIT_ASSERT_EQUAL(std::string("2"), attrsPtr->selectedFiles);
+  CPPUNIT_ASSERT_EQUAL((size_t)2, attrsPtr->filePriorities.size());
+  CPPUNIT_ASSERT_EQUAL(0, attrsPtr->filePriorities[0]);
+  CPPUNIT_ASSERT_EQUAL(4, attrsPtr->filePriorities[1]);
+}
+
+void RpcMethodTest::testUnpauseLibtorrentMagnetAfterMetadataSelectFile()
+{
+  auto dctx = std::make_shared<DownloadContext>(1_k, 2_k, "torrent");
+  std::vector<std::shared_ptr<FileEntry>> entries;
+  entries.push_back(std::make_shared<FileEntry>("file1", 1_k, 0));
+  entries.push_back(std::make_shared<FileEntry>("file2", 1_k, 1_k));
+  dctx->setFileEntries(entries.begin(), entries.end());
+  auto attrs = make_unique<LibtorrentAttribute>(
+      LibtorrentAttribute::SourceType::MAGNET,
+      "magnet:?xt=urn:btih:0101010101010101010101010101010101010101", "",
+      std::vector<std::string>{},
+      "test_outdir/0101010101010101010101010101010101010101.aria2");
+  auto attrsPtr = attrs.get();
+  attrsPtr->pauseAfterMetadata = true;
+  attrsPtr->metadataPauseApplied = true;
+  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
+
+  auto group =
+      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
+  group->setDownloadContext(dctx);
+  group->setPauseRequested(true);
+  e_->getRequestGroupMan()->addReservedGroup(group);
+
+  {
+    ChangeOptionRpcMethod m;
+    auto req = createReq(ChangeOptionRpcMethod::getMethodName());
+    req.params->append(GroupId::toHex(group->getGID()));
+    auto opt = Dict::g();
+    opt->put(PREF_SELECT_FILE->k, "2");
+    req.params->append(std::move(opt));
+    auto res = m.execute(std::move(req), e_.get());
+    CPPUNIT_ASSERT_EQUAL(0, res.code);
+  }
+
+  CPPUNIT_ASSERT_EQUAL(std::string("2"), attrsPtr->selectedFiles);
+  CPPUNIT_ASSERT_EQUAL((size_t)2, attrsPtr->filePriorities.size());
+  CPPUNIT_ASSERT_EQUAL(0, attrsPtr->filePriorities[0]);
+  CPPUNIT_ASSERT_EQUAL(4, attrsPtr->filePriorities[1]);
+
+  UnpauseRpcMethod m;
+  auto req = createReq(UnpauseRpcMethod::getMethodName());
+  req.params->append(GroupId::toHex(group->getGID()));
+  auto res = m.execute(std::move(req), e_.get());
+
+  CPPUNIT_ASSERT_EQUAL(0, res.code);
+  CPPUNIT_ASSERT(!group->isPauseRequested());
+  CPPUNIT_ASSERT(attrsPtr->metadataPauseApplied);
   CPPUNIT_ASSERT_EQUAL((size_t)2, attrsPtr->filePriorities.size());
   CPPUNIT_ASSERT_EQUAL(0, attrsPtr->filePriorities[0]);
   CPPUNIT_ASSERT_EQUAL(4, attrsPtr->filePriorities[1]);
