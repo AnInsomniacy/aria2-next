@@ -39,6 +39,7 @@ class RequestGroupTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCreateDownloadResult);
   CPPUNIT_TEST(testLoadAndOpenFileRestartFromScratch);
   CPPUNIT_TEST(testCompletedLengthReportsVerifiedStorageOnly);
+  CPPUNIT_TEST(testCurlTlsTrustOptions);
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForHttp);
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForFtpFamily);
 #ifdef ENABLE_BITTORRENT
@@ -72,6 +73,7 @@ public:
   void testCreateDownloadResult();
   void testLoadAndOpenFileRestartFromScratch();
   void testCompletedLengthReportsVerifiedStorageOnly();
+  void testCurlTlsTrustOptions();
   void testInitiateConnectionFactoryUsesCurlForHttp();
   void testInitiateConnectionFactoryUsesCurlForFtpFamily();
 #ifdef ENABLE_BITTORRENT
@@ -258,6 +260,16 @@ void RequestGroupTest::testCompletedLengthReportsVerifiedStorageOnly()
   CPPUNIT_ASSERT_EQUAL((int64_t)250_m, group.getCompletedLength());
   CPPUNIT_ASSERT_EQUAL((int64_t)1_m,
                        group.getPieceStorage()->getInFlightCompletedLength());
+}
+
+void RequestGroupTest::testCurlTlsTrustOptions()
+{
+  const auto options = CurlDownloadCommand::platformSslTrustOptions();
+#if defined(_WIN32) && defined(CURLSSLOPT_NATIVE_CA)
+  CPPUNIT_ASSERT(options & CURLSSLOPT_NATIVE_CA);
+#else  // !defined(_WIN32) || !defined(CURLSSLOPT_NATIVE_CA)
+  CPPUNIT_ASSERT_EQUAL(0L, options);
+#endif // !defined(_WIN32) || !defined(CURLSSLOPT_NATIVE_CA)
 }
 
 void RequestGroupTest::testInitiateConnectionFactoryUsesCurlForHttp()

@@ -32,6 +32,8 @@ public:
                       RequestGroup* requestGroup, DownloadEngine* e);
   ~CurlDownloadCommand() CXX11_OVERRIDE;
 
+  static long platformSslTrustOptions();
+
 private:
   bool execute() CXX11_OVERRIDE;
 

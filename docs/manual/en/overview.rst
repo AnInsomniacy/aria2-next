@@ -150,10 +150,12 @@ preset.
 The CMake configure step checks the maintained dependency set and fails with a
 clear error if a required dependency is missing.
 
-Since 1.1.0, aria2 checks the certificate of HTTPS servers by default. OpenSSL
-builds use system CA loading first. If system lookup fails, aria2 uses a
-detected CA bundle path as the backend fallback. Set
-``-DARIA2_CA_BUNDLE=/path/to/ca-bundle`` to choose that fallback explicitly.
+Since 1.1.0, aria2 checks the certificate of HTTPS servers by default. Official
+release builds use the platform trust source selected by their libcurl build:
+Windows uses the native certificate store, macOS uses Apple SecTrust, Linux uses
+the configured system CA bundle path, and Android shells may need an explicit
+``--ca-certificate`` path. Set ``-DARIA2_CA_BUNDLE=/path/to/ca-bundle`` to
+choose the Linux-style bundle fallback explicitly for custom builds.
 
 By default, the bash completion file named ``aria2-next`` is installed to the
 default documentation directory. To change that directory, set

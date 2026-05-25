@@ -9,7 +9,7 @@ Example use from an Android shell environment:
 ```sh
 chmod 755 ./aria2-next
 ./aria2-next --version
-./aria2-next https://example.com/file.iso
+./aria2-next http://127.0.0.1:18080/file.iso
 ```
 
 Android certificate paths differ across shells and devices. Pass `--ca-certificate` explicitly when the shell environment does not expose usable defaults.

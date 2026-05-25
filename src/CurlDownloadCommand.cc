@@ -85,6 +85,15 @@ CurlDownloadCommand::~CurlDownloadCommand()
   }
 }
 
+long CurlDownloadCommand::platformSslTrustOptions()
+{
+#if defined(_WIN32) && defined(CURLSSLOPT_NATIVE_CA)
+  return CURLSSLOPT_NATIVE_CA;
+#else  // !defined(_WIN32) || !defined(CURLSSLOPT_NATIVE_CA)
+  return 0L;
+#endif // !defined(_WIN32) || !defined(CURLSSLOPT_NATIVE_CA)
+}
+
 bool CurlDownloadCommand::execute()
 {
   return AbstractCommand::execute();
@@ -247,6 +256,10 @@ void CurlDownloadCommand::applyRequestOptions()
     const auto verify = option->getAsBool(PREF_CHECK_CERTIFICATE) ? 1L : 0L;
     curl_easy_setopt(easy_, CURLOPT_SSL_VERIFYPEER, verify);
     curl_easy_setopt(easy_, CURLOPT_SSL_VERIFYHOST, verify ? 2L : 0L);
+    const auto sslOptions = platformSslTrustOptions();
+    if (sslOptions != 0L) {
+      curl_easy_setopt(easy_, CURLOPT_SSL_OPTIONS, sslOptions);
+    }
     if (!option->blank(PREF_CA_CERTIFICATE)) {
       curl_easy_setopt(easy_, CURLOPT_CAINFO,
                        option->get(PREF_CA_CERTIFICATE).c_str());

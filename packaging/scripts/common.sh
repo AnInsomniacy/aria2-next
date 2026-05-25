@@ -134,7 +134,33 @@ build_curl() {
     exit 1
   fi
 
+  curl_target_system=${CMAKE_SYSTEM_NAME:-}
+  for arg in "$@"; do
+    case "$arg" in
+      -DCMAKE_SYSTEM_NAME=*)
+        curl_target_system=${arg#-DCMAKE_SYSTEM_NAME=}
+        ;;
+    esac
+  done
+  if [ -z "$curl_target_system" ]; then
+    curl_target_system=$(uname -s)
+  fi
+
+  curl_ca_options=
+  case "$curl_target_system" in
+    Windows)
+      curl_ca_options="-DCURL_CA_NATIVE=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none"
+      ;;
+    Darwin)
+      curl_ca_options="-DUSE_APPLE_SECTRUST=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none"
+      ;;
+    Android)
+      curl_ca_options="-DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none"
+      ;;
+  esac
+
   tar xf "$CURL_ARCHIVE"
+  # shellcheck disable=SC2086
   cmake -S "curl-$CURL_VERSION" \
     -B build/curl-release -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
@@ -151,6 +177,7 @@ build_curl() {
     -DBUILD_MISC_DOCS=OFF \
     -DCURL_USE_PKGCONFIG=OFF \
     -DCURL_USE_OPENSSL=ON \
+    -DENABLE_THREADED_RESOLVER=ON \
     -DOPENSSL_USE_STATIC_LIBS=ON \
     -DOPENSSL_ROOT_DIR="$PREFIX" \
     -DOPENSSL_INCLUDE_DIR="$PREFIX/include" \
@@ -191,6 +218,7 @@ build_curl() {
     -DCURL_DISABLE_WEBSOCKETS=ON \
     -DCMAKE_C_FLAGS="${RELEASE_CFLAGS:-}" \
     -DCMAKE_EXE_LINKER_FLAGS="${RELEASE_LDFLAGS:-}" \
+    $curl_ca_options \
     "$@"
   cmake --build build/curl-release -j"${ARIA2_BUILD_JOBS:-$(getconf _NPROCESSORS_ONLN)}"
   aria2_cmake_install build/curl-release
