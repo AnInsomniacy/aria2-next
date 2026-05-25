@@ -40,6 +40,7 @@ class RequestGroupTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testLoadAndOpenFileRestartFromScratch);
   CPPUNIT_TEST(testCompletedLengthReportsVerifiedStorageOnly);
   CPPUNIT_TEST(testCurlTlsTrustOptions);
+  CPPUNIT_TEST(testCurlExplicitEmptyProxyDisablesEnvironmentProxy);
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForHttp);
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForFtpFamily);
 #ifdef ENABLE_BITTORRENT
@@ -74,6 +75,7 @@ public:
   void testLoadAndOpenFileRestartFromScratch();
   void testCompletedLengthReportsVerifiedStorageOnly();
   void testCurlTlsTrustOptions();
+  void testCurlExplicitEmptyProxyDisablesEnvironmentProxy();
   void testInitiateConnectionFactoryUsesCurlForHttp();
   void testInitiateConnectionFactoryUsesCurlForFtpFamily();
 #ifdef ENABLE_BITTORRENT
@@ -270,6 +272,25 @@ void RequestGroupTest::testCurlTlsTrustOptions()
 #else  // !defined(_WIN32) || !defined(CURLSSLOPT_NATIVE_CA)
   CPPUNIT_ASSERT_EQUAL(0L, options);
 #endif // !defined(_WIN32) || !defined(CURLSSLOPT_NATIVE_CA)
+}
+
+void RequestGroupTest::testCurlExplicitEmptyProxyDisablesEnvironmentProxy()
+{
+  auto parent = std::make_shared<Option>();
+  parent->put(PREF_ALL_PROXY, "http://proxy.example:8080/");
+
+  Option op;
+  op.setParent(parent);
+  CPPUNIT_ASSERT(!CurlDownloadCommand::shouldDisableCurlProxy("https", &op));
+
+  op.put(PREF_ALL_PROXY, "");
+  CPPUNIT_ASSERT(CurlDownloadCommand::shouldDisableCurlProxy("https", &op));
+  CPPUNIT_ASSERT(CurlDownloadCommand::shouldDisableCurlProxy("http", &op));
+
+  op.put(PREF_ALL_PROXY, "http://proxy.example:8080/");
+  op.put(PREF_HTTPS_PROXY, "");
+  CPPUNIT_ASSERT(CurlDownloadCommand::shouldDisableCurlProxy("https", &op));
+  CPPUNIT_ASSERT(!CurlDownloadCommand::shouldDisableCurlProxy("http", &op));
 }
 
 void RequestGroupTest::testInitiateConnectionFactoryUsesCurlForHttp()

@@ -94,6 +94,33 @@ long CurlDownloadCommand::platformSslTrustOptions()
 #endif // !defined(_WIN32) || !defined(CURLSSLOPT_NATIVE_CA)
 }
 
+bool CurlDownloadCommand::shouldDisableCurlProxy(const std::string& protocol,
+                                                 const Option* option)
+{
+  if (protocol == "http") {
+    return (option->definedLocal(PREF_HTTP_PROXY) &&
+            option->blank(PREF_HTTP_PROXY)) ||
+           (option->definedLocal(PREF_ALL_PROXY) &&
+            option->blank(PREF_ALL_PROXY));
+  }
+
+  if (protocol == "https") {
+    return (option->definedLocal(PREF_HTTPS_PROXY) &&
+            option->blank(PREF_HTTPS_PROXY)) ||
+           (option->definedLocal(PREF_ALL_PROXY) &&
+            option->blank(PREF_ALL_PROXY));
+  }
+
+  if (protocol == "ftp" || protocol == "sftp") {
+    return (option->definedLocal(PREF_FTP_PROXY) &&
+            option->blank(PREF_FTP_PROXY)) ||
+           (option->definedLocal(PREF_ALL_PROXY) &&
+            option->blank(PREF_ALL_PROXY));
+  }
+
+  return false;
+}
+
 bool CurlDownloadCommand::execute()
 {
   return AbstractCommand::execute();
@@ -244,8 +271,11 @@ void CurlDownloadCommand::applyRequestOptions()
   }
 
   proxyUri_ = getProxyUri(protocol, option.get());
-  if (!proxyUri_.empty() &&
-      !inNoProxy(getRequest(), option->get(PREF_NO_PROXY))) {
+  if (shouldDisableCurlProxy(protocol, option.get()) ||
+      inNoProxy(getRequest(), option->get(PREF_NO_PROXY))) {
+    curl_easy_setopt(easy_, CURLOPT_PROXY, "");
+  }
+  else if (!proxyUri_.empty()) {
     curl_easy_setopt(easy_, CURLOPT_PROXY, proxyUri_.c_str());
     if (option->get(PREF_PROXY_METHOD) == V_TUNNEL) {
       curl_easy_setopt(easy_, CURLOPT_HTTPPROXYTUNNEL, 1L);
