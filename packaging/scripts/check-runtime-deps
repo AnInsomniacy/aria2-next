@@ -45,7 +45,7 @@ check_windows() {
       api-ms-win-crt-private-*.dll)
         fail_unexpected "$dep"
         ;;
-      api-ms-win-*.dll|advapi32.dll|bcrypt.dll|cfgmgr32.dll|crypt32.dll|dnsapi.dll|gdi32.dll|iphlpapi.dll|kernel32.dll|msvcrt.dll|normaliz.dll|ntdll.dll|ole32.dll|oleaut32.dll|psapi.dll|rpcrt4.dll|secur32.dll|shell32.dll|shlwapi.dll|ucrtbase.dll|user32.dll|version.dll|winmm.dll|ws2_32.dll|wsock32.dll)
+      api-ms-win-*.dll|advapi32.dll|bcrypt.dll|cfgmgr32.dll|crypt32.dll|dnsapi.dll|gdi32.dll|iphlpapi.dll|kernel32.dll|msvcrt.dll|mswsock.dll|normaliz.dll|ntdll.dll|ole32.dll|oleaut32.dll|psapi.dll|rpcrt4.dll|secur32.dll|shell32.dll|shlwapi.dll|ucrtbase.dll|user32.dll|version.dll|winmm.dll|ws2_32.dll|wsock32.dll)
         ;;
       *)
         fail_unexpected "$dep"
