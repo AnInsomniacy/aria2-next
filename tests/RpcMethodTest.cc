@@ -1136,8 +1136,9 @@ void RpcMethodTest::testGatherProgressLibtorrentMetadataDownloading()
   auto dctx = std::make_shared<DownloadContext>(0, 0, "magnet");
   auto attrs = make_unique<LibtorrentAttribute>(
       LibtorrentAttribute::SourceType::MAGNET,
-      "magnet:?xt=urn:btih:0101010101010101010101010101010101010101", "",
-      std::vector<std::string>{},
+      "magnet:?xt=urn:btih:0101010101010101010101010101010101010101"
+      "&dn=Display%20Name",
+      "", std::vector<std::string>{},
       "test_outdir/0101010101010101010101010101010101010101.aria2");
   attrs->status.hasStatus = true;
   attrs->status.hasMetadata = false;
@@ -1157,6 +1158,9 @@ void RpcMethodTest::testGatherProgressLibtorrentMetadataDownloading()
   CPPUNIT_ASSERT_EQUAL(std::string("downloading"),
                        downcast<String>(metadataDict->get("state"))->s());
   CPPUNIT_ASSERT(!downcast<Bool>(metadataDict->get("hasMetadata"))->val());
+  CPPUNIT_ASSERT(metadataDict->containsKey("displayName"));
+  CPPUNIT_ASSERT_EQUAL(std::string("Display Name"),
+                       downcast<String>(metadataDict->get("displayName"))->s());
 }
 
 void RpcMethodTest::testGatherProgressLibtorrentMetadataReady()
@@ -1188,6 +1192,7 @@ void RpcMethodTest::testGatherProgressLibtorrentMetadataReady()
   CPPUNIT_ASSERT_EQUAL(std::string("ready"),
                        downcast<String>(metadataDict->get("state"))->s());
   CPPUNIT_ASSERT(downcast<Bool>(metadataDict->get("hasMetadata"))->val());
+  CPPUNIT_ASSERT(!metadataDict->containsKey("displayName"));
 }
 
 void RpcMethodTest::testGatherProgressLibtorrentUsesResumeFallbackWhileChecking()

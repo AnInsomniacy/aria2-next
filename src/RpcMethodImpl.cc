@@ -79,6 +79,7 @@
 #  include <map>
 #endif // ENABLE_BITTORRENT
 #include "CheckIntegrityEntry.h"
+#include "magnet.h"
 
 namespace aria2 {
 
@@ -141,6 +142,7 @@ const char KEY_INFO[] = "info";
 const char KEY_METADATA[] = "metadata";
 const char KEY_STATE[] = "state";
 const char KEY_HAS_METADATA[] = "hasMetadata";
+const char KEY_DISPLAY_NAME[] = "displayName";
 const char KEY_NAME[] = "name";
 const char KEY_ANNOUNCE_LIST[] = "announceList";
 const char KEY_COMMENT[] = "comment";
@@ -732,7 +734,8 @@ const char* getLibtorrentMetadataStateName(
 }
 
 std::unique_ptr<Dict>
-createLibtorrentMetadataEntry(const LibtorrentAttribute::Status* status)
+createLibtorrentMetadataEntry(const LibtorrentAttribute* attrs,
+                              const LibtorrentAttribute::Status* status)
 {
   auto metadataDict = Dict::g();
   metadataDict->put(KEY_STATE,
@@ -740,6 +743,18 @@ createLibtorrentMetadataEntry(const LibtorrentAttribute::Status* status)
                                                    status->hasMetadata));
   metadataDict->put(KEY_HAS_METADATA, status->hasMetadata ? Bool::gTrue()
                                                           : Bool::gFalse());
+  if (!status->hasMetadata &&
+      attrs->sourceType == LibtorrentAttribute::SourceType::MAGNET) {
+    auto magnetParams = magnet::parse(attrs->sourceUri);
+    auto displayNames = magnetParams ? downcast<List>(magnetParams->get("dn"))
+                                     : nullptr;
+    auto displayName = displayNames && displayNames->size() > 0
+                           ? downcast<String>(displayNames->get(0))
+                           : nullptr;
+    if (displayName && !displayName->s().empty()) {
+      metadataDict->put(KEY_DISPLAY_NAME, displayName->s());
+    }
+  }
   return metadataDict;
 }
 
@@ -1047,7 +1062,8 @@ void gatherProgressCommon(Dict* entryDict,
         infoDict->put(KEY_NAME, ltStatus->name);
         btDict->put(KEY_INFO, std::move(infoDict));
       }
-      btDict->put(KEY_METADATA, createLibtorrentMetadataEntry(ltStatus));
+      btDict->put(KEY_METADATA,
+                  createLibtorrentMetadataEntry(libtorrentAttrs, ltStatus));
       if (!libtorrentAttrs->trackerUris.empty()) {
         btDict->put(KEY_ANNOUNCE_LIST,
                     createLibtorrentAnnounceList(
