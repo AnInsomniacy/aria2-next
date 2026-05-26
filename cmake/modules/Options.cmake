@@ -20,6 +20,7 @@ option(ARIA2_WITH_JEMALLOC "Use jemalloc where available" OFF)
 set(ARIA2_CA_BUNDLE "" CACHE FILEPATH "CA bundle fallback path for OpenSSL builds")
 set(ARIA2_DEFAULT_DISK_CACHE "" CACHE STRING "Default disk cache size")
 set(ARIA2_BASH_COMPLETION_DIR "" CACHE PATH "Bash completion installation directory")
+set(ARIA2_WINDOWS_TARGET_VERSION "0x0A00" CACHE STRING "Windows API target version")
 
 if(ARIA2_ENABLE_STATIC)
   set(PKG_CONFIG_ARGN --static)

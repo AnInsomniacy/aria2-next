@@ -50,12 +50,18 @@
 
 #ifdef __MINGW32__
 #  define WIN32_LEAN_AND_MEAN
+#  ifndef ARIA2_WINDOWS_TARGET_VERSION
+#    define ARIA2_WINDOWS_TARGET_VERSION 0x0A00
+#  endif // ARIA2_WINDOWS_TARGET_VERSION
 #  ifndef WINVER
-#    define WINVER 0x501
+#    define WINVER ARIA2_WINDOWS_TARGET_VERSION
 #  endif // !WINVER
 #  ifndef _WIN32_WINNT
-#    define _WIN32_WINNT 0x501
+#    define _WIN32_WINNT ARIA2_WINDOWS_TARGET_VERSION
 #  endif // _WIN32_WINNT
+#  if _WIN32_WINNT < 0x0601
+#    error "_WIN32_WINNT must be at least 0x0601 for Boost.Asio Windows ABI consistency"
+#  endif // _WIN32_WINNT < 0x0601
 #  ifdef HAVE_WINSOCK2_H
 #    ifndef FD_SETSIZE
 #      define FD_SETSIZE 32768

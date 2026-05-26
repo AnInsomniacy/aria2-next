@@ -88,6 +88,10 @@ if(HAVE_LIBTORRENT_RASTERBAR)
   target_link_libraries(aria2_core PUBLIC Boost::headers)
 endif()
 if(WIN32)
+  target_compile_definitions(aria2_core PUBLIC
+    ARIA2_WINDOWS_TARGET_VERSION=${ARIA2_WINDOWS_TARGET_VERSION}
+    WINVER=${ARIA2_WINDOWS_TARGET_VERSION}
+    _WIN32_WINNT=${ARIA2_WINDOWS_TARGET_VERSION})
   target_link_libraries(aria2_core PUBLIC ws2_32 wsock32 gdi32 winmm iphlpapi psapi crypt32 secur32 advapi32)
 endif()
 if(CMAKE_SYSTEM_NAME MATCHES "SunOS")
