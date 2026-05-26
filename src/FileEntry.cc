@@ -123,6 +123,33 @@ OutputIterator enumerateInFlightHosts(InputIterator first, InputIterator last,
   }
   return out;
 }
+
+bool exceedsDynamicConnectionLimit(
+    const std::shared_ptr<Request>& request,
+    const FileEntry::InFlightRequestSet& inFlightRequests,
+    const std::function<std::string(const std::shared_ptr<Request>&)>&
+        connectionKey,
+    const std::function<int(const std::shared_ptr<Request>&)>& connectionLimit)
+{
+  if (!connectionKey || !connectionLimit) {
+    return false;
+  }
+  auto limit = connectionLimit(request);
+  if (limit <= 0) {
+    return true;
+  }
+  auto key = connectionKey(request);
+  auto used = 0;
+  for (const auto& inFlight : inFlightRequests) {
+    if (inFlight == request) {
+      continue;
+    }
+    if (connectionKey(inFlight) == key) {
+      ++used;
+    }
+  }
+  return used >= limit;
+}
 } // namespace
 
 std::shared_ptr<Request> FileEntry::getRequestWithInFlightHosts(
@@ -181,7 +208,10 @@ std::shared_ptr<Request> FileEntry::getRequestWithInFlightHosts(
 std::shared_ptr<Request> FileEntry::getRequest(
     URISelector* selector, bool uriReuse,
     const std::vector<std::pair<size_t, std::string>>& usedHosts,
-    const std::string& referer, const std::string& method)
+    const std::string& referer, const std::string& method,
+    const std::function<std::string(const std::shared_ptr<Request>&)>&
+        connectionKey,
+    const std::function<int(const std::shared_ptr<Request>&)>& connectionLimit)
 {
   std::shared_ptr<Request> req;
   if (requestPool_.empty()) {
@@ -189,8 +219,16 @@ std::shared_ptr<Request> FileEntry::getRequest(
     enumerateInFlightHosts(std::begin(inFlightRequests_),
                            std::end(inFlightRequests_),
                            std::back_inserter(inFlightHosts));
-    return getRequestWithInFlightHosts(selector, uriReuse, usedHosts, referer,
-                                       method, inFlightHosts);
+    while ((req = getRequestWithInFlightHosts(selector, uriReuse, usedHosts,
+                                             referer, method, inFlightHosts))) {
+      if (!exceedsDynamicConnectionLimit(req, inFlightRequests_, connectionKey,
+                                         connectionLimit)) {
+        return req;
+      }
+      poolRequest(req);
+      inFlightHosts.push_back(req->getHost());
+    }
+    return nullptr;
   }
 
   // Skip Request object if it is still
@@ -199,7 +237,9 @@ std::shared_ptr<Request> FileEntry::getRequest(
   // should inspect returned object's getWakeTime().
   auto i = std::begin(requestPool_);
   for (; i != std::end(requestPool_); ++i) {
-    if ((*i)->getWakeTime() <= global::wallclock()) {
+    if ((*i)->getWakeTime() <= global::wallclock() &&
+        !exceedsDynamicConnectionLimit(*i, inFlightRequests_, connectionKey,
+                                       connectionLimit)) {
       break;
     }
   }
@@ -212,9 +252,20 @@ std::shared_ptr<Request> FileEntry::getRequest(
     enumerateInFlightHosts(std::begin(requestPool_), std::end(requestPool_),
                            std::back_inserter(inFlightHosts));
 
-    req = getRequestWithInFlightHosts(selector, uriReuse, usedHosts, referer,
-                                      method, inFlightHosts);
-    if (!req || req->getUri() == (*std::begin(requestPool_))->getUri()) {
+    while ((req = getRequestWithInFlightHosts(selector, uriReuse, usedHosts,
+                                             referer, method, inFlightHosts))) {
+      if (!exceedsDynamicConnectionLimit(req, inFlightRequests_, connectionKey,
+                                         connectionLimit)) {
+        break;
+      }
+      poolRequest(req);
+      inFlightHosts.push_back(req->getHost());
+      req.reset();
+    }
+    if (!req || (req->getUri() == (*std::begin(requestPool_))->getUri() &&
+                 !exceedsDynamicConnectionLimit(
+                     *std::begin(requestPool_), inFlightRequests_,
+                     connectionKey, connectionLimit))) {
       i = std::begin(requestPool_);
     }
   }

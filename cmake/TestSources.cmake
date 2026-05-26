@@ -23,6 +23,7 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/UriListParserTest.cc
   tests/HttpHeaderProcessorTest.cc
   tests/HttpRangeValidatorTest.cc
+  tests/HttpAdaptiveWindowTest.cc
   tests/RequestTest.cc
   tests/RequestGroupManTest.cc
   tests/OptionHandlerTest.cc

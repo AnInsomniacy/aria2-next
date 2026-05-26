@@ -420,12 +420,12 @@ void RequestGroupTest::testHttpAdaptiveCommandLimit()
   commands.clear();
   group->noteHttpSegmentSuccess();
   group->createNextCommand(commands, &engine);
-  CPPUNIT_ASSERT_EQUAL((size_t)5, commands.size());
+  CPPUNIT_ASSERT_EQUAL((size_t)8, commands.size());
 
   commands.clear();
   group->noteHttpSegmentFailure();
   group->createNextCommand(commands, &engine);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, commands.size());
+  CPPUNIT_ASSERT_EQUAL((size_t)4, commands.size());
 }
 
 void RequestGroupTest::testHttpRangeDowngradeDisablesRangedConcurrency()

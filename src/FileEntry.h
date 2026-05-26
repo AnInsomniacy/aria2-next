@@ -43,6 +43,7 @@
 #include <ostream>
 #include <set>
 #include <memory>
+#include <functional>
 
 #include "File.h"
 #include "Request.h"
@@ -182,7 +183,11 @@ public:
   getRequest(URISelector* selector, bool uriReuse,
              const std::vector<std::pair<size_t, std::string>>& usedHosts,
              const std::string& referer = A2STR::NIL,
-             const std::string& method = Request::METHOD_GET);
+             const std::string& method = Request::METHOD_GET,
+             const std::function<std::string(const std::shared_ptr<Request>&)>&
+                 connectionKey = {},
+             const std::function<int(const std::shared_ptr<Request>&)>&
+                 connectionLimit = {});
 
   // Finds pooled Request object which is faster than passed one,
   // comparing their PeerStat objects. If such Request is found, it is

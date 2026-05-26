@@ -102,7 +102,15 @@ bool CreateRequestCommand::executeInternal()
                                   getOption()->getAsBool(PREF_USE_HEAD)) ||
                                          getOption()->getAsBool(PREF_DRY_RUN)
                                      ? Request::METHOD_HEAD
-                                     : Request::METHOD_GET));
+                                     : Request::METHOD_GET,
+                                 [this](const std::shared_ptr<Request>& req) {
+                                   return getRequestGroup()
+                                       ->getHttpAdaptiveOriginKey(req);
+                                 },
+                                 [this](const std::shared_ptr<Request>& req) {
+                                   return getRequestGroup()
+                                       ->getHttpAdaptiveOriginLimit(req);
+                                 }));
   if (!getRequest()) {
     if (getSegmentMan()) {
       getSegmentMan()->ignoreSegmentFor(getFileEntry());

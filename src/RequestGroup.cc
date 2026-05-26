@@ -69,6 +69,7 @@
 #include "LibtorrentAttribute.h"
 #include "LibtorrentProgressInfoFile.h"
 #include "Request.h"
+#include "AbstractCommand.h"
 #include "FileAllocationIterator.h"
 #include "fmt.h"
 #include "A2STR.h"
@@ -129,7 +130,6 @@ RequestGroup::RequestGroup(const std::shared_ptr<GroupId>& gid,
       maxDownloadSpeedLimit_(option->getAsInt(PREF_MAX_DOWNLOAD_LIMIT)),
       maxUploadSpeedLimit_(option->getAsInt(PREF_MAX_UPLOAD_LIMIT)),
       resumeFailureCount_(0),
-      httpAdaptiveCommandLimit_(std::min(option->getAsInt(PREF_SPLIT), 4)),
       httpAdaptiveCommandLimitEnabled_(false),
       httpRangeEnabled_(true),
       httpRangeGeneration_(0),
@@ -768,22 +768,50 @@ void RequestGroup::createNextCommand(
   }
 }
 
-void RequestGroup::noteHttpSegmentSuccess()
+void RequestGroup::noteHttpSegmentSuccess(const std::shared_ptr<Request>& request)
 {
   if (!httpAdaptiveCommandLimitEnabled_) {
     return;
   }
-  if (httpAdaptiveCommandLimit_ < numConcurrentCommand_) {
-    ++httpAdaptiveCommandLimit_;
+  httpAdaptiveWindow_.onSuccess(numConcurrentCommand_);
+  if (request && isHttpFamilyUri(request->getUri())) {
+    httpAdaptiveOriginWindows_[getHttpAdaptiveOriginKey(request)].onSuccess(
+        numConcurrentCommand_);
   }
 }
 
-void RequestGroup::noteHttpSegmentFailure()
+void RequestGroup::noteHttpSegmentFailure(const std::shared_ptr<Request>& request)
 {
   if (!httpAdaptiveCommandLimitEnabled_) {
     return;
   }
-  httpAdaptiveCommandLimit_ = std::max(1, httpAdaptiveCommandLimit_ / 2);
+  httpAdaptiveWindow_.onTransientFailure();
+  if (request && isHttpFamilyUri(request->getUri())) {
+    httpAdaptiveOriginWindows_[getHttpAdaptiveOriginKey(request)]
+        .onTransientFailure();
+  }
+}
+
+std::string RequestGroup::getHttpAdaptiveOriginKey(
+    const std::shared_ptr<Request>& request) const
+{
+  if (!request) {
+    return A2STR::NIL;
+  }
+  return fmt("%s://%s:%u|proxy=%s", request->getProtocol().c_str(),
+             request->getHost().c_str(), request->getPort(),
+             resolveProxyUri(request, option_.get()).c_str());
+}
+
+int RequestGroup::getHttpAdaptiveOriginLimit(
+    const std::shared_ptr<Request>& request)
+{
+  if (!httpAdaptiveCommandLimitEnabled_ || !request ||
+      !httpRangeEnabled_ || !isHttpFamilyUri(request->getUri())) {
+    return numConcurrentCommand_;
+  }
+  auto& window = httpAdaptiveOriginWindows_[getHttpAdaptiveOriginKey(request)];
+  return window.limit(numConcurrentCommand_);
 }
 
 int RequestGroup::getEffectiveStreamCommandLimit() const
@@ -794,7 +822,7 @@ int RequestGroup::getEffectiveStreamCommandLimit() const
   if (!httpAdaptiveCommandLimitEnabled_) {
     return numConcurrentCommand_;
   }
-  return std::min(numConcurrentCommand_, httpAdaptiveCommandLimit_);
+  return httpAdaptiveWindow_.limit(numConcurrentCommand_);
 }
 
 void RequestGroup::disableHttpRangeForDownload()
@@ -805,7 +833,10 @@ void RequestGroup::disableHttpRangeForDownload()
   httpRangeEnabled_ = false;
   ++httpRangeGeneration_;
   httpRangeFallbackRetryIssued_ = false;
-  httpAdaptiveCommandLimit_ = 1;
+  httpAdaptiveWindow_.onRangeUnsupported();
+  for (auto& entry : httpAdaptiveOriginWindows_) {
+    entry.second.onRangeUnsupported();
+  }
   if (segmentMan_) {
     segmentMan_->cancelAllSegments();
     segmentMan_->eraseSegmentWrittenLengthMemo();
@@ -830,7 +861,10 @@ bool RequestGroup::claimStreamRetrySlot(uint64_t commandHttpRangeGeneration)
 void RequestGroup::setNumConcurrentCommand(int num)
 {
   numConcurrentCommand_ = num;
-  httpAdaptiveCommandLimit_ = std::min(num, 4);
+  httpAdaptiveWindow_.reset(num);
+  for (auto& entry : httpAdaptiveOriginWindows_) {
+    entry.second.reset(num);
+  }
 }
 
 std::string RequestGroup::getFirstFilePath() const

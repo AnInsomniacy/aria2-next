@@ -16,6 +16,7 @@ class FileEntryTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGetRequest_withoutUriReuse);
   CPPUNIT_TEST(testGetRequest_withUniqueProtocol);
   CPPUNIT_TEST(testGetRequest_withReferer);
+  CPPUNIT_TEST(testGetRequest_withDynamicConnectionLimit);
   CPPUNIT_TEST(testGetRequest_resetsTryCountAfterWake);
   CPPUNIT_TEST(testReuseUri);
   CPPUNIT_TEST(testAddUri);
@@ -34,6 +35,7 @@ public:
   void testGetRequest_withoutUriReuse();
   void testGetRequest_withUniqueProtocol();
   void testGetRequest_withReferer();
+  void testGetRequest_withDynamicConnectionLimit();
   void testGetRequest_resetsTryCountAfterWake();
   void testReuseUri();
   void testAddUri();
@@ -184,6 +186,32 @@ void FileEntryTest::testGetRequest_withReferer()
   // URI is used as referer if "*" is given.
   req = fileEntry->getRequest(&selector, true, usedHosts, "*");
   CPPUNIT_ASSERT_EQUAL(req->getUri(), req->getReferer());
+}
+
+void FileEntryTest::testGetRequest_withDynamicConnectionLimit()
+{
+  auto fileEntry = std::make_shared<FileEntry>();
+  fileEntry->setUris(std::vector<std::string>{"http://localhost/one.bin",
+                                              "http://localhost/two.bin",
+                                              "http://mirror/three.bin"});
+  fileEntry->setMaxConnectionPerServer(64);
+  InorderURISelector selector{};
+  std::vector<std::pair<size_t, std::string>> usedHosts;
+
+  auto req = fileEntry->getRequest(&selector, true, usedHosts);
+  CPPUNIT_ASSERT_EQUAL(std::string("localhost"), req->getHost());
+
+  auto limited = fileEntry->getRequest(
+      &selector, true, usedHosts, A2STR::NIL, Request::METHOD_GET,
+      [](const std::shared_ptr<Request>& request) {
+        return request->getProtocol() + "://" + request->getHost();
+      },
+      [](const std::shared_ptr<Request>& request) {
+        return request->getHost() == "localhost" ? 1 : 64;
+      });
+
+  CPPUNIT_ASSERT(limited);
+  CPPUNIT_ASSERT_EQUAL(std::string("mirror"), limited->getHost());
 }
 
 void FileEntryTest::testGetRequest_resetsTryCountAfterWake()
