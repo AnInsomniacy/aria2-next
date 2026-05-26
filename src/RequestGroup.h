@@ -151,6 +151,10 @@ private:
 
   bool httpRangeEnabled_;
 
+  uint64_t httpRangeGeneration_;
+
+  bool httpRangeFallbackRetryIssued_;
+
   HaltReason haltReason_;
 
   error_code::Value lastErrorCode_;
@@ -235,6 +239,10 @@ public:
   bool shouldUseHttpRange() const { return httpRangeEnabled_; }
 
   void disableHttpRangeForDownload();
+
+  uint64_t getHttpRangeGeneration() const { return httpRangeGeneration_; }
+
+  bool claimStreamRetrySlot(uint64_t commandHttpRangeGeneration);
 
   bool downloadFinished() const;
 

@@ -40,6 +40,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <stdint.h>
 
 #include "TimerA2.h"
 
@@ -82,6 +83,8 @@ private:
 
   bool incNumConnection_;
   bool incNumStreamCommand_;
+
+  uint64_t httpRangeGeneration_;
 
   int32_t calculateMinSplitSize() const;
 

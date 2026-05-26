@@ -90,7 +90,8 @@ AbstractCommand::AbstractCommand(
       checkSocketIsReadable_(false),
       checkSocketIsWritable_(false),
       incNumConnection_(incNumConnection),
-      incNumStreamCommand_(incNumStreamCommand)
+      incNumStreamCommand_(incNumStreamCommand),
+      httpRangeGeneration_(requestGroup->getHttpRangeGeneration())
 {
   if (socket_ && socket_->isOpen()) {
     setReadCheckSocket(socket_);
@@ -422,6 +423,22 @@ bool AbstractCommand::prepareForRetry(time_t wait)
 {
   if (getPieceStorage()) {
     getSegmentMan()->cancelSegment(getCuid());
+  }
+  if (incNumStreamCommand_ &&
+      !requestGroup_->claimStreamRetrySlot(httpRangeGeneration_)) {
+    if (req_) {
+      A2_LOG_DEBUG(fmt("CUID#%" PRId64
+                       " - Discarding retry because stream command limit is"
+                       " already converging.",
+                       getCuid()));
+      req_->supportsPersistentConnection(true);
+      req_->setMaxPipelinedRequest(1);
+      fileEntry_->poolRequest(req_);
+      if (getSegmentMan()) {
+        getSegmentMan()->recognizeSegmentFor(fileEntry_);
+      }
+    }
+    return true;
   }
   if (req_) {
     // Reset persistentConnection and maxPipelinedRequest to handle

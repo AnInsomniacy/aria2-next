@@ -64,6 +64,7 @@ class RequestGroupTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForFtpFamily);
   CPPUNIT_TEST(testHttpAdaptiveCommandLimit);
   CPPUNIT_TEST(testHttpRangeDowngradeDisablesRangedConcurrency);
+  CPPUNIT_TEST(testHttpRangeDowngradeRejectsExtraActiveStreamRetries);
   CPPUNIT_TEST(testFtpDoesNotUseHttpAdaptiveCommandLimit);
 #ifdef ENABLE_BITTORRENT
   CPPUNIT_TEST(testCreateInitialCommandUsesLibtorrentRuntime);
@@ -103,6 +104,7 @@ public:
   void testInitiateConnectionFactoryUsesCurlForFtpFamily();
   void testHttpAdaptiveCommandLimit();
   void testHttpRangeDowngradeDisablesRangedConcurrency();
+  void testHttpRangeDowngradeRejectsExtraActiveStreamRetries();
   void testFtpDoesNotUseHttpAdaptiveCommandLimit();
 #ifdef ENABLE_BITTORRENT
   void testCreateInitialCommandUsesLibtorrentRuntime();
@@ -443,6 +445,42 @@ void RequestGroupTest::testHttpRangeDowngradeDisablesRangedConcurrency()
 
   CPPUNIT_ASSERT(!group->shouldUseHttpRange());
   CPPUNIT_ASSERT_EQUAL(1, group->getEffectiveStreamCommandLimit());
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+
+  std::vector<std::unique_ptr<Command>> commands;
+  group->createNextCommand(commands, &engine);
+  CPPUNIT_ASSERT_EQUAL((size_t)1, commands.size());
+}
+
+void RequestGroupTest::testHttpRangeDowngradeRejectsExtraActiveStreamRetries()
+{
+  option_->put(PREF_SPLIT, "64");
+  option_->put(PREF_DIR, A2_TEST_OUT_DIR);
+
+  auto group = createRequestGroup(
+      1_k, 64_k,
+      std::string(A2_TEST_OUT_DIR) +
+          "/aria2_RequestGroupTest_http_range_active_downgrade",
+      "https://example.test/file", option_);
+  group->setNumConcurrentCommand(64);
+  group->initPieceStorage();
+
+  group->increaseStreamCommand();
+  group->increaseStreamCommand();
+  group->increaseStreamCommand();
+  group->disableHttpRangeForDownload();
+  auto oldGeneration = group->getHttpRangeGeneration() - 1;
+  auto currentGeneration = group->getHttpRangeGeneration();
+
+  CPPUNIT_ASSERT(group->claimStreamRetrySlot(oldGeneration));
+  group->decreaseStreamCommand();
+  CPPUNIT_ASSERT(!group->claimStreamRetrySlot(oldGeneration));
+  group->decreaseStreamCommand();
+  CPPUNIT_ASSERT(!group->claimStreamRetrySlot(oldGeneration));
+  group->decreaseStreamCommand();
+  CPPUNIT_ASSERT(group->claimStreamRetrySlot(currentGeneration));
 
   DownloadEngine engine(make_unique<SelectEventPoll>());
   engine.setOption(option_.get());
