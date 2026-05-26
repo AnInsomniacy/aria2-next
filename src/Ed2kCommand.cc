@@ -1255,18 +1255,33 @@ void Ed2kCommand::schedulePendingPeers()
 
 void Ed2kCommand::handlePartData(int64_t begin, const std::string& data)
 {
+  auto attrs = getEd2kAttrs(getDownloadContext());
   ed2k::PeerTransfer transfer(getDownloadContext().get(), getPieceStorage().get(),
                               getSegmentMan().get(), getCuid());
   auto completedSegment = transfer.writePartData(begin, data);
-  removeEd2kPeerCompletedRequestedRange(getEd2kAttrs(getDownloadContext()),
-                                        endpoint_, begin,
+  const auto visibleCompletedLength =
+      std::max(getRequestGroup()->getCompletedLength() +
+                   getRequestGroup()->getInFlightCompletedLength(),
+               attrs->visibleCompletedLength);
+  attrs->visibleCompletedLength =
+      attrs->link.size > 0
+          ? std::min(visibleCompletedLength, attrs->link.size)
+          : visibleCompletedLength;
+  removeEd2kPeerCompletedRequestedRange(attrs, endpoint_, begin,
                                         begin + static_cast<int64_t>(data.size()),
                                         nowSeconds());
   if (!completedSegment) {
     return;
   }
   if (transfer.completeVerifiedSegment(completedSegment)) {
-    clearEd2kPeerRequestedParts(getEd2kAttrs(getDownloadContext()), endpoint_);
+    attrs->visibleCompletedLength =
+        std::max(attrs->visibleCompletedLength,
+                 getRequestGroup()->getCompletedLength());
+    if (attrs->link.size > 0) {
+      attrs->visibleCompletedLength =
+          std::min(attrs->visibleCompletedLength, attrs->link.size);
+    }
+    clearEd2kPeerRequestedParts(attrs, endpoint_);
   }
 }
 

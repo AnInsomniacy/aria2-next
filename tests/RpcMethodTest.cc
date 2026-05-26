@@ -71,6 +71,8 @@ class RpcMethodTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kSearchResultLinkCreatesDownload);
   CPPUNIT_TEST(testGatherStoppedDownload);
   CPPUNIT_TEST(testGatherProgressEd2kStatus);
+  CPPUNIT_TEST(testGatherProgressEd2kVisibleLengthStaysStableWhenPaused);
+  CPPUNIT_TEST(testGatherStoppedDownloadEd2kVisibleLength);
 #ifdef ENABLE_BITTORRENT
   CPPUNIT_TEST(testGatherProgressLibtorrentStatus);
   CPPUNIT_TEST(testGatherProgressLibtorrentMetadataDownloading);
@@ -148,6 +150,8 @@ public:
   void testEd2kSearchResultLinkCreatesDownload();
   void testGatherStoppedDownload();
   void testGatherProgressEd2kStatus();
+  void testGatherProgressEd2kVisibleLengthStaysStableWhenPaused();
+  void testGatherStoppedDownloadEd2kVisibleLength();
 #ifdef ENABLE_BITTORRENT
   void testGatherProgressLibtorrentStatus();
   void testGatherProgressLibtorrentMetadataDownloading();
@@ -1048,10 +1052,13 @@ void RpcMethodTest::testGatherProgressEd2kStatus()
   CPPUNIT_ASSERT_EQUAL(std::string("1024"), getString(ed2kStatus, "length"));
   CPPUNIT_ASSERT(ed2kStatus->containsKey("completedLength"));
   CPPUNIT_ASSERT(ed2kStatus->containsKey("inFlightCompletedLength"));
+  CPPUNIT_ASSERT(ed2kStatus->containsKey("visibleCompletedLength"));
   CPPUNIT_ASSERT_EQUAL(std::string("0"),
                        getString(ed2kStatus, "completedLength"));
   CPPUNIT_ASSERT_EQUAL(std::string("0"),
                        getString(ed2kStatus, "inFlightCompletedLength"));
+  CPPUNIT_ASSERT_EQUAL(std::string("0"),
+                       getString(ed2kStatus, "visibleCompletedLength"));
   CPPUNIT_ASSERT_EQUAL(std::string("1"),
                        getString(ed2kStatus, "partHashCount"));
   CPPUNIT_ASSERT_EQUAL(std::string("2222222222222222222222222222222222222222"),
@@ -1082,6 +1089,62 @@ void RpcMethodTest::testGatherProgressEd2kStatus()
                        getString(ed2kStatus, "waitingUploadPeerCount"));
   CPPUNIT_ASSERT_EQUAL(std::string("0"),
                        getString(ed2kStatus, "peerCreditCount"));
+}
+
+void RpcMethodTest::testGatherProgressEd2kVisibleLengthStaysStableWhenPaused()
+{
+  auto dctx = std::make_shared<DownloadContext>(
+      ed2k::PIECE_LENGTH, 1024, A2_TEST_OUT_DIR "/ed2k-paused.bin");
+  auto attrs = std::make_shared<Ed2kAttribute>();
+  attrs->link.type = ed2k::LinkType::FILE;
+  attrs->link.name = "ed2k-paused.bin";
+  attrs->link.size = 1024;
+  attrs->link.hash = std::string(ed2k::HASH_LENGTH, '\x42');
+  attrs->visibleCompletedLength = 768;
+  dctx->setAttribute(CTX_ATTR_ED2K, attrs);
+  auto group =
+      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
+  group->setDownloadContext(dctx);
+  group->setRequestGroupMan(e_->getRequestGroupMan().get());
+
+  auto entry = Dict::g();
+  gatherProgressCommon(entry.get(), group, {"ed2k"});
+
+  auto ed2kStatus = downcast<Dict>(entry->get("ed2k"));
+  CPPUNIT_ASSERT(ed2kStatus);
+  CPPUNIT_ASSERT_EQUAL(std::string("0"),
+                       getString(ed2kStatus, "completedLength"));
+  CPPUNIT_ASSERT_EQUAL(std::string("0"),
+                       getString(ed2kStatus, "inFlightCompletedLength"));
+  CPPUNIT_ASSERT_EQUAL(std::string("768"),
+                       getString(ed2kStatus, "visibleCompletedLength"));
+}
+
+void RpcMethodTest::testGatherStoppedDownloadEd2kVisibleLength()
+{
+  auto attrs = std::make_shared<Ed2kAttribute>();
+  attrs->link.type = ed2k::LinkType::FILE;
+  attrs->link.name = "ed2k-stopped.bin";
+  attrs->link.size = 1024;
+  attrs->link.hash = std::string(ed2k::HASH_LENGTH, '\x42');
+  attrs->visibleCompletedLength = 900;
+
+  auto result = std::make_shared<DownloadResult>();
+  result->gid = GroupId::create();
+  result->totalLength = 1024;
+  result->completedLength = 0;
+  result->inFlightCompletedLength = 0;
+  result->result = error_code::IN_PROGRESS;
+  result->attrs.resize(MAX_CTX_ATTR);
+  result->attrs[CTX_ATTR_ED2K] = attrs;
+
+  auto entry = Dict::g();
+  gatherStoppedDownload(entry.get(), result, {"ed2k"});
+
+  auto ed2kStatus = downcast<Dict>(entry->get("ed2k"));
+  CPPUNIT_ASSERT(ed2kStatus);
+  CPPUNIT_ASSERT_EQUAL(std::string("900"),
+                       getString(ed2kStatus, "visibleCompletedLength"));
 }
 
 #ifdef ENABLE_BITTORRENT

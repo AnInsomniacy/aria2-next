@@ -156,6 +156,7 @@ const char KEY_NUM_STOPPED_TOTAL[] = "numStoppedTotal";
 const char KEY_VERIFIED_LENGTH[] = "verifiedLength";
 const char KEY_VERIFY_PENDING[] = "verifyIntegrityPending";
 const char KEY_HASH[] = "hash";
+const char KEY_VISIBLE_COMPLETED_LENGTH[] = "visibleCompletedLength";
 const char KEY_SOURCE_COUNT[] = "sourceCount";
 const char KEY_COMPLETE_SOURCE_COUNT[] = "completeSourceCount";
 const char KEY_FILE_TYPE[] = "fileType";
@@ -847,6 +848,29 @@ size_t countEd2kCallbackWaitingPeers(const Ed2kAttribute* attrs)
   return count;
 }
 
+int64_t clampEd2kVisibleCompletedLength(int64_t length, int64_t totalLength)
+{
+  length = std::max<int64_t>(0, length);
+  if (totalLength > 0) {
+    length = std::min(length, totalLength);
+  }
+  return length;
+}
+
+int64_t calculateEd2kVisibleCompletedLength(const Ed2kAttribute* attrs,
+                                            int64_t completedLength,
+                                            int64_t inFlightCompletedLength)
+{
+  auto visibleCompletedLength = completedLength + inFlightCompletedLength;
+  if (attrs) {
+    visibleCompletedLength =
+        std::max(visibleCompletedLength, attrs->visibleCompletedLength);
+    return clampEd2kVisibleCompletedLength(visibleCompletedLength,
+                                           attrs->link.size);
+  }
+  return clampEd2kVisibleCompletedLength(visibleCompletedLength, 0);
+}
+
 std::unique_ptr<Dict> createEd2kStatusEntry(const Ed2kAttribute* attrs,
                                             RequestGroupMan* rgman,
                                             int64_t completedLength,
@@ -865,6 +889,9 @@ std::unique_ptr<Dict> createEd2kStatusEntry(const Ed2kAttribute* attrs,
   dict->put(KEY_COMPLETED_LENGTH, util::itos(completedLength));
   dict->put(KEY_IN_FLIGHT_COMPLETED_LENGTH,
             util::itos(inFlightCompletedLength));
+  dict->put(KEY_VISIBLE_COMPLETED_LENGTH,
+            util::itos(calculateEd2kVisibleCompletedLength(
+                attrs, completedLength, inFlightCompletedLength)));
   dict->put("partHashCount", util::uitos(attrs->pieceHashes.size()));
   if (!attrs->aichRootHash.empty()) {
     dict->put("aichRoot", util::toHex(attrs->aichRootHash));
@@ -1195,6 +1222,13 @@ void gatherStoppedDownload(Dict* entryDict,
   }
   if (requested_key(keys, KEY_DIR)) {
     entryDict->put(KEY_DIR, ds->dir);
+  }
+  if (requested_key(keys, KEY_ED2K) && ds->attrs.size() > CTX_ATTR_ED2K &&
+      ds->attrs[CTX_ATTR_ED2K]) {
+    auto attrs = static_cast<Ed2kAttribute*>(ds->attrs[CTX_ATTR_ED2K].get());
+    entryDict->put(KEY_ED2K,
+                   createEd2kStatusEntry(attrs, nullptr, ds->completedLength,
+                                         ds->inFlightCompletedLength));
   }
 
 }
