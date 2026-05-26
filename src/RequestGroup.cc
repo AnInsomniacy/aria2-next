@@ -76,11 +76,25 @@
 #include "InorderURISelector.h"
 #include "CheckIntegrityCommand.h"
 #include "ChecksumCheckIntegrityEntry.h"
+#include "uri.h"
 #ifdef ENABLE_BITTORRENT
 #  include "LibtorrentCommand.h"
 #endif // ENABLE_BITTORRENT
 
 namespace aria2 {
+
+namespace {
+bool isHttpFamilyUri(const std::string& uri)
+{
+  uri_split_result us;
+  if (uri_split(&us, uri.c_str()) != 0) {
+    return false;
+  }
+  auto protocol = uri::getFieldString(us, USR_SCHEME, uri.c_str());
+  util::lowercase(protocol);
+  return protocol == "http" || protocol == "https";
+}
+} // namespace
 
 #ifdef ENABLE_BITTORRENT
 namespace {
@@ -115,6 +129,8 @@ RequestGroup::RequestGroup(const std::shared_ptr<GroupId>& gid,
       maxDownloadSpeedLimit_(option->getAsInt(PREF_MAX_DOWNLOAD_LIMIT)),
       maxUploadSpeedLimit_(option->getAsInt(PREF_MAX_UPLOAD_LIMIT)),
       resumeFailureCount_(0),
+      httpAdaptiveCommandLimit_(std::min(option->getAsInt(PREF_SPLIT), 4)),
+      httpAdaptiveCommandLimitEnabled_(false),
       haltReason_(RequestGroup::NONE),
       lastErrorCode_(error_code::UNDEFINED),
       saveControlFile_(true),
@@ -700,7 +716,7 @@ void RequestGroup::createNextCommandWithAdj(
   }
   else {
     numCommand = std::min(downloadContext_->getNumPieces(),
-                          static_cast<size_t>(numConcurrentCommand_));
+                          static_cast<size_t>(getEffectiveStreamCommandLimit()));
     numCommand += numAdj;
   }
 
@@ -721,13 +737,14 @@ void RequestGroup::createNextCommand(
       numCommand = 1;
     }
   }
-  else if (numStreamCommand_ >= numConcurrentCommand_) {
+  else if (numStreamCommand_ >= getEffectiveStreamCommandLimit()) {
     numCommand = 0;
   }
   else {
     numCommand = std::min(
         downloadContext_->getNumPieces(),
-        static_cast<size_t>(numConcurrentCommand_ - numStreamCommand_));
+        static_cast<size_t>(getEffectiveStreamCommandLimit() -
+                            numStreamCommand_));
   }
 
   if (numCommand > 0) {
@@ -746,6 +763,38 @@ void RequestGroup::createNextCommand(
   if (!commands.empty()) {
     e->setNoWait(true);
   }
+}
+
+void RequestGroup::noteHttpSegmentSuccess()
+{
+  if (!httpAdaptiveCommandLimitEnabled_) {
+    return;
+  }
+  if (httpAdaptiveCommandLimit_ < numConcurrentCommand_) {
+    ++httpAdaptiveCommandLimit_;
+  }
+}
+
+void RequestGroup::noteHttpSegmentFailure()
+{
+  if (!httpAdaptiveCommandLimitEnabled_) {
+    return;
+  }
+  httpAdaptiveCommandLimit_ = std::max(1, httpAdaptiveCommandLimit_ / 2);
+}
+
+int RequestGroup::getEffectiveStreamCommandLimit() const
+{
+  if (!httpAdaptiveCommandLimitEnabled_) {
+    return numConcurrentCommand_;
+  }
+  return std::min(numConcurrentCommand_, httpAdaptiveCommandLimit_);
+}
+
+void RequestGroup::setNumConcurrentCommand(int num)
+{
+  numConcurrentCommand_ = num;
+  httpAdaptiveCommandLimit_ = std::min(num, 4);
 }
 
 std::string RequestGroup::getFirstFilePath() const
@@ -1119,6 +1168,19 @@ void RequestGroup::setDownloadContext(
   downloadContext_ = downloadContext;
   if (downloadContext_) {
     downloadContext_->setOwnerRequestGroup(this);
+    bool hasUris = false;
+    httpAdaptiveCommandLimitEnabled_ = true;
+    for (const auto& fileEntry : downloadContext_->getFileEntries()) {
+      for (const auto& uri : fileEntry->getUris()) {
+        hasUris = true;
+        if (!isHttpFamilyUri(uri)) {
+          httpAdaptiveCommandLimitEnabled_ = false;
+          return;
+        }
+      }
+    }
+    httpAdaptiveCommandLimitEnabled_ =
+        hasUris && httpAdaptiveCommandLimitEnabled_;
   }
 }
 

@@ -24,7 +24,10 @@
 #include "DownloadEngine.h"
 #include "DownloadFailureException.h"
 #include "DlAbortEx.h"
+#include "DlRetryEx.h"
 #include "FileEntry.h"
+#include "HttpHeader.h"
+#include "HttpRangeValidator.h"
 #include "LogFactory.h"
 #include "Logger.h"
 #include "Command.h"
@@ -56,8 +59,11 @@ CurlDownloadCommand::CurlDownloadCommand(
       initialized_(false),
       finished_(false),
       metadataProbe_(false),
+      rangeRequested_(false),
+      rangeResponseValidated_(false),
       expectedLength_(0),
       responseLength_(0),
+      rangeProtocolErrorCode_(error_code::HTTP_PROTOCOL_ERROR),
       headerList_(nullptr)
 {
   std::memset(errorBuffer_, 0, sizeof(errorBuffer_));
@@ -166,6 +172,11 @@ void CurlDownloadCommand::initialize()
     const auto end =
         getFileEntry()->gtoloff(segment->getPosition() + segment->getLength()) -
         1;
+    expectedRange_ = Range(begin, end, expectedLength_);
+    rangeRequested_ = true;
+    if (isRangedHttpTransfer()) {
+      curl_easy_setopt(easy_, CURLOPT_ACCEPT_ENCODING, "identity");
+    }
     curl_easy_setopt(easy_, CURLOPT_RANGE,
                      fmt("%lld-%lld", static_cast<long long>(begin),
                          static_cast<long long>(end))
@@ -394,6 +405,12 @@ void CurlDownloadCommand::finish(CURLcode result)
   }
 
   if (result != CURLE_OK) {
+    if (!rangeProtocolError_.empty()) {
+      if (rangeProtocolErrorCode_ == error_code::CANNOT_RESUME) {
+        throw DL_ABORT_EX2(rangeProtocolError_, rangeProtocolErrorCode_);
+      }
+      throw DL_RETRY_EX2(rangeProtocolError_, rangeProtocolErrorCode_);
+    }
     throw DOWNLOAD_FAILURE_EXCEPTION(
         fmt("libcurl transfer failed: %s",
             errorBuffer_[0] ? errorBuffer_ : curl_easy_strerror(result)));
@@ -407,7 +424,14 @@ void CurlDownloadCommand::finish(CURLcode result)
     return;
   }
 
+  if (isRangedHttpTransfer()) {
+    validateRangeResponseBeforeBody();
+  }
+
   completeCurrentSegment();
+  if (isRangedHttpTransfer()) {
+    getRequestGroup()->noteHttpSegmentSuccess();
+  }
   if (getRequestGroup()->downloadFinished()) {
     getDownloadEngine()->setNoWait(true);
     getDownloadEngine()->setRefreshInterval(std::chrono::milliseconds(0));
@@ -497,6 +521,38 @@ std::string CurlDownloadCommand::determineFilename() const
   return file;
 }
 
+bool CurlDownloadCommand::isRangedHttpTransfer() const
+{
+  if (!rangeRequested_) {
+    return false;
+  }
+  const auto& protocol = getRequest()->getProtocol();
+  return protocol == "http" || protocol == "https";
+}
+
+void CurlDownloadCommand::validateRangeResponseBeforeBody()
+{
+  if (rangeResponseValidated_) {
+    return;
+  }
+
+  long status = 0;
+  curl_easy_getinfo(easy_, CURLINFO_RESPONSE_CODE, &status);
+  auto result = validateHttpRangeResponse(
+      status, expectedRange_, responseRange_, expectedLength_, contentEncoding_);
+  if (!result.ok) {
+    rangeProtocolError_ = result.error;
+    rangeProtocolErrorCode_ = result.retryable ? error_code::HTTP_PROTOCOL_ERROR
+                                               : error_code::CANNOT_RESUME;
+    getRequestGroup()->noteHttpSegmentFailure();
+    if (result.retryable) {
+      throw DL_RETRY_EX2(result.error, rangeProtocolErrorCode_);
+    }
+    throw DL_ABORT_EX2(result.error, rangeProtocolErrorCode_);
+  }
+  rangeResponseValidated_ = true;
+}
+
 void CurlDownloadCommand::completeCurrentSegment()
 {
   const auto& segments = getSegments();
@@ -529,6 +585,22 @@ size_t CurlDownloadCommand::writeData(const unsigned char* data, size_t length)
     return 0;
   }
 
+  if (isRangedHttpTransfer()) {
+    try {
+      validateRangeResponseBeforeBody();
+    }
+    catch (const DlAbortEx& ex) {
+      rangeProtocolError_ = ex.what();
+      rangeProtocolErrorCode_ = ex.getErrorCode();
+      return 0;
+    }
+    catch (const DlRetryEx& ex) {
+      rangeProtocolError_ = ex.what();
+      rangeProtocolErrorCode_ = ex.getErrorCode();
+      return 0;
+    }
+  }
+
   auto remaining = length;
   auto cursor = data;
   while (remaining > 0) {
@@ -542,6 +614,13 @@ size_t CurlDownloadCommand::writeData(const unsigned char* data, size_t length)
             ? static_cast<size_t>(segment->getLength() -
                                   segment->getWrittenLength())
             : remaining;
+    if (capacity == 0) {
+      rangeProtocolError_ =
+          "HTTP response body exceeded the requested segment range.";
+      rangeProtocolErrorCode_ = error_code::HTTP_PROTOCOL_ERROR;
+      getRequestGroup()->noteHttpSegmentFailure();
+      return 0;
+    }
     const auto writeLength = std::min(remaining, capacity);
     getPieceStorage()->getDiskAdaptor()->writeData(
         cursor, writeLength, segment->getPositionToWrite());
@@ -550,9 +629,6 @@ size_t CurlDownloadCommand::writeData(const unsigned char* data, size_t length)
     getDownloadContext()->updateDownload(writeLength);
     cursor += writeLength;
     remaining -= writeLength;
-    if (writeLength == 0) {
-      break;
-    }
   }
 
   return length - remaining;
@@ -562,6 +638,8 @@ size_t CurlDownloadCommand::writeHeader(const char* data, size_t length)
 {
   constexpr char CONTENT_LENGTH[] = "content-length:";
   constexpr char CONTENT_DISPOSITION[] = "content-disposition:";
+  constexpr char CONTENT_RANGE[] = "content-range:";
+  constexpr char CONTENT_ENCODING[] = "content-encoding:";
 
   std::string line(data, length);
   while (!line.empty() && (line.back() == '\r' || line.back() == '\n')) {
@@ -581,6 +659,23 @@ size_t CurlDownloadCommand::writeHeader(const char* data, size_t length)
   else if (util::startsWith(lower, CONTENT_DISPOSITION)) {
     contentDisposition_ =
         util::strip(line.substr(sizeof(CONTENT_DISPOSITION) - 1));
+  }
+  else if (util::startsWith(lower, CONTENT_RANGE)) {
+    HttpHeader header;
+    header.put(HttpHeader::CONTENT_RANGE,
+               util::strip(line.substr(sizeof(CONTENT_RANGE) - 1)));
+    try {
+      responseRange_ = header.getRange();
+    }
+    catch (const Exception& ex) {
+      rangeProtocolError_ = ex.what();
+      rangeProtocolErrorCode_ = error_code::HTTP_PROTOCOL_ERROR;
+      return 0;
+    }
+  }
+  else if (util::startsWith(lower, CONTENT_ENCODING)) {
+    contentEncoding_ =
+        util::strip(line.substr(sizeof(CONTENT_ENCODING) - 1));
   }
 
   return length;

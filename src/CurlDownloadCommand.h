@@ -20,6 +20,9 @@
 #include <string>
 #include <vector>
 
+#include "Range.h"
+#include "error_code.h"
+
 namespace aria2 {
 
 class CurlSession;
@@ -52,6 +55,8 @@ private:
   void completeCurrentSegment();
   void prepareKnownLengthStorage(int64_t length);
   std::string determineFilename() const;
+  bool isRangedHttpTransfer() const;
+  void validateRangeResponseBeforeBody();
 
   static size_t writeCallback(char* ptr, size_t size, size_t nmemb,
                               void* userdata);
@@ -67,9 +72,16 @@ private:
   bool initialized_;
   bool finished_;
   bool metadataProbe_;
+  bool rangeRequested_;
+  bool rangeResponseValidated_;
   int64_t expectedLength_;
   int64_t responseLength_;
+  Range expectedRange_;
+  Range responseRange_;
+  error_code::Value rangeProtocolErrorCode_;
   std::string contentDisposition_;
+  std::string contentEncoding_;
+  std::string rangeProtocolError_;
   char errorBuffer_[CURL_ERROR_SIZE];
   std::string userPassword_;
   std::vector<std::string> requestHeaders_;

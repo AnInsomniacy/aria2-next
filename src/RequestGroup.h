@@ -145,6 +145,10 @@ private:
 
   int resumeFailureCount_;
 
+  int httpAdaptiveCommandLimit_;
+
+  bool httpAdaptiveCommandLimitEnabled_;
+
   HaltReason haltReason_;
 
   error_code::Value lastErrorCode_;
@@ -220,6 +224,12 @@ public:
   void createNextCommand(std::vector<std::unique_ptr<Command>>& commands,
                          DownloadEngine* e);
 
+  void noteHttpSegmentSuccess();
+
+  void noteHttpSegmentFailure();
+
+  int getEffectiveStreamCommandLimit() const;
+
   bool downloadFinished() const;
 
   bool allDownloadFinished() const;
@@ -253,7 +263,7 @@ public:
 
   void validateTotalLength(int64_t actualTotalLength) const;
 
-  void setNumConcurrentCommand(int num) { numConcurrentCommand_ = num; }
+  void setNumConcurrentCommand(int num);
 
   int getNumConcurrentCommand() const { return numConcurrentCommand_; }
 

@@ -43,6 +43,8 @@ class RequestGroupTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCurlProxyModeControlsEnvironmentProxy);
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForHttp);
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForFtpFamily);
+  CPPUNIT_TEST(testHttpAdaptiveCommandLimit);
+  CPPUNIT_TEST(testFtpDoesNotUseHttpAdaptiveCommandLimit);
 #ifdef ENABLE_BITTORRENT
   CPPUNIT_TEST(testCreateInitialCommandUsesLibtorrentRuntime);
   CPPUNIT_TEST(testLibtorrentCommandLoadsTorrentMetadata);
@@ -78,6 +80,8 @@ public:
   void testCurlProxyModeControlsEnvironmentProxy();
   void testInitiateConnectionFactoryUsesCurlForHttp();
   void testInitiateConnectionFactoryUsesCurlForFtpFamily();
+  void testHttpAdaptiveCommandLimit();
+  void testFtpDoesNotUseHttpAdaptiveCommandLimit();
 #ifdef ENABLE_BITTORRENT
   void testCreateInitialCommandUsesLibtorrentRuntime();
   void testLibtorrentCommandLoadsTorrentMetadata();
@@ -355,6 +359,58 @@ void RequestGroupTest::testInitiateConnectionFactoryUsesCurlForFtpFamily()
 
     CPPUNIT_ASSERT(dynamic_cast<CurlDownloadCommand*>(command.get()));
   }
+}
+
+void RequestGroupTest::testHttpAdaptiveCommandLimit()
+{
+  option_->put(PREF_SPLIT, "64");
+  option_->put(PREF_DIR, A2_TEST_OUT_DIR);
+
+  auto group = createRequestGroup(
+      1_k, 64_k,
+      std::string(A2_TEST_OUT_DIR) +
+          "/aria2_RequestGroupTest_http_adaptive_limit",
+      "https://example.test/file", option_);
+  group->setNumConcurrentCommand(64);
+  group->initPieceStorage();
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+
+  std::vector<std::unique_ptr<Command>> commands;
+  group->createNextCommand(commands, &engine);
+  CPPUNIT_ASSERT_EQUAL((size_t)4, commands.size());
+
+  commands.clear();
+  group->noteHttpSegmentSuccess();
+  group->createNextCommand(commands, &engine);
+  CPPUNIT_ASSERT_EQUAL((size_t)5, commands.size());
+
+  commands.clear();
+  group->noteHttpSegmentFailure();
+  group->createNextCommand(commands, &engine);
+  CPPUNIT_ASSERT_EQUAL((size_t)2, commands.size());
+}
+
+void RequestGroupTest::testFtpDoesNotUseHttpAdaptiveCommandLimit()
+{
+  option_->put(PREF_SPLIT, "64");
+  option_->put(PREF_DIR, A2_TEST_OUT_DIR);
+
+  auto group = createRequestGroup(
+      1_k, 64_k,
+      std::string(A2_TEST_OUT_DIR) +
+          "/aria2_RequestGroupTest_ftp_no_http_adaptive_limit",
+      "ftp://example.test/file", option_);
+  group->setNumConcurrentCommand(64);
+  group->initPieceStorage();
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+
+  std::vector<std::unique_ptr<Command>> commands;
+  group->createNextCommand(commands, &engine);
+  CPPUNIT_ASSERT_EQUAL((size_t)64, commands.size());
 }
 
 #ifdef ENABLE_BITTORRENT

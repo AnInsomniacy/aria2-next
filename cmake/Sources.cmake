@@ -214,6 +214,8 @@ set(ARIA2_SOURCES_BASE
   src/HttpHeader.h
   src/HttpHeaderProcessor.cc
   src/HttpHeaderProcessor.h
+  src/HttpRangeValidator.cc
+  src/HttpRangeValidator.h
   src/IndexedList.h
   src/InitiateConnectionCommand.cc
   src/InitiateConnectionCommand.h
