@@ -37,6 +37,7 @@ public:
 
   static long platformSslTrustOptions();
   static bool shouldDisableCurlProxy(const Option* option);
+  static bool isRetryableHttpCurlError(CURLcode result);
 
 private:
   bool execute() CXX11_OVERRIDE;
@@ -56,7 +57,10 @@ private:
   void prepareKnownLengthStorage(int64_t length);
   std::string determineFilename() const;
   bool isRangedHttpTransfer() const;
+  bool isHttpTransfer() const;
+  void retryHttpTransfer(CURLcode result);
   void validateRangeResponseBeforeBody();
+  bool ensureWritableSegment();
 
   static size_t writeCallback(char* ptr, size_t size, size_t nmemb,
                               void* userdata);

@@ -22,6 +22,7 @@ namespace aria2 {
 struct HttpRangeValidationResult {
   bool ok;
   bool retryable;
+  bool rangeUnsupported;
   std::string error;
 };
 

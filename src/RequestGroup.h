@@ -149,6 +149,8 @@ private:
 
   bool httpAdaptiveCommandLimitEnabled_;
 
+  bool httpRangeEnabled_;
+
   HaltReason haltReason_;
 
   error_code::Value lastErrorCode_;
@@ -229,6 +231,10 @@ public:
   void noteHttpSegmentFailure();
 
   int getEffectiveStreamCommandLimit() const;
+
+  bool shouldUseHttpRange() const { return httpRangeEnabled_; }
+
+  void disableHttpRangeForDownload();
 
   bool downloadFinished() const;
 

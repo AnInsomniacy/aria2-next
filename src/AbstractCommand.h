@@ -124,6 +124,8 @@ public:
     return segments_;
   }
 
+  std::vector<std::shared_ptr<Segment>>& getSegments() { return segments_; }
+
   // Resolves hostname.  The resolved addresses are stored in addrs
   // and first element is returned.  If resolve is not finished,
   // return empty string. In this case, call this function with same

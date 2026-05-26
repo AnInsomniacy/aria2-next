@@ -131,6 +131,7 @@ RequestGroup::RequestGroup(const std::shared_ptr<GroupId>& gid,
       resumeFailureCount_(0),
       httpAdaptiveCommandLimit_(std::min(option->getAsInt(PREF_SPLIT), 4)),
       httpAdaptiveCommandLimitEnabled_(false),
+      httpRangeEnabled_(true),
       haltReason_(RequestGroup::NONE),
       lastErrorCode_(error_code::UNDEFINED),
       saveControlFile_(true),
@@ -785,10 +786,26 @@ void RequestGroup::noteHttpSegmentFailure()
 
 int RequestGroup::getEffectiveStreamCommandLimit() const
 {
+  if (!httpRangeEnabled_) {
+    return 1;
+  }
   if (!httpAdaptiveCommandLimitEnabled_) {
     return numConcurrentCommand_;
   }
   return std::min(numConcurrentCommand_, httpAdaptiveCommandLimit_);
+}
+
+void RequestGroup::disableHttpRangeForDownload()
+{
+  httpRangeEnabled_ = false;
+  httpAdaptiveCommandLimit_ = 1;
+  if (segmentMan_) {
+    segmentMan_->cancelAllSegments();
+    segmentMan_->eraseSegmentWrittenLengthMemo();
+  }
+  if (pieceStorage_) {
+    pieceStorage_->markPiecesDone(0);
+  }
 }
 
 void RequestGroup::setNumConcurrentCommand(int num)

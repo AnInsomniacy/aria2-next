@@ -41,9 +41,11 @@ class RequestGroupTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testCompletedLengthReportsVerifiedStorageOnly);
   CPPUNIT_TEST(testCurlTlsTrustOptions);
   CPPUNIT_TEST(testCurlProxyModeControlsEnvironmentProxy);
+  CPPUNIT_TEST(testCurlHttpRetryableErrors);
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForHttp);
   CPPUNIT_TEST(testInitiateConnectionFactoryUsesCurlForFtpFamily);
   CPPUNIT_TEST(testHttpAdaptiveCommandLimit);
+  CPPUNIT_TEST(testHttpRangeDowngradeDisablesRangedConcurrency);
   CPPUNIT_TEST(testFtpDoesNotUseHttpAdaptiveCommandLimit);
 #ifdef ENABLE_BITTORRENT
   CPPUNIT_TEST(testCreateInitialCommandUsesLibtorrentRuntime);
@@ -78,9 +80,11 @@ public:
   void testCompletedLengthReportsVerifiedStorageOnly();
   void testCurlTlsTrustOptions();
   void testCurlProxyModeControlsEnvironmentProxy();
+  void testCurlHttpRetryableErrors();
   void testInitiateConnectionFactoryUsesCurlForHttp();
   void testInitiateConnectionFactoryUsesCurlForFtpFamily();
   void testHttpAdaptiveCommandLimit();
+  void testHttpRangeDowngradeDisablesRangedConcurrency();
   void testFtpDoesNotUseHttpAdaptiveCommandLimit();
 #ifdef ENABLE_BITTORRENT
   void testCreateInitialCommandUsesLibtorrentRuntime();
@@ -298,6 +302,18 @@ void RequestGroupTest::testCurlProxyModeControlsEnvironmentProxy()
   CPPUNIT_ASSERT(CurlDownloadCommand::shouldDisableCurlProxy(&op));
 }
 
+void RequestGroupTest::testCurlHttpRetryableErrors()
+{
+  CPPUNIT_ASSERT(
+      CurlDownloadCommand::isRetryableHttpCurlError(CURLE_OPERATION_TIMEDOUT));
+  CPPUNIT_ASSERT(
+      CurlDownloadCommand::isRetryableHttpCurlError(CURLE_COULDNT_CONNECT));
+  CPPUNIT_ASSERT(CurlDownloadCommand::isRetryableHttpCurlError(CURLE_RECV_ERROR));
+  CPPUNIT_ASSERT(
+      !CurlDownloadCommand::isRetryableHttpCurlError(CURLE_SSL_CACERT_BADFILE));
+  CPPUNIT_ASSERT(!CurlDownloadCommand::isRetryableHttpCurlError(CURLE_OK));
+}
+
 void RequestGroupTest::testInitiateConnectionFactoryUsesCurlForHttp()
 {
   option_->put(PREF_DIR, A2_TEST_OUT_DIR);
@@ -390,6 +406,32 @@ void RequestGroupTest::testHttpAdaptiveCommandLimit()
   group->noteHttpSegmentFailure();
   group->createNextCommand(commands, &engine);
   CPPUNIT_ASSERT_EQUAL((size_t)2, commands.size());
+}
+
+void RequestGroupTest::testHttpRangeDowngradeDisablesRangedConcurrency()
+{
+  option_->put(PREF_SPLIT, "64");
+  option_->put(PREF_DIR, A2_TEST_OUT_DIR);
+
+  auto group = createRequestGroup(
+      1_k, 64_k,
+      std::string(A2_TEST_OUT_DIR) +
+          "/aria2_RequestGroupTest_http_range_downgrade",
+      "https://example.test/file", option_);
+  group->setNumConcurrentCommand(64);
+  group->initPieceStorage();
+
+  group->disableHttpRangeForDownload();
+
+  CPPUNIT_ASSERT(!group->shouldUseHttpRange());
+  CPPUNIT_ASSERT_EQUAL(1, group->getEffectiveStreamCommandLimit());
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+
+  std::vector<std::unique_ptr<Command>> commands;
+  group->createNextCommand(commands, &engine);
+  CPPUNIT_ASSERT_EQUAL((size_t)1, commands.size());
 }
 
 void RequestGroupTest::testFtpDoesNotUseHttpAdaptiveCommandLimit()

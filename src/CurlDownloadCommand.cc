@@ -105,6 +105,22 @@ bool CurlDownloadCommand::shouldDisableCurlProxy(const Option* option)
   return option->get(PREF_PROXY_MODE) != V_AUTO;
 }
 
+bool CurlDownloadCommand::isRetryableHttpCurlError(CURLcode result)
+{
+  switch (result) {
+  case CURLE_COULDNT_CONNECT:
+  case CURLE_OPERATION_TIMEDOUT:
+  case CURLE_RECV_ERROR:
+  case CURLE_SEND_ERROR:
+  case CURLE_GOT_NOTHING:
+  case CURLE_PARTIAL_FILE:
+  case CURLE_WRITE_ERROR:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool CurlDownloadCommand::execute()
 {
   return AbstractCommand::execute();
@@ -166,7 +182,8 @@ void CurlDownloadCommand::initialize()
   }
 
   const auto& segments = getSegments();
-  if (!segments.empty() && expectedLength_ > 0) {
+  if (!segments.empty() && expectedLength_ > 0 &&
+      getRequestGroup()->shouldUseHttpRange()) {
     const auto& segment = segments.front();
     const auto begin = getFileEntry()->gtoloff(segment->getPositionToWrite());
     const auto end =
@@ -407,9 +424,13 @@ void CurlDownloadCommand::finish(CURLcode result)
   if (result != CURLE_OK) {
     if (!rangeProtocolError_.empty()) {
       if (rangeProtocolErrorCode_ == error_code::CANNOT_RESUME) {
-        throw DL_ABORT_EX2(rangeProtocolError_, rangeProtocolErrorCode_);
+        getRequestGroup()->disableHttpRangeForDownload();
+        throw DL_RETRY_EX2(rangeProtocolError_, rangeProtocolErrorCode_);
       }
       throw DL_RETRY_EX2(rangeProtocolError_, rangeProtocolErrorCode_);
+    }
+    if (isHttpTransfer() && isRetryableHttpCurlError(result)) {
+      retryHttpTransfer(result);
     }
     throw DOWNLOAD_FAILURE_EXCEPTION(
         fmt("libcurl transfer failed: %s",
@@ -526,8 +547,25 @@ bool CurlDownloadCommand::isRangedHttpTransfer() const
   if (!rangeRequested_) {
     return false;
   }
+  return isHttpTransfer();
+}
+
+bool CurlDownloadCommand::isHttpTransfer() const
+{
   const auto& protocol = getRequest()->getProtocol();
   return protocol == "http" || protocol == "https";
+}
+
+void CurlDownloadCommand::retryHttpTransfer(CURLcode result)
+{
+  if (isRangedHttpTransfer()) {
+    getRequestGroup()->noteHttpSegmentFailure();
+  }
+  throw DL_RETRY_EX2(
+      fmt("libcurl transfer failed: %s",
+          errorBuffer_[0] ? errorBuffer_ : curl_easy_strerror(result)),
+      result == CURLE_OPERATION_TIMEDOUT ? error_code::TIME_OUT
+                                         : error_code::NETWORK_PROBLEM);
 }
 
 void CurlDownloadCommand::validateRangeResponseBeforeBody()
@@ -545,12 +583,41 @@ void CurlDownloadCommand::validateRangeResponseBeforeBody()
     rangeProtocolErrorCode_ = result.retryable ? error_code::HTTP_PROTOCOL_ERROR
                                                : error_code::CANNOT_RESUME;
     getRequestGroup()->noteHttpSegmentFailure();
+    if (result.rangeUnsupported) {
+      getRequestGroup()->disableHttpRangeForDownload();
+      throw DL_RETRY_EX2(result.error, rangeProtocolErrorCode_);
+    }
     if (result.retryable) {
       throw DL_RETRY_EX2(result.error, rangeProtocolErrorCode_);
     }
     throw DL_ABORT_EX2(result.error, rangeProtocolErrorCode_);
   }
   rangeResponseValidated_ = true;
+}
+
+bool CurlDownloadCommand::ensureWritableSegment()
+{
+  auto& segments = getSegments();
+  while (!segments.empty()) {
+    const auto& segment = segments.front();
+    if (segment->getLength() == 0 ||
+        segment->getWrittenLength() < segment->getLength()) {
+      return true;
+    }
+    completeCurrentSegment();
+    segments.erase(segments.begin());
+  }
+
+  if (isRangedHttpTransfer()) {
+    return false;
+  }
+
+  auto segment = getSegmentMan()->getSegment(getCuid(), 1);
+  if (!segment) {
+    return false;
+  }
+  segments.push_back(segment);
+  return true;
 }
 
 void CurlDownloadCommand::completeCurrentSegment()
@@ -604,10 +671,10 @@ size_t CurlDownloadCommand::writeData(const unsigned char* data, size_t length)
   auto remaining = length;
   auto cursor = data;
   while (remaining > 0) {
-    const auto& segments = getSegments();
-    if (segments.empty()) {
+    if (!ensureWritableSegment()) {
       return length - remaining;
     }
+    const auto& segments = getSegments();
     const auto& segment = segments.front();
     const auto capacity =
         segment->getLength() > 0
