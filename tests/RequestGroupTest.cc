@@ -377,6 +377,15 @@ void RequestGroupTest::testCurlMetadataHeadFailureFallbackPolicy()
   CPPUNIT_ASSERT(
       !CurlDownloadCommand::shouldFallbackMetadataHeadStatusToRangeProbe(
           true, false, false, true, 404));
+
+  CPPUNIT_ASSERT(CurlDownloadCommand::shouldFallbackMetadataRangeProbeToFullDownload(
+      true, true, 200));
+  CPPUNIT_ASSERT(
+      !CurlDownloadCommand::shouldFallbackMetadataRangeProbeToFullDownload(
+          true, true, 206));
+  CPPUNIT_ASSERT(
+      !CurlDownloadCommand::shouldFallbackMetadataRangeProbeToFullDownload(
+          true, false, 200));
 }
 
 void RequestGroupTest::testFinishedHttpDownloadQueuesWholeFileChecksum()

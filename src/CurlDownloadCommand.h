@@ -46,6 +46,8 @@ public:
   static bool shouldFallbackMetadataHeadStatusToRangeProbe(
       bool metadataProbe, bool metadataRangeProbe, bool explicitHead,
       bool httpTransfer, long status);
+  static bool shouldFallbackMetadataRangeProbeToFullDownload(
+      bool metadataProbe, bool metadataRangeProbe, long status);
 
 private:
   bool execute() CXX11_OVERRIDE;
@@ -69,6 +71,7 @@ private:
   void retryHttpTransfer(CURLcode result);
   void retryMetadataProbeWithRange(const std::string& reason);
   void retryMetadataProbeWithRange(CURLcode result);
+  void retryMetadataProbeAsFullDownload(const std::string& reason);
   void retryHttpStatus(long status);
   int httpRetryAfterDelaySeconds();
   void setRequestWakeAfter(int seconds);

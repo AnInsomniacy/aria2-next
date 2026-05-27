@@ -159,6 +159,12 @@ bool CurlDownloadCommand::shouldFallbackMetadataHeadStatusToRangeProbe(
          (status == 405 || status == 501);
 }
 
+bool CurlDownloadCommand::shouldFallbackMetadataRangeProbeToFullDownload(
+    bool metadataProbe, bool metadataRangeProbe, long status)
+{
+  return metadataProbe && metadataRangeProbe && status == 200;
+}
+
 bool CurlDownloadCommand::execute()
 {
   return AbstractCommand::execute();
@@ -592,6 +598,11 @@ bool CurlDownloadCommand::finishMetadataProbe(long status)
   }
 
   if (metadataRangeProbe_) {
+    if (shouldFallbackMetadataRangeProbeToFullDownload(
+            metadataProbe_, metadataRangeProbe_, status)) {
+      retryMetadataProbeAsFullDownload(
+          "HTTP metadata range probe was ignored by the server");
+    }
     auto result =
         validateHttpMetadataRangeProbe(status, responseRange_, contentEncoding_);
     if (!result.ok) {
@@ -718,6 +729,17 @@ void CurlDownloadCommand::retryMetadataProbeWithRange(const std::string& reason)
   throw DL_RETRY_EX2(
       fmt("%s. Retrying with Range: bytes=0-0.", reason.c_str()),
       error_code::NETWORK_PROBLEM);
+}
+
+void CurlDownloadCommand::retryMetadataProbeAsFullDownload(
+    const std::string& reason)
+{
+  getDownloadContext()->markTotalLengthIsUnknown();
+  prepareKnownLengthStorage(0);
+  throw DL_RETRY_EX2(
+      fmt("%s. Restarting as an unknown-length full download.",
+          reason.c_str()),
+      error_code::CANNOT_RESUME);
 }
 
 void CurlDownloadCommand::retryHttpStatus(long status)
@@ -852,6 +874,12 @@ size_t CurlDownloadCommand::writeData(const unsigned char* data, size_t length)
 
   if (metadataProbe_) {
     if (metadataRangeProbe_ && responseRange_.entityLength <= 0) {
+      long status = 0;
+      curl_easy_getinfo(easy_, CURLINFO_RESPONSE_CODE, &status);
+      if (shouldFallbackMetadataRangeProbeToFullDownload(
+              metadataProbe_, metadataRangeProbe_, status)) {
+        return length;
+      }
       httpBodyError_ =
           "HTTP metadata range probe did not include Content-Range.";
       return 0;
