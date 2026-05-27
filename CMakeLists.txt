@@ -6,7 +6,7 @@ endif()
 
 project(
   aria2
-  VERSION 2.2.8
+  VERSION 2.2.9
   DESCRIPTION "High speed download utility"
   HOMEPAGE_URL "https://github.com/AnInsomniacy/aria2-next"
   LANGUAGES C CXX)

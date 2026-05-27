@@ -33,12 +33,15 @@ private:
   static constexpr int kInitialLimit = 4;
   static constexpr int kSlowStartThreshold = 16;
   static constexpr int kCooldownSuccesses = 2;
+  static constexpr int kProbeSuccesses = 8;
 
   int limit_ = kInitialLimit;
   int slowStartThreshold_ = kSlowStartThreshold;
+  int learnedCeiling_ = 1024;
   int cooldownSuccessesRemaining_ = 0;
   int rateLimitStrikes_ = 0;
   int rateLimitSuccesses_ = 0;
+  int successesAtCeiling_ = 0;
   bool rangeUnsupported_ = false;
 };
 

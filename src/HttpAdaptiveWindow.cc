@@ -30,7 +30,9 @@ void HttpAdaptiveWindow::reset(int maxLimit)
   cooldownSuccessesRemaining_ = 0;
   rateLimitStrikes_ = 0;
   rateLimitSuccesses_ = 0;
+  successesAtCeiling_ = 0;
   slowStartThreshold_ = kSlowStartThreshold;
+  learnedCeiling_ = std::max(1, maxLimit);
   limit_ = std::max(1, std::min(kInitialLimit, maxLimit));
 }
 
@@ -47,18 +49,31 @@ void HttpAdaptiveWindow::onSuccess(int maxLimit)
     rateLimitStrikes_ = 0;
     rateLimitSuccesses_ = 0;
     slowStartThreshold_ = 2;
-    limit_ = std::min(2, maxLimit);
+    successesAtCeiling_ = 0;
+    limit_ = std::min(2, std::min(learnedCeiling_, maxLimit));
     return;
   }
   if (cooldownSuccessesRemaining_ > 0) {
     --cooldownSuccessesRemaining_;
     return;
   }
-  if (limit_ < slowStartThreshold_) {
-    limit_ = std::min(slowStartThreshold_, limit_ * 2);
+  const auto effectiveCeiling = std::max(1, std::min(learnedCeiling_, maxLimit));
+  if (limit_ < std::min(slowStartThreshold_, effectiveCeiling)) {
+    limit_ = std::min(std::min(slowStartThreshold_, effectiveCeiling),
+                      limit_ * 2);
+    successesAtCeiling_ = 0;
+  }
+  else if (limit_ < effectiveCeiling) {
+    ++limit_;
+    successesAtCeiling_ = 0;
   }
   else {
-    ++limit_;
+    ++successesAtCeiling_;
+    if (successesAtCeiling_ >= kProbeSuccesses && learnedCeiling_ < maxLimit) {
+      ++learnedCeiling_;
+      limit_ = std::min(learnedCeiling_, maxLimit);
+      successesAtCeiling_ = 0;
+    }
   }
   limit_ = std::max(1, std::min(limit_, maxLimit));
 }
@@ -70,6 +85,7 @@ void HttpAdaptiveWindow::onTransientFailure()
   }
   rateLimitStrikes_ = 0;
   rateLimitSuccesses_ = 0;
+  successesAtCeiling_ = 0;
   limit_ = std::max(1, limit_ / 2);
   slowStartThreshold_ = limit_;
   cooldownSuccessesRemaining_ = kCooldownSuccesses;
@@ -80,8 +96,11 @@ void HttpAdaptiveWindow::onRateLimited()
   if (rangeUnsupported_) {
     return;
   }
+  learnedCeiling_ = std::max(1, std::min(learnedCeiling_,
+                                         std::max(1, limit_ / 2)));
   rateLimitStrikes_ = std::min(rateLimitStrikes_ + 1, 4);
   rateLimitSuccesses_ = 0;
+  successesAtCeiling_ = 0;
   cooldownSuccessesRemaining_ = 0;
   slowStartThreshold_ = 1;
   limit_ = 1;
@@ -93,6 +112,8 @@ void HttpAdaptiveWindow::onRangeUnsupported()
   cooldownSuccessesRemaining_ = 0;
   rateLimitStrikes_ = 0;
   rateLimitSuccesses_ = 0;
+  successesAtCeiling_ = 0;
+  learnedCeiling_ = 1;
   slowStartThreshold_ = 1;
   limit_ = 1;
 }
