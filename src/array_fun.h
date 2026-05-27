@@ -39,6 +39,8 @@
 
 #include <cstdlib>
 #include <functional>
+#include <type_traits>
+#include <utility>
 
 namespace aria2 {
 
@@ -66,7 +68,9 @@ public:
 namespace expr {
 
 template <typename L, typename R, typename Op> struct BinExpr {
-  typedef typename Op::result_type value_type;
+  typedef typename std::decay<decltype(std::declval<Op>()(
+      std::declval<typename L::value_type>(),
+      std::declval<typename R::value_type>()))>::type value_type;
 
   BinExpr(L lhs, R rhs, Op op)
       : lhs(std::move(lhs)), rhs(std::move(rhs)), op(std::move(op))
@@ -81,21 +85,25 @@ template <typename L, typename R, typename Op> struct BinExpr {
 };
 
 template <typename L, typename R,
-          typename Op = std::bit_and<typename L::value_type>>
+          typename Op = std::bit_and<typename std::remove_cv<
+              typename L::value_type>::type>>
 BinExpr<L, R, Op> operator&(L lhs, R rhs)
 {
   return BinExpr<L, R, Op>(std::forward<L>(lhs), std::forward<R>(rhs), Op());
 }
 
 template <typename L, typename R,
-          typename Op = std::bit_or<typename L::value_type>>
+          typename Op = std::bit_or<typename std::remove_cv<
+              typename L::value_type>::type>>
 BinExpr<L, R, Op> operator|(L lhs, R rhs)
 {
   return BinExpr<L, R, Op>(std::forward<L>(lhs), std::forward<R>(rhs), Op());
 }
 
 template <typename Arg, typename Op> struct UnExpr {
-  typedef typename Op::result_type value_type;
+  typedef typename std::decay<decltype(
+      std::declval<Op>()(std::declval<typename Arg::value_type>()))>::type
+      value_type;
 
   UnExpr(Arg arg, Op op) : arg(std::move(arg)), op(std::move(op)) {}
 
@@ -105,11 +113,14 @@ template <typename Arg, typename Op> struct UnExpr {
   Op op;
 };
 
-template <typename T> struct bit_neg : std::function<T(T)> {
-  T operator()(T t) const { return ~t; }
+template <typename T> struct bit_neg {
+  typedef typename std::remove_cv<T>::type value_type;
+
+  value_type operator()(T t) const { return ~t; }
 };
 
-template <typename Arg, typename Op = bit_neg<typename Arg::value_type>>
+template <typename Arg, typename Op = bit_neg<typename std::remove_cv<
+                            typename Arg::value_type>::type>>
 UnExpr<Arg, Op> operator~(Arg arg)
 {
   return UnExpr<Arg, Op>(std::forward<Arg>(arg), Op());
