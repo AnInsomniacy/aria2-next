@@ -1,0 +1,138 @@
+name: Bug Report
+description: Report a reproducible aria2-next engine bug
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report bugs here only when the failing component is the aria2-next engine.
+        UI, installer, updater, tray, history, and notification bugs belong in Motrix Next.
+        Security-sensitive reports belong in the private security process described in docs/SECURITY.md.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the failure and the expected behavior.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Aria2 Next Version
+      description: Run `aria2-next --version` and paste the version line.
+      placeholder: "Aria2 Next version 2.2.7"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS Apple Silicon
+        - macOS Intel
+        - Windows x86_64
+        - Windows ARM64
+        - Linux x86_64
+        - Linux ARM64
+        - Android ARM64
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS Version
+      description: Include distribution, release, and architecture where applicable.
+      placeholder: "Windows 11 24H2, Ubuntu 24.04 x86_64, macOS 15.5"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: binary-source
+    attributes:
+      label: Binary Source
+      options:
+        - Official GitHub Release
+        - GitHub Actions artifact
+        - Built locally from source
+        - Bundled with Motrix Next
+        - Packaged by a third party
+    validations:
+      required: true
+
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: Protocol or Surface
+      options:
+        - HTTP or HTTPS
+        - FTP, FTPS, SFTP, or SCP
+        - BitTorrent or magnet
+        - ED2K
+        - JSON-RPC
+        - Session or input file
+        - Checksum or integrity
+        - Proxy or certificate
+        - Packaging or startup
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command, RPC Call, or Input File
+      description: Paste the exact command, JSON-RPC request, or minimal input-file entry. Redact secrets, cookies, proxy credentials, and signed URL tokens if needed.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Provide a minimal sequence that reproduces the bug.
+      placeholder: |
+        1. Run the command above.
+        2. Wait until the transfer reaches the failing state.
+        3. Observe the error shown below.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Run with `--log-level=debug --console-log-level=debug --log=aria2-next.log` where possible, then upload the log file. Redact secrets before uploading.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: comparison
+    attributes:
+      label: Regression or Comparison
+      description: If another aria2-next version, upstream aria2, browser, curl, or Motrix Next behavior differs, describe the exact comparison.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Additional Context
+      description: Add screenshots, packet captures, server behavior notes, or links to related Motrix Next issues.
+
+  - type: checkboxes
+    id: validations
+    attributes:
+      label: Validations
+      options:
+        - label: I searched existing issues and this has not already been reported.
+          required: true
+        - label: I removed or redacted RPC secrets, cookies, proxy credentials, and private signed URL tokens.
+          required: true
+        - label: This is a reproducible engine bug, not a general usage question.
+          required: true

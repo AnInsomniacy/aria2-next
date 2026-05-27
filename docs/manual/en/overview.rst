@@ -50,6 +50,7 @@ Here is a list of features:
 * Segmented downloading
 * HTTP/1.1 implementation
 * HTTP Proxy support
+* Proxy resolution modes for automatic, direct, and explicitly configured proxy use
 * HTTP BASIC authentication support
 * HTTP Proxy authentication support
 * Well-known environment variables for proxy: ``http_proxy``,
@@ -92,7 +93,8 @@ Versioning
 Aria2 Next uses semantic versions. ``CMakeLists.txt`` is the version source of
 truth, and release tags use ``v{PROJECT_VERSION}``. Official release artifacts
 are built by the GitHub release workflow after a matching GitHub Release is
-published.
+published. Manual release workflow runs can validate release or debug profiles
+without publishing official assets.
 
 How to get source code
 ----------------------
@@ -116,7 +118,6 @@ BitTorrent               libtorrent-rasterbar and Boost headers
 ED2K                     Native aria2-next protocol code
 Checksum                 OpenSSL plus zlib for adler32 when enabled
 gzip and deflate         libcurl and zlib
-Async DNS                C-Ares when enabled
 JSON-RPC over WebSocket  Boost.Beast and Boost.JSON
 ======================== ========================================
 
@@ -157,6 +158,11 @@ libcurl/OpenSSL CA auto-discovery with default OpenSSL fallback paths, and
 Android shells may need an explicit ``--ca-certificate`` path. Set
 ``-DARIA2_CA_BUNDLE=/path/to/ca-bundle`` to add an explicit direct OpenSSL
 bundle fallback for custom builds.
+
+Proxy behavior is controlled by ``--proxy-mode``. ``auto`` is the command-line
+default and permits configured proxy options plus environment proxy variables.
+``direct`` disables proxy use for HTTP, HTTPS, and FTP transfers. ``manual``
+uses only explicitly configured aria2-next proxy options.
 
 By default, the bash completion file named ``aria2-next`` is installed to the
 default documentation directory. To change that directory, set
@@ -257,6 +263,29 @@ aria2-next uses libtorrent-rasterbar as its only BitTorrent backend.
 Torrent files and magnet links are routed through libtorrent for peer
 protocol, DHT, PEX, local peer discovery, UDP trackers, piece picking,
 endgame behavior, disk I/O, metadata exchange, and resume state.
+
+During magnet metadata download, JSON-RPC status reports metadata state under
+``bittorrent.metadata``. ``bittorrent.info`` is emitted only after stable
+torrent metadata exists.
+
+HTTP segmented transfer behavior
+--------------------------------
+
+Segmented HTTP and HTTPS transfers validate ranged responses before writing
+body data. A valid ranged response must use status ``206 Partial Content``,
+provide a matching ``Content-Range`` header, and use identity encoding for the
+byte stream. If a server ignores Range and returns ``200 OK`` with the full
+body, aria2-next can downgrade that task to a single full-body transfer instead
+of writing full-body data into a fixed segment.
+
+ED2K progress
+-------------
+
+ED2K exposes stable visible progress for frontends through
+``ed2k.visibleCompletedLength`` in addition to the lower level verified
+progress model. This prevents paused or waiting ED2K tasks from displaying a
+progress regression when in-flight data exists but has not yet become verified
+completed length.
 
 About file names
 ~~~~~~~~~~~~~~~~

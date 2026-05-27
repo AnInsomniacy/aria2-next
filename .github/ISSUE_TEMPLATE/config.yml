@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and usage help
+    url: https://github.com/AnInsomniacy/aria2-next/blob/main/docs/SUPPORT.md
+    about: Read the support guide before opening usage or configuration questions.
+  - name: Motrix Next application bugs
+    url: https://github.com/AnInsomniacy/motrix-next/issues
+    about: Report UI, installer, update, tray, history, notification, and desktop app issues in Motrix Next.
+  - name: Security reports
+    url: https://github.com/AnInsomniacy/aria2-next/blob/main/docs/SECURITY.md
+    about: Report vulnerabilities privately instead of opening a public issue.

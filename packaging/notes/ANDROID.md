@@ -13,3 +13,5 @@ chmod 755 ./aria2-next
 ```
 
 Android certificate paths differ across shells and devices. Pass `--ca-certificate` explicitly when the shell environment does not expose usable defaults.
+
+Android release smoke testing is local and does not depend on external network downloads. Runtime HTTPS behavior depends on the CA path visible to the shell environment.

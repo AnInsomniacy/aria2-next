@@ -1,0 +1,68 @@
+name: Feature Request
+description: Suggest a focused aria2-next engine improvement
+title: "[feat]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests should describe an engine, CLI, RPC, protocol, build, or packaging improvement.
+        UI features for Motrix Next belong in the Motrix Next repository.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user, script, frontend, or integration problem does this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed Behavior
+      description: Describe the expected CLI option, RPC field, protocol behavior, build behavior, or release artifact behavior.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - CLI option
+        - JSON-RPC
+        - HTTP or HTTPS
+        - FTP, FTPS, SFTP, or SCP
+        - BitTorrent or magnet
+        - ED2K
+        - Session or input file
+        - Build or packaging
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility Impact
+      description: Explain whether this changes aria2-compatible behavior, adds an aria2-next extension, or affects Motrix Next integration.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Mention existing aria2 behavior, libcurl/libtorrent behavior, or frontend-side workarounds if relevant.
+
+  - type: checkboxes
+    id: validations
+    attributes:
+      label: Validations
+      options:
+        - label: I searched existing issues for this request.
+          required: true
+        - label: This request belongs in aria2-next, not Motrix Next UI.
+          required: true

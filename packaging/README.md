@@ -27,3 +27,9 @@ Release jobs also run `packaging/scripts/size-audit` on final binaries. This aud
 The release dependency boundary is platform-specific. Linux release binaries must be fully static ELF executables with no interpreter and no `NEEDED` shared libraries. macOS release binaries may link only Apple system libraries and frameworks at runtime; third-party dependencies must be linked into the executable. Windows release binaries may link only Windows system DLLs at runtime; third-party DLLs and private CRT DLLs are not allowed. Android release binaries may link only Android system runtime libraries and must not require `libc++_shared.so`.
 
 Release jobs run final-binary local loopback smoke tests, runtime dependency checks, and size audits before assets are uploaded. External network downloads are limited to verified dependency acquisition, not release smoke testing.
+
+Manual release workflow runs accept `version=latest` and `build_profile=release|debug`. `latest` resolves to the current version declared in `CMakeLists.txt`. Official GitHub Releases always force the release profile. Manual debug runs use `RelWithDebInfo`, skip stripping, add a `-debug` artifact suffix, and upload Windows linker map files as workflow artifacts only.
+
+Release checksum files are generated from the exact uploaded artifact names. Official releases upload `aria2-next-<version>-checksums.sha256`; manual debug validation uploads `aria2-next-<version>-debug-checksums.sha256` only to the workflow run.
+
+See [`../docs/RELEASE.md`](../docs/RELEASE.md) for maintainer release steps and [`../docs/RELEASE_INTEGRITY.md`](../docs/RELEASE_INTEGRITY.md) for user verification.

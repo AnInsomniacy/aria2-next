@@ -1,6 +1,6 @@
 # AGENTS.md - aria2-next
 
-This file defines repository rules for AI coding agents. Human contributors should start with [README.md](README.md), [packaging/README.md](packaging/README.md), [tools/README.md](tools/README.md), [third_party/README.md](third_party/README.md), and [docs/maintenance/README.md](docs/maintenance/README.md).
+This file defines repository rules for AI coding agents. Human contributors should start with [README.md](README.md), [docs/README.md](docs/README.md), [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md), [docs/SUPPORT.md](docs/SUPPORT.md), [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md), [docs/INTEGRATION.md](docs/INTEGRATION.md), [docs/SECURITY.md](docs/SECURITY.md), [docs/RELEASE.md](docs/RELEASE.md), [docs/RELEASE_INTEGRITY.md](docs/RELEASE_INTEGRITY.md), [packaging/README.md](packaging/README.md), [tools/README.md](tools/README.md), [third_party/README.md](third_party/README.md), and [docs/maintenance/README.md](docs/maintenance/README.md).
 
 > [!IMPORTANT]
 > All changes must meet industrial-grade quality. Find the root cause before changing code, keep behavior compatible unless the task explicitly changes it, avoid unrelated churn, and verify the exact build or release path affected by the change.
@@ -27,6 +27,8 @@ This file defines repository rules for AI coding agents. Human contributors shou
 | `src/` | aria2 core, CLI, protocol, disk, RPC, and platform code |
 | `tests/` | CppUnit tests and fixtures |
 | `docs/` | Manual sources, completion tooling, and maintenance records |
+| `.github/ISSUE_TEMPLATE/` | GitHub issue forms for bugs, crashes, build and packaging failures, feature requests, and usage questions |
+| `.github/PULL_REQUEST_TEMPLATE.md` | Pull request scope, verification, compatibility, release-note, and AI-disclosure checklist |
 | `packaging/` | Release dependencies, Dockerfiles, cross-build scripts, and package assets |
 | `packaging/dependencies.env` | Release dependency version source |
 | `third_party/` | Bundled third-party source |
@@ -191,6 +193,8 @@ Changes under `third_party/` must preserve third-party ownership. Limit edits th
 ## Documentation
 
 Keep documentation synchronized with behavior. If a CMake option, dependency baseline, supported platform, artifact name, release command, or directory path changes, update the relevant documentation in the same change.
+
+If support process, release integrity, security reporting, privacy-relevant network behavior, issue triage, or PR expectations change, update the matching files under `docs/` and `.github/` in the same change.
 
 `docs/maintenance/` is for durable audit records only. Do not commit temporary API payloads, scratch logs, generated reports, or local caches there.
 

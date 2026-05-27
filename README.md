@@ -114,6 +114,14 @@ Linux and macOS downloads are executable files. If your browser clears the execu
 
 Release binaries verify HTTPS certificates by default. Windows release builds use the native Windows certificate store through libcurl, macOS release builds use Apple SecTrust, Linux release builds use libcurl/OpenSSL CA auto-discovery with default OpenSSL fallback paths, and Android shells should pass `--ca-certificate` when the environment does not expose a usable CA path. Official release builds also enable the size-optimized release profile so standalone artifacts keep the current dependency baseline without carrying avoidable dead code.
 
+See [`docs/RELEASE_INTEGRITY.md`](docs/RELEASE_INTEGRITY.md) for the release trust model, checksum verification, signing status, and failed-release policy. Maintainer release steps are documented in [`docs/RELEASE.md`](docs/RELEASE.md).
+
+## Contributing and Support
+
+Use GitHub issue forms for reproducible bugs, crashes, feature proposals, release packaging problems, and focused usage questions.
+
+Before contributing, read the documentation index at [`docs/README.md`](docs/README.md), especially [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md), [`docs/SUPPORT.md`](docs/SUPPORT.md), and [`docs/CODE_OF_CONDUCT.md`](docs/CODE_OF_CONDUCT.md). Troubleshooting guidance lives in [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md), and application integration guidance lives in [`docs/INTEGRATION.md`](docs/INTEGRATION.md). Security-sensitive reports must follow [`docs/SECURITY.md`](docs/SECURITY.md). Privacy and network behavior are documented in [`docs/PRIVACY.md`](docs/PRIVACY.md).
+
 ## Maintenance Audit
 
 The durable audit artifacts live under [`docs/maintenance/`](docs/maintenance/). The preserved matrix contains 137 reviewed upstream bug issues, including 43 rows with final state `fixed-verified`.
@@ -143,6 +151,7 @@ The same file records versions, archive names, download URLs, and SHA-256 hashes
 | `src/` | aria2 command-line client and core implementation |
 | `tests/` | CppUnit test suite registered through CTest |
 | `docs/` | manual sources, completion tooling, and maintenance records |
+| `.github/` | issue forms, pull request template, CI, and release workflows |
 | `packaging/` | release dependencies, cross-build scripts, Dockerfiles, and package assets |
 | `third_party/` | vendored source with explicit ownership rules |
 | `tools/` | local developer helpers |

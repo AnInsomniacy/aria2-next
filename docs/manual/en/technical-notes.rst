@@ -101,3 +101,25 @@ BitTorrent DHT state
 aria2-next uses libtorrent-rasterbar as its BitTorrent backend.
 BitTorrent DHT routing state is owned by libtorrent and is not stored in
 the removed native ``dht.dat`` or ``dht6.dat`` formats.
+
+JSON-RPC extension fields
+-------------------------
+
+aria2-next keeps aria2-compatible JSON-RPC fields where they can represent
+state accurately. When a modern backend exposes state that cannot be represented
+without placeholders, aria2-next adds explicit extension fields.
+
+For libtorrent magnet tasks, ``bittorrent.metadata`` reports metadata phase.
+``bittorrent.info`` is omitted until real torrent metadata is available.
+
+For ED2K tasks, ``ed2k.visibleCompletedLength`` exposes stable user-facing
+progress across active, waiting, paused, and stopped states.
+
+HTTP Range validation
+---------------------
+
+The libcurl-backed HTTP path validates ranged responses before body writes.
+Ranged segment writes require ``206 Partial Content``, a matching
+``Content-Range``, and identity content encoding. Servers that ignore Range and
+return ``200 OK`` can be treated as range-unreliable and restarted as a
+single full-body transfer.

@@ -3046,15 +3046,14 @@ REMOVEME    >>> from pprint import pprint
     >>> pprint(json.loads(c.read().decode()))
     {'id': 'qwer',
      'jsonrpc': '2.0',
-     'result': {'enabledFeatures': ['Async DNS',
-                                      'BitTorrent',
+     'result': {'enabledFeatures': ['BitTorrent',
                                       'ED2K',
                                       'Firefox3 Cookie',
                                       'GZip',
                                       'HTTPS',
                                       'Message Digest',
                                       'JSON-RPC'],
-                 'version': '1.11.0'}}
+                 'version': '2.2.7'}}
 
 
 .. function:: aria2.getSessionInfo([secret])

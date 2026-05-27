@@ -1,0 +1,60 @@
+name: Question or Usage Help
+description: Ask a focused aria2-next usage, configuration, or integration question
+title: "[question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for aria2-next engine questions. Motrix Next application questions belong in the Motrix Next repository.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: Ask the question and describe what you are trying to do.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Aria2 Next Version
+      description: Run `aria2-next --version` if the question depends on runtime behavior.
+      placeholder: "Aria2 Next version 2.2.7"
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - CLI option
+        - Configuration file
+        - JSON-RPC
+        - HTTP or HTTPS
+        - FTP or SFTP
+        - BitTorrent or magnet
+        - ED2K
+        - Session or input file
+        - Build or release artifact
+        - Parent application integration
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command, Config, or RPC Example
+      description: Paste the relevant command, config, or request. Redact secrets.
+      render: text
+
+  - type: checkboxes
+    id: validations
+    attributes:
+      label: Validations
+      options:
+        - label: I read `docs/SUPPORT.md` and `docs/TROUBLESHOOTING.md`.
+          required: true
+        - label: I redacted secrets, cookies, proxy credentials, and private tokens.
+          required: true

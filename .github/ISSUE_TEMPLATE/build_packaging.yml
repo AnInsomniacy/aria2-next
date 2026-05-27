@@ -1,0 +1,78 @@
+name: Build or Packaging Issue
+description: Report local build, CI, release artifact, checksum, dependency, or packaging failures
+title: "[build]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the build or packaging failure.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Surface
+      options:
+        - Local CMake build
+        - GitHub Actions CI
+        - GitHub Actions release
+        - Linux release artifact
+        - macOS release artifact
+        - Windows release artifact
+        - Android release artifact
+        - Release checksum file
+        - Runtime dependency closure
+        - Dependency source download
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Version or Commit
+      placeholder: "v2.2.7 or commit SHA"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command or Workflow Run
+      description: Paste the local command or link to the failing workflow run and job.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure
+    attributes:
+      label: Failure or Verification Output
+      description: Paste the smallest complete failing section from the log. For release artifacts, include `sha256sum`, `file`, `ldd`, `otool -L`, `dumpbin`, or `aria2-next --version` output when relevant.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Build Environment
+      description: Include OS, compiler, CMake version, Ninja version, dependency source, and target architecture.
+      render: text
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: validations
+    attributes:
+      label: Validations
+      options:
+        - label: I checked `packaging/dependencies.env` for the maintained dependency baseline.
+          required: true
+        - label: I included the full failing command or workflow run link.
+          required: true
+        - label: For official release artifacts, I downloaded the asset from the GitHub Release page and checked the published checksum file.
+          required: false

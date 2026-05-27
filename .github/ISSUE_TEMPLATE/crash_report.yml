@@ -1,0 +1,96 @@
+name: Crash Report
+description: Report an aria2-next process crash or abort
+title: "[crash]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form when the aria2-next process exits unexpectedly, aborts, or crashes.
+        If Motrix Next stays open but the engine process disappears, report it here and include the engine command line.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Crash Summary
+      description: Describe what action starts the crash and how long it takes to happen.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Aria2 Next Version
+      placeholder: "Aria2 Next version 2.2.7"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - macOS Apple Silicon
+        - macOS Intel
+        - Windows x86_64
+        - Windows ARM64
+        - Linux x86_64
+        - Linux ARM64
+        - Android ARM64
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: OS Version
+      placeholder: "Windows 10 22H2, Windows 11 24H2, Ubuntu 24.04, macOS 15.5"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Startup Command
+      description: Paste the exact command line or Motrix Next sidecar arguments used to start the engine.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: trigger
+    attributes:
+      label: Trigger
+      description: Paste the URI, magnet, RPC call, torrent file details, or input-file entry that triggers the crash. Redact private data.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: crash-data
+    attributes:
+      label: Crash Data
+      description: Include exit code, signal, Windows exception code, faulting module, fault offset, WER data, debugger backtrace, minidump notes, or core dump notes.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and stderr
+      description: Include stderr and debug logs. If there is no output, say so.
+      render: text
+
+  - type: checkboxes
+    id: validations
+    attributes:
+      label: Validations
+      options:
+        - label: I searched existing crash reports.
+          required: true
+        - label: I identified whether the crashing process is aria2-next, not the parent application.
+          required: true
+        - label: I redacted secrets and private tokens from commands, logs, and dumps.
+          required: true
