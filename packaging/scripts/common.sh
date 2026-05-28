@@ -46,7 +46,7 @@ curl_fetch() {
     exit 1
   fi
 
-  curl --fail --show-error -L --retry 5 --connect-timeout 15 -O "$url"
+  curl --fail --show-error -L --retry 5 --connect-timeout 15 -o "$archive" "$url"
   verify_sha256 "$archive" "$expected"
 }
 
