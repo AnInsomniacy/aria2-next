@@ -322,6 +322,16 @@ if(NOT spdlog_FOUND)
       break()
     endif()
   endforeach()
+
+  if(NOT TARGET spdlog::spdlog)
+    find_path(SPDLOG_INCLUDE_DIR NAMES spdlog/spdlog.h)
+    if(SPDLOG_INCLUDE_DIR)
+      add_library(spdlog::spdlog INTERFACE IMPORTED)
+      target_include_directories(spdlog::spdlog INTERFACE
+        "${SPDLOG_INCLUDE_DIR}")
+      set(spdlog_FOUND TRUE)
+    endif()
+  endif()
 endif()
 if(NOT TARGET spdlog::spdlog)
   message(FATAL_ERROR
