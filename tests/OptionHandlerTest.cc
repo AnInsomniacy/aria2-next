@@ -19,6 +19,7 @@ class OptionHandlerTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testNumberOptionHandler_min_max);
   CPPUNIT_TEST(testUnitNumberOptionHandler);
   CPPUNIT_TEST(testParameterOptionHandler);
+  CPPUNIT_TEST(testDnsResolverOptionHandler);
   CPPUNIT_TEST(testDefaultOptionHandler);
   CPPUNIT_TEST(testFloatNumberOptionHandler);
   CPPUNIT_TEST(testFloatNumberOptionHandler_min);
@@ -36,6 +37,7 @@ public:
   void testNumberOptionHandler_min_max();
   void testUnitNumberOptionHandler();
   void testParameterOptionHandler();
+  void testDnsResolverOptionHandler();
   void testDefaultOptionHandler();
   void testFloatNumberOptionHandler();
   void testFloatNumberOptionHandler_min();
@@ -176,6 +178,23 @@ void OptionHandlerTest::testParameterOptionHandler()
   }
   CPPUNIT_ASSERT_EQUAL(std::string("value1, value2"),
                        handler.createPossibleValuesString());
+}
+
+void OptionHandlerTest::testDnsResolverOptionHandler()
+{
+  ParameterOptionHandler handler(PREF_DNS_RESOLVER, "", V_SYSTEM,
+                                 {V_SYSTEM, V_ASYNC});
+  Option option;
+  handler.parse(option, V_SYSTEM);
+  CPPUNIT_ASSERT_EQUAL(std::string(V_SYSTEM), option.get(PREF_DNS_RESOLVER));
+  handler.parse(option, V_ASYNC);
+  CPPUNIT_ASSERT_EQUAL(std::string(V_ASYNC), option.get(PREF_DNS_RESOLVER));
+  try {
+    handler.parse(option, "threaded");
+    CPPUNIT_FAIL("exception must be thrown.");
+  }
+  catch (Exception& e) {
+  }
 }
 
 void OptionHandlerTest::testDefaultOptionHandler()

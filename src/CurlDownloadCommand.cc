@@ -71,7 +71,8 @@ CurlDownloadCommand::CurlDownloadCommand(
       rangeProtocolErrorCode_(error_code::HTTP_PROTOCOL_ERROR),
       retryAfterSeconds_(0),
       bodyInspectionComplete_(false),
-      headerList_(nullptr)
+      headerList_(nullptr),
+      resolveList_(nullptr)
 {
   std::memset(errorBuffer_, 0, sizeof(errorBuffer_));
   peerStat_ = req->initPeerStat();
@@ -88,6 +89,9 @@ CurlDownloadCommand::~CurlDownloadCommand()
   }
   if (headerList_) {
     curl_slist_free_all(headerList_);
+  }
+  if (resolveList_) {
+    curl_slist_free_all(resolveList_);
   }
   if (easy_) {
     curl_easy_cleanup(easy_);
@@ -110,6 +114,36 @@ long CurlDownloadCommand::platformSslTrustOptions()
 bool CurlDownloadCommand::shouldDisableCurlProxy(const Option* option)
 {
   return option->get(PREF_PROXY_MODE) != V_AUTO;
+}
+
+bool CurlDownloadCommand::usesSystemDnsResolver(const Option* option)
+{
+  return option->get(PREF_DNS_RESOLVER) != V_ASYNC;
+}
+
+std::string CurlDownloadCommand::makeCurlResolveEntry(
+    const std::string& host, uint16_t port,
+    const std::vector<std::string>& addresses)
+{
+  std::string entry = host;
+  entry += ":";
+  entry += util::uitos(port);
+  entry += ":";
+  for (size_t i = 0; i < addresses.size(); ++i) {
+    if (i != 0) {
+      entry += ",";
+    }
+    const auto& address = addresses[i];
+    if (address.find(':') != std::string::npos) {
+      entry += "[";
+      entry += address;
+      entry += "]";
+    }
+    else {
+      entry += address;
+    }
+  }
+  return entry;
 }
 
 bool CurlDownloadCommand::isRetryableHttpCurlError(CURLcode result)
@@ -136,6 +170,12 @@ bool CurlDownloadCommand::supportsHttp2()
 #else
   return false;
 #endif
+}
+
+bool CurlDownloadCommand::isHttpRedirectStatus(long status)
+{
+  return status == 300 || status == 301 || status == 302 || status == 303 ||
+         status == 307 || status == 308;
 }
 
 bool CurlDownloadCommand::isRetryableHttpStatus(long status)
@@ -211,10 +251,12 @@ void CurlDownloadCommand::initialize()
                    &CurlDownloadCommand::writeCallback);
   curl_easy_setopt(easy_, CURLOPT_WRITEDATA, this);
   curl_easy_setopt(easy_, CURLOPT_ERRORBUFFER, errorBuffer_);
-  curl_easy_setopt(easy_, CURLOPT_FOLLOWLOCATION, 1L);
+  curl_easy_setopt(easy_, CURLOPT_FOLLOWLOCATION,
+                   usesSystemDnsResolver(getOption().get()) ? 0L : 1L);
   curl_easy_setopt(easy_, CURLOPT_NOSIGNAL, 1L);
   curl_easy_setopt(easy_, CURLOPT_FAILONERROR, 0L);
   applyRequestOptions();
+  applyDnsResolverOptions();
 
   metadataProbe_ = !getPieceStorage();
   metadataRangeProbe_ =
@@ -476,6 +518,44 @@ void CurlDownloadCommand::applyFtpFamilyOptions()
   }
 }
 
+void CurlDownloadCommand::applyDnsResolverOptions()
+{
+  auto option = getOption();
+  if (option->getAsBool(PREF_DISABLE_IPV6)) {
+    curl_easy_setopt(easy_, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+  }
+
+  if (!usesSystemDnsResolver(option.get())) {
+    return;
+  }
+
+  auto host = getRequest()->getHost();
+  auto uriHost = getRequest()->getURIHost();
+  auto port = getRequest()->getPort();
+  if (!proxyUri_.empty()) {
+    auto proxyRequest = createProxyRequest();
+    if (!proxyRequest) {
+      return;
+    }
+    host = proxyRequest->getHost();
+    uriHost = proxyRequest->getURIHost();
+    port = proxyRequest->getPort();
+  }
+  if (util::isNumericHost(host)) {
+    return;
+  }
+  std::vector<std::string> addresses;
+  resolveHostname(addresses, host, port);
+  if (addresses.empty()) {
+    throw DOWNLOAD_FAILURE_EXCEPTION(
+        fmt("Failed to resolve hostname %s.", host.c_str()));
+  }
+
+  auto entry = makeCurlResolveEntry(uriHost, port, addresses);
+  resolveList_ = curl_slist_append(resolveList_, entry.c_str());
+  curl_easy_setopt(easy_, CURLOPT_RESOLVE, resolveList_);
+}
+
 void CurlDownloadCommand::applyMetadataProbeOptions()
 {
   curl_easy_setopt(easy_, CURLOPT_ACCEPT_ENCODING, "identity");
@@ -525,6 +605,9 @@ void CurlDownloadCommand::finish(CURLcode result)
     throw DOWNLOAD_FAILURE_EXCEPTION(
         fmt("libcurl transfer failed: %s",
             errorBuffer_[0] ? errorBuffer_ : curl_easy_strerror(result)));
+  }
+  if (followManualRedirect(status)) {
+    return;
   }
   if (status >= 400) {
     if (shouldFallbackMetadataHeadStatusToRangeProbe(
@@ -576,6 +659,31 @@ void CurlDownloadCommand::finish(CURLcode result)
                                          numNext);
     getDownloadEngine()->addCommand(std::move(commands));
   }
+}
+
+bool CurlDownloadCommand::followManualRedirect(long status)
+{
+  if (!usesSystemDnsResolver(getOption().get()) || !isHttpTransfer() ||
+      !isHttpRedirectStatus(status)) {
+    return false;
+  }
+  if (location_.empty()) {
+    throw DOWNLOAD_FAILURE_EXCEPTION(
+        fmt("HTTP redirect status %ld did not include Location.", status));
+  }
+  if (getRequest()->getRedirectCount() >= Request::MAX_REDIRECT) {
+    throw DOWNLOAD_FAILURE_EXCEPTION("Too many redirects.");
+  }
+  if (!getRequest()->redirectUri(location_)) {
+    throw DOWNLOAD_FAILURE_EXCEPTION(
+        fmt("Invalid redirect URI: %s", location_.c_str()));
+  }
+  A2_LOG_NOTICE(fmt(MSG_REDIRECT, getCuid(),
+                    getRequest()->getCurrentUri().c_str()));
+  getDownloadEngine()->addCommand(
+      make_unique<CurlDownloadCommand>(getCuid(), getRequest(), getFileEntry(),
+                                       getRequestGroup(), getDownloadEngine()));
+  return true;
 }
 
 bool CurlDownloadCommand::finishMetadataProbe(long status)
@@ -872,6 +980,14 @@ size_t CurlDownloadCommand::writeData(const unsigned char* data, size_t length)
     return 0;
   }
 
+  if (isHttpTransfer() && usesSystemDnsResolver(getOption().get())) {
+    long status = 0;
+    if (curl_easy_getinfo(easy_, CURLINFO_RESPONSE_CODE, &status) == CURLE_OK &&
+        isHttpRedirectStatus(status)) {
+      return length;
+    }
+  }
+
   if (metadataProbe_) {
     if (metadataRangeProbe_ && responseRange_.entityLength <= 0) {
       long status = 0;
@@ -1010,6 +1126,7 @@ size_t CurlDownloadCommand::writeHeader(const char* data, size_t length)
   constexpr char CONTENT_RANGE[] = "content-range:";
   constexpr char CONTENT_ENCODING[] = "content-encoding:";
   constexpr char CONTENT_TYPE[] = "content-type:";
+  constexpr char LOCATION[] = "location:";
   constexpr char LAST_MODIFIED[] = "last-modified:";
   constexpr char RETRY_AFTER[] = "retry-after:";
 
@@ -1026,6 +1143,7 @@ size_t CurlDownloadCommand::writeHeader(const char* data, size_t length)
     contentDisposition_.clear();
     contentEncoding_.clear();
     contentType_.clear();
+    location_.clear();
     retryAfterSeconds_ = 0;
   }
   else if (util::startsWith(lower, CONTENT_LENGTH)) {
@@ -1059,6 +1177,9 @@ size_t CurlDownloadCommand::writeHeader(const char* data, size_t length)
   }
   else if (util::startsWith(lower, CONTENT_TYPE)) {
     contentType_ = util::strip(line.substr(sizeof(CONTENT_TYPE) - 1));
+  }
+  else if (util::startsWith(lower, LOCATION)) {
+    location_ = util::strip(line.substr(sizeof(LOCATION) - 1));
   }
   else if (util::startsWith(lower, LAST_MODIFIED)) {
     if (getOption()->getAsBool(PREF_REMOTE_TIME)) {

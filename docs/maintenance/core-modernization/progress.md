@@ -218,5 +218,11 @@ Blocked: none.
 2026-05-28 CM-020 verified
 Changed: Release packaging now builds c-ares as libcurl's asynchronous DNS resolver input. The old native async DNS source ownership stays removed; ordinary URL DNS remains owned by libcurl. Feature reporting now exposes `Async DNS`, `libcurl/<version>`, and `c-ares/<version>` from libcurl runtime metadata. Release smoke tests now cover both numeric loopback and hostname resolution.
 Verified: `cmake --preset default` passed. `cmake --build --preset default` passed. `ctest --preset default --output-on-failure` passed. `build/default/aria2-next --version` passed and reported `Async DNS` through the local libcurl. Focused `FeatureConfigTest` passed. Packaging shell syntax checks, workflow YAML parsing, and `git diff --check` passed. The pinned c-ares archive downloaded with SHA-256 verification, `build_cares` built and installed c-ares 1.34.6, and curl CMake detected c-ares 1.34.6 through the release helper options.
+
+## 2026-05-28 - Startup DNS Resolver Policy
+
+Changed: Added startup-only `--dns-resolver=system|async` for ordinary URL transfers. The default `system` mode resolves hostnames through the existing system resolver and feeds libcurl with fixed host mappings. The `async` mode keeps libcurl's c-ares resolver path. The old `async-dns` option name remains removed and unsupported.
+
+Verified: Focused `RequestGroupTest`, `OptionHandlerTest`, and `RpcMethodTest` passed after the option and transfer-path changes.
 Remaining: release workflow validation should exercise the full static dependency closure on Linux runners.
 Blocked: none.

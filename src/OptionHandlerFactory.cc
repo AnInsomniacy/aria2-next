@@ -316,6 +316,14 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
   }
   {
     OptionHandler* op(new ParameterOptionHandler(
+        PREF_DNS_RESOLVER, TEXT_DNS_RESOLVER, V_SYSTEM, {V_SYSTEM, V_ASYNC}));
+    op->addTag(TAG_ADVANCED);
+    op->addTag(TAG_HTTP);
+    op->setInitialOption(true);
+    handlers.push_back(op);
+  }
+  {
+    OptionHandler* op(new ParameterOptionHandler(
         PREF_DOWNLOAD_RESULT, TEXT_DOWNLOAD_RESULT, A2_V_DEFAULT,
         {A2_V_DEFAULT, A2_V_FULL, A2_V_HIDE}));
     op->addTag(TAG_ADVANCED);

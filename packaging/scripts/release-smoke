@@ -50,6 +50,16 @@ test "$(cat release-smoke-out/release-smoke.txt)" = "aria2-next release smoke"
   --dir=release-smoke-hostname-out \
   --out=release-smoke.txt \
   --allow-overwrite=true \
+  --dns-resolver=system \
   http://localhost:18080/release-smoke.txt
 
 test "$(cat release-smoke-hostname-out/release-smoke.txt)" = "aria2-next release smoke"
+
+"$binary" \
+  --dir=release-smoke-async-out \
+  --out=release-smoke.txt \
+  --allow-overwrite=true \
+  --dns-resolver=async \
+  http://localhost:18080/release-smoke.txt
+
+test "$(cat release-smoke-async-out/release-smoke.txt)" = "aria2-next release smoke"

@@ -58,10 +58,12 @@ class RpcMethodTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testChangeOption);
   CPPUNIT_TEST(testChangeOption_withBadOption);
   CPPUNIT_TEST(testChangeOption_withNotAllowedOption);
+  CPPUNIT_TEST(testChangeOption_ignoresDnsResolver);
   CPPUNIT_TEST(testChangeOption_withoutGid);
   CPPUNIT_TEST(testChangeGlobalOption);
   CPPUNIT_TEST(testChangeGlobalOption_withBadOption);
   CPPUNIT_TEST(testChangeGlobalOption_withNotAllowedOption);
+  CPPUNIT_TEST(testChangeGlobalOption_ignoresDnsResolver);
   CPPUNIT_TEST(testTellStatus_withoutGid);
   CPPUNIT_TEST(testTellWaiting);
   CPPUNIT_TEST(testTellWaiting_fail);
@@ -137,10 +139,12 @@ public:
   void testChangeOption();
   void testChangeOption_withBadOption();
   void testChangeOption_withNotAllowedOption();
+  void testChangeOption_ignoresDnsResolver();
   void testChangeOption_withoutGid();
   void testChangeGlobalOption();
   void testChangeGlobalOption_withBadOption();
   void testChangeGlobalOption_withNotAllowedOption();
+  void testChangeGlobalOption_ignoresDnsResolver();
   void testTellStatus_withoutGid();
   void testTellWaiting();
   void testTellWaiting_fail();
@@ -608,6 +612,25 @@ void RpcMethodTest::testChangeOption_withNotAllowedOption()
   CPPUNIT_ASSERT_EQUAL(0, res.code);
 }
 
+void RpcMethodTest::testChangeOption_ignoresDnsResolver()
+{
+  auto group = std::make_shared<RequestGroup>(GroupId::create(), option_);
+  group->getOption()->put(PREF_DNS_RESOLVER, V_SYSTEM);
+  e_->getRequestGroupMan()->addReservedGroup(group);
+
+  ChangeOptionRpcMethod m;
+  auto req = createReq(ChangeOptionRpcMethod::getMethodName());
+  req.params->append(GroupId::toHex(group->getGID()));
+  auto opt = Dict::g();
+  opt->put(PREF_DNS_RESOLVER->k, V_ASYNC);
+  req.params->append(std::move(opt));
+  auto res = m.execute(std::move(req), e_.get());
+
+  CPPUNIT_ASSERT_EQUAL(0, res.code);
+  CPPUNIT_ASSERT_EQUAL(std::string(V_SYSTEM),
+                       group->getOption()->get(PREF_DNS_RESOLVER));
+}
+
 void RpcMethodTest::testChangeOption_withoutGid()
 {
   ChangeOptionRpcMethod m;
@@ -662,6 +685,22 @@ void RpcMethodTest::testChangeGlobalOption_withNotAllowedOption()
   auto res = m.execute(std::move(req), e_.get());
   // The unacceptable options are just ignored.
   CPPUNIT_ASSERT_EQUAL(0, res.code);
+}
+
+void RpcMethodTest::testChangeGlobalOption_ignoresDnsResolver()
+{
+  e_->getOption()->put(PREF_DNS_RESOLVER, V_SYSTEM);
+
+  ChangeGlobalOptionRpcMethod m;
+  auto req = createReq(ChangeGlobalOptionRpcMethod::getMethodName());
+  auto opt = Dict::g();
+  opt->put(PREF_DNS_RESOLVER->k, V_ASYNC);
+  req.params->append(std::move(opt));
+  auto res = m.execute(std::move(req), e_.get());
+
+  CPPUNIT_ASSERT_EQUAL(0, res.code);
+  CPPUNIT_ASSERT_EQUAL(std::string(V_SYSTEM),
+                       e_->getOption()->get(PREF_DNS_RESOLVER));
 }
 
 void RpcMethodTest::testNoSuchMethod()

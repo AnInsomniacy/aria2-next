@@ -523,6 +523,9 @@
     "                              ignored.")
 #define TEXT_DISABLE_IPV6                               \
   _(" --disable-ipv6[=true|false]  Disable IPv6.")
+#define TEXT_DNS_RESOLVER                                               \
+  _(" --dns-resolver=RESOLVER    Set DNS resolver policy. Possible values are\n" \
+    "                              system and async. Default: system.")
 #define TEXT_HTTP_NO_CACHE                      \
   _(" --http-no-cache[=true|false] Send Cache-Control: no-cache and Pragma: no-cache\n" \
     "                              header to avoid cached content.  If false is\n" \

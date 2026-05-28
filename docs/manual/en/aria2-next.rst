@@ -951,6 +951,14 @@ Advanced Options
   Disable IPv6. This is useful if you have to use broken DNS and want
   to avoid terribly slow AAAA record lookup. Default: ``false``
 
+.. option:: --dns-resolver=<RESOLVER>
+
+  Set DNS resolver policy for ordinary URL transfers. ``system`` resolves
+  hostnames through the system resolver before handing the connection to
+  libcurl. ``async`` lets libcurl use its asynchronous resolver when the binary
+  supports it. This option is read at startup and cannot be changed through
+  JSON-RPC. Possible values: ``system``, ``async``. Default: ``system``
+
 .. option:: --disk-cache=<SIZE>
 
   Enable disk cache. If SIZE is ``0``, the disk cache is

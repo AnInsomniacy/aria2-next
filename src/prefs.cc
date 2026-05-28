@@ -147,6 +147,8 @@ const std::string V_TUNNEL("tunnel");
 const std::string V_AUTO("auto");
 const std::string V_DIRECT("direct");
 const std::string V_MANUAL("manual");
+const std::string V_SYSTEM("system");
+const std::string V_ASYNC("async");
 const std::string V_PLAIN("plain");
 const std::string V_ARC4("arc4");
 const std::string V_HTTP("http");
@@ -166,6 +168,8 @@ PrefPtr PREF_HELP = makePref("help");
 PrefPtr PREF_TIMEOUT = makePref("timeout");
 // values: 1*digit
 PrefPtr PREF_DNS_TIMEOUT = makePref("dns-timeout");
+// values: system | async
+PrefPtr PREF_DNS_RESOLVER = makePref("dns-resolver");
 // values: 1*digit
 PrefPtr PREF_CONNECT_TIMEOUT = makePref("connect-timeout");
 // values: 1*digit
