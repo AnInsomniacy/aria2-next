@@ -128,6 +128,32 @@ build_libssh2_for_curl() {
   aria2_cmake_install build/libssh2-for-curl-release
 }
 
+build_cares() {
+  if [ -z "$PREFIX" ]; then
+    echo "build_cares requires PREFIX" >&2
+    exit 1
+  fi
+
+  tar xf "$CARES_ARCHIVE"
+  cmake -S "c-ares-$CARES_VERSION" \
+    -B build/c-ares-release -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+    -DCMAKE_PREFIX_PATH="$PREFIX" \
+    -DCARES_STATIC=ON \
+    -DCARES_SHARED=OFF \
+    -DCARES_STATIC_PIC=ON \
+    -DCARES_BUILD_TESTS=OFF \
+    -DCARES_BUILD_CONTAINER_TESTS=OFF \
+    -DCARES_BUILD_TOOLS=OFF \
+    -DCARES_INSTALL=ON \
+    -DCMAKE_C_FLAGS="${RELEASE_CFLAGS:-}" \
+    -DCMAKE_EXE_LINKER_FLAGS="${RELEASE_LDFLAGS:-}" \
+    "$@"
+  cmake --build build/c-ares-release -j"${ARIA2_BUILD_JOBS:-$(getconf _NPROCESSORS_ONLN)}"
+  aria2_cmake_install build/c-ares-release
+}
+
 build_curl() {
   if [ -z "$PREFIX" ]; then
     echo "build_curl requires PREFIX" >&2
@@ -147,6 +173,7 @@ build_curl() {
   fi
 
   curl_ca_options=
+  curl_resolver_options="-DENABLE_ARES=ON -DENABLE_THREADED_RESOLVER=OFF -DCARES_USE_STATIC_LIBS=ON -DCARES_INCLUDE_DIR=$PREFIX/include -DCARES_LIBRARY=$PREFIX/lib/libcares.a"
   case "$curl_target_system" in
     Windows)
       curl_ca_options="-DCURL_CA_NATIVE=ON -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none"
@@ -180,7 +207,7 @@ build_curl() {
     -DBUILD_MISC_DOCS=OFF \
     -DCURL_USE_PKGCONFIG=OFF \
     -DCURL_USE_OPENSSL=ON \
-    -DENABLE_THREADED_RESOLVER=ON \
+    $curl_resolver_options \
     -DOPENSSL_USE_STATIC_LIBS=ON \
     -DOPENSSL_ROOT_DIR="$PREFIX" \
     -DOPENSSL_INCLUDE_DIR="$PREFIX/include" \

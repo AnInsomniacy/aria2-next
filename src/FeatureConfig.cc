@@ -37,6 +37,9 @@
 #include <sstream>
 #include <cstring>
 
+#ifdef HAVE_LIBCURL
+#  include <curl/curl.h>
+#endif // HAVE_LIBCURL
 #ifdef HAVE_ZLIB
 #  include <zlib.h>
 #endif // HAVE_ZLIB
@@ -49,6 +52,20 @@
 #include "util.h"
 
 namespace aria2 {
+
+namespace {
+
+bool curlSupportsAsyncDns()
+{
+#if defined(HAVE_LIBCURL) && defined(CURL_VERSION_ASYNCHDNS)
+  auto info = curl_version_info(CURLVERSION_NOW);
+  return info && (info->features & CURL_VERSION_ASYNCHDNS);
+#else  // !HAVE_LIBCURL || !CURL_VERSION_ASYNCHDNS
+  return false;
+#endif // !HAVE_LIBCURL || !CURL_VERSION_ASYNCHDNS
+}
+
+} // namespace
 
 uint16_t getDefaultPort(const std::string& protocol)
 {
@@ -98,7 +115,7 @@ const char* strSupportedFeature(int feature)
 {
   switch (feature) {
   case (FEATURE_ASYNC_DNS):
-    return nullptr;
+    return curlSupportsAsyncDns() ? "Async DNS" : nullptr;
     break;
 
   case (FEATURE_BITTORRENT):
@@ -141,6 +158,19 @@ const char* strSupportedFeature(int feature)
 std::string usedLibs()
 {
   std::string res;
+#ifdef HAVE_LIBCURL
+  auto curlInfo = curl_version_info(CURLVERSION_NOW);
+  if (curlInfo && curlInfo->version) {
+    res += "libcurl/";
+    res += curlInfo->version;
+    res += " ";
+    if (curlInfo->ares && curlInfo->ares[0]) {
+      res += "c-ares/";
+      res += curlInfo->ares;
+      res += " ";
+    }
+  }
+#endif // HAVE_LIBCURL
 #ifdef HAVE_ZLIB
   res += "zlib/" ZLIB_VERSION " ";
 #endif // HAVE_ZLIB

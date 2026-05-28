@@ -39,6 +39,9 @@
 
 #include <iostream>
 
+#ifdef HAVE_LIBCURL
+#  include <curl/curl.h>
+#endif // HAVE_LIBCURL
 #ifdef HAVE_OPENSSL
 #  include <openssl/err.h>
 #  include <openssl/ssl.h>
@@ -75,6 +78,14 @@ bool Platform::setUp()
     return false;
   }
   initialized_ = true;
+#ifdef HAVE_LIBCURL
+  CURLcode curlCode = curl_global_init(CURL_GLOBAL_DEFAULT);
+  if (curlCode != CURLE_OK) {
+    initialized_ = false;
+    throw DL_ABORT_EX(
+        fmt("curl_global_init failed: %s", curl_easy_strerror(curlCode)));
+  }
+#endif // HAVE_LIBCURL
 #ifdef HAVE_OPENSSL
   // RC4 is in the legacy provider.
   legacy_provider_ = OSSL_PROVIDER_load(nullptr, "legacy");
@@ -118,6 +129,10 @@ bool Platform::tearDown()
   SocketCore::setServerTLSContext(nullptr);
 #endif // ENABLE_SSL
 
+#ifdef HAVE_LIBCURL
+  curl_global_cleanup();
+#endif // HAVE_LIBCURL
+
 #ifdef HAVE_OPENSSL
   if (default_provider_) {
     OSSL_PROVIDER_unload(default_provider_);
@@ -129,7 +144,6 @@ bool Platform::tearDown()
     legacy_provider_ = nullptr;
   }
 #endif   // HAVE_OPENSSL
-
 
 #ifdef HAVE_WINSOCK2_H
   WSACleanup();

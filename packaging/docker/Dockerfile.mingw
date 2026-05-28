@@ -31,6 +31,7 @@ RUN . packaging/dependencies.env && \
     curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256" && \
     curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256" && \
     curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256" && \
+    curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256" && \
     curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256" && \
     curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
 
@@ -63,6 +64,15 @@ RUN . packaging/dependencies.env && \
     . packaging/scripts/common.sh && \
     . packaging/scripts/release-size-profile windows && \
     ARIA2_BUILD_JOBS="$(nproc)" build_libssh2_for_curl \
+      -DCMAKE_SYSTEM_NAME=Windows \
+      -DCMAKE_C_COMPILER="$HOST-gcc" \
+      -DCMAKE_RC_COMPILER="$HOST-windres" \
+      -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
+
+RUN . packaging/dependencies.env && \
+    . packaging/scripts/common.sh && \
+    . packaging/scripts/release-size-profile windows && \
+    ARIA2_BUILD_JOBS="$(nproc)" build_cares \
       -DCMAKE_SYSTEM_NAME=Windows \
       -DCMAKE_C_COMPILER="$HOST-gcc" \
       -DCMAKE_RC_COMPILER="$HOST-windres" \

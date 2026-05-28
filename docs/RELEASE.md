@@ -59,7 +59,9 @@ The manual `build_profile` input accepts `release` or `debug`. Official GitHub R
 
 ## Packaging Guarantees
 
-Release jobs build dependencies from the pinned sources in `packaging/dependencies.env`, verify SHA-256 hashes, run local loopback smoke tests, check runtime dependency closure, run size audits, generate checksums, and upload final assets.
+Release jobs build dependencies from the pinned sources in `packaging/dependencies.env`, verify SHA-256 hashes, run local loopback and hostname smoke tests, check runtime dependency closure, run size audits, generate checksums, and upload final assets.
+
+Official builds use libcurl with c-ares for asynchronous DNS resolution. `aria2-next --version` reports `Async DNS` and `c-ares/<version>` when the linked libcurl exposes that resolver capability.
 
 Linux release binaries must be static ELF executables without unexpected dynamic dependencies. macOS release binaries may link only Apple system libraries and frameworks at runtime. Windows release binaries may link only Windows system DLLs at runtime. Android binaries must not require `libc++_shared.so`.
 

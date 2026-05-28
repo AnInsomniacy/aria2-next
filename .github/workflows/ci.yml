@@ -38,6 +38,7 @@ jobs:
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
+          curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
           curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
 
@@ -68,6 +69,13 @@ jobs:
           . packaging/scripts/common.sh
           . packaging/scripts/release-size-profile linux
           ARIA2_BUILD_JOBS=$(nproc) build_libssh2_for_curl
+
+      - name: Build c-ares for libcurl
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile linux
+          ARIA2_BUILD_JOBS=$(nproc) build_cares
 
       - name: Build libcurl
         run: |

@@ -16,7 +16,7 @@ This directory owns release packaging, cross-compilation helpers, Docker build c
 
 Supported packaging paths build this repository checkout through CMake. Third-party dependencies may use their own upstream build systems while they are being built as release dependencies. BitTorrent support is built through libtorrent-rasterbar only; release packaging does not build or ship the removed native BitTorrent engine.
 
-Official release builds use `packaging/scripts/release-size-profile` to apply size-oriented compiler flags, per-function and per-data sections, and platform linker dead-code elimination. The profile is used by GitHub release jobs and Docker cross-build images so portable artifacts keep the maintained dependency baseline without retaining avoidable unused code. `packaging/scripts/common.sh` also owns the shared Boost header installation and static libtorrent-rasterbar build helper used by release jobs and Docker cross-build images.
+Official release builds use `packaging/scripts/release-size-profile` to apply size-oriented compiler flags, per-function and per-data sections, and platform linker dead-code elimination. The profile is used by GitHub release jobs and Docker cross-build images so portable artifacts keep the maintained dependency baseline without retaining avoidable unused code. `packaging/scripts/common.sh` also owns the shared Boost header installation, libcurl c-ares resolver build, and static libtorrent-rasterbar build helper used by release jobs and Docker cross-build images.
 
 GitHub Release assets are standalone executable binaries named `aria2-next-<version>-<platform>-<architecture>`, plus a SHA-256 checksum file. Source code and license material are provided by the GitHub release tag source archives.
 
@@ -26,7 +26,7 @@ Release jobs also run `packaging/scripts/size-audit` on final binaries. This aud
 
 The release dependency boundary is platform-specific. Linux release binaries must be fully static ELF executables with no interpreter and no `NEEDED` shared libraries. macOS release binaries may link only Apple system libraries and frameworks at runtime; third-party dependencies must be linked into the executable. Windows release binaries may link only Windows system DLLs at runtime; third-party DLLs and private CRT DLLs are not allowed. Android release binaries may link only Android system runtime libraries and must not require `libc++_shared.so`.
 
-Release jobs run final-binary local loopback smoke tests, runtime dependency checks, and size audits before assets are uploaded. External network downloads are limited to verified dependency acquisition, not release smoke testing.
+Release jobs run final-binary loopback and hostname smoke tests, runtime dependency checks, and size audits before assets are uploaded. External network downloads are limited to verified dependency acquisition, not release smoke testing.
 
 Manual release workflow runs accept `version=latest` and `build_profile=release|debug`. `latest` resolves to the current version declared in `CMakeLists.txt`. Official GitHub Releases always force the release profile. Manual debug runs use `RelWithDebInfo`, skip stripping, add a `-debug` artifact suffix, and upload Windows linker map files as workflow artifacts only.
 

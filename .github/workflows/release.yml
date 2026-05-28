@@ -159,6 +159,7 @@ jobs:
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
+          curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
           curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
           curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
@@ -190,6 +191,13 @@ jobs:
           . packaging/scripts/common.sh
           . packaging/scripts/release-size-profile linux
           ARIA2_BUILD_JOBS=$(nproc) build_libssh2_for_curl
+
+      - name: Build c-ares for libcurl
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile linux
+          ARIA2_BUILD_JOBS=$(nproc) build_cares
 
       - name: Build libcurl
         run: |
@@ -275,6 +283,7 @@ jobs:
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
+          curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
           curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
           curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
@@ -306,6 +315,13 @@ jobs:
           . packaging/scripts/common.sh
           . packaging/scripts/release-size-profile linux
           ARIA2_BUILD_JOBS=$(nproc) build_libssh2_for_curl
+
+      - name: Build c-ares for libcurl
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile linux
+          ARIA2_BUILD_JOBS=$(nproc) build_cares
 
       - name: Build libcurl
         run: |
@@ -389,6 +405,7 @@ jobs:
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
+          curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
           curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
           curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
@@ -420,6 +437,13 @@ jobs:
           . packaging/scripts/common.sh
           . packaging/scripts/release-size-profile macos
           ARIA2_BUILD_JOBS=$(sysctl -n hw.ncpu) build_libssh2_for_curl
+
+      - name: Build c-ares for libcurl
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile macos
+          ARIA2_BUILD_JOBS=$(sysctl -n hw.ncpu) build_cares
 
       - name: Build libcurl
         run: |
@@ -502,6 +526,7 @@ jobs:
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
+          curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
           curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
           curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
@@ -533,6 +558,13 @@ jobs:
           . packaging/scripts/common.sh
           . packaging/scripts/release-size-profile macos
           ARIA2_BUILD_JOBS=$(sysctl -n hw.ncpu) build_libssh2_for_curl
+
+      - name: Build c-ares for libcurl
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile macos
+          ARIA2_BUILD_JOBS=$(sysctl -n hw.ncpu) build_cares
 
       - name: Build libcurl
         run: |
@@ -621,6 +653,7 @@ jobs:
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
+          curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
           curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
           curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
@@ -658,6 +691,17 @@ jobs:
           . packaging/scripts/common.sh
           . packaging/scripts/release-size-profile windows
           ARIA2_BUILD_JOBS=$(nproc) build_libssh2_for_curl \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_C_COMPILER=$HOST-gcc \
+            -DCMAKE_RC_COMPILER=$HOST-windres \
+            -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
+
+      - name: Build c-ares for libcurl
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile windows
+          ARIA2_BUILD_JOBS=$(nproc) build_cares \
             -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_C_COMPILER=$HOST-gcc \
             -DCMAKE_RC_COMPILER=$HOST-windres \
@@ -791,6 +835,7 @@ jobs:
           curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
           curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
           curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
+          curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
           curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
           curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
           curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
@@ -828,6 +873,18 @@ jobs:
           . packaging/scripts/common.sh
           . packaging/scripts/release-size-profile windows
           ARIA2_BUILD_JOBS=$(nproc) build_libssh2_for_curl \
+            -DCMAKE_SYSTEM_NAME=Windows \
+            -DCMAKE_C_COMPILER=$CC \
+            -DCMAKE_AR=$AR \
+            -DCMAKE_RANLIB=$RANLIB \
+            -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
+
+      - name: Build c-ares for libcurl
+        run: |
+          source packaging/dependencies.env
+          . packaging/scripts/common.sh
+          . packaging/scripts/release-size-profile windows
+          ARIA2_BUILD_JOBS=$(nproc) build_cares \
             -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_C_COMPILER=$CC \
             -DCMAKE_AR=$AR \
