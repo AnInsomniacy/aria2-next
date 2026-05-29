@@ -40,6 +40,10 @@
 
 namespace aria2 {
 
+namespace {
+constexpr auto SAMPLE_INTERVAL = 500_ms;
+} // namespace
+
 SpeedCalc::SpeedCalc()
     : buckets_{},
       bucketIndex_(0),
@@ -70,10 +74,8 @@ void SpeedCalc::reset()
 
 void SpeedCalc::publishElapsedSamples(const Timer& now)
 {
-  auto elapsedSeconds = std::chrono::duration_cast<std::chrono::seconds>(
-                            lastTick_.difference(now))
-                            .count();
-  while (elapsedSeconds > 0) {
+  auto elapsedSamples = lastTick_.difference(now) / SAMPLE_INTERVAL;
+  while (elapsedSamples > 0) {
     const auto sampleBytes = currentBucketBytes_;
     currentBucketBytes_ = 0;
     if (sampleBytes == 0) {
@@ -81,8 +83,8 @@ void SpeedCalc::publishElapsedSamples(const Timer& now)
       publishedWindowBytes_ = 0;
       publishedSamples_ = 0;
       publishedSpeed_ = 0;
-      lastTick_.advance(1_s);
-      --elapsedSeconds;
+      lastTick_.advance(SAMPLE_INTERVAL);
+      --elapsedSamples;
       continue;
     }
     bucketIndex_ = (bucketIndex_ + 1) % buckets_.size();
@@ -92,10 +94,12 @@ void SpeedCalc::publishElapsedSamples(const Timer& now)
     publishedSamples_ =
         std::min<int>(publishedSamples_ + 1, static_cast<int>(buckets_.size()));
     publishedSpeed_ =
-        publishedSamples_ == 0 ? 0 : publishedWindowBytes_ / publishedSamples_;
+        publishedSamples_ == 0
+            ? 0
+            : (publishedWindowBytes_ * 2) / publishedSamples_;
     maxSpeed_ = std::max(publishedSpeed_, maxSpeed_);
-    lastTick_.advance(1_s);
-    --elapsedSeconds;
+    lastTick_.advance(SAMPLE_INTERVAL);
+    --elapsedSamples;
   }
 }
 

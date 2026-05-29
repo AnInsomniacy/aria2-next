@@ -367,7 +367,7 @@ void RequestGroupManTest::testUploadDeltaFeedsGlobalStat()
   group->setDownloadContext(dctx);
 
   dctx->updateUpload(8048);
-  global::wallclock().advance(1_s);
+  global::wallclock().advance(500_ms);
 
   auto taskStat = group->calculateStat();
   auto globalStat = rgman_->calculateStat();

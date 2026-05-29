@@ -46,9 +46,9 @@ namespace aria2 {
 
 class SpeedCalc {
 private:
-  static constexpr size_t WINDOW_SECONDS = 5;
+  static constexpr size_t WINDOW_BUCKETS = 10;
 
-  std::array<int64_t, WINDOW_SECONDS> buckets_;
+  std::array<int64_t, WINDOW_BUCKETS> buckets_;
   size_t bucketIndex_;
   Timer start_;
   Timer lastTick_;
