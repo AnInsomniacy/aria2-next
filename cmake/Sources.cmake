@@ -349,6 +349,8 @@ set(ARIA2_SOURCES_BASE
   src/LibtorrentSeedPolicy.h
   src/LibtorrentSession.cc
   src/LibtorrentSession.h
+  src/LibtorrentStatCounter.cc
+  src/LibtorrentStatCounter.h
   src/Signature.cc
   src/Signature.h
   src/SimpleRandomizer.cc

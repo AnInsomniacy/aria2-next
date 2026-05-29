@@ -16,6 +16,7 @@
 #include "TimeBasedCommand.h"
 #include "TimerA2.h"
 #include "error_code.h"
+#include "LibtorrentStatCounter.h"
 
 #include <libtorrent/torrent_handle.hpp>
 
@@ -30,8 +31,7 @@ private:
   RequestGroup* requestGroup_;
   LibtorrentSession* session_;
   libtorrent::torrent_handle handle_;
-  int64_t completedLength_;
-  int64_t uploadedLength_;
+  LibtorrentStatCounter statCounter_;
   Timer sharingTimer_;
   bool resumeDataRequested_;
   bool torrentAdded_;

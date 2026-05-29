@@ -491,8 +491,6 @@ LibtorrentCommand::LibtorrentCommand(cuid_t cuid, RequestGroup* requestGroup,
     : TimeBasedCommand(cuid, engine, 1_s),
       requestGroup_(requestGroup),
       session_(&engine->getLibtorrentSession()),
-      completedLength_(0),
-      uploadedLength_(0),
       sharingTimer_(Timer::zero()),
       resumeDataRequested_(false),
       torrentAdded_(false),
@@ -723,21 +721,15 @@ void LibtorrentCommand::updateStatus()
     ARIA2_LOG_DEBUG(fmt("Failed to refresh libtorrent RPC state: %s", ex.what()));
   }
 
-  if (status.total_wanted_done > completedLength_) {
+  auto downloadDelta = statCounter_.updateDownload(status.total_payload_download);
+  if (downloadDelta > 0) {
     requestGroup_->getDownloadContext()->updateDownload(
-        static_cast<size_t>(status.total_wanted_done - completedLength_));
-    completedLength_ = status.total_wanted_done;
+        static_cast<size_t>(downloadDelta));
   }
-  if (status.total_payload_upload >= uploadedLength_) {
-    auto uploadDelta = status.total_payload_upload - uploadedLength_;
-    if (uploadDelta > 0) {
-      requestGroup_->getDownloadContext()->updateUpload(
-          static_cast<size_t>(uploadDelta));
-      uploadedLength_ = status.total_payload_upload;
-    }
-  }
-  else {
-    uploadedLength_ = status.total_payload_upload;
+  auto uploadDelta = statCounter_.updateUpload(status.total_payload_upload);
+  if (uploadDelta > 0) {
+    requestGroup_->getDownloadContext()->updateUpload(
+        static_cast<size_t>(uploadDelta));
   }
 
   if (requestGroup_->getPieceStorage()) {

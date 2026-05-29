@@ -112,6 +112,7 @@ set(ARIA2_TEST_SOURCES_ENABLE_BITTORRENT
   tests/MagnetTest.cc
   tests/Bencode2Test.cc
   tests/LibtorrentSeedPolicyTest.cc
+  tests/LibtorrentStatCounterTest.cc
 )
 
 set(ARIA2_TEST_SOURCES_NOT_HAVE_TIMEGM

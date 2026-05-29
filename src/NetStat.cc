@@ -124,6 +124,8 @@ void NetStat::downloadStop()
 {
   calculateAvgDownloadSpeed();
   calculateAvgUploadSpeed();
+  downloadSpeed_.reset();
+  uploadSpeed_.reset();
   status_ = IDLE;
 }
 
