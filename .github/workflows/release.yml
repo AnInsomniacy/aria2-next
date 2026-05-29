@@ -159,7 +159,7 @@ jobs:
             -v "$PWD:/work" \
             -w /work \
             alpine:3.22 \
-            sh -lc 'apk add --no-cache bash build-base cmake coreutils curl linux-headers ninja perl pkgconf python3 tar && packaging/scripts/linux-musl-release linux-x86_64'
+            sh -lc 'apk add --no-cache bash build-base cmake coreutils curl linux-headers ninja perl pkgconf python3 tar xz && packaging/scripts/linux-musl-release linux-x86_64'
 
       - name: Package
         run: |
@@ -203,7 +203,7 @@ jobs:
             -v "$PWD:/work" \
             -w /work \
             alpine:3.22 \
-            sh -lc 'apk add --no-cache bash build-base cmake coreutils curl linux-headers ninja perl pkgconf python3 tar && packaging/scripts/linux-musl-release linux-aarch64'
+            sh -lc 'apk add --no-cache bash build-base cmake coreutils curl linux-headers ninja perl pkgconf python3 tar xz && packaging/scripts/linux-musl-release linux-aarch64'
 
       - name: Package
         run: |
