@@ -4,6 +4,8 @@
 
 #include "util.h"
 
+#include <algorithm>
+
 namespace aria2 {
 
 class FileEntryTest : public CppUnit::TestFixture {
@@ -13,6 +15,8 @@ class FileEntryTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testExtractURIResult);
   CPPUNIT_TEST(testGetRequest);
   CPPUNIT_TEST(testGetRequest_honorsMaxConnectionPerServer);
+  CPPUNIT_TEST(testGetRequest_reusesPooledRequest);
+  CPPUNIT_TEST(testGetRequest_honorsMaxConnectionPerServerForPooledRequest);
   CPPUNIT_TEST(testGetRequest_withReferer);
   CPPUNIT_TEST(testAddUri);
   CPPUNIT_TEST(testAddUris);
@@ -28,6 +32,8 @@ public:
   void testExtractURIResult();
   void testGetRequest();
   void testGetRequest_honorsMaxConnectionPerServer();
+  void testGetRequest_reusesPooledRequest();
+  void testGetRequest_honorsMaxConnectionPerServerForPooledRequest();
   void testGetRequest_withReferer();
   void testAddUri();
   void testAddUris();
@@ -130,6 +136,44 @@ void FileEntryTest::testGetRequest_honorsMaxConnectionPerServer()
   CPPUNIT_ASSERT_EQUAL(std::string("ftp"), req4th->getProtocol());
 }
 
+void FileEntryTest::testGetRequest_reusesPooledRequest()
+{
+  FileEntry fileEntry;
+  fileEntry.addUri("http://example.org/file");
+
+  auto req = fileEntry.getRequest();
+  CPPUNIT_ASSERT(req);
+  fileEntry.poolRequest(req);
+
+  auto reusedReq = fileEntry.getRequest();
+  CPPUNIT_ASSERT(reusedReq);
+  CPPUNIT_ASSERT_EQUAL(std::string("http://example.org/file"),
+                       reusedReq->getUri());
+}
+
+void FileEntryTest::testGetRequest_honorsMaxConnectionPerServerForPooledRequest()
+{
+  FileEntry fileEntry;
+  fileEntry.setMaxConnectionPerServer(2);
+  fileEntry.addUri("http://example.org/1");
+  fileEntry.addUri("http://example.org/2");
+
+  auto firstReq = fileEntry.getRequest();
+  CPPUNIT_ASSERT(firstReq);
+  auto secondReq = fileEntry.getRequest();
+  CPPUNIT_ASSERT(secondReq);
+  fileEntry.poolRequest(secondReq);
+
+  fileEntry.setMaxConnectionPerServer(1);
+  auto blockedReq = fileEntry.getRequest();
+  CPPUNIT_ASSERT(!blockedReq);
+
+  fileEntry.poolRequest(firstReq);
+  auto pooledReq = fileEntry.getRequest();
+  CPPUNIT_ASSERT(pooledReq);
+  CPPUNIT_ASSERT_EQUAL(std::string("example.org"), pooledReq->getHost());
+}
+
 void FileEntryTest::testGetRequest_withReferer()
 {
   auto fileEntry = createFileEntry();
@@ -217,9 +261,11 @@ void FileEntryTest::testPutBackRequest()
   fileEntry->poolRequest(req2);
   fileEntry->putBackRequest();
   auto& uris = fileEntry->getRemainingUris();
-  CPPUNIT_ASSERT_EQUAL((size_t)2, uris.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("http://localhost/aria2.zip"), uris[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string("ftp://localhost/aria2.zip"), uris[1]);
+  CPPUNIT_ASSERT_EQUAL((size_t)3, uris.size());
+  CPPUNIT_ASSERT(std::find(uris.begin(), uris.end(),
+                           "http://localhost/aria2.zip") != uris.end());
+  CPPUNIT_ASSERT(std::find(uris.begin(), uris.end(),
+                           "ftp://localhost/aria2.zip") != uris.end());
 }
 
 } // namespace aria2

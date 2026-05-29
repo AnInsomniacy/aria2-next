@@ -70,6 +70,7 @@ private:
   // available.
   std::deque<URIResult> uriResults_;
   InFlightRequestSet inFlightRequests_;
+  std::deque<std::shared_ptr<Request>> pooledRequests_;
 
   std::string path_;
   std::string contentType_;

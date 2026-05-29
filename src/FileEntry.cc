@@ -132,12 +132,33 @@ std::shared_ptr<Request> FileEntry::getRequest(
   }
 
   uris_.insert(uris_.begin(), deferred.begin(), deferred.end());
+  std::deque<std::shared_ptr<Request>> deferredRequests;
+  while (!pooledRequests_.empty()) {
+    auto req = std::move(pooledRequests_.front());
+    pooledRequests_.pop_front();
+    if (!req || req->removalRequested()) {
+      continue;
+    }
+    if (countInFlightHost(inFlightRequests_, req->getHost()) >=
+        static_cast<size_t>(maxConnectionPerServer_)) {
+      deferredRequests.push_back(std::move(req));
+      continue;
+    }
+    inFlightRequests_.insert(req);
+    pooledRequests_.insert(pooledRequests_.begin(), deferredRequests.begin(),
+                           deferredRequests.end());
+    return req;
+  }
+  pooledRequests_.insert(pooledRequests_.begin(), deferredRequests.begin(),
+                         deferredRequests.end());
   return nullptr;
 }
 
 void FileEntry::poolRequest(const std::shared_ptr<Request>& request)
 {
-  removeRequest(request);
+  if (removeRequest(request) && !request->removalRequested()) {
+    pooledRequests_.push_back(request);
+  }
 }
 
 bool FileEntry::removeRequest(const std::shared_ptr<Request>& request)
@@ -204,6 +225,7 @@ void FileEntry::extractURIResult(std::deque<URIResult>& res,
 void FileEntry::releaseRuntimeResource()
 {
   inFlightRequests_.clear();
+  pooledRequests_.clear();
 }
 
 namespace {
@@ -220,6 +242,8 @@ void putBackUri(std::deque<std::string>& uris, InputIterator first,
 void FileEntry::putBackRequest()
 {
   putBackUri(uris_, inFlightRequests_.begin(), inFlightRequests_.end());
+  putBackUri(uris_, pooledRequests_.begin(), pooledRequests_.end());
+  pooledRequests_.clear();
 }
 
 namespace {
@@ -238,6 +262,14 @@ InputIterator findRequestByUri(InputIterator first, InputIterator last,
 
 bool FileEntry::removeUri(const std::string& uri)
 {
+  for (auto itr = pooledRequests_.begin(); itr != pooledRequests_.end();
+       ++itr) {
+    if (!(*itr)->removalRequested() && (*itr)->getUri() == uri) {
+      pooledRequests_.erase(itr);
+      return true;
+    }
+  }
+
   auto itr = std::find(spentUris_.begin(), spentUris_.end(), uri);
   if (itr == spentUris_.end()) {
     itr = std::find(uris_.begin(), uris_.end(), uri);
