@@ -794,6 +794,14 @@ These options configure libtorrent-backed torrent and magnet downloads.
   The path to the ".torrent" file.  You are not required to use this
   option because you can specify ".torrent" files without :option:`--torrent-file <-T>`.
 
+.. option:: --torrent-metadata=save|start|memory
+
+  Control remote ".torrent" URLs passed to :func:`aria2.addUri` or the command
+  line. ``save`` downloads the ".torrent" file only. ``start`` downloads the
+  ".torrent" file and starts the BitTorrent download from it. ``memory`` starts
+  the BitTorrent download from the fetched metadata without saving the
+  ".torrent" file. Default: ``start``
+
 RPC Options
 ~~~~~~~~~~~
 
@@ -812,8 +820,8 @@ RPC Options
 .. option:: --pause-metadata [true|false]
 
   Pause downloads created as a result of metadata download. There are
-  2 types of metadata downloads in Aria2 Next: downloading .torrent files
-  and downloading torrent metadata from magnet links. These metadata
+  2 types of metadata downloads in Aria2 Next: downloading remote ".torrent"
+  metadata and downloading torrent metadata from magnet links. These metadata
   downloads create subsequent downloads from the fetched metadata. This
   option pauses those subsequent downloads. This option is effective only when
   :option:`--enable-rpc=true <--enable-rpc>` is given.
@@ -1872,6 +1880,7 @@ of URIs. These optional lines must start with white space(s).
   * :option:`split <-s>`
   * :option:`stream-piece-selector <--stream-piece-selector>`
   * :option:`timeout <-t>`
+  * :option:`torrent-metadata <--torrent-metadata>`
   * :option:`uri-selector <--uri-selector>`
   * :option:`use-head <--use-head>`
   * :option:`user-agent <-U>`
@@ -2067,6 +2076,11 @@ For information on the *secret* parameter, see :ref:`rpc_auth`.
 
     >>> s.aria2.addUri(['http://example.org/file'], {}, 0)
     'ca3d829cee549a4d'
+
+  Remote ".torrent" URLs follow :option:`--torrent-metadata`. With the default
+  ``torrent-metadata=start``, this method returns the metadata download GID.
+  The BitTorrent download created from that metadata is reported in the
+  metadata task's ``followedBy`` field.
 
 .. function:: aria2.ed2kSearch([secret], keyword[, options])
 

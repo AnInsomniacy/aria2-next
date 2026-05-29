@@ -20,6 +20,7 @@ class OptionHandlerTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testUnitNumberOptionHandler);
   CPPUNIT_TEST(testParameterOptionHandler);
   CPPUNIT_TEST(testDnsResolverOptionHandler);
+  CPPUNIT_TEST(testTorrentMetadataOptionHandler);
   CPPUNIT_TEST(testDefaultOptionHandler);
   CPPUNIT_TEST(testFloatNumberOptionHandler);
   CPPUNIT_TEST(testFloatNumberOptionHandler_min);
@@ -38,6 +39,7 @@ public:
   void testUnitNumberOptionHandler();
   void testParameterOptionHandler();
   void testDnsResolverOptionHandler();
+  void testTorrentMetadataOptionHandler();
   void testDefaultOptionHandler();
   void testFloatNumberOptionHandler();
   void testFloatNumberOptionHandler_min();
@@ -191,6 +193,28 @@ void OptionHandlerTest::testDnsResolverOptionHandler()
   CPPUNIT_ASSERT_EQUAL(std::string(V_ASYNC), option.get(PREF_DNS_RESOLVER));
   try {
     handler.parse(option, "threaded");
+    CPPUNIT_FAIL("exception must be thrown.");
+  }
+  catch (Exception& e) {
+  }
+}
+
+void OptionHandlerTest::testTorrentMetadataOptionHandler()
+{
+  ParameterOptionHandler handler(PREF_TORRENT_METADATA, "", "start",
+                                 {"save", "start", "memory"});
+  Option option;
+  handler.parse(option, "save");
+  CPPUNIT_ASSERT_EQUAL(std::string("save"),
+                       option.get(PREF_TORRENT_METADATA));
+  handler.parse(option, "start");
+  CPPUNIT_ASSERT_EQUAL(std::string("start"),
+                       option.get(PREF_TORRENT_METADATA));
+  handler.parse(option, "memory");
+  CPPUNIT_ASSERT_EQUAL(std::string("memory"),
+                       option.get(PREF_TORRENT_METADATA));
+  try {
+    handler.parse(option, "follow");
     CPPUNIT_FAIL("exception must be thrown.");
   }
   catch (Exception& e) {

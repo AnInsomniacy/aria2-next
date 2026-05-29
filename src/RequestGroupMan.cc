@@ -86,6 +86,7 @@
 #include "OpenedFileCounter.h"
 #include "wallclock.h"
 #include "RpcMethodImpl.h"
+#include "TorrentMetadataFollow.h"
 #ifdef ENABLE_BITTORRENT
 #  include "LibtorrentAttribute.h"
 #endif // ENABLE_BITTORRENT
@@ -396,6 +397,10 @@ public:
           }
           else {
             group->saveControlFile();
+          }
+          std::vector<std::shared_ptr<RequestGroup>> nextGroups;
+          if (createTorrentMetadataFollowGroups(nextGroups, group.get())) {
+            e_->getRequestGroupMan()->insertReservedGroup(0, nextGroups);
           }
         }
         else {

@@ -482,6 +482,8 @@ PrefPtr PREF_MAX_OVERALL_UPLOAD_LIMIT = makePref("max-overall-upload-limit");
 PrefPtr PREF_MAX_UPLOAD_LIMIT = makePref("max-upload-limit");
 // values: a string that your file system recognizes as a file name.
 PrefPtr PREF_TORRENT_FILE = makePref("torrent-file");
+// values: save | start | memory
+PrefPtr PREF_TORRENT_METADATA = makePref("torrent-metadata");
 // values: 1*digit
 PrefPtr PREF_LISTEN_PORT = makePref("listen-port");
 // values: 1*digit * = makePref(  = makePref(,|-) 1*digit);

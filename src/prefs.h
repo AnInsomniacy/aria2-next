@@ -432,6 +432,8 @@ extern PrefPtr PREF_MAX_OVERALL_UPLOAD_LIMIT;
 extern PrefPtr PREF_MAX_UPLOAD_LIMIT;
 // values: a string that your file system recognizes as a file name.
 extern PrefPtr PREF_TORRENT_FILE;
+// values: save | start | memory
+extern PrefPtr PREF_TORRENT_METADATA;
 // values: 1*digit
 extern PrefPtr PREF_LISTEN_PORT;
 // values: 1*digit *( (,|-) 1*digit)

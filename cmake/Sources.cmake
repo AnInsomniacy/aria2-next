@@ -406,6 +406,8 @@ set(ARIA2_SOURCES_BASE
   src/timespec.h
   src/TorrentAttribute.cc
   src/TorrentAttribute.h
+  src/TorrentMetadataFollow.cc
+  src/TorrentMetadataFollow.h
   src/TransferStat.cc
   src/TransferStat.h
   src/TruncFileAllocationIterator.cc

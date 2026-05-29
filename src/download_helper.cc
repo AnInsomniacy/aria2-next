@@ -536,6 +536,28 @@ std::shared_ptr<MetadataInfo> createMetadataInfoDataOnly()
 #ifdef ENABLE_BITTORRENT
 
 namespace {
+bool isRemoteTorrentMetadataUrl(const std::string& uri)
+{
+  Request req;
+  if (!req.setUri(uri)) {
+    return false;
+  }
+  auto protocol = req.getProtocol();
+  return (protocol == "http" || protocol == "https" || protocol == "ftp" ||
+          protocol == "sftp") &&
+         util::iendsWith(req.getFile(), ".torrent");
+}
+
+std::shared_ptr<RequestGroup> createRemoteTorrentMetadataMemoryRequestGroup(
+    const std::shared_ptr<Option>& option, std::vector<std::string> uris)
+{
+  auto rg = createRequestGroup(option, std::move(uris), true);
+  rg->markInMemoryDownload();
+  rg->setDiskWriterFactory(std::make_shared<ByteArrayDiskWriterFactory>());
+  rg->setNumConcurrentCommand(1);
+  return rg;
+}
+
 void applyTrackerOptions(LibtorrentAttribute* attrs,
                          const std::shared_ptr<Option>& option,
                          TorrentAttribute* torrentAttrs)
@@ -719,6 +741,15 @@ public:
 
   void operator()(const std::string& uri)
   {
+#ifdef ENABLE_BITTORRENT
+    if (isRemoteTorrentMetadataUrl(uri) &&
+        option_->get(PREF_TORRENT_METADATA) == "memory") {
+      requestGroups_.push_back(createRemoteTorrentMetadataMemoryRequestGroup(
+          option_, std::vector<std::string>{uri}));
+      return;
+    }
+#endif // ENABLE_BITTORRENT
+
     if (detector_.isStreamProtocol(uri)) {
       std::vector<std::string> streamURIs;
       size_t numIter = option_->getAsInt(PREF_MAX_CONNECTION_PER_SERVER);
@@ -791,6 +822,27 @@ public:
 };
 } // namespace
 
+#ifdef ENABLE_BITTORRENT
+namespace {
+class RemoteTorrentMetadataMemoryFilter {
+private:
+  const std::shared_ptr<Option>& option_;
+
+public:
+  explicit RemoteTorrentMetadataMemoryFilter(const std::shared_ptr<Option>& option)
+      : option_(option)
+  {
+  }
+
+  bool operator()(const std::string& uri)
+  {
+    return option_->get(PREF_TORRENT_METADATA) == "memory" &&
+           isRemoteTorrentMetadataUrl(uri);
+  }
+};
+} // namespace
+#endif // ENABLE_BITTORRENT
+
 void createRequestGroupForUri(
     std::vector<std::shared_ptr<RequestGroup>>& result,
     const std::shared_ptr<Option>& option, const std::vector<std::string>& uris,
@@ -810,14 +862,26 @@ void createRequestGroupForUri(
         AccRequestGroup(result, option, ignoreLocalPath, throwOnError));
   }
   else {
+#ifdef ENABLE_BITTORRENT
+    auto memoryTorrentEnd = std::stable_partition(
+        std::begin(nargs), std::end(nargs),
+        RemoteTorrentMetadataMemoryFilter(option));
+    if (std::begin(nargs) != memoryTorrentEnd) {
+      result.push_back(createRemoteTorrentMetadataMemoryRequestGroup(
+          option, std::vector<std::string>(std::begin(nargs),
+                                           memoryTorrentEnd)));
+    }
+#else  // !ENABLE_BITTORRENT
+    auto memoryTorrentEnd = std::begin(nargs);
+#endif // !ENABLE_BITTORRENT
     auto strmProtoEnd = std::stable_partition(
-        std::begin(nargs), std::end(nargs), StreamProtocolFilter());
+        memoryTorrentEnd, std::end(nargs), StreamProtocolFilter());
     // let's process http/ftp protocols first.
-    if (std::begin(nargs) != strmProtoEnd) {
+    if (memoryTorrentEnd != strmProtoEnd) {
       size_t numIter = option->getAsInt(PREF_MAX_CONNECTION_PER_SERVER);
       size_t numSplit = option->getAsInt(PREF_SPLIT);
       std::vector<std::string> streamURIs;
-      splitURI(streamURIs, std::begin(nargs), strmProtoEnd, numSplit, numIter);
+      splitURI(streamURIs, memoryTorrentEnd, strmProtoEnd, numSplit, numIter);
       try {
         auto rg = createRequestGroup(option, streamURIs, true);
         rg->setNumConcurrentCommand(numSplit);

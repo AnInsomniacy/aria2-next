@@ -114,6 +114,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
 
 #ifdef ENABLE_BITTORRENT
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentTorrent);
+  CPPUNIT_TEST(testCreateRequestGroupForUri_RemoteTorrentMetadataMemory);
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentTorrentSelectFile);
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentTorrentTrackers);
   CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnet);
@@ -192,6 +193,7 @@ public:
 
 #ifdef ENABLE_BITTORRENT
   void testCreateRequestGroupForUri_LibtorrentTorrent();
+  void testCreateRequestGroupForUri_RemoteTorrentMetadataMemory();
   void testCreateRequestGroupForUri_LibtorrentTorrentSelectFile();
   void testCreateRequestGroupForUri_LibtorrentTorrentTrackers();
   void testCreateRequestGroupForUri_LibtorrentMagnet();
@@ -2372,6 +2374,25 @@ void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentTorrent()
     CPPUNIT_ASSERT(torrentInfoFile.getFilename().find(".aria2") !=
                    std::string::npos);
   }
+}
+
+void DownloadHelperTest::testCreateRequestGroupForUri_RemoteTorrentMetadataMemory()
+{
+  std::vector<std::string> uris{"https://mirror1.example.test/file.torrent",
+                                "https://mirror2.example.test/file.torrent"};
+  option_->put(PREF_TORRENT_METADATA, "memory");
+  option_->put(PREF_DIR, "/tmp");
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  CPPUNIT_ASSERT(result[0]->inMemoryDownload());
+  CPPUNIT_ASSERT_EQUAL(1, result[0]->getNumConcurrentCommand());
+  auto xuris = result[0]->getDownloadContext()->getFirstFileEntry()->getUris();
+  CPPUNIT_ASSERT_EQUAL((size_t)2, xuris.size());
+  CPPUNIT_ASSERT_EQUAL(uris[0], xuris[0]);
+  CPPUNIT_ASSERT_EQUAL(uris[1], xuris[1]);
 }
 
 void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentTorrentSelectFile()

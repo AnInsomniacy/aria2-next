@@ -1176,6 +1176,7 @@ size_t CurlDownloadCommand::writeHeader(const char* data, size_t length)
   }
   else if (util::startsWith(lower, CONTENT_TYPE)) {
     contentType_ = util::strip(line.substr(sizeof(CONTENT_TYPE) - 1));
+    getFileEntry()->setContentType(contentType_);
   }
   else if (util::startsWith(lower, LOCATION)) {
     location_ = util::strip(line.substr(sizeof(LOCATION) - 1));

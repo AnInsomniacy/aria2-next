@@ -1643,6 +1643,15 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
     op->addTag(TAG_BITTORRENT);
     handlers.push_back(op);
   }
+  {
+    OptionHandler* op(new ParameterOptionHandler(
+        PREF_TORRENT_METADATA, TEXT_TORRENT_METADATA, "start",
+        {"save", "start", "memory"}));
+    op->addTag(TAG_BITTORRENT);
+    op->setInitialOption(true);
+    op->setChangeOptionForReserved(true);
+    handlers.push_back(op);
+  }
 #endif // ENABLE_BITTORRENT
   // Version Option
   {

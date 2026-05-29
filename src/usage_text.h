@@ -273,6 +273,10 @@
     "                              ',' and '-' can be used together.")
 #define TEXT_TORRENT_FILE                                               \
   _(" -T, --torrent-file=TORRENT_FILE  The path to the .torrent file.")
+#define TEXT_TORRENT_METADATA                                           \
+  _(" --torrent-metadata=MODE    Control remote .torrent metadata URLs.\n" \
+    "                              Possible values are save, start and memory.\n" \
+    "                              Default: start.")
 #define TEXT_LISTEN_PORT                                                \
   _(" --listen-port=PORT...        Set TCP port number for BitTorrent downloads.\n" \
     "                              Multiple ports can be specified by using ',',\n" \
@@ -834,10 +838,9 @@
 #define TEXT_PAUSE_METADATA                  \
   _(" --pause-metadata[=true|false]\n"       \
     "                              Pause downloads created as a result of metadata\n" \
-    "                              download. There are 3 types of metadata\n" \
-    "                              downloads in Aria2 Next: (1) downloading .torrent\n" \
-    "                              file. (2) downloading torrent metadata using\n" \
-    "                              magnet link.\n" \
+    "                              download. Remote .torrent metadata and magnet\n" \
+    "                              metadata create subsequent downloads from the\n" \
+    "                              fetched metadata.\n" \
     "                              These metadata downloads will generate downloads\n" \
     "                              using their metadata. This option pauses these\n" \
     "                              subsequent downloads. This option is effective\n" \

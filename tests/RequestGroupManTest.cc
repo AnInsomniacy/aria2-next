@@ -19,6 +19,7 @@
 #include "ServerStatMan.h"
 #include "ServerStat.h"
 #include "File.h"
+#include "TorrentMetadataFollow.h"
 #include "array_fun.h"
 #include "RecoverableException.h"
 #include "util.h"
@@ -65,6 +66,10 @@ class RequestGroupManTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testFillRequestGroupFromReserver);
   CPPUNIT_TEST(testFillRequestGroupFromReserver_uriParser);
   CPPUNIT_TEST(testFillRequestGroupFromReserverSkipsDuplicateBtInfoHash);
+#ifdef ENABLE_BITTORRENT
+  CPPUNIT_TEST(testTorrentMetadataResponseDetection);
+  CPPUNIT_TEST(testCompletedTorrentMetadataStartsLibtorrentTask);
+#endif // ENABLE_BITTORRENT
   CPPUNIT_TEST(testReduceMaxConcurrentDownloads);
   CPPUNIT_TEST(testUploadDeltaFeedsGlobalStat);
   CPPUNIT_TEST(testUserRemoveDoesNotKeepControlFile);
@@ -102,6 +107,10 @@ public:
   void testFillRequestGroupFromReserver();
   void testFillRequestGroupFromReserver_uriParser();
   void testFillRequestGroupFromReserverSkipsDuplicateBtInfoHash();
+#ifdef ENABLE_BITTORRENT
+  void testTorrentMetadataResponseDetection();
+  void testCompletedTorrentMetadataStartsLibtorrentTask();
+#endif // ENABLE_BITTORRENT
   void testReduceMaxConcurrentDownloads();
   void testUploadDeltaFeedsGlobalStat();
   void testUserRemoveDoesNotKeepControlFile();
@@ -313,6 +322,50 @@ void RequestGroupManTest::testFillRequestGroupFromReserverSkipsDuplicateBtInfoHa
   CPPUNIT_ASSERT(rgman_->getDownloadResults().empty());
 #endif // ENABLE_BITTORRENT
 }
+
+#ifdef ENABLE_BITTORRENT
+void RequestGroupManTest::testTorrentMetadataResponseDetection()
+{
+  CPPUNIT_ASSERT(isTorrentMetadataResponse("/tmp/file.torrent", ""));
+  CPPUNIT_ASSERT(isTorrentMetadataResponse(
+      "/tmp/file.bin", "application/x-bittorrent; charset=binary"));
+  CPPUNIT_ASSERT(!isTorrentMetadataResponse("/tmp/file.bin",
+                                            "application/octet-stream"));
+}
+
+void RequestGroupManTest::testCompletedTorrentMetadataStartsLibtorrentTask()
+{
+  option_->put(PREF_TORRENT_METADATA, "start");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  const std::string path = A2_TEST_OUT_DIR "/remote-metadata.torrent";
+  File(path).remove();
+  auto data = readFile(A2_TEST_DIR "/single.torrent");
+
+  auto group = createRequestGroup(data.size(), data.size(), path,
+                                  "http://example.test/file.torrent",
+                                  util::copy(option_));
+  group->getDownloadContext()->getFirstFileEntry()->setContentType(
+      "application/octet-stream");
+  group->setRequestGroupMan(rgman_);
+  group->setState(RequestGroup::STATE_ACTIVE);
+  group->initPieceStorage();
+  group->getPieceStorage()->getDiskAdaptor()->openFile();
+  group->getPieceStorage()->getDiskAdaptor()->writeData(
+      reinterpret_cast<const unsigned char*>(data.data()), data.size(), 0);
+  group->getPieceStorage()->markAllPiecesDone();
+
+  rgman_->addRequestGroup(group);
+  while (e_->run(true) != 0)
+    ;
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, rgman_->getReservedGroups().size());
+  auto child = *rgman_->getReservedGroups().begin();
+  CPPUNIT_ASSERT(child->getDownloadContext()->hasAttribute(CTX_ATTR_LIBTORRENT));
+  CPPUNIT_ASSERT_EQUAL(group->getGID(), child->following());
+  CPPUNIT_ASSERT_EQUAL((size_t)1, group->followedBy().size());
+  CPPUNIT_ASSERT_EQUAL(child->getGID(), group->followedBy()[0]);
+}
+#endif // ENABLE_BITTORRENT
 
 void RequestGroupManTest::testReduceMaxConcurrentDownloads()
 {
