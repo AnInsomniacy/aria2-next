@@ -63,7 +63,7 @@ Release jobs build dependencies from the pinned sources in `packaging/dependenci
 
 Official builds use libcurl's native resolver path. Aria2 Next does not ship c-ares or expose an asynchronous DNS resolver option.
 
-Linux release binaries must be static ELF executables without unexpected dynamic dependencies. macOS release binaries may link only Apple system libraries and frameworks at runtime. Windows release binaries may link only Windows system DLLs at runtime. Android binaries must not require `libc++_shared.so`.
+Linux release binaries must be static musl ELF executables without an interpreter, `NEEDED` shared libraries, or glibc/NSS markers. Static glibc Linux release artifacts are not supported. macOS release binaries may link only Apple system libraries and frameworks at runtime. Windows release binaries may link only Windows system DLLs at runtime. Android binaries must not require `libc++_shared.so`.
 
 ## Maintainer Release Flow
 

@@ -119,5 +119,7 @@ jobs:
           bash -n scripts/release.sh
           bash -n packaging/scripts/common.sh
           bash -n packaging/scripts/check-runtime-deps
+          bash -n packaging/scripts/linux-musl-release
           bash -n packaging/scripts/mingw-release
           bash -n packaging/scripts/android-release
+          packaging/tests/check-runtime-deps-linux-glibc-nss.sh

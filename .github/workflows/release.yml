@@ -129,7 +129,7 @@ jobs:
           echo "windows_debug_map_flags=$WINDOWS_DEBUG_MAP_FLAGS" >> "$GITHUB_OUTPUT"
 
   # ---------------------------------------------------------------------------
-  # Linux x86_64 (static)
+  # Linux x86_64 (static musl)
   # ---------------------------------------------------------------------------
   build-linux-x64:
     name: Linux x86_64
@@ -139,7 +139,7 @@ jobs:
       ARTIFACT_SUFFIX: ${{ needs.resolve-release.outputs.artifact_suffix }}
       ARIA2_BUILD_PROFILE: ${{ needs.resolve-release.outputs.build_profile }}
       CMAKE_BUILD_TYPE: ${{ needs.resolve-release.outputs.cmake_build_type }}
-      PREFIX: /usr/local
+      PREFIX: /work/packaging/build-deps
       STRIP_BINARY: ${{ needs.resolve-release.outputs.strip_binary }}
     steps:
       - uses: actions/checkout@v6
@@ -147,93 +147,19 @@ jobs:
           ref: ${{ github.event.release.tag_name || github.sha }}
 
       - name: Install build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            cmake ninja-build pkg-config
-
-      - name: Download dependency sources
-        run: |
-          . packaging/dependencies.env
-          . packaging/scripts/common.sh
-          curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
-          curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
-          curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
-          curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
-          curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
-          curl_fetch "$SPDLOG_URL" "$SPDLOG_ARCHIVE" "$SPDLOG_SHA256"
-          curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
-
-      - name: Build zlib
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile linux
-          tar xf "$ZLIB_ARCHIVE" && cd "zlib-$ZLIB_VERSION"
-          CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-          ./configure --prefix=$PREFIX --static
-          make -j$(nproc)
-          sudo make install
-
-      - name: Build OpenSSL
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile linux
-          tar xf "$OPENSSL_ARCHIVE" && cd "openssl-$OPENSSL_VERSION"
-          ./Configure linux-x86_64 no-shared no-module no-tests \
-            --prefix=$PREFIX --libdir=lib \
-            $RELEASE_CFLAGS
-          make -j$(nproc)
-          sudo make install_sw
-
-      - name: Build libssh2 for libcurl
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          . packaging/scripts/release-size-profile linux
-          ARIA2_BUILD_JOBS=$(nproc) build_libssh2_for_curl
-
-      - name: Build libcurl
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          . packaging/scripts/release-size-profile linux
-          ARIA2_BUILD_JOBS=$(nproc) build_curl
-
-      - name: Build Boost headers
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          install_boost_headers
-          install_spdlog_headers
-
-      - name: Build libtorrent-rasterbar
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          . packaging/scripts/release-size-profile linux
-          ARIA2_BUILD_JOBS=$(nproc) build_libtorrent_rasterbar
+        run: docker pull alpine:3.22
 
       - name: Build aria2
         run: |
-          . packaging/scripts/release-size-profile linux
-          PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
-          cmake -S . -B build/release -G Ninja \
-            -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
-            -DARIA2_ENABLE_STATIC=ON \
-            -DARIA2_WITH_ZLIB=ON \
-            -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
-            -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
-            -DCMAKE_EXE_LINKER_FLAGS="$RELEASE_LDFLAGS" \
-            -DARIA2_RELEASE_SIZE_OPTIMIZED=ON \
-            -DCMAKE_PREFIX_PATH="$PREFIX" \
-            -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
-          cmake --build build/release -j$(nproc)
-          if [ "$STRIP_BINARY" = true ]; then
-            strip build/release/aria2-next
-          fi
-          packaging/scripts/check-runtime-deps linux build/release/aria2-next
-          packaging/scripts/size-audit linux build/release/aria2-next
-          packaging/scripts/release-smoke "$PWD/build/release/aria2-next"
+          docker run --rm \
+            -e ARIA2_BUILD_PROFILE \
+            -e CMAKE_BUILD_TYPE \
+            -e PREFIX \
+            -e STRIP_BINARY \
+            -v "$PWD:/work" \
+            -w /work \
+            alpine:3.22 \
+            sh -lc 'apk add --no-cache bash build-base cmake coreutils curl linux-headers ninja perl pkgconf python3 tar && packaging/scripts/linux-musl-release linux-x86_64'
 
       - name: Package
         run: |
@@ -247,7 +173,7 @@ jobs:
           archive: false
 
   # ---------------------------------------------------------------------------
-  # Linux ARM64 (static)
+  # Linux ARM64 (static musl)
   # ---------------------------------------------------------------------------
   build-linux-arm64:
     name: Linux ARM64
@@ -257,7 +183,7 @@ jobs:
       ARTIFACT_SUFFIX: ${{ needs.resolve-release.outputs.artifact_suffix }}
       ARIA2_BUILD_PROFILE: ${{ needs.resolve-release.outputs.build_profile }}
       CMAKE_BUILD_TYPE: ${{ needs.resolve-release.outputs.cmake_build_type }}
-      PREFIX: /usr/local
+      PREFIX: /work/packaging/build-deps
       STRIP_BINARY: ${{ needs.resolve-release.outputs.strip_binary }}
     steps:
       - uses: actions/checkout@v6
@@ -265,93 +191,19 @@ jobs:
           ref: ${{ github.event.release.tag_name || github.sha }}
 
       - name: Install build tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            cmake ninja-build pkg-config
-
-      - name: Download dependency sources
-        run: |
-          . packaging/dependencies.env
-          . packaging/scripts/common.sh
-          curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
-          curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
-          curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
-          curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
-          curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
-          curl_fetch "$SPDLOG_URL" "$SPDLOG_ARCHIVE" "$SPDLOG_SHA256"
-          curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
-
-      - name: Build zlib
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile linux
-          tar xf "$ZLIB_ARCHIVE" && cd "zlib-$ZLIB_VERSION"
-          CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-          ./configure --prefix=$PREFIX --static
-          make -j$(nproc)
-          sudo make install
-
-      - name: Build OpenSSL
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile linux
-          tar xf "$OPENSSL_ARCHIVE" && cd "openssl-$OPENSSL_VERSION"
-          ./Configure linux-aarch64 no-shared no-module no-tests \
-            --prefix=$PREFIX --libdir=lib \
-            $RELEASE_CFLAGS
-          make -j$(nproc)
-          sudo make install_sw
-
-      - name: Build libssh2 for libcurl
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          . packaging/scripts/release-size-profile linux
-          ARIA2_BUILD_JOBS=$(nproc) build_libssh2_for_curl
-
-      - name: Build libcurl
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          . packaging/scripts/release-size-profile linux
-          ARIA2_BUILD_JOBS=$(nproc) build_curl
-
-      - name: Build Boost headers
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          install_boost_headers
-          install_spdlog_headers
-
-      - name: Build libtorrent-rasterbar
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          . packaging/scripts/release-size-profile linux
-          ARIA2_BUILD_JOBS=$(nproc) build_libtorrent_rasterbar
+        run: docker pull alpine:3.22
 
       - name: Build aria2
         run: |
-          . packaging/scripts/release-size-profile linux
-          PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
-          cmake -S . -B build/release -G Ninja \
-            -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
-            -DARIA2_ENABLE_STATIC=ON \
-            -DARIA2_WITH_ZLIB=ON \
-            -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
-            -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
-            -DCMAKE_EXE_LINKER_FLAGS="$RELEASE_LDFLAGS" \
-            -DARIA2_RELEASE_SIZE_OPTIMIZED=ON \
-            -DCMAKE_PREFIX_PATH="$PREFIX" \
-            -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
-          cmake --build build/release -j$(nproc)
-          if [ "$STRIP_BINARY" = true ]; then
-            strip build/release/aria2-next
-          fi
-          packaging/scripts/check-runtime-deps linux build/release/aria2-next
-          packaging/scripts/size-audit linux build/release/aria2-next
-          packaging/scripts/release-smoke "$PWD/build/release/aria2-next"
+          docker run --rm \
+            -e ARIA2_BUILD_PROFILE \
+            -e CMAKE_BUILD_TYPE \
+            -e PREFIX \
+            -e STRIP_BINARY \
+            -v "$PWD:/work" \
+            -w /work \
+            alpine:3.22 \
+            sh -lc 'apk add --no-cache bash build-base cmake coreutils curl linux-headers ninja perl pkgconf python3 tar && packaging/scripts/linux-musl-release linux-aarch64'
 
       - name: Package
         run: |

@@ -53,6 +53,11 @@ curl_fetch() {
 aria2_install_dir() {
   dir=$1
 
+  if [ "$(id -u)" -eq 0 ]; then
+    mkdir -p "$dir"
+    return
+  fi
+
   if mkdir -p "$dir" 2>/dev/null; then
     return
   fi
@@ -64,6 +69,11 @@ aria2_copy_tree() {
   src=$1
   dest=$2
 
+  if [ "$(id -u)" -eq 0 ]; then
+    cp -R "$src" "$dest"
+    return
+  fi
+
   if cp -R "$src" "$dest" 2>/dev/null; then
     return
   fi
@@ -73,6 +83,11 @@ aria2_copy_tree() {
 
 aria2_cmake_install() {
   build_dir=$1
+
+  if [ "$(id -u)" -eq 0 ]; then
+    cmake --install "$build_dir"
+    return
+  fi
 
   if cmake --install "$build_dir" 2>/dev/null; then
     return

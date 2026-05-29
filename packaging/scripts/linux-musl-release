@@ -1,0 +1,93 @@
+#!/bin/sh
+set -eu
+
+usage() {
+  echo "Usage: $0 <openssl-target>" >&2
+  echo "OpenSSL targets: linux-x86_64, linux-aarch64" >&2
+  exit 2
+}
+
+test $# -eq 1 || usage
+
+openssl_target=$1
+
+case "$openssl_target" in
+  linux-x86_64|linux-aarch64)
+    ;;
+  *)
+    usage
+    ;;
+esac
+
+: "${PREFIX:=$PWD/packaging/build-deps}"
+: "${CMAKE_BUILD_TYPE:=Release}"
+: "${STRIP_BINARY:=true}"
+
+export PREFIX
+
+jobs=${ARIA2_BUILD_JOBS:-$(getconf _NPROCESSORS_ONLN)}
+
+. packaging/dependencies.env
+. packaging/scripts/common.sh
+
+curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
+curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
+curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
+curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
+curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
+curl_fetch "$SPDLOG_URL" "$SPDLOG_ARCHIVE" "$SPDLOG_SHA256"
+curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
+
+. packaging/scripts/release-size-profile linux
+
+rm -rf "$PREFIX" build/release
+mkdir -p "$PREFIX"
+
+rm -rf "zlib-$ZLIB_VERSION"
+tar xf "$ZLIB_ARCHIVE"
+(
+  cd "zlib-$ZLIB_VERSION"
+  CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
+    ./configure --prefix="$PREFIX" --static
+  make -j"$jobs"
+  make install
+)
+
+rm -rf "openssl-$OPENSSL_VERSION"
+tar xf "$OPENSSL_ARCHIVE"
+(
+  cd "openssl-$OPENSSL_VERSION"
+  ./Configure "$openssl_target" no-shared no-module no-tests \
+    --prefix="$PREFIX" --libdir=lib \
+    $RELEASE_CFLAGS
+  make -j"$jobs"
+  make install_sw
+)
+
+ARIA2_BUILD_JOBS="$jobs" build_libssh2_for_curl
+ARIA2_BUILD_JOBS="$jobs" build_curl
+install_boost_headers
+install_spdlog_headers
+ARIA2_BUILD_JOBS="$jobs" build_libtorrent_rasterbar
+
+PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
+cmake -S . -B build/release -G Ninja \
+  -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
+  -DARIA2_ENABLE_STATIC=ON \
+  -DARIA2_WITH_ZLIB=ON \
+  -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
+  -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
+  -DCMAKE_EXE_LINKER_FLAGS="$RELEASE_LDFLAGS" \
+  -DARIA2_RELEASE_SIZE_OPTIMIZED=ON \
+  -DCMAKE_PREFIX_PATH="$PREFIX" \
+  -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
+
+cmake --build build/release -j"$jobs"
+
+if [ "$STRIP_BINARY" = true ]; then
+  strip build/release/aria2-next
+fi
+
+packaging/scripts/check-runtime-deps linux build/release/aria2-next
+packaging/scripts/size-audit linux build/release/aria2-next
+packaging/scripts/release-smoke "$PWD/build/release/aria2-next"

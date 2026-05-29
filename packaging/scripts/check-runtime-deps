@@ -18,7 +18,9 @@ if [ ! -f "$binary" ]; then
 fi
 
 tmp=${TMPDIR:-/tmp}/aria2-runtime-deps.$$
-trap 'rm -f "$tmp"' EXIT HUP INT TERM
+deps_tmp=$tmp.deps
+strings_tmp=$tmp.strings
+trap 'rm -f "$deps_tmp" "$strings_tmp"' EXIT HUP INT TERM
 
 fail_unexpected() {
   dep=$1
@@ -37,7 +39,7 @@ check_windows() {
       sub(/^[[:space:]]*DLL Name:[[:space:]]*/, "")
       print
     }' |
-    sort -fu > "$tmp"
+    sort -fu > "$deps_tmp"
 
   while IFS= read -r dep; do
     dep_lc=$(printf '%s\n' "$dep" | tr '[:upper:]' '[:lower:]')
@@ -51,7 +53,7 @@ check_windows() {
         fail_unexpected "$dep"
         ;;
     esac
-  done < "$tmp"
+  done < "$deps_tmp"
 }
 
 check_elf() {
@@ -76,16 +78,26 @@ check_elf() {
         print dep
       }
     ' |
-    sort -fu > "$tmp"
+    sort -fu > "$deps_tmp"
 
   if [ "$platform" = linux ]; then
-    if [ -s "$tmp" ]; then
-      dep=$(sed -n '1p' "$tmp")
+    if [ -s "$deps_tmp" ]; then
+      dep=$(sed -n '1p' "$deps_tmp")
       fail_unexpected "$dep"
     fi
 
     if "$reader" -l "$binary" | grep -q 'Requesting program interpreter'; then
       fail_unexpected "ELF interpreter"
+    fi
+
+    command -v strings >/dev/null 2>&1 || {
+      echo "Runtime dependency check failed: strings is required for Linux ELF binaries" >&2
+      exit 1
+    }
+
+    strings "$binary" > "$strings_tmp"
+    if grep -F -q -e 'libnss_' -e '__nss_' -e 'GNU C Library' -e 'ld-linux' "$strings_tmp"; then
+      fail_unexpected "static glibc/NSS marker"
     fi
 
     return
@@ -99,7 +111,7 @@ check_elf() {
         fail_unexpected "$dep"
         ;;
     esac
-  done < "$tmp"
+  done < "$deps_tmp"
 }
 
 check_macos() {
@@ -113,7 +125,7 @@ check_macos() {
       dep = $1
       print dep
     }' |
-    sort -fu > "$tmp"
+    sort -fu > "$deps_tmp"
 
   while IFS= read -r dep; do
     case "$dep" in
@@ -123,7 +135,7 @@ check_macos() {
         fail_unexpected "$dep"
         ;;
     esac
-  done < "$tmp"
+  done < "$deps_tmp"
 }
 
 case "$platform" in

@@ -152,9 +152,20 @@ if(ARIA2_ENABLE_STATIC)
   if(WIN32)
     target_link_options(aria2-next PRIVATE -static -static-libgcc -static-libstdc++)
   elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    find_package(Threads REQUIRED)
+    check_c_source_compiles("
+      #include <features.h>
+      #ifdef __GLIBC__
+      #error glibc static release builds are unsupported
+      #endif
+      int main(void) { return 0; }
+    " ARIA2_LINUX_STATIC_USES_SUPPORTED_LIBC)
+    if(NOT ARIA2_LINUX_STATIC_USES_SUPPORTED_LIBC)
+      message(FATAL_ERROR "Linux static release builds require musl libc.")
+    endif()
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+      message(FATAL_ERROR "Linux static release builds require a GCC-compatible musl toolchain.")
+    endif()
     target_link_options(aria2-next PRIVATE -static -static-libgcc -static-libstdc++)
-    target_link_libraries(aria2-next PRIVATE Threads::Threads ${CMAKE_DL_LIBS} rt)
   endif()
 endif()
 
