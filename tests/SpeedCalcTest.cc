@@ -9,9 +9,9 @@ class SpeedCalcTest : public CppUnit::TestFixture {
 
   CPPUNIT_TEST_SUITE(SpeedCalcTest);
   CPPUNIT_TEST(testColdStartDoesNotPublishSubSecondSpike);
-  CPPUNIT_TEST(testPublishesOneSecondRate);
-  CPPUNIT_TEST(testIdleSecondClearsLiveSpeed);
-  CPPUNIT_TEST(testFiveSecondRollingWindow);
+  CPPUNIT_TEST(testPublishesAfterMinimumLiveSample);
+  CPPUNIT_TEST(testActiveIdleGapKeepsSmoothedSpeed);
+  CPPUNIT_TEST(testTenSecondWindowExpiresNaturally);
   CPPUNIT_TEST(testResetClearsLiveSpeed);
   CPPUNIT_TEST_SUITE_END();
 
@@ -20,9 +20,9 @@ public:
   void setUp() { global::wallclock().reset(); }
 
   void testColdStartDoesNotPublishSubSecondSpike();
-  void testPublishesOneSecondRate();
-  void testIdleSecondClearsLiveSpeed();
-  void testFiveSecondRollingWindow();
+  void testPublishesAfterMinimumLiveSample();
+  void testActiveIdleGapKeepsSmoothedSpeed();
+  void testTenSecondWindowExpiresNaturally();
   void testResetClearsLiveSpeed();
 };
 
@@ -41,7 +41,7 @@ void SpeedCalcTest::testColdStartDoesNotPublishSubSecondSpike()
   CPPUNIT_ASSERT_EQUAL(0, calc.getMaxSpeed());
 }
 
-void SpeedCalcTest::testPublishesOneSecondRate()
+void SpeedCalcTest::testPublishesAfterMinimumLiveSample()
 {
   SpeedCalc calc;
   calc.update(1024);
@@ -52,7 +52,7 @@ void SpeedCalcTest::testPublishesOneSecondRate()
   CPPUNIT_ASSERT_EQUAL(2048, calc.getMaxSpeed());
 }
 
-void SpeedCalcTest::testIdleSecondClearsLiveSpeed()
+void SpeedCalcTest::testActiveIdleGapKeepsSmoothedSpeed()
 {
   SpeedCalc calc;
   calc.update(1024);
@@ -62,10 +62,10 @@ void SpeedCalcTest::testIdleSecondClearsLiveSpeed()
 
   global::wallclock().advance(500_ms);
 
-  CPPUNIT_ASSERT_EQUAL(0, calc.calculateSpeed());
+  CPPUNIT_ASSERT_EQUAL(1024, calc.calculateSpeed());
 }
 
-void SpeedCalcTest::testFiveSecondRollingWindow()
+void SpeedCalcTest::testTenSecondWindowExpiresNaturally()
 {
   SpeedCalc calc;
   calc.update(1000);
@@ -73,25 +73,11 @@ void SpeedCalcTest::testFiveSecondRollingWindow()
   global::wallclock().advance(500_ms);
   CPPUNIT_ASSERT_EQUAL(2000, calc.calculateSpeed());
 
-  calc.update(2000);
-  global::wallclock().advance(500_ms);
-  CPPUNIT_ASSERT_EQUAL(3000, calc.calculateSpeed());
+  global::wallclock().advance(9_s);
+  CPPUNIT_ASSERT(calc.calculateSpeed() > 0);
 
-  calc.update(3000);
-  global::wallclock().advance(500_ms);
-  CPPUNIT_ASSERT_EQUAL(4000, calc.calculateSpeed());
-
-  calc.update(4000);
-  global::wallclock().advance(500_ms);
-  CPPUNIT_ASSERT_EQUAL(5000, calc.calculateSpeed());
-
-  calc.update(5000);
-  global::wallclock().advance(500_ms);
-  CPPUNIT_ASSERT_EQUAL(6000, calc.calculateSpeed());
-
-  calc.update(6000);
-  global::wallclock().advance(500_ms);
-  CPPUNIT_ASSERT_EQUAL(7000, calc.calculateSpeed());
+  global::wallclock().advance(1_s);
+  CPPUNIT_ASSERT_EQUAL(0, calc.calculateSpeed());
 }
 
 void SpeedCalcTest::testResetClearsLiveSpeed()

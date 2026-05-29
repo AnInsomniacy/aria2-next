@@ -37,8 +37,7 @@
 
 #include "common.h"
 
-#include <array>
-#include <cstddef>
+#include <deque>
 
 #include "TimerA2.h"
 
@@ -46,20 +45,13 @@ namespace aria2 {
 
 class SpeedCalc {
 private:
-  static constexpr size_t WINDOW_BUCKETS = 10;
-
-  std::array<int64_t, WINDOW_BUCKETS> buckets_;
-  size_t bucketIndex_;
+  std::deque<std::pair<Timer, size_t>> timeSlots_;
   Timer start_;
-  Timer lastTick_;
   int64_t accumulatedLength_;
-  int64_t currentBucketBytes_;
-  int64_t publishedWindowBytes_;
-  int publishedSamples_;
-  int publishedSpeed_;
+  int64_t bytesWindow_;
   int maxSpeed_;
 
-  void publishElapsedSamples(const Timer& now);
+  void removeStaleTimeSlot(const Timer& now);
 
 public:
   SpeedCalc();
