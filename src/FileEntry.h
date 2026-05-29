@@ -55,22 +55,12 @@
 
 namespace aria2 {
 
-class URISelector;
-class ServerStatMan;
-
 class FileEntry {
 public:
   typedef std::set<std::shared_ptr<Request>, RefLess<Request>>
       InFlightRequestSet;
 
 private:
-  class RequestFaster {
-  public:
-    bool operator()(const std::shared_ptr<Request>& lhs,
-                    const std::shared_ptr<Request>& rhs) const;
-  };
-  typedef std::set<std::shared_ptr<Request>, RequestFaster> RequestPool;
-
   int64_t length_;
   int64_t offset_;
 
@@ -79,7 +69,6 @@ private:
   // URIResult is stored in the ascending order of the time when its result is
   // available.
   std::deque<URIResult> uriResults_;
-  RequestPool requestPool_;
   InFlightRequestSet inFlightRequests_;
 
   std::string path_;
@@ -89,20 +78,9 @@ private:
   // to change directory (PREF_DIR option).
   std::string suffixPath_;
 
-  Timer lastFasterReplace_;
   int maxConnectionPerServer_;
 
   bool requested_;
-  bool uniqueProtocol_;
-
-  void storePool(const std::shared_ptr<Request>& request);
-
-  std::shared_ptr<Request> getRequestWithInFlightHosts(
-      URISelector* selector, bool uriReuse,
-      const std::vector<std::pair<size_t, std::string>>& usedHosts,
-      const std::string& referer, const std::string& method,
-      const std::vector<std::string>& inFlightHosts);
-
 public:
   FileEntry();
 
@@ -167,42 +145,15 @@ public:
 
   const std::string& getContentType() const { return contentType_; }
 
-  // If pooled Request object is available, one of them is removed
-  // from the pool and returned.  If pool is empty, then select URI
-  // using selectUri(selector) and construct Request object using it
-  // and return the Request object.  If referer is given, it is set to
-  // newly created Request. If Request object is retrieved from the
-  // pool, referer is ignored.  If method is given, it is set to newly
-  // created Request. If Request object is retrieved from the pool,
-  // method is ignored. If uriReuse is true and selector does not
-  // returns Request object either because uris_ is empty or all URI
-  // are not be usable because maxConnectionPerServer_ limit, then
-  // reuse used URIs and do selection again.
   std::shared_ptr<Request>
-  getRequest(URISelector* selector, bool uriReuse,
-             const std::vector<std::pair<size_t, std::string>>& usedHosts,
-             const std::string& referer = A2STR::NIL,
+  getRequest(const std::string& referer = A2STR::NIL,
              const std::string& method = Request::METHOD_GET);
-
-  // Finds pooled Request object which is faster than passed one,
-  // comparing their PeerStat objects. If such Request is found, it is
-  // removed from the pool and returned.
-  std::shared_ptr<Request>
-  findFasterRequest(const std::shared_ptr<Request>& base);
-
-  // Finds faster server using ServerStatMan.
-  std::shared_ptr<Request> findFasterRequest(
-      const std::shared_ptr<Request>& base,
-      const std::vector<std::pair<size_t, std::string>>& usedHosts,
-      const std::shared_ptr<ServerStatMan>& serverStatMan);
 
   void poolRequest(const std::shared_ptr<Request>& request);
 
   bool removeRequest(const std::shared_ptr<Request>& request);
 
   size_t countInFlightRequest() const;
-
-  size_t countPooledRequest() const;
 
   const InFlightRequestSet& getInFlightRequests() const
   {
@@ -232,14 +183,9 @@ public:
 
   int getMaxConnectionPerServer() const { return maxConnectionPerServer_; }
 
-  // Reuse URIs which have not emitted error so far and whose host
-  // component is not included in ignore. The reusable URIs are
-  // appended to uris_ maxConnectionPerServer_ times.
-  void reuseUri(const std::vector<std::string>& ignore);
-
   void releaseRuntimeResource();
 
-  // Push URIs in pooled or in-flight requests to the front of uris_.
+  // Push URIs in in-flight requests to the front of uris_.
   void putBackRequest();
 
   void setOriginalName(std::string originalName);
@@ -254,9 +200,6 @@ public:
 
   bool emptyRequestUri() const;
 
-  void setUniqueProtocol(bool f) { uniqueProtocol_ = f; }
-
-  bool isUniqueProtocol() const { return uniqueProtocol_; }
 };
 
 // Returns the first FileEntry which isRequested() method returns

@@ -56,10 +56,6 @@ Request::Request()
     : method_(METHOD_GET),
       tryCount_(0),
       redirectCount_(0),
-      supportsPersistentConnection_(true),
-      keepAliveHint_(false),
-      pipeliningHint_(false),
-      maxPipelinedRequest_(1),
       removalRequested_(false),
       connectedPort_(0),
       wakeTime_(global::wallclock()),
@@ -84,14 +80,12 @@ std::string removeFragment(const std::string& uri)
 
 bool Request::setUri(const std::string& uri)
 {
-  supportsPersistentConnection_ = true;
   uri_ = uri;
   return parseUri(uri_);
 }
 
 bool Request::resetUri()
 {
-  supportsPersistentConnection_ = true;
   setConnectedAddrInfo(A2STR::NIL, A2STR::NIL, 0);
   return parseUri(uri_);
 }
@@ -103,7 +97,6 @@ void Request::setReferer(const std::string& uri)
 
 bool Request::redirectUri(const std::string& uri)
 {
-  supportsPersistentConnection_ = true;
   ++redirectCount_;
   if (uri.empty()) {
     return false;
@@ -161,8 +154,6 @@ bool Request::parseUri(const std::string& srcUri)
 }
 
 void Request::resetRedirectCount() { redirectCount_ = 0; }
-
-void Request::setMaxPipelinedRequest(int num) { maxPipelinedRequest_ = num; }
 
 const std::shared_ptr<PeerStat>& Request::initPeerStat()
 {

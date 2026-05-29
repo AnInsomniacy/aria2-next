@@ -56,7 +56,7 @@ CurlDownloadCommand::CurlDownloadCommand(
     cuid_t cuid, const std::shared_ptr<Request>& req,
     const std::shared_ptr<FileEntry>& fileEntry, RequestGroup* requestGroup,
     DownloadEngine* e)
-    : AbstractCommand(cuid, req, fileEntry, requestGroup, e, nullptr, nullptr),
+    : AbstractCommand(cuid, req, fileEntry, requestGroup, e, nullptr),
       easy_(nullptr),
       session_(nullptr),
       initialized_(false),

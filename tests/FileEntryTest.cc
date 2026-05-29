@@ -2,7 +2,6 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
-#include "InorderURISelector.h"
 #include "util.h"
 
 namespace aria2 {
@@ -13,11 +12,8 @@ class FileEntryTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testRemoveURIWhoseHostnameIs);
   CPPUNIT_TEST(testExtractURIResult);
   CPPUNIT_TEST(testGetRequest);
-  CPPUNIT_TEST(testGetRequest_withoutUriReuse);
-  CPPUNIT_TEST(testGetRequest_withUniqueProtocol);
+  CPPUNIT_TEST(testGetRequest_honorsMaxConnectionPerServer);
   CPPUNIT_TEST(testGetRequest_withReferer);
-  CPPUNIT_TEST(testGetRequest_resetsTryCountAfterWake);
-  CPPUNIT_TEST(testReuseUri);
   CPPUNIT_TEST(testAddUri);
   CPPUNIT_TEST(testAddUris);
   CPPUNIT_TEST(testInsertUri);
@@ -31,11 +27,8 @@ public:
   void testRemoveURIWhoseHostnameIs();
   void testExtractURIResult();
   void testGetRequest();
-  void testGetRequest_withoutUriReuse();
-  void testGetRequest_withUniqueProtocol();
+  void testGetRequest_honorsMaxConnectionPerServer();
   void testGetRequest_withReferer();
-  void testGetRequest_resetsTryCountAfterWake();
-  void testReuseUri();
   void testAddUri();
   void testAddUris();
   void testInsertUri();
@@ -95,146 +88,56 @@ void FileEntryTest::testExtractURIResult()
 void FileEntryTest::testGetRequest()
 {
   auto fileEntry = createFileEntry();
-  InorderURISelector selector{};
-  std::vector<std::pair<size_t, std::string>> usedHosts;
-  auto req = fileEntry->getRequest(&selector, true, usedHosts);
-  CPPUNIT_ASSERT_EQUAL(std::string("localhost"), req->getHost());
-  CPPUNIT_ASSERT_EQUAL(std::string("http"), req->getProtocol());
-  fileEntry->poolRequest(req);
-
-  auto req2nd = fileEntry->getRequest(&selector, true, usedHosts);
-  CPPUNIT_ASSERT_EQUAL(std::string("localhost"), req2nd->getHost());
-  CPPUNIT_ASSERT_EQUAL(std::string("http"), req2nd->getProtocol());
-
-  auto req3rd = fileEntry->getRequest(&selector, true, usedHosts);
-  CPPUNIT_ASSERT_EQUAL(std::string("mirror"), req3rd->getHost());
-  CPPUNIT_ASSERT_EQUAL(std::string("http"), req3rd->getProtocol());
-
-  auto req4th = fileEntry->getRequest(&selector, true, usedHosts);
-  CPPUNIT_ASSERT(!req4th);
-
   fileEntry->setMaxConnectionPerServer(2);
-
-  auto req5th = fileEntry->getRequest(&selector, true, usedHosts);
-  CPPUNIT_ASSERT_EQUAL(std::string("localhost"), req5th->getHost());
-  CPPUNIT_ASSERT_EQUAL(std::string("ftp"), req5th->getProtocol());
-
-  auto req6th = fileEntry->getRequest(&selector, true, usedHosts);
-  CPPUNIT_ASSERT_EQUAL(std::string("mirror"), req6th->getHost());
-  CPPUNIT_ASSERT_EQUAL(std::string("http"), req6th->getProtocol());
-
-  auto req7th = fileEntry->getRequest(&selector, true, usedHosts);
-  CPPUNIT_ASSERT(!req7th);
-}
-
-void FileEntryTest::testGetRequest_withoutUriReuse()
-{
-  std::vector<std::pair<size_t, std::string>> usedHosts;
-  auto fileEntry = createFileEntry();
-  fileEntry->setMaxConnectionPerServer(2);
-  InorderURISelector selector{};
-  auto req = fileEntry->getRequest(&selector, false, usedHosts);
+  auto req = fileEntry->getRequest();
   CPPUNIT_ASSERT_EQUAL(std::string("localhost"), req->getHost());
   CPPUNIT_ASSERT_EQUAL(std::string("http"), req->getProtocol());
 
-  auto req2nd = fileEntry->getRequest(&selector, false, usedHosts);
+  auto req2nd = fileEntry->getRequest();
   CPPUNIT_ASSERT_EQUAL(std::string("localhost"), req2nd->getHost());
   CPPUNIT_ASSERT_EQUAL(std::string("ftp"), req2nd->getProtocol());
 
-  auto req3rd = fileEntry->getRequest(&selector, false, usedHosts);
+  auto req3rd = fileEntry->getRequest();
   CPPUNIT_ASSERT_EQUAL(std::string("mirror"), req3rd->getHost());
   CPPUNIT_ASSERT_EQUAL(std::string("http"), req3rd->getProtocol());
 
-  auto req4th = fileEntry->getRequest(&selector, false, usedHosts);
+  auto req4th = fileEntry->getRequest();
   CPPUNIT_ASSERT(!req4th);
 }
 
-void FileEntryTest::testGetRequest_withUniqueProtocol()
+void FileEntryTest::testGetRequest_honorsMaxConnectionPerServer()
 {
-  std::vector<std::pair<size_t, std::string>> usedHosts;
   auto fileEntry = createFileEntry();
-  fileEntry->setUniqueProtocol(true);
-  InorderURISelector selector{};
-  auto req = fileEntry->getRequest(&selector, true, usedHosts);
+  auto req = fileEntry->getRequest();
   CPPUNIT_ASSERT_EQUAL(std::string("localhost"), req->getHost());
   CPPUNIT_ASSERT_EQUAL(std::string("http"), req->getProtocol());
 
-  auto req2nd = fileEntry->getRequest(&selector, true, usedHosts);
+  auto req2nd = fileEntry->getRequest();
   CPPUNIT_ASSERT_EQUAL(std::string("mirror"), req2nd->getHost());
   CPPUNIT_ASSERT_EQUAL(std::string("http"), req2nd->getProtocol());
 
-  auto req3rd = fileEntry->getRequest(&selector, true, usedHosts);
+  auto req3rd = fileEntry->getRequest();
   CPPUNIT_ASSERT(!req3rd);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, fileEntry->getRemainingUris().size());
   CPPUNIT_ASSERT_EQUAL(std::string("ftp://localhost/aria2.zip"),
                        fileEntry->getRemainingUris()[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string("http://mirror/aria2.zip"),
-                       fileEntry->getRemainingUris()[1]);
+
+  fileEntry->poolRequest(req);
+  fileEntry->setMaxConnectionPerServer(2);
+
+  auto req4th = fileEntry->getRequest();
+  CPPUNIT_ASSERT_EQUAL(std::string("localhost"), req4th->getHost());
+  CPPUNIT_ASSERT_EQUAL(std::string("ftp"), req4th->getProtocol());
 }
 
 void FileEntryTest::testGetRequest_withReferer()
 {
   auto fileEntry = createFileEntry();
-  InorderURISelector selector{};
-  std::vector<std::pair<size_t, std::string>> usedHosts;
-  auto req =
-      fileEntry->getRequest(&selector, true, usedHosts, "http://referer");
+  auto req = fileEntry->getRequest("http://referer");
   CPPUNIT_ASSERT_EQUAL(std::string("http://referer"), req->getReferer());
   // URI is used as referer if "*" is given.
-  req = fileEntry->getRequest(&selector, true, usedHosts, "*");
+  req = fileEntry->getRequest("*");
   CPPUNIT_ASSERT_EQUAL(req->getUri(), req->getReferer());
-}
-
-void FileEntryTest::testGetRequest_resetsTryCountAfterWake()
-{
-  FileEntry fileEntry;
-  fileEntry.addUri("http://example.org/file");
-  InorderURISelector selector{};
-  std::vector<std::pair<size_t, std::string>> usedHosts;
-
-  auto req = fileEntry.getRequest(&selector, true, usedHosts);
-  req->addTryCount();
-  req->setResetTryCountAfterWake(true);
-  req->setWakeTime(Timer::zero());
-  fileEntry.poolRequest(req);
-
-  auto reused = fileEntry.getRequest(&selector, true, usedHosts);
-
-  CPPUNIT_ASSERT_EQUAL(std::string("http://example.org/file"),
-                       reused->getUri());
-  CPPUNIT_ASSERT_EQUAL(0, reused->getTryCount());
-}
-
-void FileEntryTest::testReuseUri()
-{
-  InorderURISelector selector{};
-  auto fileEntry = createFileEntry();
-  fileEntry->setMaxConnectionPerServer(3);
-  size_t numUris = fileEntry->getRemainingUris().size();
-  std::vector<std::pair<size_t, std::string>> usedHosts;
-  for (size_t i = 0; i < numUris; ++i) {
-    fileEntry->getRequest(&selector, false, usedHosts);
-  }
-  CPPUNIT_ASSERT_EQUAL((size_t)0, fileEntry->getRemainingUris().size());
-  fileEntry->addURIResult("http://localhost/aria2.zip",
-                          error_code::UNKNOWN_ERROR);
-  std::vector<std::string> ignore;
-  fileEntry->reuseUri(ignore);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, fileEntry->getRemainingUris().size());
-  auto uris = fileEntry->getRemainingUris();
-  CPPUNIT_ASSERT_EQUAL(std::string("ftp://localhost/aria2.zip"), uris[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string("http://mirror/aria2.zip"), uris[1]);
-  for (size_t i = 0; i < 2; ++i) {
-    fileEntry->getRequest(&selector, false, usedHosts);
-  }
-  CPPUNIT_ASSERT_EQUAL((size_t)0, fileEntry->getRemainingUris().size());
-  ignore.clear();
-  ignore.push_back("mirror");
-  fileEntry->reuseUri(ignore);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, fileEntry->getRemainingUris().size());
-  uris = fileEntry->getRemainingUris();
-  CPPUNIT_ASSERT_EQUAL(std::string("ftp://localhost/aria2.zip"), uris[0]);
 }
 
 void FileEntryTest::testAddUri()
@@ -286,8 +189,6 @@ void FileEntryTest::testInsertUri()
 
 void FileEntryTest::testRemoveUri()
 {
-  std::vector<std::pair<size_t, std::string>> usedHosts;
-  InorderURISelector selector{};
   FileEntry file;
   file.addUri("http://example.org/");
   CPPUNIT_ASSERT(file.removeUri("http://example.org/"));
@@ -295,22 +196,13 @@ void FileEntryTest::testRemoveUri()
   CPPUNIT_ASSERT(!file.removeUri("http://example.org/"));
 
   file.addUri("http://example.org/");
-  auto exampleOrgReq = file.getRequest(&selector, true, usedHosts);
+  auto exampleOrgReq = file.getRequest();
   CPPUNIT_ASSERT(!exampleOrgReq->removalRequested());
   CPPUNIT_ASSERT_EQUAL((size_t)1, file.getSpentUris().size());
   CPPUNIT_ASSERT(file.removeUri("http://example.org/"));
   CPPUNIT_ASSERT(file.getSpentUris().empty());
   CPPUNIT_ASSERT(exampleOrgReq->removalRequested());
   file.poolRequest(exampleOrgReq);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, file.countPooledRequest());
-
-  file.addUri("http://example.org/");
-  exampleOrgReq = file.getRequest(&selector, true, usedHosts);
-  file.poolRequest(exampleOrgReq);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, file.countPooledRequest());
-  CPPUNIT_ASSERT(file.removeUri("http://example.org/"));
-  CPPUNIT_ASSERT_EQUAL((size_t)0, file.countPooledRequest());
-  CPPUNIT_ASSERT(file.getSpentUris().empty());
 
   file.addUri("http://example.org/");
   CPPUNIT_ASSERT(!file.removeUri("http://example.net"));
@@ -319,18 +211,15 @@ void FileEntryTest::testRemoveUri()
 void FileEntryTest::testPutBackRequest()
 {
   auto fileEntry = createFileEntry();
-  InorderURISelector selector{};
-  std::vector<std::pair<size_t, std::string>> usedHosts;
-  auto req1 = fileEntry->getRequest(&selector, false, usedHosts);
-  auto req2 = fileEntry->getRequest(&selector, false, usedHosts);
+  auto req1 = fileEntry->getRequest();
+  auto req2 = fileEntry->getRequest();
   CPPUNIT_ASSERT_EQUAL((size_t)1, fileEntry->getRemainingUris().size());
   fileEntry->poolRequest(req2);
   fileEntry->putBackRequest();
   auto& uris = fileEntry->getRemainingUris();
-  CPPUNIT_ASSERT_EQUAL((size_t)3, uris.size());
+  CPPUNIT_ASSERT_EQUAL((size_t)2, uris.size());
   CPPUNIT_ASSERT_EQUAL(std::string("http://localhost/aria2.zip"), uris[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string("http://mirror/aria2.zip"), uris[1]);
-  CPPUNIT_ASSERT_EQUAL(std::string("ftp://localhost/aria2.zip"), uris[2]);
+  CPPUNIT_ASSERT_EQUAL(std::string("ftp://localhost/aria2.zip"), uris[1]);
 }
 
 } // namespace aria2

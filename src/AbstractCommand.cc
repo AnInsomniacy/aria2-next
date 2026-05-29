@@ -48,15 +48,13 @@
 #include "DlRetryEx.h"
 #include "DownloadFailureException.h"
 #include "CreateRequestCommand.h"
-#include "InitiateConnectionCommandFactory.h"
+#include "RequestGroup.h"
 #include "StreamCheckIntegrityEntry.h"
 #include "PieceStorage.h"
 #include "SocketCore.h"
 #include "message.h"
 #include "prefs.h"
 #include "fmt.h"
-#include "ServerStat.h"
-#include "RequestGroupMan.h"
 #include "A2STR.h"
 #include "util.h"
 #include "DownloadContext.h"
@@ -65,7 +63,6 @@
 #include "uri.h"
 #include "FileEntry.h"
 #include "error_code.h"
-#include "SocketRecvBuffer.h"
 #include "ChecksumCheckIntegrityEntry.h"
 
 namespace aria2 {
@@ -74,17 +71,14 @@ AbstractCommand::AbstractCommand(
     cuid_t cuid, const std::shared_ptr<Request>& req,
     const std::shared_ptr<FileEntry>& fileEntry, RequestGroup* requestGroup,
     DownloadEngine* e, const std::shared_ptr<SocketCore>& s,
-    const std::shared_ptr<SocketRecvBuffer>& socketRecvBuffer,
     bool incNumConnection, bool incNumStreamCommand)
     : Command(cuid),
       req_(req),
       fileEntry_(fileEntry),
       socket_(s),
-      socketRecvBuffer_(socketRecvBuffer),
       requestGroup_(requestGroup),
       e_(e),
       checkPoint_(global::wallclock()),
-      serverStatTimer_(global::wallclock()),
       timeout_(requestGroup->getTimeout()),
       checkSocketIsReadable_(false),
       checkSocketIsWritable_(false),
@@ -117,28 +111,10 @@ AbstractCommand::~AbstractCommand()
   }
 }
 
-void AbstractCommand::useFasterRequest(
-    const std::shared_ptr<Request>& fasterRequest)
-{
-  ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Use faster Request hostname=%s, port=%u",
-                  getCuid(), fasterRequest->getHost().c_str(),
-                  fasterRequest->getPort()));
-  // Cancel current Request object and use faster one.
-  fileEntry_->removeRequest(req_);
-  e_->setNoWait(true);
-  e_->addCommand(
-      InitiateConnectionCommandFactory::createInitiateConnectionCommand(
-          getCuid(), fasterRequest, fileEntry_, requestGroup_, e_));
-}
-
 bool AbstractCommand::shouldProcess() const
 {
   if (checkSocketIsReadable_) {
     if (readEventEnabled()) {
-      return true;
-    }
-
-    if (socketRecvBuffer_ && !socketRecvBuffer_->bufferEmpty()) {
       return true;
     }
 
@@ -181,48 +157,12 @@ bool AbstractCommand::execute()
 
       if (req_ && segments_.empty()) {
         // This command previously has assigned segments, but it is
-        // canceled. So discard current request chain.  Plus, if no
-        // segment is available when http pipelining is used.
+        // canceled. So discard current request chain.
         ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
                          " - It seems previously assigned segments"
                          " are canceled. Restart.",
                          getCuid()));
-        // Request::isPipeliningEnabled() == true means aria2
-        // accessed the remote server and discovered that the server
-        // supports pipelining.
-        if (req_ && req_->isPipeliningEnabled()) {
-          e_->poolSocket(req_, createProxyRequest(), socket_);
-        }
         return prepareForRetry(0);
-      }
-
-      // TODO it is not needed to check other PeerStats every time.
-      // Find faster Request when no segment split is allowed.
-      if (req_ && fileEntry_->countPooledRequest() > 0 &&
-          requestGroup_->getPendingLength() < calculateMinSplitSize() * 2) {
-        auto fasterRequest = fileEntry_->findFasterRequest(req_);
-        if (fasterRequest) {
-          useFasterRequest(fasterRequest);
-          return true;
-        }
-      }
-      // Don't use this feature if PREF_MAX_{OVERALL_}DOWNLOAD_LIMIT
-      // is used or total length is unknown.
-      if (req_ && fileEntry_->getLength() > 0 &&
-          e_->getRequestGroupMan()->getMaxOverallDownloadSpeedLimit() == 0 &&
-          requestGroup_->getMaxDownloadSpeedLimit() == 0 &&
-          serverStatTimer_.difference(global::wallclock()) >= 10_s) {
-        serverStatTimer_ = global::wallclock();
-        std::vector<std::pair<size_t, std::string>> usedHosts;
-        if (getOption()->getAsBool(PREF_SELECT_LEAST_USED_HOST)) {
-          getDownloadEngine()->getRequestGroupMan()->getUsedHosts(usedHosts);
-        }
-        auto fasterRequest = fileEntry_->findFasterRequest(
-            req_, usedHosts, e_->getRequestGroupMan()->getServerStatMan());
-        if (fasterRequest) {
-          useFasterRequest(fasterRequest);
-          return true;
-        }
       }
     }
 
@@ -233,12 +173,8 @@ bool AbstractCommand::execute()
         return executeInternal();
       }
 
-      if (!req_ || req_->getMaxPipelinedRequest() == 1 ||
-          // Why the following condition is necessary? That's because
-          // For single file download, SegmentMan::getSegment(cuid)
-          // is more efficient.
-          getDownloadContext()->getFileEntries().size() == 1) {
-        size_t maxSegments = req_ ? req_->getMaxPipelinedRequest() : 1;
+      if (!req_ || getDownloadContext()->getFileEntries().size() == 1) {
+        size_t maxSegments = 1;
         size_t minSplitSize = calculateMinSplitSize();
         while (segments_.size() < maxSegments) {
           auto segment = sm->getSegment(getCuid(), minSplitSize);
@@ -248,9 +184,6 @@ bool AbstractCommand::execute()
           segments_.push_back(segment);
         }
         if (segments_.empty()) {
-          // TODO socket could be pooled here if pipelining is
-          // enabled...  Hmm, I don't think if pipelining is enabled
-          // it does not go here.
           ARIA2_LOG_DEBUG(fmt(MSG_NO_SEGMENT_AVAILABLE, getCuid()));
           // When all segments are ignored in SegmentMan, there are
           // no URIs available, so don't retry.
@@ -268,7 +201,7 @@ bool AbstractCommand::execute()
       else {
         // For multi-file downloads
         size_t minSplitSize = calculateMinSplitSize();
-        size_t maxSegments = req_->getMaxPipelinedRequest();
+        size_t maxSegments = 1;
         if (segments_.size() < maxSegments) {
           sm->getSegment(segments_, getCuid(), minSplitSize, fileEntry_,
                          maxSegments);
@@ -283,19 +216,11 @@ bool AbstractCommand::execute()
 
     if (errorEventEnabled()) {
       // older kernel may report "connection refused" here.
-      auto ss = e_->getRequestGroupMan()->getOrCreateServerStat(
-          req_->getHost(), req_->getProtocol());
-      ss->setError();
-
       throw DL_RETRY_EX(
           fmt(MSG_NETWORK_PROBLEM, socket_->getSocketError().c_str()));
     }
 
     if (checkPoint_.difference(global::wallclock()) >= timeout_) {
-      // timeout triggers ServerStat error state.
-      auto ss = e_->getRequestGroupMan()->getOrCreateServerStat(
-          req_->getHost(), req_->getProtocol());
-      ss->setError();
       // When DNS query was timeout, req_->getConnectedAddr() is
       // empty.
       if (!req_->getConnectedAddr().empty()) {
@@ -427,8 +352,6 @@ bool AbstractCommand::prepareForRetry(time_t wait)
                        " - Discarding retry because stream command limit is"
                        " already converging.",
                        getCuid()));
-      req_->supportsPersistentConnection(true);
-      req_->setMaxPipelinedRequest(1);
       fileEntry_->poolRequest(req_);
       if (getSegmentMan()) {
         getSegmentMan()->recognizeSegmentFor(fileEntry_);
@@ -437,12 +360,6 @@ bool AbstractCommand::prepareForRetry(time_t wait)
     return true;
   }
   if (req_) {
-    // Reset persistentConnection and maxPipelinedRequest to handle
-    // the situation where remote server returns Connection: close
-    // after several pipelined requests.
-    req_->supportsPersistentConnection(true);
-    req_->setMaxPipelinedRequest(1);
-
     fileEntry_->poolRequest(req_);
     ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Pooling request URI=%s", getCuid(),
                      req_->getUri().c_str()));
@@ -863,27 +780,13 @@ bool AbstractCommand::checkIfConnectionEstablished(
     return true;
   }
 
-  // See also InitiateConnectionCommand::executeInternal()
   e_->markBadIPAddress(connectedHostname, connectedAddr, connectedPort);
   if (e_->findCachedIPAddress(connectedHostname, connectedPort).empty()) {
     e_->removeCachedIPAddress(connectedHostname, connectedPort);
-    // Don't set error if proxy server is used and its method is GET.
-    if (resolveProxyMethod(req_->getProtocol()) != V_GET ||
-        !isProxyDefined()) {
-      e_->getRequestGroupMan()
-          ->getOrCreateServerStat(req_->getHost(), req_->getProtocol())
-          ->setError();
-    }
     throw DL_RETRY_EX(fmt(MSG_ESTABLISHING_CONNECTION_FAILED, error.c_str()));
   }
 
-  ARIA2_LOG_DEBUG(fmt(MSG_CONNECT_FAILED_AND_RETRY, getCuid(),
-                  connectedAddr.c_str(), connectedPort));
-  e_->setNoWait(true);
-  e_->addCommand(
-      InitiateConnectionCommandFactory::createInitiateConnectionCommand(
-          getCuid(), req_, fileEntry_, requestGroup_, e_));
-  return false;
+  throw DL_RETRY_EX(fmt(MSG_ESTABLISHING_CONNECTION_FAILED, error.c_str()));
 }
 
 const std::string&
@@ -908,10 +811,6 @@ void AbstractCommand::createSocket()
 
 int32_t AbstractCommand::calculateMinSplitSize() const
 {
-  if (req_ && req_->isPipeliningEnabled()) {
-    return getDownloadContext()->getPieceLength();
-  }
-
   return getOption()->getAsInt(PREF_MIN_SPLIT_SIZE);
 }
 
@@ -946,17 +845,6 @@ const std::shared_ptr<SegmentMan>& AbstractCommand::getSegmentMan() const
 const std::shared_ptr<PieceStorage>& AbstractCommand::getPieceStorage() const
 {
   return requestGroup_->getPieceStorage();
-}
-
-void AbstractCommand::checkSocketRecvBuffer()
-{
-  if (socketRecvBuffer_->bufferEmpty() &&
-      socket_->getRecvBufferedLength() == 0) {
-    return;
-  }
-
-  setStatus(Command::STATUS_ONESHOT_REALTIME);
-  e_->setNoWait(true);
 }
 
 void AbstractCommand::addCommandSelf()

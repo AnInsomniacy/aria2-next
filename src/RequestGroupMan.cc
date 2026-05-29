@@ -53,12 +53,7 @@
 #include "a2functional.h"
 #include "DownloadResult.h"
 #include "DownloadContext.h"
-#include "ServerStatMan.h"
-#include "ServerStat.h"
 #include "SegmentMan.h"
-#include "FeedbackURISelector.h"
-#include "InorderURISelector.h"
-#include "AdaptiveURISelector.h"
 #include "Option.h"
 #include "prefs.h"
 #include "File.h"
@@ -108,13 +103,8 @@ RequestGroupMan::RequestGroupMan(
     std::vector<std::shared_ptr<RequestGroup>> requestGroups,
     int maxConcurrentDownloads, const Option* option)
     : maxConcurrentDownloads_(maxConcurrentDownloads),
-      optimizeConcurrentDownloads_(false),
-      optimizeConcurrentDownloadsCoeffA_(5.),
-      optimizeConcurrentDownloadsCoeffB_(25.),
-      optimizationSpeed_(0),
       numActive_(0),
       option_(option),
-      serverStatMan_(std::make_shared<ServerStatMan>()),
       maxOverallDownloadSpeedLimit_(
           option->getAsInt(PREF_MAX_OVERALL_DOWNLOAD_LIMIT)),
       maxOverallUploadSpeedLimit_(
@@ -131,7 +121,6 @@ RequestGroupMan::RequestGroupMan(
           option->getAsInt(PREF_ED2K_UPLOAD_SLOTS))),
       numStoppedTotal_(0)
 {
-  setupOptimizeConcurrentDownloads();
   const auto now = std::chrono::duration_cast<std::chrono::seconds>(
                        global::wallclock().getTime().time_since_epoch())
                        .count();
@@ -143,23 +132,6 @@ RequestGroupMan::RequestGroupMan(
 }
 
 RequestGroupMan::~RequestGroupMan() { openedFileCounter_->deactivate(); }
-
-bool RequestGroupMan::setupOptimizeConcurrentDownloads(void)
-{
-  optimizeConcurrentDownloads_ =
-      option_->getAsBool(PREF_OPTIMIZE_CONCURRENT_DOWNLOADS);
-  if (optimizeConcurrentDownloads_) {
-    if (option_->defined(PREF_OPTIMIZE_CONCURRENT_DOWNLOADS_COEFFA)) {
-      optimizeConcurrentDownloadsCoeffA_ = strtod(
-          option_->get(PREF_OPTIMIZE_CONCURRENT_DOWNLOADS_COEFFA).c_str(),
-          nullptr);
-      optimizeConcurrentDownloadsCoeffB_ = strtod(
-          option_->get(PREF_OPTIMIZE_CONCURRENT_DOWNLOADS_COEFFB).c_str(),
-          nullptr);
-    }
-  }
-  return optimizeConcurrentDownloads_;
-}
 
 bool RequestGroupMan::downloadFinished()
 {
@@ -319,38 +291,6 @@ private:
     }
   }
 
-  // Collect statistics during download in PeerStats and update/register
-  // ServerStatMan
-  void collectStat(const std::shared_ptr<RequestGroup>& group)
-  {
-    if (group->getSegmentMan()) {
-      bool singleConnection =
-          group->getSegmentMan()->getPeerStats().size() == 1;
-      const std::vector<std::shared_ptr<PeerStat>>& peerStats =
-          group->getSegmentMan()->getFastestPeerStats();
-      for (auto& stat : peerStats) {
-        if (stat->getHostname().empty() || stat->getProtocol().empty()) {
-          continue;
-        }
-        int speed = stat->getAvgDownloadSpeed();
-        if (speed == 0)
-          continue;
-
-        std::shared_ptr<ServerStat> ss =
-            e_->getRequestGroupMan()->getOrCreateServerStat(
-                stat->getHostname(), stat->getProtocol());
-        ss->increaseCounter();
-        ss->updateDownloadSpeed(speed);
-        if (singleConnection) {
-          ss->updateSingleConnectionAvgSpeed(speed);
-        }
-        else {
-          ss->updateMultiConnectionAvgSpeed(speed);
-        }
-      }
-    }
-  }
-
 public:
   ProcessStoppedRequestGroup(DownloadEngine* e,
                              RequestGroupList& reservedGroups)
@@ -361,7 +301,6 @@ public:
   bool operator()(const RequestGroupList::value_type& group)
   {
     if (group->getNumCommand() == 0) {
-      collectStat(group);
       const std::shared_ptr<DownloadContext>& dctx =
           group->getDownloadContext();
 
@@ -438,8 +377,6 @@ public:
                                      PREF_ON_DOWNLOAD_PAUSE);
           notifyDownloadEvent(EVENT_ON_DOWNLOAD_PAUSE, group);
         }
-        // TODO Should we have to prepend spend uris to remaining uris
-        // in case PREF_REUSE_URI is disabled?
       }
       else {
         std::shared_ptr<DownloadResult> dr = group->createDownloadResult();
@@ -471,24 +408,6 @@ void RequestGroupMan::removeStoppedGroup(DownloadEngine* e)
   }
 }
 
-void RequestGroupMan::configureRequestGroup(
-    const std::shared_ptr<RequestGroup>& requestGroup) const
-{
-  const std::string& uriSelectorValue =
-      requestGroup->getOption()->get(PREF_URI_SELECTOR);
-  if (uriSelectorValue == V_FEEDBACK) {
-    requestGroup->setURISelector(
-        make_unique<FeedbackURISelector>(serverStatMan_));
-  }
-  else if (uriSelectorValue == V_INORDER) {
-    requestGroup->setURISelector(make_unique<InorderURISelector>());
-  }
-  else if (uriSelectorValue == V_ADAPTIVE) {
-    requestGroup->setURISelector(
-        make_unique<AdaptiveURISelector>(serverStatMan_, requestGroup.get()));
-  }
-}
-
 namespace {
 std::vector<std::unique_ptr<Command>>
 createInitialCommand(const std::shared_ptr<RequestGroup>& requestGroup,
@@ -504,9 +423,7 @@ void RequestGroupMan::fillRequestGroupFromReserver(DownloadEngine* e)
 {
   removeStoppedGroup(e);
 
-  int maxConcurrentDownloads = optimizeConcurrentDownloads_
-                                   ? optimizeConcurrentDownloads()
-                                   : maxConcurrentDownloads_;
+  int maxConcurrentDownloads = maxConcurrentDownloads_;
 
   if (static_cast<size_t>(maxConcurrentDownloads) <= numActive_) {
     return;
@@ -541,7 +458,6 @@ void RequestGroupMan::fillRequestGroupFromReserver(DownloadEngine* e)
     // Drop pieceStorage here because paused download holds its
     // reference.
     groupToAdd->dropPieceStorage();
-    configureRequestGroup(groupToAdd);
     groupToAdd->setRequestGroupMan(this);
     groupToAdd->setState(RequestGroup::STATE_ACTIVE);
     if (isSameLibtorrentInfoHashBeingDownloaded(groupToAdd.get())) {
@@ -589,9 +505,7 @@ void RequestGroupMan::reduceActiveDownloadsToLimit(DownloadEngine* e)
 {
   removeStoppedGroup(e);
 
-  int maxConcurrentDownloads = optimizeConcurrentDownloads_
-                                   ? optimizeConcurrentDownloads()
-                                   : maxConcurrentDownloads_;
+  int maxConcurrentDownloads = maxConcurrentDownloads_;
   if (maxConcurrentDownloads < 0 ||
       numActive_ <= static_cast<size_t>(maxConcurrentDownloads)) {
     return;
@@ -1017,46 +931,6 @@ void RequestGroupMan::addDownloadResult(
 
 void RequestGroupMan::purgeDownloadResult() { downloadResults_.clear(); }
 
-std::shared_ptr<ServerStat>
-RequestGroupMan::findServerStat(const std::string& hostname,
-                                const std::string& protocol) const
-{
-  return serverStatMan_->find(hostname, protocol);
-}
-
-std::shared_ptr<ServerStat>
-RequestGroupMan::getOrCreateServerStat(const std::string& hostname,
-                                       const std::string& protocol)
-{
-  std::shared_ptr<ServerStat> ss = findServerStat(hostname, protocol);
-  if (!ss) {
-    ss = std::make_shared<ServerStat>(hostname, protocol);
-    addServerStat(ss);
-  }
-  return ss;
-}
-
-bool RequestGroupMan::addServerStat(
-    const std::shared_ptr<ServerStat>& serverStat)
-{
-  return serverStatMan_->add(serverStat);
-}
-
-bool RequestGroupMan::loadServerStat(const std::string& filename)
-{
-  return serverStatMan_->load(filename);
-}
-
-bool RequestGroupMan::saveServerStat(const std::string& filename) const
-{
-  return serverStatMan_->save(filename);
-}
-
-void RequestGroupMan::removeStaleServerStat(const std::chrono::seconds& timeout)
-{
-  serverStatMan_->removeStaleServerStat(timeout);
-}
-
 bool RequestGroupMan::doesOverallDownloadSpeedExceed()
 {
   return maxOverallDownloadSpeedLimit_ > 0 &&
@@ -1067,50 +941,6 @@ bool RequestGroupMan::doesOverallUploadSpeedExceed()
 {
   return maxOverallUploadSpeedLimit_ > 0 &&
          maxOverallUploadSpeedLimit_ < netStat_.calculateUploadSpeed();
-}
-
-void RequestGroupMan::getUsedHosts(
-    std::vector<std::pair<size_t, std::string>>& usedHosts)
-{
-  // vector of tuple which consists of use count, -download speed,
-  // hostname. We want to sort by least used and faster download
-  // speed. We use -download speed so that we can sort them using
-  // operator<().
-  std::vector<std::tuple<size_t, int, std::string>> tempHosts;
-  for (const auto& rg : requestGroups_) {
-    const auto& inFlightReqs =
-        rg->getDownloadContext()->getFirstFileEntry()->getInFlightRequests();
-    for (const auto& req : inFlightReqs) {
-      uri_split_result us;
-      if (uri_split(&us, req->getUri().c_str()) == 0) {
-        std::string host =
-            uri::getFieldString(us, USR_HOST, req->getUri().c_str());
-        auto k = tempHosts.begin();
-        auto eok = tempHosts.end();
-        for (; k != eok; ++k) {
-          if (std::get<2>(*k) == host) {
-            ++std::get<0>(*k);
-            break;
-          }
-        }
-        if (k == eok) {
-          std::string protocol =
-              uri::getFieldString(us, USR_SCHEME, req->getUri().c_str());
-          auto ss = findServerStat(host, protocol);
-          int invDlSpeed = (ss && ss->isOK())
-                               ? -(static_cast<int>(ss->getDownloadSpeed()))
-                               : 0;
-          tempHosts.emplace_back(1, invDlSpeed, host);
-        }
-      }
-    }
-  }
-  std::sort(tempHosts.begin(), tempHosts.end());
-  std::transform(tempHosts.begin(), tempHosts.end(),
-                 std::back_inserter(usedHosts),
-                 [](const std::tuple<size_t, int, std::string>& x) {
-                   return std::make_pair(std::get<0>(x), std::get<2>(x));
-                 });
 }
 
 void RequestGroupMan::setUriListParser(
@@ -1134,56 +964,4 @@ void RequestGroupMan::decreaseNumActive()
   --numActive_;
 }
 
-int RequestGroupMan::optimizeConcurrentDownloads()
-{
-  // gauge the current speed
-  int currentSpeed = getNetStat().calculateDownloadSpeed();
-
-  const auto& now = global::wallclock();
-  if (currentSpeed >= optimizationSpeed_) {
-    optimizationSpeed_ = currentSpeed;
-    optimizationSpeedTimer_ = now;
-  }
-  else if (std::chrono::duration_cast<std::chrono::seconds>(
-               optimizationSpeedTimer_.difference(now)) >= 5_s) {
-    // we keep using the reference speed for minimum 5 seconds so reset the
-    // timer
-    optimizationSpeedTimer_ = now;
-
-    // keep the reference speed as long as the speed tends to augment or to
-    // maintain itself within 10%
-    if (currentSpeed >= 1.1 * getNetStat().calculateNewestDownloadSpeed(5)) {
-      // else assume a possible congestion and record a new optimization speed
-      // by dichotomy
-      optimizationSpeed_ = (optimizationSpeed_ + currentSpeed) / 2.;
-    }
-  }
-
-  if (optimizationSpeed_ <= 0) {
-    return optimizeConcurrentDownloadsCoeffA_;
-  }
-
-  // apply the rule
-  if ((maxOverallDownloadSpeedLimit_ > 0) &&
-      (optimizationSpeed_ > maxOverallDownloadSpeedLimit_)) {
-    optimizationSpeed_ = maxOverallDownloadSpeedLimit_;
-  }
-  int maxConcurrentDownloads =
-      ceil(optimizeConcurrentDownloadsCoeffA_ +
-           optimizeConcurrentDownloadsCoeffB_ *
-               log10(optimizationSpeed_ * 8. / 1000000.));
-
-  // bring the value in bound between 1 and the defined maximum
-  maxConcurrentDownloads =
-      std::min(std::max(1, maxConcurrentDownloads), maxConcurrentDownloads_);
-
-  ARIA2_LOG_DEBUG(
-      fmt("Max concurrent downloads optimized at %d (%lu currently active) "
-          "[optimization speed %sB/s, current speed %sB/s]",
-          maxConcurrentDownloads, static_cast<unsigned long>(numActive_),
-          util::abbrevSize(optimizationSpeed_).c_str(),
-          util::abbrevSize(currentSpeed).c_str()));
-
-  return maxConcurrentDownloads;
-}
 } // namespace aria2

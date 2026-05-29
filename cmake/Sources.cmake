@@ -19,8 +19,6 @@ set(ARIA2_SOURCES_BASE
   src/AbstractSingleDiskAdaptor.h
   src/AdaptiveFileAllocationIterator.cc
   src/AdaptiveFileAllocationIterator.h
-  src/AdaptiveURISelector.cc
-  src/AdaptiveURISelector.h
   src/AnonDiskWriterFactory.h
   src/array_fun.h
   src/AsioPumpCommand.cc
@@ -29,8 +27,6 @@ set(ARIA2_SOURCES_BASE
   src/AsioRuntime.h
   src/AutoSaveCommand.cc
   src/AutoSaveCommand.h
-  src/BackupIPv4ConnectCommand.h
-  src/BackupIPv4ConnectCommand.cc
   src/base32.cc
   src/base32.h
   src/base64.h
@@ -65,8 +61,6 @@ set(ARIA2_SOURCES_BASE
   src/Command.cc
   src/Command.h
   src/common.h
-  src/ConnectCommand.cc
-  src/ConnectCommand.h
   src/console.cc
   src/console.h
   src/ConsoleStatCalc.cc
@@ -111,8 +105,6 @@ set(ARIA2_SOURCES_BASE
   src/DlRetryEx.h
   src/DNSCache.cc
   src/DNSCache.h
-  src/DownloadCommand.cc
-  src/DownloadCommand.h
   src/DownloadContext.cc
   src/DownloadContext.h
   src/DownloadEngine.cc
@@ -182,8 +174,6 @@ set(ARIA2_SOURCES_BASE
   src/FatalException.h
   src/FeatureConfig.cc
   src/FeatureConfig.h
-  src/FeedbackURISelector.cc
-  src/FeedbackURISelector.h
   src/File.cc
   src/File.h
   src/FileAllocationCommand.cc
@@ -221,16 +211,12 @@ set(ARIA2_SOURCES_BASE
   src/HttpRangeValidator.cc
   src/HttpRangeValidator.h
   src/IndexedList.h
-  src/InitiateConnectionCommand.cc
-  src/InitiateConnectionCommand.h
   src/InitiateConnectionCommandFactory.cc
   src/InitiateConnectionCommandFactory.h
   src/InorderStreamPieceSelector.cc
   src/InorderStreamPieceSelector.h
   src/RandomStreamPieceSelector.cc
   src/RandomStreamPieceSelector.h
-  src/InorderURISelector.cc
-  src/InorderURISelector.h
   src/IOFile.cc
   src/IOFile.h
   src/IteratableChecksumValidator.cc
@@ -351,10 +337,6 @@ set(ARIA2_SOURCES_BASE
   src/SelectEventPoll.h
   src/SequentialDispatcherCommand.h
   src/SequentialPicker.h
-  src/ServerStat.cc
-  src/ServerStat.h
-  src/ServerStatMan.cc
-  src/ServerStatMan.h
   src/SessionSerializer.cc
   src/SessionSerializer.h
   src/LibtorrentAttribute.cc
@@ -380,8 +362,6 @@ set(ARIA2_SOURCES_BASE
   src/SocketBuffer.h
   src/SocketCore.cc
   src/SocketCore.h
-  src/SocketRecvBuffer.cc
-  src/SocketRecvBuffer.h
   src/SpeedCalc.cc
   src/SpeedCalc.h
   src/StatCalc.h
@@ -420,7 +400,6 @@ set(ARIA2_SOURCES_BASE
   src/UriListParser.h
   src/URIResult.cc
   src/URIResult.h
-  src/URISelector.h
   src/uri_split.c
   src/uri_split.h
   src/usage_text.h
@@ -450,8 +429,6 @@ set(ARIA2_SOURCES_BASE
   src/OpenedFileCounter.h
   src/SHA1IOFile.cc
   src/SHA1IOFile.h
-  src/EvictSocketPoolCommand.cc
-  src/EvictSocketPoolCommand.h
 )
 
 set(ARIA2_SOURCES_MINGW_BUILD

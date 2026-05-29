@@ -285,45 +285,17 @@ HTTP/FTP/SFTP Options
   server and if it is available, apply it to the local file.
   Default: ``false``
 
-.. option:: --reuse-uri [true|false]
-
-  Reuse already used URIs if no unused URIs are left.
-  Default: ``true``
-
 .. option:: --retry-wait=<SEC>
 
   Set the seconds to wait between retries. When ``SEC > 0``, Aria2 Next will
   retry downloads when the HTTP server returns a 503 response. Default:
   ``0``
 
-.. option:: --server-stat-of=<FILE>
-
-  Specify the file name to which performance profile of the servers is
-  saved. You can load saved data using :option:`--server-stat-if` option. See
-  `Server Performance Profile`_
-  subsection below for file format.
-
-.. option:: --server-stat-if=<FILE>
-
-  Specify the file name to load performance profile of the servers. The
-  loaded data will be used in some URI selector such as ``feedback``.
-  See also :option:`--uri-selector` option. See
-  `Server Performance Profile`_
-  subsection below for file format.
-
-.. option:: --server-stat-timeout=<SEC>
-
-  Specifies timeout in seconds to invalidate performance profile of
-  the servers since the last contact to them.
-  Default: ``86400`` (24hours)
-
 .. option:: -s, --split=<N>
 
   Download a file using N connections.  If more than N URIs are given,
-  first N URIs are used and remaining URIs are used for backup.  If
-  less than N URIs are given, those URIs are used more than once so
-  that N connections total are made simultaneously.  The number of
-  connections to the same host is restricted by the
+  first N URIs are used and remaining URIs are used for backup.  The
+  number of connections to the same host is restricted by the
   :option:`--max-connection-per-server <-x>` option.
   See also the :option:`--min-split-size <-k>` option.
   Default: ``5``
@@ -340,8 +312,7 @@ HTTP/FTP/SFTP Options
     expensive operation.
   inorder
     Select a piece closest to the beginning of the file. This is useful for
-    viewing movies while downloading. :option:`--enable-http-pipelining` option
-    may be useful to reduce re-connection overhead. Note that Aria2 Next honors
+    viewing movies while downloading. Note that Aria2 Next honors
     :option:`--min-split-size <-k>` option, so it will be necessary to specify
     a reasonable value to :option:`--min-split-size <-k>` option.
   random
@@ -359,23 +330,6 @@ HTTP/FTP/SFTP Options
 
   Set timeout in seconds.
   Default: ``60``
-
-.. option:: --uri-selector=<SELECTOR>
-
-  Specify URI selection algorithm. The possible values are ``inorder``,
-  ``feedback`` and ``adaptive``.  If ``inorder`` is given, URI is tried in
-  the order appeared in the URI list.  If ``feedback`` is given, Aria2 Next
-  uses download speed observed in the previous downloads and choose
-  fastest server in the URI list. This also effectively skips dead
-  mirrors. The observed download speed is a part of performance
-  profile of servers mentioned in :option:`--server-stat-of` and
-  :option:`--server-stat-if` options.  If ``adaptive`` is given, selects one of
-  the best mirrors for the first and reserved connections.  For
-  supplementary ones, it returns mirrors which has not been tested
-  yet, and if each of them has already been tested, returns mirrors
-  which has to be tested again. Otherwise, it doesn't select anymore
-  mirrors. Like ``feedback``, it uses a performance profile of servers.
-  Default: ``feedback``
 
 HTTP Specific Options
 ~~~~~~~~~~~~~~~~~~~~~
@@ -480,20 +434,6 @@ HTTP Specific Options
   If ``*`` is given, the download URI is also used as the referrer.
   This may be useful when used together with the
   :option:`--parameterized-uri <-P>` option.
-
-.. option:: --enable-http-keep-alive [true|false]
-
-  Enable HTTP/1.1 persistent connection.
-  Default: ``true``
-
-.. option:: --enable-http-pipelining [true|false]
-
-  Enable HTTP/1.1 pipelining.
-  Default: ``false``
-
-  .. note::
-
-    There is usually no performance gain from enabling this option.
 
 .. option:: --header=<HEADER>
 
@@ -1222,33 +1162,12 @@ Advanced Options
   Possible Values: ``/path/to/command``
 
 
-.. option:: --optimize-concurrent-downloads [true|false|<A>:<B>]
-
-  Optimizes the number of concurrent downloads according to the
-  bandwidth available. Aria2 Next uses the download speed observed in the
-  previous downloads to adapt the number of downloads launched in
-  parallel according to the rule N = A + B Log10(speed in Mbps). The
-  coefficients A and B can be customized in the option arguments with
-  A and B separated by a colon. The default values (A=5, B=25) lead to
-  using typically 5 parallel downloads on 1Mbps networks and above 50
-  on 100Mbps networks. The number of parallel downloads remains
-  constrained under the maximum defined by the
-  :option:`--max-concurrent-downloads` parameter.
-  Default: ``false``
-
 .. option:: --piece-length=<LENGTH>
 
   Set a piece length for HTTP/FTP downloads. This is the boundary when
   Aria2 Next splits a file. All splits occur at multiple of this
   length. This option will be ignored in BitTorrent downloads.
   Default: ``1M``
-
-  .. note::
-
-    The possible use case of :option:`--piece-length`
-    option is change the request range in one HTTP pipelined request.
-    To enable HTTP pipelining use
-    :option:`--enable-http-pipelining`.
 
 .. option:: --show-console-readout [true|false]
 
@@ -1698,8 +1617,6 @@ user's home directory:
 * :option:`private-key <--private-key>`
 * :option:`save-cookies <--save-cookies>`
 * :option:`save-session <--save-session>`
-* :option:`server-stat-if <--server-stat-if>`
-* :option:`server-stat-of <--server-stat-of>`
 * :option:`torrent-file <--torrent-file>`
 
 Note that this expansion occurs even if the above options are used in
@@ -1810,8 +1727,6 @@ of URIs. These optional lines must start with white space(s).
   * :option:`ed2k-server-list <--ed2k-server-list>`
   * :option:`ed2k-share-file <--ed2k-share-file>`
   * :option:`ed2k-upload-slots <--ed2k-upload-slots>`
-  * :option:`enable-http-keep-alive <--enable-http-keep-alive>`
-  * :option:`enable-http-pipelining <--enable-http-pipelining>`
   * :option:`enable-mmap <--enable-mmap>`
   * :option:`enable-peer-exchange <--enable-peer-exchange>`
   * :option:`file-allocation <--file-allocation>`
@@ -1860,7 +1775,6 @@ of URIs. These optional lines must start with white space(s).
   * :option:`remote-time <-R>`
   * :option:`remove-control-file <--remove-control-file>`
   * :option:`retry-wait <--retry-wait>`
-  * :option:`reuse-uri <--reuse-uri>`
   * :option:`rpc-save-upload-metadata <--rpc-save-upload-metadata>`
   * :option:`seed-ratio <--seed-ratio>`
   * :option:`seed-time <--seed-time>`
@@ -1869,7 +1783,6 @@ of URIs. These optional lines must start with white space(s).
   * :option:`stream-piece-selector <--stream-piece-selector>`
   * :option:`timeout <-t>`
   * :option:`torrent-metadata <--torrent-metadata>`
-  * :option:`uri-selector <--uri-selector>`
   * :option:`use-head <--use-head>`
   * :option:`user-agent <-U>`
 
@@ -1894,57 +1807,6 @@ from ``http://server/file.iso`` and ``http://mirror/file.iso``.  The file
 In some cases, :option:`out <-o>` parameter has no effect.
 See note of :option:`--out <-o>`
 option for the restrictions.
-
-Server Performance Profile
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This section describes the format of server performance profile.  The
-file is plain text and each line has several ``NAME=VALUE`` pair,
-delimited by comma.  Currently following NAMEs are recognized:
-
-``host``
-  Host name of the server. Required.
-
-``protocol``
-  Protocol for this profile, such as ftp, http. Required.
-
-``dl_speed``
-  The average download speed observed in the previous download in
-  bytes per sec.  Required.
-
-``sc_avg_speed``
-  The average download speed observed in the previous download in
-  bytes per sec. This value is only updated if the download is done in
-  single connection environment and only used by
-  AdaptiveURISelector. Optional.
-
-``mc_avg_speed``
-  The average download speed observed in the previous download in
-  bytes per sec. This value is only updated if the download is done in
-  multi connection environment and only used by
-  AdaptiveURISelector. Optional.
-
-``counter``
-  How many times the server is used. Currently this value is only used
-  by AdaptiveURISelector.  Optional.
-
-``last_updated``
-  Last contact time in GMT with this server, specified in the seconds
-  since the Epoch(00:00:00 on January 1, 1970, UTC). Required.
-
-``status``
-  ERROR is set when server cannot be reached or out-of-service or
-  timeout occurred. Otherwise, OK is set.
-
-Those fields must exist in one line. The order of the fields is not
-significant. You can put pairs other than the above; they are simply
-ignored.
-
-An example follows::
-
-  host=localhost, protocol=http, dl_speed=32000, last_updated=1222491640, status=OK
-  host=localhost, protocol=ftp, dl_speed=0, last_updated=1222491632, status=ERROR
-
 
 RPC INTERFACE
 -------------
@@ -2951,10 +2813,8 @@ REMOVEME    >>> from pprint import pprint
   * :option:`max-download-result <--max-download-result>`
   * :option:`max-overall-download-limit <--max-overall-download-limit>`
   * :option:`max-overall-upload-limit <--max-overall-upload-limit>`
-  * :option:`optimize-concurrent-downloads <--optimize-concurrent-downloads>`
   * :option:`save-cookies <--save-cookies>`
   * :option:`save-session <--save-session>`
-  * :option:`server-stat-of <--server-stat-of>`
 
   In addition, options listed in the `Input File`_ subsection
   are available, **except** for following options:

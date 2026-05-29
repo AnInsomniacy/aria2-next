@@ -55,7 +55,6 @@ namespace aria2 {
 class DownloadEngine;
 class SegmentMan;
 class Command;
-class DownloadCommand;
 class DownloadContext;
 class PieceStorage;
 class ProgressInfoFile;
@@ -65,7 +64,6 @@ class Option;
 class RequestGroup;
 class CheckIntegrityEntry;
 struct DownloadResult;
-class URISelector;
 class URIResult;
 class RequestGroupMan;
 
@@ -103,8 +101,6 @@ private:
   std::shared_ptr<DiskWriterFactory> diskWriterFactory_;
 
   std::shared_ptr<Dependency> dependency_;
-
-  std::unique_ptr<URISelector> uriSelector_;
 
   std::shared_ptr<MetadataInfo> metadataInfo_;
 
@@ -412,13 +408,6 @@ public:
   const std::shared_ptr<Option>& getOption() const { return option_; }
 
   void reportDownloadFinished();
-
-  void setURISelector(std::unique_ptr<URISelector> uriSelector);
-
-  const std::unique_ptr<URISelector>& getURISelector() const
-  {
-    return uriSelector_;
-  }
 
   void applyLastModifiedTimeToLocalFiles();
 

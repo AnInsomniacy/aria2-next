@@ -46,10 +46,6 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/FmtTest.cc
   tests/DownloadEngineTest.cc
   tests/SignatureTest.cc
-  tests/ServerStatManTest.cc
-  tests/FeedbackURISelectorTest.cc
-  tests/InorderURISelectorTest.cc
-  tests/ServerStatTest.cc
   tests/DirectDiskAdaptorTest.cc
   tests/TimeTest.cc
   tests/OptionParserTest.cc

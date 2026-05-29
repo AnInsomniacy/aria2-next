@@ -89,8 +89,6 @@ extern const std::string V_WARN;
 extern const std::string V_ERROR;
 extern const std::string V_INORDER;
 extern const std::string A2_V_RANDOM;
-extern const std::string V_FEEDBACK;
-extern const std::string V_ADAPTIVE;
 extern const std::string V_EPOLL;
 extern const std::string V_KQUEUE;
 extern const std::string V_PORT;
@@ -178,12 +176,6 @@ extern PrefPtr PREF_DEFERRED_INPUT;
 // value: 1*digit
 extern PrefPtr PREF_MAX_CONCURRENT_DOWNLOADS;
 // value: true | false
-extern PrefPtr PREF_OPTIMIZE_CONCURRENT_DOWNLOADS;
-// value: 1*digit ['.' [ 1*digit ] ]
-extern PrefPtr PREF_OPTIMIZE_CONCURRENT_DOWNLOADS_COEFFA;
-// value: 1*digit ['.' [ 1*digit ] ]
-extern PrefPtr PREF_OPTIMIZE_CONCURRENT_DOWNLOADS_COEFFB;
-// value: true | false
 extern PrefPtr PREF_FORCE_SEQUENTIAL;
 // value: true | false
 extern PrefPtr PREF_AUTO_FILE_RENAMING;
@@ -207,14 +199,6 @@ extern PrefPtr PREF_LOG_LEVEL;
 extern PrefPtr PREF_LOG_MAX_SIZE;
 // value: 1*digit.
 extern PrefPtr PREF_LOG_MAX_FILES;
-// value: inorder | feedback | adaptive
-extern PrefPtr PREF_URI_SELECTOR;
-// value: 1*digit
-extern PrefPtr PREF_SERVER_STAT_TIMEOUT;
-// value: string that your file system recognizes as a file name.
-extern PrefPtr PREF_SERVER_STAT_IF;
-// value: string that your file system recognizes as a file name.
-extern PrefPtr PREF_SERVER_STAT_OF;
 // value: true | false
 extern PrefPtr PREF_REMOTE_TIME;
 // value: 1*digit
@@ -235,8 +219,6 @@ extern PrefPtr PREF_RPC_ALLOW_ORIGIN_ALL;
 extern PrefPtr PREF_RPC_SAVE_UPLOAD_METADATA;
 // value: true | false
 extern PrefPtr PREF_DRY_RUN;
-// value: true | false
-extern PrefPtr PREF_REUSE_URI;
 // value: string
 extern PrefPtr PREF_ON_DOWNLOAD_START;
 extern PrefPtr PREF_ON_DOWNLOAD_PAUSE;
@@ -265,8 +247,6 @@ extern PrefPtr PREF_MAX_CONNECTION_PER_SERVER;
 extern PrefPtr PREF_MIN_SPLIT_SIZE;
 // value: true | false
 extern PrefPtr PREF_CONDITIONAL_GET;
-// value: true | false
-extern PrefPtr PREF_SELECT_LEAST_USED_HOST;
 // value: 1*digit
 extern PrefPtr PREF_MAX_DOWNLOAD_RESULT;
 // value: 1*digit
@@ -365,12 +345,6 @@ extern PrefPtr PREF_USER_AGENT;
 extern PrefPtr PREF_LOAD_COOKIES;
 // value: string that your file system recognizes as a file name.
 extern PrefPtr PREF_SAVE_COOKIES;
-// values: true | false
-extern PrefPtr PREF_ENABLE_HTTP_KEEP_ALIVE;
-// values: true | false
-extern PrefPtr PREF_ENABLE_HTTP_PIPELINING;
-// value: 1*digit
-extern PrefPtr PREF_MAX_HTTP_PIPELINING;
 // value: string
 extern PrefPtr PREF_HEADER;
 // value: string that your file system recognizes as a file name.

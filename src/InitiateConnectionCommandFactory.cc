@@ -39,10 +39,7 @@
 #include "DownloadEngine.h"
 #include "DlAbortEx.h"
 #include "fmt.h"
-#include "Option.h"
-#include "prefs.h"
 #include "SocketCore.h"
-#include "SocketRecvBuffer.h"
 
 namespace aria2 {
 
@@ -66,13 +63,6 @@ InitiateConnectionCommandFactory::createInitiateConnectionCommand(
       throw DL_ABORT_EX(fmt("%s URI %s doesn't contain file path.",
                             req->getProtocol().c_str(),
                             req->getUri().c_str()));
-    }
-
-    if (requestGroup->getOption()->getAsBool(PREF_ENABLE_HTTP_KEEP_ALIVE)) {
-      req->setKeepAliveHint(true);
-    }
-    if (requestGroup->getOption()->getAsBool(PREF_ENABLE_HTTP_PIPELINING)) {
-      req->setPipeliningHint(true);
     }
 
     return make_unique<CurlDownloadCommand>(cuid, req, fileEntry, requestGroup,

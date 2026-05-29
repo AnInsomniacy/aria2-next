@@ -44,9 +44,7 @@
 #include "SegmentMan.h"
 #include "prefs.h"
 #include "Option.h"
-#include "RequestGroupMan.h"
 #include "FileEntry.h"
-#include "SocketRecvBuffer.h"
 #include "wallclock.h"
 #include "DownloadFailureException.h"
 #include "fmt.h"
@@ -58,8 +56,7 @@ CreateRequestCommand::CreateRequestCommand(cuid_t cuid,
                                            DownloadEngine* e)
     : AbstractCommand(cuid, std::shared_ptr<Request>(),
                       std::shared_ptr<FileEntry>(), requestGroup, e,
-                      std::shared_ptr<SocketCore>(),
-                      std::shared_ptr<SocketRecvBuffer>(), false)
+                      std::shared_ptr<SocketCore>(), false)
 {
   setStatus(Command::STATUS_ONESHOT_REALTIME);
   disableReadCheckSocket();
@@ -87,22 +84,15 @@ bool CreateRequestCommand::executeInternal()
                                   : getSegments().front()->getPositionToWrite()),
         error_code::UNKNOWN_ERROR);
   }
-  std::vector<std::pair<size_t, std::string>> usedHosts;
-  if (getOption()->getAsBool(PREF_SELECT_LEAST_USED_HOST)) {
-    getDownloadEngine()->getRequestGroupMan()->getUsedHosts(usedHosts);
-  }
-  setRequest(
-      getFileEntry()->getRequest(getRequestGroup()->getURISelector().get(),
-                                 getOption()->getAsBool(PREF_REUSE_URI),
-                                 usedHosts, getOption()->get(PREF_REFERER),
-                                 // Don't use HEAD request when file
-                                 // size is known.
-                                 // Use HEAD for dry-run mode.
-                                 (getFileEntry()->getLength() == 0 &&
-                                  getOption()->getAsBool(PREF_USE_HEAD)) ||
-                                         getOption()->getAsBool(PREF_DRY_RUN)
-                                     ? Request::METHOD_HEAD
-                                     : Request::METHOD_GET));
+  setRequest(getFileEntry()->getRequest(
+      getOption()->get(PREF_REFERER),
+      // Don't use HEAD request when file size is known.
+      // Use HEAD for dry-run mode.
+      (getFileEntry()->getLength() == 0 &&
+       getOption()->getAsBool(PREF_USE_HEAD)) ||
+              getOption()->getAsBool(PREF_DRY_RUN)
+          ? Request::METHOD_HEAD
+          : Request::METHOD_GET));
   if (!getRequest()) {
     if (getSegmentMan()) {
       getSegmentMan()->ignoreSegmentFor(getFileEntry());

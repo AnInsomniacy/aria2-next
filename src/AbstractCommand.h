@@ -57,14 +57,12 @@ class DownloadEngine;
 class Segment;
 class SocketCore;
 class Option;
-class SocketRecvBuffer;
 
 class AbstractCommand : public Command {
 private:
   std::shared_ptr<Request> req_;
   std::shared_ptr<FileEntry> fileEntry_;
   std::shared_ptr<SocketCore> socket_;
-  std::shared_ptr<SocketRecvBuffer> socketRecvBuffer_;
   std::shared_ptr<SocketCore> readCheckTarget_;
   std::shared_ptr<SocketCore> writeCheckTarget_;
 
@@ -75,7 +73,6 @@ private:
   std::vector<std::shared_ptr<Segment>> segments_;
 
   Timer checkPoint_;
-  Timer serverStatTimer_;
   std::chrono::seconds timeout_;
 
   bool checkSocketIsReadable_;
@@ -87,8 +84,6 @@ private:
   uint64_t httpRangeGeneration_;
 
   int32_t calculateMinSplitSize() const;
-
-  void useFasterRequest(const std::shared_ptr<Request>& fasterRequest);
 
   bool shouldProcess() const;
 
@@ -116,11 +111,6 @@ public:
   void setSocket(const std::shared_ptr<SocketCore>& s);
 
   void createSocket();
-
-  const std::shared_ptr<SocketRecvBuffer>& getSocketRecvBuffer() const
-  {
-    return socketRecvBuffer_;
-  }
 
   const std::vector<std::shared_ptr<Segment>>& getSegments() const
   {
@@ -173,11 +163,9 @@ public:
 
   void prepareForNextAction(std::unique_ptr<CheckIntegrityEntry> checkEntry);
 
-  // Check if socket is connected. If socket is not connected and
-  // there are other addresses to try, command is created using
-  // InitiateConnectionCommandFactory and it is pushed to
-  // DownloadEngine and returns false. If no addresses left, DlRetryEx
-  // exception is thrown.
+  // Check if socket is connected. If it failed and there are other addresses to
+  // try, the current address is marked bad and the command is retried. If no
+  // addresses are left, DlRetryEx is thrown.
   bool checkIfConnectionEstablished(const std::shared_ptr<SocketCore>& socket,
                                     const std::string& connectedHostname,
                                     const std::string& connectedAddr,
@@ -207,8 +195,6 @@ public:
 
   Timer& getCheckPoint() { return checkPoint_; }
 
-  void checkSocketRecvBuffer();
-
   void addCommandSelf();
 
 protected:
@@ -227,7 +213,6 @@ public:
       cuid_t cuid, const std::shared_ptr<Request>& req,
       const std::shared_ptr<FileEntry>& fileEntry, RequestGroup* requestGroup,
       DownloadEngine* e, const std::shared_ptr<SocketCore>& s = nullptr,
-      const std::shared_ptr<SocketRecvBuffer>& socketRecvBuffer = nullptr,
       bool incNumConnection = true, bool incNumStreamCommand = true);
 
   virtual ~AbstractCommand();

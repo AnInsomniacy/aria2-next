@@ -1,7 +1,5 @@
 #include "RequestGroupMan.h"
 
-#include <fstream>
-
 #include <cppunit/extensions/HelperMacros.h>
 
 #include "TestUtil.h"
@@ -16,9 +14,6 @@
 #include "DownloadResult.h"
 #include "FileEntry.h"
 #include "PieceStorage.h"
-#include "ServerStatMan.h"
-#include "ServerStat.h"
-#include "File.h"
 #include "TorrentMetadataFollow.h"
 #include "array_fun.h"
 #include "RecoverableException.h"
@@ -60,8 +55,6 @@ class RequestGroupManTest : public CppUnit::TestFixture {
   CPPUNIT_TEST_SUITE(RequestGroupManTest);
   CPPUNIT_TEST(testIsSameFileBeingDownloaded);
   CPPUNIT_TEST(testGetInitialCommands);
-  CPPUNIT_TEST(testLoadServerStat);
-  CPPUNIT_TEST(testSaveServerStat);
   CPPUNIT_TEST(testChangeReservedGroupPosition);
   CPPUNIT_TEST(testFillRequestGroupFromReserver);
   CPPUNIT_TEST(testFillRequestGroupFromReserver_uriParser);
@@ -101,8 +94,6 @@ public:
 
   void testIsSameFileBeingDownloaded();
   void testGetInitialCommands();
-  void testLoadServerStat();
-  void testSaveServerStat();
   void testChangeReservedGroupPosition();
   void testFillRequestGroupFromReserver();
   void testFillRequestGroupFromReserver_uriParser();
@@ -152,42 +143,6 @@ void RequestGroupManTest::testIsSameFileBeingDownloaded()
 void RequestGroupManTest::testGetInitialCommands()
 {
   // TODO implement later
-}
-
-void RequestGroupManTest::testSaveServerStat()
-{
-  RequestGroupMan rm(std::vector<std::shared_ptr<RequestGroup>>(), 0,
-                     option_.get());
-  std::shared_ptr<ServerStat> ss_localhost(new ServerStat("localhost", "http"));
-  rm.addServerStat(ss_localhost);
-  File f(A2_TEST_OUT_DIR "/aria2_RequestGroupManTest_testSaveServerStat");
-  if (f.exists()) {
-    f.remove();
-  }
-  CPPUNIT_ASSERT(rm.saveServerStat(f.getPath()));
-  CPPUNIT_ASSERT(f.isFile());
-
-  f.remove();
-  CPPUNIT_ASSERT(f.mkdirs());
-  CPPUNIT_ASSERT(!rm.saveServerStat(f.getPath()));
-}
-
-void RequestGroupManTest::testLoadServerStat()
-{
-  File f(A2_TEST_OUT_DIR "/aria2_RequestGroupManTest_testLoadServerStat");
-  std::ofstream o(f.getPath().c_str(), std::ios::binary);
-  o << "host=localhost, protocol=http, dl_speed=0, last_updated=1219505257,"
-    << "status=OK";
-  o.close();
-
-  RequestGroupMan rm(std::vector<std::shared_ptr<RequestGroup>>(), 0,
-                     option_.get());
-  std::cerr << "testLoadServerStat" << std::endl;
-  CPPUNIT_ASSERT(rm.loadServerStat(f.getPath()));
-  std::shared_ptr<ServerStat> ss_localhost =
-      rm.findServerStat("localhost", "http");
-  CPPUNIT_ASSERT(ss_localhost);
-  CPPUNIT_ASSERT_EQUAL(std::string("localhost"), ss_localhost->getHostname());
 }
 
 void RequestGroupManTest::testChangeReservedGroupPosition()

@@ -194,10 +194,6 @@
     "                              If all URIs do not point to the same file, such\n" \
     "                              as the second example above, -Z option is\n" \
     "                              required.")
-#define TEXT_ENABLE_HTTP_KEEP_ALIVE                                     \
-  _(" --enable-http-keep-alive[=true|false] Enable HTTP/1.1 persistent connection.")
-#define TEXT_ENABLE_HTTP_PIPELINING                                     \
-  _(" --enable-http-pipelining[=true|false] Enable HTTP/1.1 pipelining.")
 #define TEXT_CHECK_INTEGRITY                                            \
   _(" -V, --check-integrity[=true|false] Check file integrity by validating piece\n" \
     "                              hashes or a hash of entire file. This option has\n" \
@@ -241,23 +237,7 @@
     "                              for details. See also --deferred-input option.")
 #define TEXT_MAX_CONCURRENT_DOWNLOADS                                   \
   _(" -j, --max-concurrent-downloads=N Set maximum number of parallel downloads for\n" \
-    "                              every static (HTTP/FTP) URL and torrent.\n" \
-    "                              See also --split and --optimize-concurrent-downloads options.")
-#define TEXT_OPTIMIZE_CONCURRENT_DOWNLOADS\
-  _(" --optimize-concurrent-downloads[=true|false|A:B] Optimizes the number of\n" \
-    "                              concurrent downloads according to the bandwidth\n" \
-    "                              available. Aria2 Next uses the download speed observed\n" \
-    "                              in the previous downloads to adapt the number of\n" \
-    "                              downloads launched in parallel according to the\n" \
-    "                              rule N = A + B Log10(speed in Mbps). The\n" \
-    "                              coefficients A and B can be customized in the\n" \
-    "                              option arguments with A and B separated by a\n" \
-    "                              colon. The default values (A=5,B=25) lead to\n" \
-    "                              using typically 5 parallel downloads on 1Mbps\n" \
-    "                              networks and above 50 on 100Mbps networks. The\n" \
-    "                              number of parallel downloads remains constrained\n" \
-    "                              under the maximum defined by the\n" \
-    "                              max-concurrent-downloads parameter.")
+    "                              every static (HTTP/FTP) URL and torrent.")
 #define TEXT_LOAD_COOKIES                                               \
   _(" --load-cookies=FILE          Load cookies from FILE using libcurl.")
 #define TEXT_SAVE_COOKIES                                               \
@@ -385,38 +365,6 @@
     "                              HTTP/FTP servers. The number of retry attempt is\n" \
     "                              counted toward --max-tries, so it should be\n" \
     "                              configured too.")
-#define TEXT_URI_SELECTOR                                               \
-  _(" --uri-selector=SELECTOR      Specify URI selection algorithm.\n"  \
-    "                              If 'inorder' is given, URI is tried in the order\n" \
-    "                              appeared in the URI list.\n"         \
-    "                              If 'feedback' is given, Aria2 Next uses download speed\n" \
-    "                              observed in the previous downloads and choose\n" \
-    "                              fastest server in the URI list. This also\n" \
-    "                              effectively skips dead mirrors. The observed\n" \
-    "                              download speed is a part of performance profile\n" \
-    "                              of servers mentioned in --server-stat-of and\n" \
-    "                              --server-stat-if options.\n"         \
-    "                              If 'adaptive' is given, selects one of the best\n" \
-    "                              mirrors for the first and reserved connections.\n" \
-    "                              For supplementary ones, it returns mirrors which\n" \
-    "                              has not been tested yet, and if each of them has\n" \
-    "                              already been tested, returns mirrors which has to\n" \
-    "                              be tested again. Otherwise, it doesn't select\n" \
-    "                              anymore mirrors. Like 'feedback', it uses a\n" \
-    "                              performance profile of servers.")
-#define TEXT_SERVER_STAT_OF                                             \
-  _(" --server-stat-of=FILE        Specify the filename to which performance profile\n" \
-    "                              of the servers is saved. You can load saved data\n" \
-    "                              using --server-stat-if option.")
-#define TEXT_SERVER_STAT_IF                                             \
-  _(" --server-stat-if=FILE        Specify the filename to load performance profile\n" \
-    "                              of the servers. The loaded data will be used in\n" \
-    "                              some URI selector such as 'feedback'.\n" \
-    "                              See also --uri-selector option")
-#define TEXT_SERVER_STAT_TIMEOUT                                        \
-  _(" --server-stat-timeout=SEC    Specifies timeout in seconds to invalidate\n" \
-    "                              performance profile of the servers since the last\n" \
-    "                              contact to them.")
 #define TEXT_ED2K_SERVER                                                \
   _(" --ed2k-server=HOST:PORT[,..] Use ED2K servers to discover file sources.")
 #define TEXT_ED2K_SERVER_LIST                                           \
@@ -541,9 +489,6 @@
     "                              (e.g., 1.2Ki, 3.4Mi) in the console readout.")
 #define TEXT_BT_ENABLE_LPD                      \
   _(" --bt-enable-lpd[=true|false] Enable Local Peer Discovery.")
-#define TEXT_REUSE_URI                          \
-  _(" --reuse-uri[=true|false]     Reuse already used URIs if no unused URIs are\n" \
-    "                              left.")
 #define TEXT_ALL_PROXY_USER                                             \
   _(" --all-proxy-user=USER        Set user for --all-proxy.")
 #define TEXT_ALL_PROXY_PASSWD                                           \
@@ -679,9 +624,7 @@
     "                              If 'inorder' is given, Aria2 Next selects piece which\n" \
     "                              has minimum index. Index=0 means first of the\n" \
     "                              file. This will be useful to view movie while\n" \
-    "                              downloading it. --enable-http-pipelining option\n" \
-    "                              may be useful to reduce reconnection overhead.\n" \
-    "                              Please note that Aria2 Next honors\n"     \
+    "                              downloading it. Please note that Aria2 Next honors\n"     \
     "                              --min-split-size option, so it will be necessary\n" \
     "                              to specify a reasonable value to\n"  \
     "                              --min-split-size option.\n"          \

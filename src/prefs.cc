@@ -132,8 +132,6 @@ const std::string V_WARN("warn");
 const std::string V_ERROR("error");
 const std::string V_INORDER("inorder");
 const std::string A2_V_RANDOM("random");
-const std::string V_FEEDBACK("feedback");
-const std::string V_ADAPTIVE("adaptive");
 const std::string V_EPOLL("epoll");
 const std::string V_KQUEUE("kqueue");
 const std::string V_PORT("port");
@@ -221,15 +219,6 @@ PrefPtr PREF_INPUT_FILE = makePref("input-file");
 PrefPtr PREF_DEFERRED_INPUT = makePref("deferred-input");
 // value: 1*digit
 PrefPtr PREF_MAX_CONCURRENT_DOWNLOADS = makePref("max-concurrent-downloads");
-// value: true | false | A:B
-PrefPtr PREF_OPTIMIZE_CONCURRENT_DOWNLOADS =
-    makePref("optimize-concurrent-downloads");
-// values: 1*digit ['.' [ 1*digit ] ]
-PrefPtr PREF_OPTIMIZE_CONCURRENT_DOWNLOADS_COEFFA =
-    makePref("optimize-concurrent-downloads-coeffA");
-// values: 1*digit ['.' [ 1*digit ] ]
-PrefPtr PREF_OPTIMIZE_CONCURRENT_DOWNLOADS_COEFFB =
-    makePref("optimize-concurrent-downloads-coeffB");
 // value: true | false
 PrefPtr PREF_FORCE_SEQUENTIAL = makePref("force-sequential");
 // value: true | false
@@ -255,14 +244,6 @@ PrefPtr PREF_LOG_LEVEL = makePref("log-level");
 PrefPtr PREF_LOG_MAX_SIZE = makePref("log-max-size");
 // value: 1*digit.
 PrefPtr PREF_LOG_MAX_FILES = makePref("log-max-files");
-// value: inorder | feedback | adaptive
-PrefPtr PREF_URI_SELECTOR = makePref("uri-selector");
-// value: 1*digit
-PrefPtr PREF_SERVER_STAT_TIMEOUT = makePref("server-stat-timeout");
-// value: string that your file system recognizes as a file name.
-PrefPtr PREF_SERVER_STAT_IF = makePref("server-stat-if");
-// value: string that your file system recognizes as a file name.
-PrefPtr PREF_SERVER_STAT_OF = makePref("server-stat-of");
 // value: true | false
 PrefPtr PREF_REMOTE_TIME = makePref("remote-time");
 // value: 1*digit
@@ -283,8 +264,6 @@ PrefPtr PREF_RPC_ALLOW_ORIGIN_ALL = makePref("rpc-allow-origin-all");
 PrefPtr PREF_RPC_SAVE_UPLOAD_METADATA = makePref("rpc-save-upload-metadata");
 // value: true | false
 PrefPtr PREF_DRY_RUN = makePref("dry-run");
-// value: true | false
-PrefPtr PREF_REUSE_URI = makePref("reuse-uri");
 // value: string
 PrefPtr PREF_ON_DOWNLOAD_START = makePref("on-download-start");
 PrefPtr PREF_ON_DOWNLOAD_PAUSE = makePref("on-download-pause");
@@ -313,9 +292,6 @@ PrefPtr PREF_MAX_CONNECTION_PER_SERVER = makePref("max-connection-per-server");
 PrefPtr PREF_MIN_SPLIT_SIZE = makePref("min-split-size");
 // value: true | false
 PrefPtr PREF_CONDITIONAL_GET = makePref("conditional-get");
-// value: true | false
-PrefPtr PREF_SELECT_LEAST_USED_HOST = makePref("select-least-used-host");
-// value: true | false
 // value: 1*digit
 PrefPtr PREF_MAX_DOWNLOAD_RESULT = makePref("max-download-result");
 // value: 1*digit
@@ -414,12 +390,6 @@ PrefPtr PREF_USER_AGENT = makePref("user-agent");
 PrefPtr PREF_LOAD_COOKIES = makePref("load-cookies");
 // value: string that your file system recognizes as a file name.
 PrefPtr PREF_SAVE_COOKIES = makePref("save-cookies");
-// values: true | false
-PrefPtr PREF_ENABLE_HTTP_KEEP_ALIVE = makePref("enable-http-keep-alive");
-// values: true | false
-PrefPtr PREF_ENABLE_HTTP_PIPELINING = makePref("enable-http-pipelining");
-// value: 1*digit
-PrefPtr PREF_MAX_HTTP_PIPELINING = makePref("max-http-pipelining");
 // value: string
 PrefPtr PREF_HEADER = makePref("header");
 // value: string that your file system recognizes as a file name.

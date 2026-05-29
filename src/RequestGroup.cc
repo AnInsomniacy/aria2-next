@@ -72,8 +72,6 @@
 #include "FileAllocationIterator.h"
 #include "fmt.h"
 #include "A2STR.h"
-#include "URISelector.h"
-#include "InorderURISelector.h"
 #include "CheckIntegrityCommand.h"
 #include "ChecksumCheckIntegrityEntry.h"
 #include "uri.h"
@@ -102,7 +100,6 @@ RequestGroup::RequestGroup(const std::shared_ptr<GroupId>& gid,
       gid_(gid),
       option_(option),
       progressInfoFile_(std::make_shared<NullProgressInfoFile>()),
-      uriSelector_(make_unique<InorderURISelector>()),
       requestGroupMan_(nullptr),
       followingGID_(0),
       lastModifiedTime_(Time::null()),
@@ -1128,12 +1125,6 @@ void RequestGroup::reportDownloadFinished()
                     inMemoryDownload()
                         ? getFirstFilePath().c_str()
                         : downloadContext_->getBasePath().c_str()));
-  uriSelector_->resetCounters();
-}
-
-void RequestGroup::setURISelector(std::unique_ptr<URISelector> uriSelector)
-{
-  uriSelector_ = std::move(uriSelector);
 }
 
 void RequestGroup::applyLastModifiedTimeToLocalFiles()

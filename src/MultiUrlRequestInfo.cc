@@ -211,12 +211,6 @@ int MultiUrlRequestInfo::prepare()
     SocketCore::setClientTLSContext(clTlsContext);
 #endif
 
-    std::string serverStatIf = option_->get(PREF_SERVER_STAT_IF);
-    if (!serverStatIf.empty()) {
-      e_->getRequestGroupMan()->loadServerStat(serverStatIf);
-      e_->getRequestGroupMan()->removeStaleServerStat(
-          std::chrono::seconds(option_->getAsInt(PREF_SERVER_STAT_TIMEOUT)));
-    }
     e_->setStatCalc(getStatCalc(option_));
     if (uriListParser_) {
       e_->getRequestGroupMan()->setUriListParser(uriListParser_);
@@ -240,10 +234,6 @@ int MultiUrlRequestInfo::prepare()
 error_code::Value MultiUrlRequestInfo::getResult()
 {
   error_code::Value returnValue = error_code::FINISHED;
-  const std::string& serverStatOf = option_->get(PREF_SERVER_STAT_OF);
-  if (!serverStatOf.empty()) {
-    e_->getRequestGroupMan()->saveServerStat(serverStatOf);
-  }
   if (!option_->getAsBool(PREF_QUIET) &&
       option_->get(PREF_DOWNLOAD_RESULT) != A2_V_HIDE) {
     e_->getRequestGroupMan()->showDownloadResults(

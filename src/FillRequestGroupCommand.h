@@ -36,8 +36,6 @@
 #define D_FILL_REQUEST_GROUP_COMMAND_H
 
 #include "Command.h"
-#include "a2time.h"
-#include "TimerA2.h"
 
 namespace aria2 {
 
@@ -47,7 +45,6 @@ class DownloadEngine;
 class FillRequestGroupCommand : public Command {
 private:
   DownloadEngine* e_;
-  Timer lastExecTime;
 
 public:
   FillRequestGroupCommand(cuid_t cuid, DownloadEngine* e);
