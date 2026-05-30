@@ -37,6 +37,8 @@ public:
   void setObservedSpeed(RateLimitBackend backend, RateLimitDirection direction,
                         int64_t speed);
 
+  void clearObservedSpeeds();
+
   void recalculate();
 
   int64_t backendLimit(RateLimitBackend backend,

@@ -122,18 +122,21 @@
   _(" --lowest-speed-limit=SPEED   Close connection if download speed is lower than\n" \
     "                              or equal to this value(bytes per sec).\n" \
     "                              0 means Aria2 Next does not have a lowest speed limit.\n" \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              You can use decimals and append K or M\n" \
+    "                              (1K = 1024, 1M = 1024K).\n" \
     "                              This option does not affect BitTorrent downloads.")
 #define TEXT_MAX_OVERALL_DOWNLOAD_LIMIT                                 \
   _(" --max-overall-download-limit=SPEED Set max overall download speed in bytes/sec.\n" \
     "                              0 means unrestricted.\n"             \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              You can use decimals and append K or M\n" \
+    "                              (1K = 1024, 1M = 1024K).\n" \
     "                              To limit the download speed per download, use\n" \
     "                              --max-download-limit option.")
 #define TEXT_MAX_DOWNLOAD_LIMIT                                         \
   _(" --max-download-limit=SPEED   Set max download speed per each download in\n" \
     "                              bytes/sec. 0 means unrestricted.\n"  \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              You can use decimals and append K or M\n" \
+    "                              (1K = 1024, 1M = 1024K).\n" \
     "                              To limit the overall download speed, use\n" \
     "                              --max-overall-download-limit option.")
 #define TEXT_FILE_ALLOCATION                                            \
@@ -268,7 +271,8 @@
 #define TEXT_MAX_OVERALL_UPLOAD_LIMIT                                   \
   _(" --max-overall-upload-limit=SPEED Set max overall upload speed in bytes/sec.\n" \
     "                              0 means unrestricted.\n"             \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              You can use decimals and append K or M\n" \
+    "                              (1K = 1024, 1M = 1024K).\n" \
     "                              To limit the upload speed per torrent, use\n" \
     "                              --max-upload-limit option.")
 #define TEXT_MAX_UPLOAD_LIMIT                                           \

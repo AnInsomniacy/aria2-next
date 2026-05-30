@@ -18,6 +18,7 @@ class OptionHandlerTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testNumberOptionHandler_max);
   CPPUNIT_TEST(testNumberOptionHandler_min_max);
   CPPUNIT_TEST(testUnitNumberOptionHandler);
+  CPPUNIT_TEST(testSpeedLimitOptionHandler);
   CPPUNIT_TEST(testParameterOptionHandler);
   CPPUNIT_TEST(testTorrentMetadataOptionHandler);
   CPPUNIT_TEST(testDefaultOptionHandler);
@@ -36,6 +37,7 @@ public:
   void testNumberOptionHandler_max();
   void testNumberOptionHandler_min_max();
   void testUnitNumberOptionHandler();
+  void testSpeedLimitOptionHandler();
   void testParameterOptionHandler();
   void testTorrentMetadataOptionHandler();
   void testDefaultOptionHandler();
@@ -156,6 +158,35 @@ void OptionHandlerTest::testUnitNumberOptionHandler()
   }
   try {
     handler.parse(option, "");
+    CPPUNIT_FAIL("exception must be thrown.");
+  }
+  catch (Exception& e) {
+  }
+}
+
+void OptionHandlerTest::testSpeedLimitOptionHandler()
+{
+  SpeedLimitOptionHandler handler(PREF_MAX_OVERALL_DOWNLOAD_LIMIT, "", "0", 0);
+  Option option;
+
+  handler.parse(option, "6.66M");
+  CPPUNIT_ASSERT_EQUAL(std::string("6983516"),
+                       option.get(PREF_MAX_OVERALL_DOWNLOAD_LIMIT));
+  handler.parse(option, "500.5K");
+  CPPUNIT_ASSERT_EQUAL(std::string("512512"),
+                       option.get(PREF_MAX_OVERALL_DOWNLOAD_LIMIT));
+  handler.parse(option, "0.5K");
+  CPPUNIT_ASSERT_EQUAL(std::string("512"),
+                       option.get(PREF_MAX_OVERALL_DOWNLOAD_LIMIT));
+
+  try {
+    handler.parse(option, "0.0001K");
+    CPPUNIT_FAIL("exception must be thrown.");
+  }
+  catch (Exception& e) {
+  }
+  try {
+    handler.parse(option, "1e3K");
     CPPUNIT_FAIL("exception must be thrown.");
   }
   catch (Exception& e) {

@@ -53,6 +53,7 @@ class DownloadEngineTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testRuntimeTimerWake);
   CPPUNIT_TEST(testHaltWakesRuntime);
   CPPUNIT_TEST(testRefreshRateLimitsAppliesCurlTaskAndGlobalLimit);
+  CPPUNIT_TEST(testCurlRateLimitIsPerTaskAcrossSplits);
   CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -60,6 +61,7 @@ public:
   void testRuntimeTimerWake();
   void testHaltWakesRuntime();
   void testRefreshRateLimitsAppliesCurlTaskAndGlobalLimit();
+  void testCurlRateLimitIsPerTaskAcrossSplits();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(DownloadEngineTest);
@@ -125,6 +127,37 @@ void DownloadEngineTest::testRefreshRateLimitsAppliesCurlTaskAndGlobalLimit()
 
   e.getCurlSession().remove(easy);
   curl_easy_cleanup(easy);
+}
+
+void DownloadEngineTest::testCurlRateLimitIsPerTaskAcrossSplits()
+{
+  DownloadEngine e(make_unique<SelectEventPoll>());
+  auto option = createEngineOption();
+  option->put(PREF_MAX_OVERALL_DOWNLOAD_LIMIT, "6660000");
+  e.setOption(option.get());
+  e.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{}, 1, option.get()));
+
+  auto group = std::make_shared<RequestGroup>(GroupId::create(), option);
+  group->setDownloadContext(std::make_shared<DownloadContext>(1_k, 0, "test"));
+  CurlLimitTestCommand command1(group.get(), &e);
+  CurlLimitTestCommand command2(group.get(), &e);
+  auto easy1 = curl_easy_init();
+  auto easy2 = curl_easy_init();
+
+  e.getCurlSession().add(easy1, &command1);
+  e.getCurlSession().add(easy2, &command2);
+  e.refreshRateLimits();
+
+  CPPUNIT_ASSERT_EQUAL(static_cast<int64_t>(3330000),
+                       e.getCurlSession().testDownloadLimit(easy1));
+  CPPUNIT_ASSERT_EQUAL(static_cast<int64_t>(3330000),
+                       e.getCurlSession().testDownloadLimit(easy2));
+
+  e.getCurlSession().remove(easy1);
+  e.getCurlSession().remove(easy2);
+  curl_easy_cleanup(easy1);
+  curl_easy_cleanup(easy2);
 }
 
 } // namespace aria2

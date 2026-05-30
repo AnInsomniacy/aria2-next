@@ -19,6 +19,7 @@
 
 #include <map>
 #include <set>
+#include <vector>
 
 #include "a2netcompat.h"
 
@@ -26,6 +27,7 @@ namespace aria2 {
 
 class Command;
 class DownloadEngine;
+class RequestGroup;
 
 class CurlSession {
 public:
@@ -46,6 +48,10 @@ public:
   void refreshRateLimits();
 
   size_t activeHandleCount() const { return active_.size(); }
+
+  size_t activeTaskCount() const;
+
+  std::vector<RequestGroup*> activeTasks() const;
 
   int64_t testDownloadLimit(CURL* easy) const;
   int64_t testUploadLimit(CURL* easy) const;

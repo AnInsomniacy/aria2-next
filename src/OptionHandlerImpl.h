@@ -103,6 +103,18 @@ public:
                         const std::string& optarg) const CXX11_OVERRIDE;
 };
 
+class SpeedLimitOptionHandler : public NumberOptionHandler {
+public:
+  SpeedLimitOptionHandler(PrefPtr pref,
+                          const char* description = NO_DESCRIPTION,
+                          const std::string& defaultValue = NO_DEFAULT_VALUE,
+                          int64_t min = -1, int64_t max = -1,
+                          char shortName = 0);
+  virtual ~SpeedLimitOptionHandler();
+  virtual void parseArg(Option& option,
+                        const std::string& optarg) const CXX11_OVERRIDE;
+};
+
 class FloatNumberOptionHandler : public AbstractOptionHandler {
 private:
   double min_;

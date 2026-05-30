@@ -18,6 +18,13 @@ namespace aria2 {
 
 namespace {
 int64_t sanitizeLimit(int64_t limit) { return std::max<int64_t>(0, limit); }
+
+int64_t floorShare(int64_t globalLimit, int64_t baseShare)
+{
+  const auto oneTenth = std::max<int64_t>(1, globalLimit / 10);
+  const auto floor = std::max<int64_t>(64 * 1024, oneTenth);
+  return std::min(baseShare, floor);
+}
 } // namespace
 
 void RateLimitScheduler::setGlobalLimit(RateLimitDirection direction,
@@ -46,6 +53,16 @@ void RateLimitScheduler::setObservedSpeed(RateLimitBackend backend,
   states_[index(direction)][index(backend)].observedSpeed =
       std::max<int64_t>(0, speed);
   states_[index(direction)][index(backend)].observed = true;
+}
+
+void RateLimitScheduler::clearObservedSpeeds()
+{
+  for (auto& direction : states_) {
+    for (auto& state : direction) {
+      state.observedSpeed = 0;
+      state.observed = false;
+    }
+  }
 }
 
 void RateLimitScheduler::recalculate()
@@ -90,31 +107,40 @@ void RateLimitScheduler::recalculateDirection(RateLimitDirection direction)
   const auto baseShare = std::max<int64_t>(
       1, globalLimit / static_cast<int64_t>(activeCount));
   int64_t used = 0;
-  size_t hungryCount = 0;
   for (auto& state : states) {
     if (!state.active) {
       continue;
     }
     const auto cap = state.cap == 0 ? globalLimit : state.cap;
     auto assigned = std::min(baseShare, cap);
-    if (state.observed && state.observedSpeed < baseShare / 2) {
-      assigned = std::min<int64_t>(assigned, std::max<int64_t>(1, baseShare / 8));
-    }
-    else {
-      ++hungryCount;
+    if (activeCount > 1 && state.observed &&
+        state.observedSpeed < baseShare / 2) {
+      assigned = std::min<int64_t>(assigned,
+                                   floorShare(globalLimit, baseShare));
     }
     state.assignedLimit = assigned;
     used += assigned;
   }
 
   auto remaining = std::max<int64_t>(0, globalLimit - used);
+  size_t hungryCount = 0;
+  for (const auto& state : states) {
+    if (!state.active) {
+      continue;
+    }
+    const auto cap = state.cap == 0 ? globalLimit : state.cap;
+    if (state.assignedLimit < cap &&
+        (!state.observed || state.observedSpeed >= state.assignedLimit / 2)) {
+      ++hungryCount;
+    }
+  }
   while (remaining > 0 && hungryCount > 0) {
     bool assignedAny = false;
     const auto share =
         std::max<int64_t>(1, remaining / static_cast<int64_t>(hungryCount));
     for (auto& state : states) {
       if (!state.active ||
-          (state.observed && state.observedSpeed < baseShare / 2)) {
+          (state.observed && state.observedSpeed < state.assignedLimit / 2)) {
         continue;
       }
       const auto cap = state.cap == 0 ? globalLimit : state.cap;

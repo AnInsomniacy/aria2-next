@@ -45,6 +45,8 @@
 #include <iterator>
 #include <vector>
 #include <stdexcept>
+#include <cctype>
+#include <limits>
 
 #include "util.h"
 #include "DlAbortEx.h"
@@ -217,6 +219,80 @@ void UnitNumberOptionHandler::parseArg(Option& option,
 {
   int64_t num = util::getRealSize(optarg);
   NumberOptionHandler::parseArg(option, num);
+}
+
+namespace {
+int64_t parseSpeedLimitValue(const std::string& optarg)
+{
+  if (optarg.empty()) {
+    throw DL_ABORT_EX(
+        fmt("Bad or negative value detected: %s", optarg.c_str()));
+  }
+
+  auto end = optarg.size();
+  long double multiplier = 1.0L;
+  const auto suffix = optarg.back();
+  if (suffix == 'K' || suffix == 'k' || suffix == 'M' || suffix == 'm') {
+    end = optarg.size() - 1;
+    multiplier = suffix == 'K' || suffix == 'k' ? 1_k : 1_m;
+    if (end == 0) {
+      throw DL_ABORT_EX(
+          fmt("Bad or negative value detected: %s", optarg.c_str()));
+    }
+  }
+
+  bool sawDigit = false;
+  bool sawDot = false;
+  for (size_t i = 0; i < end; ++i) {
+    const auto c = static_cast<unsigned char>(optarg[i]);
+    if (std::isdigit(c)) {
+      sawDigit = true;
+      continue;
+    }
+    if (optarg[i] == '.' && !sawDot) {
+      sawDot = true;
+      continue;
+    }
+    throw DL_ABORT_EX(
+        fmt("Bad or negative value detected: %s", optarg.c_str()));
+  }
+  if (!sawDigit) {
+    throw DL_ABORT_EX(
+        fmt("Bad or negative value detected: %s", optarg.c_str()));
+  }
+
+  const auto value = std::stold(optarg.substr(0, end));
+  if (value < 0) {
+    throw DL_ABORT_EX(
+        fmt("Bad or negative value detected: %s", optarg.c_str()));
+  }
+  const auto bytes = value * multiplier;
+  if (bytes > static_cast<long double>(std::numeric_limits<int64_t>::max())) {
+    throw DL_ABORT_EX(
+        fmt(MSG_STRING_INTEGER_CONVERSION_FAILURE, "overflow/underflow"));
+  }
+  const auto result = static_cast<int64_t>(bytes);
+  if (result == 0 && value > 0) {
+    throw DL_ABORT_EX(
+        fmt("Bad or negative value detected: %s", optarg.c_str()));
+  }
+  return result;
+}
+} // namespace
+
+SpeedLimitOptionHandler::SpeedLimitOptionHandler(
+    PrefPtr pref, const char* description, const std::string& defaultValue,
+    int64_t min, int64_t max, char shortName)
+    : NumberOptionHandler(pref, description, defaultValue, min, max, shortName)
+{
+}
+
+SpeedLimitOptionHandler::~SpeedLimitOptionHandler() = default;
+
+void SpeedLimitOptionHandler::parseArg(Option& option,
+                                       const std::string& optarg) const
+{
+  NumberOptionHandler::parseArg(option, parseSpeedLimitValue(optarg));
 }
 
 FloatNumberOptionHandler::FloatNumberOptionHandler(

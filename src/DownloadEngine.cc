@@ -57,11 +57,13 @@
 #include "CheckIntegrityEntry.h"
 #include "ProgressInfoFile.h"
 #include "DownloadContext.h"
+#include "Ed2kAttribute.h"
 #include "SocketCore.h"
 #include "fmt.h"
 #include "wallclock.h"
 #ifdef ENABLE_BITTORRENT
 #  include "LibtorrentSession.h"
+#  include "LibtorrentAttribute.h"
 #endif // ENABLE_BITTORRENT
 #ifdef ENABLE_WEBSOCKET
 #  include "WebSocketSessionMan.h"
@@ -313,6 +315,7 @@ void DownloadEngine::refreshRateLimits()
   if (!option_) {
     return;
   }
+  rateLimitScheduler_.clearObservedSpeeds();
   rateLimitScheduler_.setGlobalLimit(
       RateLimitDirection::Download,
       option_->getAsInt(PREF_MAX_OVERALL_DOWNLOAD_LIMIT));
@@ -321,17 +324,96 @@ void DownloadEngine::refreshRateLimits()
       option_->getAsInt(PREF_MAX_OVERALL_UPLOAD_LIMIT));
   rateLimitScheduler_.setActive(RateLimitBackend::Curl,
                                 RateLimitDirection::Download,
-                                curlSession_->activeHandleCount() > 0);
+                                curlSession_->activeTaskCount() > 0);
   rateLimitScheduler_.setActive(RateLimitBackend::Curl,
                                 RateLimitDirection::Upload,
-                                curlSession_->activeHandleCount() > 0);
+                                curlSession_->activeTaskCount() > 0);
+  int64_t curlDownloadSpeed = 0;
+  int64_t curlUploadSpeed = 0;
+  for (auto group : curlSession_->activeTasks()) {
+    const auto stat = group->calculateStat();
+    curlDownloadSpeed += stat.downloadSpeed;
+    curlUploadSpeed += stat.uploadSpeed;
+  }
+  if (curlDownloadSpeed > 0) {
+    rateLimitScheduler_.setObservedSpeed(RateLimitBackend::Curl,
+                                         RateLimitDirection::Download,
+                                         curlDownloadSpeed);
+  }
+  if (curlUploadSpeed > 0) {
+    rateLimitScheduler_.setObservedSpeed(RateLimitBackend::Curl,
+                                         RateLimitDirection::Upload,
+                                         curlUploadSpeed);
+  }
+  int64_t ed2kDownloadSpeed = 0;
+  int64_t ed2kUploadSpeed = 0;
+  bool ed2kDownloadActive = false;
+  bool ed2kUploadActive = false;
+  if (requestGroupMan_) {
+    for (const auto& group : requestGroupMan_->getRequestGroups()) {
+      const auto& dctx = group->getDownloadContext();
+      if (!dctx || !dctx->hasAttribute(CTX_ATTR_ED2K)) {
+        continue;
+      }
+      const auto stat = group->calculateStat();
+      ed2kDownloadSpeed += stat.downloadSpeed;
+      ed2kUploadSpeed += stat.uploadSpeed;
+      ed2kDownloadActive = true;
+      ed2kUploadActive = true;
+    }
+  }
+  rateLimitScheduler_.setActive(RateLimitBackend::Ed2k,
+                                RateLimitDirection::Download,
+                                ed2kDownloadActive);
+  rateLimitScheduler_.setActive(RateLimitBackend::Ed2k,
+                                RateLimitDirection::Upload,
+                                ed2kUploadActive);
+  if (ed2kDownloadSpeed > 0) {
+    rateLimitScheduler_.setObservedSpeed(RateLimitBackend::Ed2k,
+                                         RateLimitDirection::Download,
+                                         ed2kDownloadSpeed);
+  }
+  if (ed2kUploadSpeed > 0) {
+    rateLimitScheduler_.setObservedSpeed(RateLimitBackend::Ed2k,
+                                         RateLimitDirection::Upload,
+                                         ed2kUploadSpeed);
+  }
 #ifdef ENABLE_BITTORRENT
+  int64_t libtorrentDownloadSpeed = 0;
+  int64_t libtorrentUploadSpeed = 0;
+  bool libtorrentActive = false;
+  if (requestGroupMan_) {
+    for (const auto& group : requestGroupMan_->getRequestGroups()) {
+      const auto& dctx = group->getDownloadContext();
+      if (!dctx || !dctx->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+        continue;
+      }
+      const auto stat = group->calculateStat();
+      libtorrentDownloadSpeed += stat.downloadSpeed;
+      libtorrentUploadSpeed += stat.uploadSpeed;
+      auto attrs = getLibtorrentAttrs(dctx);
+      if (stat.downloadSpeed > 0 || attrs->status.hasMetadata ||
+          attrs->contentStarted) {
+        libtorrentActive = true;
+      }
+    }
+  }
   rateLimitScheduler_.setActive(
       RateLimitBackend::Libtorrent, RateLimitDirection::Download,
-      libtorrentSession_ && libtorrentSession_->torrentCount() > 0);
+      libtorrentActive);
   rateLimitScheduler_.setActive(
       RateLimitBackend::Libtorrent, RateLimitDirection::Upload,
-      libtorrentSession_ && libtorrentSession_->torrentCount() > 0);
+      libtorrentActive);
+  if (libtorrentDownloadSpeed > 0) {
+    rateLimitScheduler_.setObservedSpeed(RateLimitBackend::Libtorrent,
+                                         RateLimitDirection::Download,
+                                         libtorrentDownloadSpeed);
+  }
+  if (libtorrentUploadSpeed > 0) {
+    rateLimitScheduler_.setObservedSpeed(RateLimitBackend::Libtorrent,
+                                         RateLimitDirection::Upload,
+                                         libtorrentUploadSpeed);
+  }
 #endif // ENABLE_BITTORRENT
   rateLimitScheduler_.recalculate();
   curlSession_->refreshRateLimits();

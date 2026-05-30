@@ -12,6 +12,7 @@ class RateLimitSchedulerTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testSingleActiveBackendGetsGlobalLimit);
   CPPUNIT_TEST(testTaskLimitCapsBackendLimit);
   CPPUNIT_TEST(testUnusedShareIsBorrowedByBusyBackend);
+  CPPUNIT_TEST(testSlowBackendKeepsFloorWhileBusyBackendBorrowsRest);
   CPPUNIT_TEST(testUploadAndDownloadAreIndependent);
   CPPUNIT_TEST_SUITE_END();
 
@@ -20,6 +21,7 @@ public:
   void testSingleActiveBackendGetsGlobalLimit();
   void testTaskLimitCapsBackendLimit();
   void testUnusedShareIsBorrowedByBusyBackend();
+  void testSlowBackendKeepsFloorWhileBusyBackendBorrowsRest();
   void testUploadAndDownloadAreIndependent();
 };
 
@@ -99,6 +101,31 @@ void RateLimitSchedulerTest::testUnusedShareIsBorrowedByBusyBackend()
   CPPUNIT_ASSERT(
       scheduler.backendLimit(RateLimitBackend::Libtorrent,
                              RateLimitDirection::Download) < 100_k);
+}
+
+void RateLimitSchedulerTest::testSlowBackendKeepsFloorWhileBusyBackendBorrowsRest()
+{
+  RateLimitScheduler scheduler;
+  scheduler.setGlobalLimit(RateLimitDirection::Download, 6660000);
+  scheduler.setActive(RateLimitBackend::Curl, RateLimitDirection::Download,
+                      true);
+  scheduler.setObservedSpeed(RateLimitBackend::Curl,
+                             RateLimitDirection::Download, 3300000);
+  scheduler.setActive(RateLimitBackend::Libtorrent,
+                      RateLimitDirection::Download, true);
+  scheduler.setObservedSpeed(RateLimitBackend::Libtorrent,
+                             RateLimitDirection::Download, 4096);
+
+  scheduler.recalculate();
+
+  CPPUNIT_ASSERT_EQUAL(
+      static_cast<int64_t>(5994000),
+      scheduler.backendLimit(RateLimitBackend::Curl,
+                             RateLimitDirection::Download));
+  CPPUNIT_ASSERT_EQUAL(
+      static_cast<int64_t>(666000),
+      scheduler.backendLimit(RateLimitBackend::Libtorrent,
+                             RateLimitDirection::Download));
 }
 
 void RateLimitSchedulerTest::testUploadAndDownloadAreIndependent()

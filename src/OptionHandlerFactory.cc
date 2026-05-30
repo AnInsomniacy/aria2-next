@@ -532,7 +532,7 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
     handlers.push_back(op);
   }
   {
-    OptionHandler* op(new UnitNumberOptionHandler(
+    OptionHandler* op(new SpeedLimitOptionHandler(
         PREF_MAX_DOWNLOAD_LIMIT, TEXT_MAX_DOWNLOAD_LIMIT, "0", 0));
     op->addTag(TAG_BITTORRENT);
     op->addTag(TAG_FTP);
@@ -562,7 +562,7 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
   }
   {
     OptionHandler* op(
-        new UnitNumberOptionHandler(PREF_MAX_OVERALL_DOWNLOAD_LIMIT,
+        new SpeedLimitOptionHandler(PREF_MAX_OVERALL_DOWNLOAD_LIMIT,
                                     TEXT_MAX_OVERALL_DOWNLOAD_LIMIT, "0", 0));
     op->addTag(TAG_BITTORRENT);
     op->addTag(TAG_FTP);
@@ -1505,7 +1505,7 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
     handlers.push_back(op);
   }
   {
-    OptionHandler* op(new UnitNumberOptionHandler(
+    OptionHandler* op(new SpeedLimitOptionHandler(
         PREF_MAX_OVERALL_UPLOAD_LIMIT, TEXT_MAX_OVERALL_UPLOAD_LIMIT, "0", 0));
     op->addTag(TAG_BASIC);
     op->addTag(TAG_BITTORRENT);
@@ -1513,7 +1513,7 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
     handlers.push_back(op);
   }
   {
-    OptionHandler* op(new UnitNumberOptionHandler(
+    OptionHandler* op(new SpeedLimitOptionHandler(
         PREF_MAX_UPLOAD_LIMIT, TEXT_MAX_UPLOAD_LIMIT, "0", 0, -1, 'u'));
     op->addTag(TAG_BASIC);
     op->addTag(TAG_BITTORRENT);

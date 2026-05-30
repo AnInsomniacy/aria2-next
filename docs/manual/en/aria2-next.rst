@@ -698,7 +698,7 @@ These options configure libtorrent-backed torrent and magnet downloads.
 
   Set max overall upload speed in bytes/sec.
   ``0`` means unrestricted.
-  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).
+  You can use decimals and append ``K`` or ``M`` (1K = 1024, 1M = 1024K).
   To limit the upload speed per torrent, use :option:`--max-upload-limit <-u>` option.
   Default: ``0``
 
@@ -706,7 +706,7 @@ These options configure libtorrent-backed torrent and magnet downloads.
 
   Set max upload speed per each torrent in bytes/sec.
   ``0`` means unrestricted.
-  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).
+  You can use decimals and append ``K`` or ``M`` (1K = 1024, 1M = 1024K).
   To limit the overall upload speed, use :option:`--max-overall-upload-limit` option.
   Default: ``0``
 
@@ -1206,15 +1206,17 @@ Advanced Options
 .. option:: --max-overall-download-limit=<SPEED>
 
   Set max overall download speed in bytes/sec.  ``0`` means
-  unrestricted.  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).  To
-  limit the download speed per download, use :option:`--max-download-limit`
+  unrestricted.  You can use decimals and append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K).  To limit the download speed per download, use
+  :option:`--max-download-limit`
   option.  Default: ``0``
 
 .. option:: --max-download-limit=<SPEED>
 
   Set max download speed per each download in bytes/sec. ``0`` means
-  unrestricted.  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).  To
-  limit the overall download speed, use :option:`--max-overall-download-limit`
+  unrestricted.  You can use decimals and append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K).  To limit the overall download speed, use
+  :option:`--max-overall-download-limit`
   option.  Default: ``0``
 
 .. option:: --no-conf [true|false]

@@ -21,6 +21,7 @@
 #include "fmt.h"
 
 #include <algorithm>
+#include <map>
 
 namespace aria2 {
 
@@ -89,19 +90,28 @@ void CurlSession::refreshRateLimits()
       RateLimitBackend::Curl, RateLimitDirection::Download);
   const auto backendUploadLimit = engine_->getRateLimitScheduler().backendLimit(
       RateLimitBackend::Curl, RateLimitDirection::Upload);
-  const auto activeCount = std::max<size_t>(1, active_.size());
+  std::map<RequestGroup*, size_t> taskHandles;
+  for (const auto& entry : active_) {
+    auto command = dynamic_cast<AbstractCommand*>(entry.second);
+    if (command && command->getRequestGroup()) {
+      ++taskHandles[command->getRequestGroup()];
+    }
+  }
+  const auto taskCount = std::max<size_t>(1, taskHandles.size());
   for (const auto& entry : active_) {
     auto command = dynamic_cast<AbstractCommand*>(entry.second);
     int64_t taskDownloadLimit = 0;
     int64_t taskUploadLimit = 0;
+    size_t handleCount = 1;
     if (command && command->getRequestGroup()) {
       taskDownloadLimit = command->getRequestGroup()->getMaxDownloadSpeedLimit();
       taskUploadLimit = command->getRequestGroup()->getMaxUploadSpeedLimit();
+      handleCount = std::max<size_t>(1, taskHandles[command->getRequestGroup()]);
     }
     auto downloadLimit =
-        backendDownloadLimit == 0 ? 0 : backendDownloadLimit / activeCount;
+        backendDownloadLimit == 0 ? 0 : backendDownloadLimit / taskCount;
     auto uploadLimit =
-        backendUploadLimit == 0 ? 0 : backendUploadLimit / activeCount;
+        backendUploadLimit == 0 ? 0 : backendUploadLimit / taskCount;
     if (taskDownloadLimit > 0) {
       downloadLimit = downloadLimit == 0
                           ? taskDownloadLimit
@@ -112,12 +122,41 @@ void CurlSession::refreshRateLimits()
                         ? taskUploadLimit
                         : std::min<int64_t>(uploadLimit, taskUploadLimit);
     }
+    if (handleCount > 1) {
+      downloadLimit = downloadLimit == 0
+                          ? 0
+                          : std::max<int64_t>(1, downloadLimit / handleCount);
+      uploadLimit = uploadLimit == 0
+                        ? 0
+                        : std::max<int64_t>(1, uploadLimit / handleCount);
+    }
     curl_easy_setopt(entry.first, CURLOPT_MAX_RECV_SPEED_LARGE,
                      static_cast<curl_off_t>(downloadLimit));
     curl_easy_setopt(entry.first, CURLOPT_MAX_SEND_SPEED_LARGE,
                      static_cast<curl_off_t>(uploadLimit));
     appliedLimits_[entry.first] = std::make_pair(downloadLimit, uploadLimit);
   }
+}
+
+size_t CurlSession::activeTaskCount() const
+{
+  return activeTasks().size();
+}
+
+std::vector<RequestGroup*> CurlSession::activeTasks() const
+{
+  std::vector<RequestGroup*> tasks;
+  for (const auto& entry : active_) {
+    auto command = dynamic_cast<AbstractCommand*>(entry.second);
+    if (!command || !command->getRequestGroup()) {
+      continue;
+    }
+    auto group = command->getRequestGroup();
+    if (std::find(tasks.begin(), tasks.end(), group) == tasks.end()) {
+      tasks.push_back(group);
+    }
+  }
+  return tasks;
 }
 
 int64_t CurlSession::testDownloadLimit(CURL* easy) const

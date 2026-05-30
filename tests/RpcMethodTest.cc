@@ -56,10 +56,12 @@ class RpcMethodTest : public CppUnit::TestFixture {
 #endif // ENABLE_BITTORRENT
   CPPUNIT_TEST(testGetOption);
   CPPUNIT_TEST(testChangeOption);
+  CPPUNIT_TEST(testChangeOptionAcceptsDecimalSpeedLimit);
   CPPUNIT_TEST(testChangeOption_withBadOption);
   CPPUNIT_TEST(testChangeOption_withNotAllowedOption);
   CPPUNIT_TEST(testChangeOption_withoutGid);
   CPPUNIT_TEST(testChangeGlobalOption);
+  CPPUNIT_TEST(testChangeGlobalOptionAcceptsDecimalSpeedLimit);
   CPPUNIT_TEST(testChangeGlobalOptionKeepsExistingLogFile);
   CPPUNIT_TEST(testChangeGlobalOption_withBadOption);
   CPPUNIT_TEST(testChangeGlobalOption_withNotAllowedOption);
@@ -136,10 +138,12 @@ public:
 #endif // ENABLE_BITTORRENT
   void testGetOption();
   void testChangeOption();
+  void testChangeOptionAcceptsDecimalSpeedLimit();
   void testChangeOption_withBadOption();
   void testChangeOption_withNotAllowedOption();
   void testChangeOption_withoutGid();
   void testChangeGlobalOption();
+  void testChangeGlobalOptionAcceptsDecimalSpeedLimit();
   void testChangeGlobalOptionKeepsExistingLogFile();
   void testChangeGlobalOption_withBadOption();
   void testChangeGlobalOption_withNotAllowedOption();
@@ -579,6 +583,25 @@ void RpcMethodTest::testChangeOption()
 #endif // ENABLE_BITTORRENT
 }
 
+void RpcMethodTest::testChangeOptionAcceptsDecimalSpeedLimit()
+{
+  auto group = std::make_shared<RequestGroup>(GroupId::create(), option_);
+  e_->getRequestGroupMan()->addReservedGroup(group);
+
+  ChangeOptionRpcMethod m;
+  auto req = createReq(ChangeOptionRpcMethod::getMethodName());
+  req.params->append(GroupId::toHex(group->getGID()));
+  auto opt = Dict::g();
+  opt->put(PREF_MAX_DOWNLOAD_LIMIT->k, "6.66M");
+  req.params->append(std::move(opt));
+  auto res = m.execute(std::move(req), e_.get());
+
+  CPPUNIT_ASSERT_EQUAL(0, res.code);
+  CPPUNIT_ASSERT_EQUAL(6983516, group->getMaxDownloadSpeedLimit());
+  CPPUNIT_ASSERT_EQUAL(std::string("6983516"),
+                       group->getOption()->get(PREF_MAX_DOWNLOAD_LIMIT));
+}
+
 void RpcMethodTest::testChangeOption_withBadOption()
 {
   auto group = std::make_shared<RequestGroup>(GroupId::create(), option_);
@@ -641,6 +664,22 @@ void RpcMethodTest::testChangeGlobalOption()
   CPPUNIT_ASSERT_EQUAL(std::string("51200"),
                        e_->getOption()->get(PREF_MAX_OVERALL_UPLOAD_LIMIT));
 #endif // ENABLE_BITTORRENT
+}
+
+void RpcMethodTest::testChangeGlobalOptionAcceptsDecimalSpeedLimit()
+{
+  ChangeGlobalOptionRpcMethod m;
+  auto req = createReq(ChangeGlobalOptionRpcMethod::getMethodName());
+  auto opt = Dict::g();
+  opt->put(PREF_MAX_OVERALL_DOWNLOAD_LIMIT->k, "6.66M");
+  req.params->append(std::move(opt));
+  auto res = m.execute(std::move(req), e_.get());
+
+  CPPUNIT_ASSERT_EQUAL(0, res.code);
+  CPPUNIT_ASSERT_EQUAL(
+      6983516, e_->getRequestGroupMan()->getMaxOverallDownloadSpeedLimit());
+  CPPUNIT_ASSERT_EQUAL(std::string("6983516"),
+                       e_->getOption()->get(PREF_MAX_OVERALL_DOWNLOAD_LIMIT));
 }
 
 void RpcMethodTest::testChangeGlobalOptionKeepsExistingLogFile()
