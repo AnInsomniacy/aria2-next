@@ -39,14 +39,15 @@
 
 #include <memory>
 
-#include "InternalTypes.h"
+#include <aria2/aria2.h>
 
 namespace aria2 {
 
 class MultiUrlRequestInfo;
 
 struct Context {
-  // The |argc| and |argv| is expected to the command-line
+  // Set the |standalone| false if the context is created via libaria2
+  // API. The |argc| and |argv| is expected to the command-line
   // arguments, which will be passed to getopt_long(3) in the end.
   // The |options| is the additional option values and is considered
   // as a part of command-line arguments.

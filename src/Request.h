@@ -61,6 +61,14 @@ private:
 
   int tryCount_;
   int redirectCount_;
+  // whether or not the server supports persistent connection
+  bool supportsPersistentConnection_;
+  // enable keep-alive if possible.
+  bool keepAliveHint_;
+  // enable pipelining if possible.
+  bool pipeliningHint_;
+  // maximum number of pipelined requests
+  int maxPipelinedRequest_;
   std::shared_ptr<PeerStat> peerStat_;
   bool removalRequested_;
   uint16_t connectedPort_;
@@ -99,6 +107,36 @@ public:
   const std::string& getFile() const { return us_.file; }
   const std::string& getQuery() const { return us_.query; }
   bool isIPv6LiteralAddress() const { return us_.ipv6LiteralAddress; }
+
+  void supportsPersistentConnection(bool f)
+  {
+    supportsPersistentConnection_ = f;
+  }
+
+  bool supportsPersistentConnection() { return supportsPersistentConnection_; }
+
+  bool isKeepAliveEnabled() const
+  {
+    return supportsPersistentConnection_ && keepAliveHint_;
+  }
+
+  void setKeepAliveHint(bool keepAliveHint) { keepAliveHint_ = keepAliveHint; }
+
+  bool isPipeliningEnabled()
+  {
+    return supportsPersistentConnection_ && pipeliningHint_;
+  }
+
+  void setPipeliningHint(bool pipeliningHint)
+  {
+    pipeliningHint_ = pipeliningHint;
+  }
+
+  bool isPipeliningHint() const { return pipeliningHint_; }
+
+  void setMaxPipelinedRequest(int num);
+
+  int getMaxPipelinedRequest() const { return maxPipelinedRequest_; }
 
   void setMethod(const std::string& method);
 

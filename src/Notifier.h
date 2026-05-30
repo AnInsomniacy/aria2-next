@@ -40,7 +40,7 @@
 #include <vector>
 #include <memory>
 
-#include "InternalTypes.h"
+#include <aria2/aria2.h>
 
 namespace aria2 {
 

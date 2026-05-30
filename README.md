@@ -1,7 +1,7 @@
 <div align="center">
   <img src="docs/media/aria2-next-icon.png" alt="Aria2 Next icon" width="144" height="144" />
   <h1>Aria2 Next</h1>
-  <p>Maintained download engine with aria2-compatible interfaces, modern transfer backends, and cross-platform release builds.</p>
+  <p>Maintained aria2 fork with extensive bug fixes and modernized architecture.</p>
 
 [![CI](https://github.com/AnInsomniacy/aria2-next/actions/workflows/ci.yml/badge.svg)](https://github.com/AnInsomniacy/aria2-next/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/AnInsomniacy/aria2-next.svg)](https://github.com/AnInsomniacy/aria2-next/releases)
@@ -14,40 +14,28 @@
 
 ## Why Aria2 Next?
 
-Aria2 Next is a maintained fork of [aria2](https://github.com/aria2/aria2) for users, scripts, RPC clients, and parent applications that need a current download engine without giving up familiar aria2 workflows.
+aria2 is remarkable open source software. For over a decade it has been one of the most capable download engines available, trusted by countless tools and users worldwide. We are deeply grateful to the original authors and contributors of the [aria2 project](https://github.com/aria2/aria2). They built something that has stood the test of time, and that enduring quality is the best testament to their vision and craftsmanship.
 
-The main executable is `aria2-next`. It preserves supported command-line options, configuration files, session files, input files, and JSON-RPC methods. It can be used directly from scripts and terminals, and it is also the download engine bundled by [Motrix Next](https://github.com/AnInsomniacy/motrix-next).
+But upstream development has slowed dramatically in recent years. Dependencies grew stale, builds broke on modern platforms, and a backlog of bugs went unaddressed. We picked up the baton: migrated the codebase to a modern build framework, triaged and fixed a substantial number of upstream issues, and introduced ED2K protocol support for the first time. A full audit trail is preserved in [`docs/maintenance/upstream-issue-review/matrix.csv`](docs/maintenance/upstream-issue-review/matrix.csv).
 
-Current maintenance focuses on reliable ordinary URL transfers through libcurl, BitTorrent and magnet handling through libtorrent-rasterbar, native ED2K support, stable JSON-RPC behavior, reproducible release artifacts, and current dependency baselines.
+Aria2 Next is an actively maintained aria2-compatible engine for everyone, and it is also the embedded engine used by [Motrix Next](https://github.com/AnInsomniacy/motrix-next). Original interfaces, including options, configuration, sessions, JSON-RPC, and libaria2, remain intact so downstream projects get a seamless upgrade. The focus is straightforward: release reliability, current dependency baselines, and ongoing compatibility fixes. Same engine, renewed foundation.
 
-## Core Modernization
+## Native ED2K/eMule Support
 
-Aria2 Next has completed a core modernization program after the ED2K hardening and libtorrent BitTorrent migration. The goal was to keep the familiar aria2-compatible engine shape while replacing obsolete native protocol and runtime stacks with mature maintained libraries where those libraries own correctness, security, and cross-platform behavior better.
+Aria2 Next includes native ED2K/eMule support reimplemented inside aria2's existing engine architecture from authoritative eMule, aMule, MLDonkey, Wireshark, and protocol documentation references. ED2K works through normal aria2-style CLI, session, and JSON-RPC flows, including source discovery, peer transfer, search, sharing, upload cooperation, queue maintenance, and Motrix Next integration surfaces. The reference-alignment and download-hardening work is tracked in [`docs/maintenance/ed2k-refactor/`](docs/maintenance/ed2k-refactor/) and [`docs/maintenance/ed2k-download-hardening/`](docs/maintenance/ed2k-download-hardening/), with obsolete legacy structures removed or replaced by aria2-next-native mechanisms.
 
-| Area | Previous ownership | Current ownership |
-| --- | --- | --- |
-| HTTP, HTTPS, FTP, FTPS, SFTP, SCP | Native protocol stacks and direct SSH glue | libcurl multi-socket transfer backend |
-| BitTorrent and magnet | Native BitTorrent residue and local torrent state | libtorrent-rasterbar |
-| RPC, JSON, and runtime | Native HTTP/WebSocket code, wslay, custom JSON, mixed legacy polling | Boost.Beast, Boost.JSON, and Boost.Asio |
-| TLS and crypto | Multiple backends and fallback implementations | OpenSSL |
-| Storage and progress truth | Mixed completed and in-flight accounting | Verified storage state with explicit in-flight progress |
-| ED2K/eMule | Not supported by old aria2 | Native Aria2 Next protocol on modern storage, crypto, progress, and runtime boundaries |
+## Compatibility
 
-The modernization also removed stale compatibility surfaces: XML-RPC, Metalink, the public C++ embedding API, old native BitTorrent fallback code, alternate TLS and crypto backends, native browser-cookie parsing, async DNS backends, and direct libssh2 transfer ownership. The full audit trail is preserved in [`docs/maintenance/core-modernization/overview.md`](docs/maintenance/core-modernization/overview.md) and [`docs/maintenance/core-modernization/progress.md`](docs/maintenance/core-modernization/progress.md).
-
-## Supported Surface
-
-| Area | Status |
+| Surface | Compatibility target |
 | --- | --- |
 | Executable | `aria2-next` |
-| CLI and config | aria2-compatible option names and file formats |
-| Sessions and input files | aria2-compatible session and input-file conventions |
-| JSON-RPC | aria2-compatible methods with explicit Aria2 Next extension fields where needed |
-| Protocols | HTTP, HTTPS, FTP, FTPS, SFTP, SCP, BitTorrent, magnet, ED2K |
-| Primary app integration | Motrix Next sidecar engine |
-| Public C++ API | Not maintained |
+| CLI | aria2 option names and behavior |
+| Configuration | aria2 config file format |
+| Sessions | aria2 session and input file conventions |
+| RPC | aria2 JSON-RPC methods and response shapes |
+| Library | public libaria2 headers under `src/includes/aria2/` |
 
-Compatibility applies to the maintained surfaces above. Removed legacy internals are not retained as hidden fallback engines or compatibility aliases.
+Motrix Next embeds this engine, but release artifacts are ordinary aria2-compatible binaries.
 
 ## Quick Start
 
@@ -66,39 +54,28 @@ aria2-next '<ed2k-file-link>'
 Run the JSON-RPC server:
 
 ```bash
-aria2-next --enable-rpc=true --rpc-listen-all=false --rpc-listen-port=6800
+aria2-next --enable-rpc --rpc-listen-all=false --rpc-listen-port=6800
 ```
 
-Inspect enabled features:
+Inspect enabled features and build details:
 
 ```bash
 aria2-next --version
-aria2-next --help=#all
+aria2-next --help=#ed2k
 ```
 
-## Downloads
+## What This Repository Provides
 
-Prebuilt binaries are published on [GitHub Releases](https://github.com/AnInsomniacy/aria2-next/releases).
-
-| Platform | Architecture | Asset |
-| --- | --- | --- |
-| Linux | x86_64 | `aria2-next-<version>-linux-x86_64` |
-| Linux | ARM64 | `aria2-next-<version>-linux-aarch64` |
-| macOS | Apple Silicon | `aria2-next-<version>-macos-arm64` |
-| macOS | Intel | `aria2-next-<version>-macos-x86_64` |
-| Windows | x86_64 | `aria2-next-<version>-windows-x86_64.exe` |
-| Windows | ARM64 | `aria2-next-<version>-windows-arm64.exe` |
-| Checksums | all assets | `aria2-next-<version>-checksums.sha256` |
-
-Linux and macOS binaries are executable files. If the executable bit is missing:
-
-```bash
-chmod +x ./aria2-next-<version>-<platform>
-```
-
-Release binaries verify HTTPS certificates by default. Windows uses the native Windows certificate store through libcurl. macOS uses Apple SecTrust. Linux uses libcurl/OpenSSL CA auto-discovery with OpenSSL fallback paths. Android shell environments may need `--ca-certificate`.
-
-Checksum verification, signing status, debug artifacts, and release rules are documented in [`docs/RELEASE.md`](docs/RELEASE.md).
+| Area | Status |
+| --- | --- |
+| Engine | aria2-compatible `aria2-next` binary |
+| Primary consumer | Motrix Next sidecar engine |
+| External consumers | Existing aria2 scripts, frontends, RPC clients, and automation |
+| Build system | CMake 3.25+ with Ninja presets |
+| Release targets | macOS, Windows, and Linux on x64 and ARM64 |
+| Additional packaging | Android ARM64 release builds |
+| Maintenance | Maintained by AnInsomniacy since 2026 |
+| Maintenance record | Preserved upstream issue review matrix |
 
 ## Build
 
@@ -109,42 +86,69 @@ ctest --preset default
 build/default/aria2-next --version
 ```
 
-The default preset uses CMake and Ninja. Common build options include `ARIA2_ENABLE_BITTORRENT`, `ARIA2_ENABLE_WEBSOCKET`, `ARIA2_ENABLE_STATIC`, `ARIA2_RELEASE_SIZE_OPTIMIZED`, `ARIA2_RELEASE_LTO`, and `ARIA2_WITH_ZLIB`.
+Plain Ninja builds are also supported:
 
-Release dependency versions, source URLs, archive names, and SHA-256 hashes are maintained in [`packaging/dependencies.env`](packaging/dependencies.env).
+```bash
+cmake -S . -B build/default -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build/default
+ctest --test-dir build/default --output-on-failure
+```
 
-## Documentation
+Common options include `ARIA2_ENABLE_BITTORRENT`, `ARIA2_ENABLE_METALINK`, `ARIA2_ENABLE_WEBSOCKET`, `ARIA2_ENABLE_LIBARIA2`, `ARIA2_ENABLE_STATIC`, `ARIA2_RELEASE_SIZE_OPTIMIZED`, `ARIA2_RELEASE_LTO`, `ARIA2_WITH_WINTLS`, `ARIA2_WITH_OPENSSL`, `ARIA2_WITH_GNUTLS`, `ARIA2_WITH_LIBXML2`, `ARIA2_WITH_EXPAT`, `ARIA2_WITH_CARES`, `ARIA2_WITH_ZLIB`, `ARIA2_WITH_SQLITE3`, and `ARIA2_WITH_LIBSSH2`.
 
-| Topic | Document |
-| --- | --- |
-| Contributor setup and PR rules | [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) |
-| Troubleshooting and issue boundaries | [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md) |
-| App and JSON-RPC integration | [`docs/INTEGRATION.md`](docs/INTEGRATION.md) |
-| Release assets and maintainer flow | [`docs/RELEASE.md`](docs/RELEASE.md) |
-| Security reporting | [`docs/SECURITY.md`](docs/SECURITY.md) |
-| Privacy and network behavior | [`docs/PRIVACY.md`](docs/PRIVACY.md) |
-| Full documentation index | [`docs/README.md`](docs/README.md) |
+Async DNS builds require c-ares 1.34.6 or newer.
 
-Use GitHub issue forms for reproducible bugs and feature proposals.
+## Downloads
 
-## Maintenance Records
+Prebuilt artifacts are published on the [GitHub Releases](https://github.com/AnInsomniacy/aria2-next/releases) page.
 
-Durable audit records live under [`docs/maintenance/`](docs/maintenance/). They preserve the modernization history, upstream issue review, dependency decisions, ED2K work, and BitTorrent migration records. They are historical evidence, not the first place to learn normal usage.
+| Platform | Architecture | Artifact |
+| --- | --- | --- |
+| Linux | x86_64 | `aria2-next-<version>-linux-x86_64` |
+| Linux | ARM64 | `aria2-next-<version>-linux-aarch64` |
+| macOS | Apple Silicon | `aria2-next-<version>-macos-arm64` |
+| macOS | Intel | `aria2-next-<version>-macos-x86_64` |
+| Windows | x86_64 | `aria2-next-<version>-windows-x86_64.exe` |
+| Windows | ARM64 | `aria2-next-<version>-windows-arm64.exe` |
+| Checksums | all release assets | `aria2-next-<version>-checksums.sha256` |
+
+Linux and macOS downloads are executable files. If your browser clears the executable bit, run `chmod +x ./aria2-next-<version>-<platform>`.
+
+Release binaries verify HTTPS certificates by default. Windows releases use WinTLS and the Windows trust store. OpenSSL and GnuTLS builds use system CA loading first, then a detected or explicitly configured CA bundle fallback. Official release builds also enable the size-optimized release profile so standalone artifacts keep the current dependency baseline without carrying avoidable dead code.
+
+## Maintenance Audit
+
+The durable audit artifacts live under [`docs/maintenance/`](docs/maintenance/). The preserved matrix contains 137 reviewed upstream bug issues, including 43 rows with final state `fixed-verified`.
+
+The audit separates confirmed fixes, already-fixed reports, documented behavior, environment issues, platform issues, site-specific reports, non-reproducible reports, and larger architecture limitations.
+
+## Release and Versioning
+
+`CMakeLists.txt` is the project version source of truth. Release tags use `v{PROJECT_VERSION}`.
+
+The release workflow runs when a matching GitHub Release is published. It validates the tag against `CMakeLists.txt`, builds all maintained platform binaries, generates SHA-256 checksums, and uploads the standalone executables to the published release. Source code is provided by the GitHub release tag source archives.
+
+Tag pushes alone do not publish release builds. `workflow_dispatch` remains available for release-path validation of the current workflow commit and uploads the final binaries and checksum file only to the workflow run artifact named `aria2-next-<version>-release-assets`. Published GitHub Releases must use a `v{PROJECT_VERSION}` tag that matches `CMakeLists.txt`.
+
+## Dependency Baseline
+
+Release dependency versions are tracked in [`packaging/dependencies.env`](packaging/dependencies.env).
+The same file records versions, archive names, download URLs, and SHA-256 hashes for source archives consumed by release workflows and Docker build contexts.
 
 ## Repository Layout
 
 | Path | Purpose |
 | --- | --- |
-| `CMakeLists.txt` | Project declaration and version source |
+| `CMakeLists.txt` | Project declaration and module entry point |
 | `CMakePresets.json` | Standard configure, build, and test presets |
 | `cmake/` | CMake modules, source inventories, and generated config templates |
-| `src/` | Aria2 Next command-line client and core implementation |
+| `src/` | aria2 command-line client and core implementation |
+| `src/includes/aria2/` | public libaria2 headers |
 | `tests/` | CppUnit test suite registered through CTest |
-| `docs/` | Documentation, manual sources, completion tooling, and maintenance records |
-| `.github/` | Issue forms, pull request template, CI, and release workflows |
-| `packaging/` | Release dependencies, cross-build scripts, Dockerfiles, and package assets |
-| `third_party/` | Vendored source with explicit ownership rules |
-| `tools/` | Local developer helpers |
+| `docs/` | manual sources, completion tooling, and maintenance records |
+| `packaging/` | release dependencies, cross-build scripts, Dockerfiles, and package assets |
+| `third_party/` | vendored source with explicit ownership rules |
+| `tools/` | local developer helpers |
 
 ## License
 

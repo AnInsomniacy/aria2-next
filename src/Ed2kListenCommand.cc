@@ -10,7 +10,6 @@
  * (at your option) any later version.
  */
 /* copyright --> */
-#include "Log.h"
 #include "Ed2kListenCommand.h"
 
 #include "DownloadContext.h"
@@ -19,6 +18,8 @@
 #include "Ed2kCommand.h"
 #include "Ed2kSharedPeerCommand.h"
 #include "Ed2kSharedStore.h"
+#include "LogFactory.h"
+#include "Logger.h"
 #include "RecoverableException.h"
 #include "RequestGroup.h"
 #include "RequestGroupMan.h"
@@ -59,12 +60,12 @@ bool Ed2kListenCommand::bindPort(uint16_t port)
     e_->addSocketForReadCheck(socket_, this);
     e_->setEd2kTcpPort(socket_->getAddrInfo().port);
     e_->setEd2kTcpListenActive(true);
-    ARIA2_LOG_INFO(fmt(_("IPv%d ED2K: listening on TCP port %u"), ipv,
+    A2_LOG_NOTICE(fmt(_("IPv%d ED2K: listening on TCP port %u"), ipv,
                       socket_->getAddrInfo().port));
     return true;
   }
   catch (RecoverableException& ex) {
-    ARIA2_LOG_ERROR_EX(
+    A2_LOG_ERROR_EX(
         fmt("IPv%d ED2K: failed to bind TCP port %u", ipv, port), ex);
     socket_->closeConnection();
   }
@@ -128,7 +129,7 @@ bool Ed2kListenCommand::execute()
         }
         e_->addCommand(make_unique<Ed2kSharedPeerCommand>(
             e_->newCUID(), e_, peer, peerSocket));
-        ARIA2_LOG_DEBUG(fmt("Accepted ED2K shared peer connection from %s:%u.",
+        A2_LOG_DEBUG(fmt("Accepted ED2K shared peer connection from %s:%u.",
                          peer.host.c_str(), peer.port));
         continue;
       }
@@ -138,11 +139,11 @@ bool Ed2kListenCommand::execute()
       }
       e_->addCommand(make_unique<Ed2kCommand>(e_->newCUID(), group, e_, peer,
                                               peerSocket));
-      ARIA2_LOG_DEBUG(fmt("Accepted ED2K peer connection from %s:%u.",
+      A2_LOG_DEBUG(fmt("Accepted ED2K peer connection from %s:%u.",
                        peer.host.c_str(), peer.port));
     }
     catch (RecoverableException& ex) {
-      ARIA2_LOG_DEBUG_EX(fmt(MSG_ACCEPT_FAILURE, getCuid()), ex);
+      A2_LOG_DEBUG_EX(fmt(MSG_ACCEPT_FAILURE, getCuid()), ex);
     }
   }
 

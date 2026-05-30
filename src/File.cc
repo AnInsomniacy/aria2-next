@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "File.h"
 
 #include <stdlib.h>
@@ -49,6 +48,8 @@
 #include "util.h"
 #include "A2STR.h"
 #include "array_fun.h"
+#include "Logger.h"
+#include "LogFactory.h"
 #include "fmt.h"
 
 namespace aria2 {
@@ -199,7 +200,7 @@ bool File::mkdirs()
       for (; i != eoi && *i != '/'; ++i)
         ;
       dbegin = i;
-      ARIA2_LOG_DEBUG(
+      A2_LOG_DEBUG(
           fmt("UNC Prefix %s", std::string(path.begin(), dbegin).c_str()));
     }
   }
@@ -230,13 +231,13 @@ bool File::mkdirs()
     }
 #endif // __MINGW32__
     std::string dir(begin, j);
-    ARIA2_LOG_DEBUG(fmt("Making directory %s", dir.c_str()));
+    A2_LOG_DEBUG(fmt("Making directory %s", dir.c_str()));
     if (File(dir).isDir()) {
-      ARIA2_LOG_DEBUG(fmt("%s exists and is a directory.", dir.c_str()));
+      A2_LOG_DEBUG(fmt("%s exists and is a directory.", dir.c_str()));
       continue;
     }
     if (a2mkdir(utf8ToWChar(dir).c_str(), DIR_OPEN_MODE) == -1) {
-      ARIA2_LOG_DEBUG(fmt("Failed to create %s", dir.c_str()));
+      A2_LOG_DEBUG(fmt("Failed to create %s", dir.c_str()));
       return false;
     }
   }
@@ -320,7 +321,7 @@ bool File::utime(const Time& actime, const Time& modtime) const
   auto hn = openFile(name_, false);
   if (hn == INVALID_HANDLE_VALUE) {
     auto errNum = GetLastError();
-    ARIA2_LOG_ERROR(fmt(EX_FILE_OPEN, name_.c_str(),
+    A2_LOG_ERROR(fmt(EX_FILE_OPEN, name_.c_str(),
                      util::formatLastError(errNum).c_str()));
     return false;
   }
@@ -349,7 +350,7 @@ bool File::utime(const Time& actime, const Time& modtime) const
   auto rv = SetFileTime(hn, nullptr, &att, &mtt);
   if (!rv) {
     auto errNum = GetLastError();
-    ARIA2_LOG_ERROR(fmt("SetFileTime failed, cause: %s",
+    A2_LOG_ERROR(fmt("SetFileTime failed, cause: %s",
                      util::formatLastError(errNum).c_str()));
   }
   CloseHandle(hn);

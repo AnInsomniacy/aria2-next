@@ -40,9 +40,13 @@
 #include <deque>
 #include <algorithm>
 #include <functional>
+#include <memory>
 
 #include "a2netcompat.h"
 #include "Command.h"
+#ifdef ENABLE_ASYNC_DNS
+#  include "AsyncNameResolver.h"
+#endif // ENABLE_ASYNC_DNS
 
 namespace aria2 {
 
@@ -117,12 +121,78 @@ public:
   }
 };
 
-template <typename CommandEvent> class SocketEntry {
+#ifdef ENABLE_ASYNC_DNS
+
+template <typename SocketEntry, typename EventPoll>
+class ADNSEvent : public Event<SocketEntry> {
+private:
+  std::shared_ptr<AsyncNameResolver> resolver_;
+  Command* command_;
+  sock_t socket_;
+  int events_;
+
+public:
+  ADNSEvent(const std::shared_ptr<AsyncNameResolver>& resolver,
+            Command* command, sock_t socket, int events)
+      : resolver_(resolver), command_(command), socket_(socket), events_(events)
+  {
+  }
+
+  bool operator==(const ADNSEvent& event) const
+  {
+    return *resolver_ == *event.resolver_;
+  }
+
+  virtual int getEvents() const { return events_; }
+
+  virtual void processEvents(int events)
+  {
+    ares_socket_t readfd;
+    ares_socket_t writefd;
+    if (events &
+        (EventPoll::IEV_READ | EventPoll::IEV_ERROR | EventPoll::IEV_HUP)) {
+      readfd = socket_;
+    }
+    else {
+      readfd = ARES_SOCKET_BAD;
+    }
+    if (events &
+        (EventPoll::IEV_WRITE | EventPoll::IEV_ERROR | EventPoll::IEV_HUP)) {
+      writefd = socket_;
+    }
+    else {
+      writefd = ARES_SOCKET_BAD;
+    }
+    resolver_->process(readfd, writefd);
+    command_->setStatusActive();
+  }
+
+  virtual void addSelf(SocketEntry* socketEntry) const
+  {
+    socketEntry->addADNSEvent(*this);
+  }
+
+  virtual void removeSelf(SocketEntry* socketEntry) const
+  {
+    socketEntry->removeADNSEvent(*this);
+  }
+};
+#else  // !ENABLE_ASYNC_DNS
+template <typename SocketEntry, typename EventPoll>
+class ADNSEvent : public Event<SocketEntry> {};
+#endif // !ENABLE_ASYNC_DNS
+
+template <typename CommandEvent, typename ADNSEvent> class SocketEntry {
 protected:
   sock_t socket_;
 
   std::deque<CommandEvent> commandEvents_;
 
+#ifdef ENABLE_ASYNC_DNS
+
+  std::deque<ADNSEvent> adnsEvents_;
+
+#endif // ENABLE_ASYNC_DNS
 public:
   SocketEntry(sock_t socket) : socket_(socket) {}
 
@@ -166,6 +236,29 @@ public:
     }
   }
 
+#ifdef ENABLE_ASYNC_DNS
+
+  void addADNSEvent(const ADNSEvent& aev)
+  {
+    typename std::deque<ADNSEvent>::iterator i =
+        std::find(adnsEvents_.begin(), adnsEvents_.end(), aev);
+    if (i == adnsEvents_.end()) {
+      adnsEvents_.push_back(aev);
+    }
+  }
+
+  void removeADNSEvent(const ADNSEvent& aev)
+  {
+    typename std::deque<ADNSEvent>::iterator i =
+        std::find(adnsEvents_.begin(), adnsEvents_.end(), aev);
+    if (i == adnsEvents_.end()) {
+      // not found
+    }
+    else {
+      adnsEvents_.erase(i);
+    }
+  }
+#endif // ENABLE_ASYNC_DNS
 
   sock_t getSocket() const { return socket_; }
 
@@ -173,7 +266,11 @@ public:
 
   bool eventEmpty() const
   {
+#ifdef ENABLE_ASYNC_DNS
+    return commandEvents_.empty() && adnsEvents_.empty();
+#else  // !ENABLE_ASYNC_DNS
     return commandEvents_.empty();
+#endif // !ENABLE_ASYNC_DNS)
   }
 
   void processEvents(int events)
@@ -181,8 +278,81 @@ public:
     using namespace std::placeholders;
     std::for_each(commandEvents_.begin(), commandEvents_.end(),
                   std::bind(&CommandEvent::processEvents, _1, events));
+#ifdef ENABLE_ASYNC_DNS
+    std::for_each(adnsEvents_.begin(), adnsEvents_.end(),
+                  std::bind(&ADNSEvent::processEvents, _1, events));
+#endif // ENABLE_ASYNC_DNS
   }
 };
+
+#ifdef ENABLE_ASYNC_DNS
+
+template <typename EventPoll> class AsyncNameResolverEntry {
+private:
+  std::shared_ptr<AsyncNameResolver> nameResolver_;
+
+  Command* command_;
+
+  std::vector<sock_t> sockets_;
+
+public:
+  AsyncNameResolverEntry(std::shared_ptr<AsyncNameResolver> nameResolver,
+                         Command* command)
+      : nameResolver_(std::move(nameResolver)), command_(command)
+  {
+  }
+
+  AsyncNameResolverEntry(const AsyncNameResolverEntry&) = delete;
+  AsyncNameResolverEntry(AsyncNameResolverEntry&&) = default;
+
+  bool operator==(const AsyncNameResolverEntry& entry)
+  {
+    return *nameResolver_ == *entry.nameResolver_ && command_ == entry.command_;
+  }
+
+  bool operator<(const AsyncNameResolverEntry& entry)
+  {
+    return nameResolver_.get() < entry.nameResolver_.get() ||
+           (nameResolver_.get() == entry.nameResolver_.get() &&
+            command_ < entry.command_);
+  }
+
+  void addSocketEvents(EventPoll* e)
+  {
+    const auto& socks = nameResolver_->getsock();
+    sockets_.resize(socks.size());
+    auto sock_it = std::begin(sockets_);
+
+    for (const auto& ent : socks) {
+      int events = 0;
+      if (ent.events & EventPoll::EVENT_READ) {
+        events |= EventPoll::IEV_READ;
+      }
+      if (ent.events & EventPoll::EVENT_WRITE) {
+        events |= EventPoll::IEV_WRITE;
+      }
+      e->addEvents(ent.fd, command_, events, nameResolver_);
+      *sock_it++ = ent.fd;
+    }
+  }
+
+  void removeSocketEvents(EventPoll* e)
+  {
+    for (auto fd : sockets_) {
+      e->deleteEvents(fd, command_, nameResolver_);
+    }
+  }
+
+  // Calls AsyncNameResolver::process(ARES_SOCKET_BAD,
+  // ARES_SOCKET_BAD).
+  void processTimeout()
+  {
+    nameResolver_->process(ARES_SOCKET_BAD, ARES_SOCKET_BAD);
+  }
+};
+#else  // !ENABLE_ASYNC_DNS
+template <typename EventPoll> class AsyncNameResolverEntry {};
+#endif // !ENABLE_ASYNC_DNS
 
 } // namespace aria2
 

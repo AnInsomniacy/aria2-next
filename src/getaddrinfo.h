@@ -42,15 +42,9 @@ extern "C" {
 #endif // HAVE_CONFIG_H
 
 #ifdef __MINGW32__
-#  ifndef ARIA2_WINDOWS_TARGET_VERSION
-#    define ARIA2_WINDOWS_TARGET_VERSION 0x0A00
-#  endif // ARIA2_WINDOWS_TARGET_VERSION
 #  ifndef _WIN32_WINNT
-#    define _WIN32_WINNT ARIA2_WINDOWS_TARGET_VERSION
+#    define _WIN32_WINNT 0x501
 #  endif // _WIN32_WINNT
-#  if _WIN32_WINNT < 0x0601
-#    error "_WIN32_WINNT must be at least 0x0601 for Boost.Asio Windows ABI consistency"
-#  endif // _WIN32_WINNT < 0x0601
 #  include <winsock2.h>
 #  undef ERROR
 #  include <ws2tcpip.h>

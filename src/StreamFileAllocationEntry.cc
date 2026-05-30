@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "StreamFileAllocationEntry.h"
 
 #include <algorithm>
@@ -47,6 +46,7 @@
 #include "FileEntry.h"
 #include "PieceStorage.h"
 #include "DiskAdaptor.h"
+#include "LogFactory.h"
 
 namespace aria2 {
 
@@ -105,7 +105,7 @@ void StreamFileAllocationEntry::prepareForNextAction(
       rg->saveControlFile();
     }
     catch (RecoverableException& e) {
-      ARIA2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
+      A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
     }
   }
 }

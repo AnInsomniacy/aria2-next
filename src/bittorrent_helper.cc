@@ -44,10 +44,12 @@
 #include "DlAbortEx.h"
 #include "message.h"
 #include "fmt.h"
-#include "TorrentMetadataConstants.h"
+#include "BtConstants.h"
 #include "MessageDigest.h"
 #include "message_digest_helper.h"
 #include "a2netcompat.h"
+#include "BtConstants.h"
+#include "bitfield.h"
 #include "base32.h"
 #include "magnet.h"
 #include "bencode2.h"
@@ -84,6 +86,9 @@ const char C_CREATION_DATE[] = "creation date";
 const char C_COMMENT[] = "comment";
 const char C_COMMENT_UTF8[] = "comment.utf-8";
 const char C_CREATED_BY[] = "created by";
+
+const char DEFAULT_PEER_ID_PREFIX[] = "aria2-";
+const char DEFAULT_PEER_AGENT[] = "aria2-next/" PACKAGE_VERSION;
 } // namespace
 
 const std::string MULTI("multi");
@@ -532,7 +537,7 @@ void processRootDictionary(const std::shared_ptr<DownloadContext>& ctx,
     torrent->createdBy = util::encodeNonUtf8(createdBy->s());
   }
 
-  ctx->setAttribute(CTX_ATTR_TORRENT_METADATA, std::move(torrent));
+  ctx->setAttribute(CTX_ATTR_BT, std::move(torrent));
 }
 } // namespace
 
@@ -598,6 +603,16 @@ void loadFromMemory(const std::string& context,
                         defaultName, overrideName, uris);
 }
 
+void loadFromMemory(const ValueBase* torrent,
+                    const std::shared_ptr<DownloadContext>& ctx,
+                    const std::shared_ptr<Option>& option,
+                    const std::vector<std::string>& uris,
+                    const std::string& defaultName,
+                    const std::string& overrideName)
+{
+  processRootDictionary(ctx, torrent, option, defaultName, overrideName, uris);
+}
+
 TorrentAttribute* getTorrentAttrs(const std::shared_ptr<DownloadContext>& dctx)
 {
   return getTorrentAttrs(dctx.get());
@@ -605,8 +620,7 @@ TorrentAttribute* getTorrentAttrs(const std::shared_ptr<DownloadContext>& dctx)
 
 TorrentAttribute* getTorrentAttrs(DownloadContext* dctx)
 {
-  return static_cast<TorrentAttribute*>(
-      dctx->getAttribute(CTX_ATTR_TORRENT_METADATA).get());
+  return static_cast<TorrentAttribute*>(dctx->getAttribute(CTX_ATTR_BT).get());
 }
 
 const unsigned char* getInfoHash(const std::shared_ptr<DownloadContext>& dctx)
@@ -630,6 +644,121 @@ std::string getInfoHashString(DownloadContext* dctx)
   return util::toHex(getTorrentAttrs(dctx)->infoHash);
 }
 
+std::vector<size_t> computeFastSet(const std::string& ipaddr, size_t numPieces,
+                                   const unsigned char* infoHash,
+                                   size_t fastSetSize)
+{
+  std::vector<size_t> fastSet;
+  unsigned char compact[COMPACT_LEN_IPV6];
+  int compactlen = packcompact(compact, ipaddr, 0);
+  if (compactlen != COMPACT_LEN_IPV4) {
+    return fastSet;
+  }
+  if (numPieces < fastSetSize) {
+    fastSetSize = numPieces;
+  }
+  unsigned char tx[24];
+  memcpy(tx, compact, 4);
+  if ((tx[0] & 0x80u) == 0 || (tx[0] & 0x40u) == 0) {
+    tx[2] = 0x00u;
+    tx[3] = 0x00u;
+  }
+  else {
+    tx[3] = 0x00u;
+  }
+  memcpy(tx + 4, infoHash, 20);
+  unsigned char x[20];
+  auto sha1 = MessageDigest::sha1();
+  message_digest::digest(x, sizeof(x), sha1.get(), tx, 24);
+  while (fastSet.size() < fastSetSize) {
+    for (size_t i = 0; i < 5 && fastSet.size() < fastSetSize; ++i) {
+      size_t j = i * 4;
+      uint32_t ny;
+      memcpy(&ny, x + j, 4);
+      uint32_t y = ntohl(ny);
+      size_t index = y % numPieces;
+      if (std::find(std::begin(fastSet), std::end(fastSet), index) ==
+          std::end(fastSet)) {
+
+        fastSet.push_back(index);
+      }
+    }
+    unsigned char temp[20];
+    sha1->reset();
+    message_digest::digest(temp, sizeof(temp), sha1.get(), x, sizeof(x));
+    memcpy(x, temp, sizeof(x));
+  }
+
+  return fastSet;
+}
+
+std::string generatePeerId(const std::string& peerIdPrefix)
+{
+  std::string peerId = peerIdPrefix;
+  unsigned char buf[20];
+  int len = 20 - peerIdPrefix.size();
+  if (len > 0) {
+    util::generateRandomData(buf, len);
+    peerId.append(&buf[0], &buf[len]);
+  }
+  if (peerId.size() > 20) {
+    peerId.erase(20);
+  }
+  return peerId;
+}
+
+namespace {
+std::string peerId;
+std::string peerAgent;
+} // namespace
+
+const std::string& generateStaticPeerId(const std::string& peerIdPrefix)
+{
+  if (peerId.empty()) {
+    peerId = generatePeerId(peerIdPrefix);
+  }
+  return peerId;
+}
+
+const std::string& generateStaticPeerAgent(const std::string& peerAgentNew)
+{
+  if (peerAgent.empty()) {
+    peerAgent = peerAgentNew;
+  }
+  return peerAgent;
+}
+
+void setStaticPeerId(const std::string& newPeerId) { peerId = newPeerId; }
+void setStaticPeerAgent(const std::string& newPeerAgent)
+{
+  peerAgent = newPeerAgent;
+}
+
+// If PeerID is not generated, it is created with default peerIdPrefix
+// (aria2-).
+const unsigned char* getStaticPeerId()
+{
+  if (peerId.empty()) {
+    return reinterpret_cast<const unsigned char*>(
+        generateStaticPeerId(DEFAULT_PEER_ID_PREFIX).data());
+  }
+  else {
+    return reinterpret_cast<const unsigned char*>(peerId.data());
+  }
+}
+
+// If PeerAgent is not generated, it is created with default agent
+// aria2-next/PACKAGE_VERSION
+const std::string& getStaticPeerAgent()
+{
+  if (peerAgent.empty()) {
+    generateStaticPeerAgent(DEFAULT_PEER_AGENT);
+  }
+  return peerAgent;
+}
+
+uint8_t getId(const unsigned char* msg) { return msg[0]; }
+
 uint64_t getLLIntParam(const unsigned char* msg, size_t pos)
 {
   uint64_t nParam;
@@ -651,6 +780,56 @@ uint16_t getShortIntParam(const unsigned char* msg, size_t pos)
   return ntohs(nParam);
 }
 
+void checkIndex(size_t index, size_t pieces)
+{
+  if (!(index < pieces)) {
+    throw DL_ABORT_EX(
+        fmt("Invalid index: %lu", static_cast<unsigned long>(index)));
+  }
+}
+
+void checkBegin(int32_t begin, int32_t pieceLength)
+{
+  if (!(begin < pieceLength)) {
+    throw DL_ABORT_EX(fmt("Invalid begin: %d", begin));
+  }
+}
+
+void checkLength(int32_t length)
+{
+  if (length > static_cast<int32_t>(MAX_BLOCK_LENGTH)) {
+    throw DL_ABORT_EX(fmt("Length too long: %d > %dKB", length,
+                          static_cast<int32_t>(MAX_BLOCK_LENGTH / 1024)));
+  }
+  if (length == 0) {
+    throw DL_ABORT_EX(fmt("Invalid length: %d", length));
+  }
+}
+
+void checkRange(int32_t begin, int32_t length, int32_t pieceLength)
+{
+  if (!(0 < length)) {
+    throw DL_ABORT_EX(fmt("Invalid range: begin=%d, length=%d", begin, length));
+  }
+  int32_t end = begin + length;
+  if (!(end <= pieceLength)) {
+    throw DL_ABORT_EX(fmt("Invalid range: begin=%d, length=%d", begin, length));
+  }
+}
+
+void checkBitfield(const unsigned char* bitfield, size_t bitfieldLength,
+                   size_t pieces)
+{
+  if (!(bitfieldLength == (pieces + 7) / 8)) {
+    throw DL_ABORT_EX(fmt("Invalid bitfield length: %lu",
+                          static_cast<unsigned long>(bitfieldLength)));
+  }
+  // Check if last byte contains garbage set bit.
+  if (bitfield[bitfieldLength - 1] & ~bitfield::lastByteMask(pieces)) {
+    throw DL_ABORT_EX("Invalid bitfield");
+  }
+}
+
 void setLLIntParam(unsigned char* dest, uint64_t param)
 {
   uint64_t nParam = hton64(param);
@@ -667,6 +846,15 @@ void setShortIntParam(unsigned char* dest, uint16_t param)
 {
   uint16_t nParam = htons(param);
   memcpy(dest, &nParam, sizeof(nParam));
+}
+
+void createPeerMessageString(unsigned char* msg, size_t msgLength,
+                             size_t payloadLength, uint8_t messageId)
+{
+  assert(msgLength >= 5);
+  memset(msg, 0, msgLength);
+  setIntParam(msg, payloadLength);
+  msg[4] = messageId;
 }
 
 size_t packcompact(unsigned char* compact, const std::string& addr,
@@ -694,6 +882,33 @@ std::pair<std::string, uint16_t> unpackcompact(const unsigned char* compact,
     r.second = ntohs(portN);
   }
   return r;
+}
+
+void assertPayloadLengthGreater(size_t threshold, size_t actual,
+                                const char* msgName)
+{
+  if (actual <= threshold) {
+    throw DL_ABORT_EX(fmt(MSG_TOO_SMALL_PAYLOAD_SIZE, msgName,
+                          static_cast<unsigned long>(actual)));
+  }
+}
+
+void assertPayloadLengthEqual(size_t expected, size_t actual,
+                              const char* msgName)
+{
+  if (expected != actual) {
+    throw DL_ABORT_EX(fmt(EX_INVALID_PAYLOAD_SIZE, msgName,
+                          static_cast<unsigned long>(actual),
+                          static_cast<unsigned long>(expected)));
+  }
+}
+
+void assertID(uint8_t expected, const unsigned char* data, const char* msgName)
+{
+  uint8_t id = getId(data);
+  if (expected != id) {
+    throw DL_ABORT_EX(fmt(EX_INVALID_BT_MESSAGE_ID, id, msgName, expected));
+  }
 }
 
 std::unique_ptr<TorrentAttribute> parseMagnet(const std::string& magnet)
@@ -760,7 +975,7 @@ std::unique_ptr<TorrentAttribute> parseMagnet(const std::string& magnet)
 void loadMagnet(const std::string& magnet,
                 const std::shared_ptr<DownloadContext>& dctx)
 {
-  dctx->setAttribute(CTX_ATTR_TORRENT_METADATA, parseMagnet(magnet));
+  dctx->setAttribute(CTX_ATTR_BT, parseMagnet(magnet));
 }
 
 std::string metadata2Torrent(const std::string& metadata,

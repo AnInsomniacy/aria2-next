@@ -33,13 +33,17 @@
  */
 /* copyright --> */
 #include "InitiateConnectionCommandFactory.h"
-#include "CurlDownloadCommand.h"
+#include "HttpInitiateConnectionCommand.h"
+#include "FtpInitiateConnectionCommand.h"
 #include "Request.h"
 #include "RequestGroup.h"
 #include "DownloadEngine.h"
 #include "DlAbortEx.h"
 #include "fmt.h"
+#include "Option.h"
+#include "prefs.h"
 #include "SocketCore.h"
+#include "SocketRecvBuffer.h"
 
 namespace aria2 {
 
@@ -54,19 +58,29 @@ InitiateConnectionCommandFactory::createInitiateConnectionCommand(
       // for SSL
       || req->getProtocol() == "https"
 #endif // ENABLE_SSL
-      || req->getProtocol() == "ftp" || req->getProtocol() == "ftps" ||
-      req->getProtocol() == "sftp" || req->getProtocol() == "scp"
   ) {
-    if ((req->getProtocol() == "ftp" || req->getProtocol() == "ftps" ||
-         req->getProtocol() == "sftp" || req->getProtocol() == "scp") &&
-        req->getFile().empty()) {
-      throw DL_ABORT_EX(fmt("%s URI %s doesn't contain file path.",
-                            req->getProtocol().c_str(),
-                            req->getUri().c_str()));
+
+    if (requestGroup->getOption()->getAsBool(PREF_ENABLE_HTTP_KEEP_ALIVE)) {
+      req->setKeepAliveHint(true);
+    }
+    if (requestGroup->getOption()->getAsBool(PREF_ENABLE_HTTP_PIPELINING)) {
+      req->setPipeliningHint(true);
     }
 
-    return make_unique<CurlDownloadCommand>(cuid, req, fileEntry, requestGroup,
-                                            e);
+    return make_unique<HttpInitiateConnectionCommand>(cuid, req, fileEntry,
+                                                      requestGroup, e);
+  }
+  else if (req->getProtocol() == "ftp"
+#ifdef HAVE_LIBSSH2
+           || req->getProtocol() == "sftp"
+#endif // HAVE_LIBSSH2
+  ) {
+    if (req->getFile().empty()) {
+      throw DL_ABORT_EX(fmt("FTP/SFTP URI %s doesn't contain file path.",
+                            req->getUri().c_str()));
+    }
+    return make_unique<FtpInitiateConnectionCommand>(cuid, req, fileEntry,
+                                                     requestGroup, e);
   }
   else {
     // these protocols are not supported yet

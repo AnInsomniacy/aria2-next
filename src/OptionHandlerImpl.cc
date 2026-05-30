@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "OptionHandlerImpl.h"
 
 #include <cassert>
@@ -58,6 +57,7 @@
 #include "File.h"
 #include "FileEntry.h"
 #include "a2io.h"
+#include "LogFactory.h"
 #include "uri.h"
 #include "SegList.h"
 #include "array_fun.h"
@@ -600,6 +600,66 @@ std::string PrioritizePieceOptionHandler::createPossibleValuesString() const
   return "head[=SIZE], tail[=SIZE]";
 }
 
+OptimizeConcurrentDownloadsOptionHandler::
+    OptimizeConcurrentDownloadsOptionHandler(PrefPtr pref,
+                                             const char* description,
+                                             const std::string& defaultValue,
+                                             char shortName)
+    : AbstractOptionHandler(pref, description, defaultValue,
+                            OptionHandler::OPT_ARG, shortName)
+{
+}
+
+void OptimizeConcurrentDownloadsOptionHandler::parseArg(
+    Option& option, const std::string& optarg) const
+{
+  if (optarg == "true" || optarg.empty()) {
+    option.put(pref_, A2_V_TRUE);
+  }
+  else if (optarg == "false") {
+    option.put(pref_, A2_V_FALSE);
+  }
+  else {
+    auto p = util::divide(std::begin(optarg), std::end(optarg), ':');
+
+    std::string coeff_b(p.second.first, p.second.second);
+    if (coeff_b.empty()) {
+      std::string msg = pref_->k;
+      msg += " ";
+      msg += _("must be either 'true', 'false' or a pair numeric coefficients "
+               "A and B under the form 'A:B'.");
+      throw DL_ABORT_EX(msg);
+    }
+
+    std::string coeff_a(p.first.first, p.first.second);
+
+    PrefPtr pref = PREF_OPTIMIZE_CONCURRENT_DOWNLOADS_COEFFA;
+    std::string* sptr = &coeff_a;
+    for (;;) {
+      char* end;
+      errno = 0;
+      strtod(sptr->c_str(), &end);
+      if (errno != 0 || sptr->c_str() + sptr->size() != end) {
+        throw DL_ABORT_EX(fmt("Bad number '%s'", sptr->c_str()));
+      }
+      option.put(pref, *sptr);
+
+      if (pref == PREF_OPTIMIZE_CONCURRENT_DOWNLOADS_COEFFB) {
+        break;
+      }
+      pref = PREF_OPTIMIZE_CONCURRENT_DOWNLOADS_COEFFB;
+      sptr = &coeff_b;
+    }
+    option.put(pref_, A2_V_TRUE);
+  }
+}
+
+std::string
+OptimizeConcurrentDownloadsOptionHandler::createPossibleValuesString() const
+{
+  return "true, false, A:B";
+}
+
 DeprecatedOptionHandler::DeprecatedOptionHandler(
     OptionHandler* depOptHandler, const OptionHandler* repOptHandler,
     bool stillWork, std::string additionalMessage)
@@ -621,19 +681,19 @@ void DeprecatedOptionHandler::parse(Option& option,
                                     const std::string& arg) const
 {
   if (repOptHandler_) {
-    ARIA2_LOG_WARN(fmt(_("--%s option is deprecated. Use --%s option instead. %s"),
+    A2_LOG_WARN(fmt(_("--%s option is deprecated. Use --%s option instead. %s"),
                     depOptHandler_->getName(), repOptHandler_->getName(),
                     additionalMessage_.c_str()));
     repOptHandler_->parse(option, arg);
   }
   else if (stillWork_) {
-    ARIA2_LOG_WARN(fmt(_("--%s option will be deprecated in the future release. "
+    A2_LOG_WARN(fmt(_("--%s option will be deprecated in the future release. "
                       "%s"),
                     depOptHandler_->getName(), additionalMessage_.c_str()));
     depOptHandler_->parse(option, arg);
   }
   else {
-    ARIA2_LOG_WARN(fmt(_("--%s option is deprecated. %s"),
+    A2_LOG_WARN(fmt(_("--%s option is deprecated. %s"),
                     depOptHandler_->getName(), additionalMessage_.c_str()));
   }
 }

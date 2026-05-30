@@ -114,7 +114,7 @@
 #define MSG_LOADING_SEGMENT_FILE _("Loading the segment file %s.")
 #define MSG_LOADED_SEGMENT_FILE _("The segment file was loaded successfully.")
 #define MSG_NO_URL_TO_DOWNLOAD _("No URI to download. Download aborted.")
-#define MSG_FILE_ALREADY_EXISTS _("File %s exists, but a control file(*.aria2) does not exist. Download was canceled in order to prevent your file from being truncated to 0. If you are sure to download the file all over again, then delete it or add --allow-overwrite=true option and restart Aria2 Next.")
+#define MSG_FILE_ALREADY_EXISTS _("File %s exists, but a control file(*.aria2) does not exist. Download was canceled in order to prevent your file from being truncated to 0. If you are sure to download the file all over again, then delete it or add --allow-overwrite=true option and restart aria2.")
 #define MSG_ALLOCATING_FILE _("Allocating file %s, %s bytes")
 #define MSG_FILE_NOT_FOUND _("File not found")
 #define MSG_NOT_DIRECTORY _("Not a directory")
@@ -130,6 +130,7 @@
 #define MSG_ALLOCATION_COMPLETED "%ld seconds to allocate %" PRId64 " byte(s)"
 #define MSG_FILE_ALLOCATION_DISPATCH                    \
   "Dispatching FileAllocationCommand for CUID#%" PRId64 "."
+#define MSG_METALINK_QUEUEING _("Metalink: Queueing %s for download.")
 #define MSG_FILE_DOWNLOAD_COMPLETED _("Download complete: %s")
 #define MSG_SEEDING_END _("Seeding is over.")
 #define MSG_NO_CHUNK_CHECKSUM _("No chunk to verify.")
@@ -145,6 +146,7 @@
 #define MSG_STRING_INTEGER_CONVERSION_FAILURE _("Failed to convert string into value: %s")
 #define MSG_RESOURCE_NOT_FOUND _("Resource not found")
 #define MSG_FILE_RENAMED _("File already exists. Renamed to %s.")
+#define MSG_CANNOT_PARSE_METALINK _("Cannot parse metalink XML file. XML may be malformed.")
 #define MSG_TOO_SMALL_PAYLOAD_SIZE _("Too small payload size for %s, size=%lu.")
 #define MSG_REMOVED_DEFUNCT_CONTROL_FILE _("Removed the defunct control file %s because the download file %s doesn't exist.")
 #define MSG_SHARE_RATIO_REPORT _("Your share ratio was %.1f, uploaded/downloaded=%sB/%sB")
@@ -153,10 +155,20 @@
 #define MSG_NULL_TRACKER_RESPONSE _("Tracker returned null data.")
 #define MSG_WINSOCK_INIT_FAILD _("Windows socket library initialization failed")
 #define MSG_TIME_HAS_PASSED _("%ld second(s) has passed. Stopping application.")
-#define MSG_SIGNATURE_SAVED _("Saved signature as %s. Please note that Aria2 Next" \
+#define MSG_SIGNATURE_SAVED _("Saved signature as %s. Please note that aria2" \
                               " doesn't verify signatures.")
 #define MSG_SIGNATURE_NOT_SAVED _("Saving signature as %s failed. Maybe file" \
                                   " already exists.")
+#define MSG_OPENING_READABLE_SERVER_STAT_FILE_FAILED    \
+  _("Failed to open ServerStat file %s for read.")
+#define MSG_SERVER_STAT_LOADED _("ServerStat file %s loaded successfully.")
+#define MSG_READING_SERVER_STAT_FILE_FAILED _("Failed to read ServerStat from" \
+                                              " %s.")
+#define MSG_OPENING_WRITABLE_SERVER_STAT_FILE_FAILED    \
+  _("Failed to open ServerStat file %s for write.")
+#define MSG_SERVER_STAT_SAVED _("ServerStat file %s saved successfully.")
+#define MSG_WRITING_SERVER_STAT_FILE_FAILED _("Failed to write ServerStat to" \
+                                              " %s.")
 #define MSG_ESTABLISHING_CONNECTION_FAILED              \
   _("Failed to establish connection, cause: %s")
 #define MSG_NETWORK_PROBLEM _("Network problem has occurred. cause:%s")
@@ -182,8 +194,10 @@
     " protocol. The integrity and confidentiality of the connection might be" \
     " compromised.\nProtocol: %s, Peer: %s")
 #define MSG_SHOW_FILES _("Printing the contents of file '%s'...")
-#define MSG_NOT_TORRENT _("This file is not a Torrent file. Skipping.")
+#define MSG_NOT_TORRENT_METALINK _("This file is neither Torrent nor Metalink" \
+                                   " file. Skipping.")
 #define MSG_GID_NOT_PROVIDED "GID is not provided."
+#define MSG_CANNOT_PARSE_XML_RPC_REQUEST "Failed to parse xml-rpc request."
 #define MSG_GOOD_BYE_SEEDER "Client is in seed state: Good Bye Seeder;)"
 #define MSG_NOT_FILE _("Is '%s' a file?")
 #define MSG_INTERFACE_NOT_FOUND _("Failed to find given interface %s,"  \

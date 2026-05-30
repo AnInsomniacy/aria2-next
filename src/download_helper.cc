@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "download_helper.h"
 
 #include <algorithm>
@@ -41,6 +40,7 @@
 #include "RequestGroup.h"
 #include "Option.h"
 #include "prefs.h"
+#include "Metalink2RequestGroup.h"
 #include "ProtocolDetector.h"
 #include "paramed_string.h"
 #include "UriListParser.h"
@@ -51,6 +51,7 @@
 #include "message.h"
 #include "fmt.h"
 #include "FileEntry.h"
+#include "LogFactory.h"
 #include "File.h"
 #include "util.h"
 #include "array_fun.h"
@@ -62,8 +63,7 @@
 #include "MetadataInfo.h"
 #include "OptionParser.h"
 #include "SegList.h"
-#include "LibtorrentAttribute.h"
-#include "bencode2.h"
+#include "download_handlers.h"
 #include "ed2k_hash.h"
 #include "ed2k_kad.h"
 #include "ed2k_link.h"
@@ -73,7 +73,8 @@
 #include "SimpleRandomizer.h"
 #ifdef ENABLE_BITTORRENT
 #  include "bittorrent_helper.h"
-#  include <libtorrent/torrent_info.hpp>
+#  include "BtConstants.h"
+#  include "ValueBaseBencodeParser.h"
 #endif // ENABLE_BITTORRENT
 
 namespace aria2 {
@@ -175,7 +176,7 @@ std::string readLocalFile(const std::string& path)
 {
   BufferedFile fp(path.c_str(), BufferedFile::READ);
   if (!fp) {
-    throw DL_ABORT_EX(fmt("Cannot open local file: %s", path.c_str()));
+    throw DL_ABORT_EX(fmt("Cannot open ED2K metadata file: %s", path.c_str()));
   }
   std::ostringstream out;
   fp.transfer(out);
@@ -417,6 +418,7 @@ createEd2kRequestGroup(const std::string& ed2kUri,
     restoreEd2kKadOperationalState(attrs.get(), kadSnapshot);
   }
   dctx->setAttribute(CTX_ATTR_ED2K, std::move(attrs));
+  dctx->setAcceptMetalink(false);
   rg->setDownloadContext(dctx);
   const auto peerConnections =
       option->definedLocal(PREF_SPLIT)
@@ -507,6 +509,7 @@ createEd2kSearchRequestGroup(const ed2k::SearchQuery& query,
     }
   }
   dctx->setAttribute(CTX_ATTR_ED2K, std::move(attrs));
+  dctx->setAcceptMetalink(false);
   rg->setDownloadContext(dctx);
   rg->setNumConcurrentCommand(option->getAsInt(PREF_SPLIT));
   if (option->getAsBool(PREF_ENABLE_RPC)) {
@@ -516,7 +519,7 @@ createEd2kSearchRequestGroup(const ed2k::SearchQuery& query,
   return rg;
 }
 
-#ifdef ENABLE_BITTORRENT
+#if defined(ENABLE_BITTORRENT) || defined(ENABLE_METALINK)
 namespace {
 std::shared_ptr<MetadataInfo>
 createMetadataInfo(const std::shared_ptr<GroupId>& gid, const std::string& uri)
@@ -531,145 +534,57 @@ std::shared_ptr<MetadataInfo> createMetadataInfoDataOnly()
   return std::make_shared<MetadataInfo>();
 }
 } // namespace
-#endif // ENABLE_BITTORRENT
+#endif // ENABLE_BITTORRENT || ENABLE_METALINK
 
 #ifdef ENABLE_BITTORRENT
-
-namespace {
-bool isRemoteTorrentMetadataUrl(const std::string& uri)
-{
-  Request req;
-  if (!req.setUri(uri)) {
-    return false;
-  }
-  auto protocol = req.getProtocol();
-  return (protocol == "http" || protocol == "https" || protocol == "ftp" ||
-          protocol == "sftp") &&
-         util::iendsWith(req.getFile(), ".torrent");
-}
-
-std::shared_ptr<RequestGroup> createRemoteTorrentMetadataMemoryRequestGroup(
-    const std::shared_ptr<Option>& option, std::vector<std::string> uris)
-{
-  auto rg = createRequestGroup(option, std::move(uris), true);
-  rg->markInMemoryDownload();
-  rg->setDiskWriterFactory(std::make_shared<ByteArrayDiskWriterFactory>());
-  rg->setNumConcurrentCommand(1);
-  return rg;
-}
-
-void applyTrackerOptions(LibtorrentAttribute* attrs,
-                         const std::shared_ptr<Option>& option,
-                         TorrentAttribute* torrentAttrs)
-{
-  bittorrent::adjustAnnounceUri(torrentAttrs, option);
-  int tier = 0;
-  for (auto& trackerTier : torrentAttrs->announceList) {
-    for (auto& uri : trackerTier) {
-      attrs->trackerUris.push_back(uri);
-      attrs->trackerTiers.push_back(tier);
-    }
-    ++tier;
-  }
-}
-
-std::string createBtControlFilePath(const std::shared_ptr<Option>& option,
-                                    const std::string& key)
-{
-  return util::applyDir(option->get(PREF_DIR), key + ".aria2");
-}
-
-std::string
-createBtInfoHashControlFilePath(const std::shared_ptr<Option>& option,
-                                const std::string& infoHash)
-{
-  return createBtControlFilePath(option, util::toHex(infoHash));
-}
-
-std::string createBtGidControlFilePath(const std::shared_ptr<Option>& option,
-                                       const std::shared_ptr<GroupId>& gid)
-{
-  return createBtControlFilePath(option, "gid-" + gid->toHex());
-}
-
-std::shared_ptr<RequestGroup>
-createLibtorrentRequestGroup(LibtorrentAttribute::SourceType sourceType,
-                             const std::string& sourceUri,
-                             const std::string& torrentData,
-                             const std::vector<std::string>& webSeedUris,
-                             const std::shared_ptr<Option>& optionTemplate,
-                             const std::string& controlFilePath,
-                             const std::string& infoHash = "")
-{
-  auto option = util::copy(optionTemplate);
-  auto gid = getGID(option);
-  auto rg = std::make_shared<RequestGroup>(gid, option);
-  auto dctx = std::make_shared<DownloadContext>();
-  dctx->markTotalLengthIsUnknown();
-  auto displayName =
-      sourceType == LibtorrentAttribute::SourceType::MAGNET
-          ? std::string("magnet")
-          : File(sourceUri).getBasename();
-  if (displayName.empty()) {
-    displayName = "torrent";
-  }
-  std::vector<std::shared_ptr<FileEntry>> entries;
-  entries.push_back(
-      std::make_shared<FileEntry>(util::applyDir(option->get(PREF_DIR),
-                                                util::escapePath(displayName)),
-                                  0, 0));
-  dctx->setFileEntries(entries.begin(), entries.end());
-  auto attrs = make_unique<LibtorrentAttribute>(sourceType, sourceUri,
-                                                torrentData, webSeedUris,
-                                                controlFilePath.empty()
-                                                    ? createBtGidControlFilePath(
-                                                          option, gid)
-                                                    : controlFilePath,
-                                                infoHash);
-  if (option->defined(PREF_SELECT_FILE)) {
-    attrs->selectedFiles = option->get(PREF_SELECT_FILE);
-  }
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-  rg->setDownloadContext(dctx);
-  rg->setFileAllocationEnabled(false);
-  rg->setPreLocalFileCheckEnabled(false);
-  rg->setMetadataInfo(createMetadataInfo(gid, sourceUri));
-  rg->setNumConcurrentCommand(option->getAsInt(PREF_SPLIT));
-  if (option->getAsBool(PREF_ENABLE_RPC)) {
-    rg->setPauseRequested(option->getAsBool(PREF_PAUSE));
-  }
-  removeOneshotOption(option);
-  return rg;
-}
-} // namespace
 
 namespace {
 std::shared_ptr<RequestGroup>
 createBtRequestGroup(const std::string& metaInfoUri,
                      const std::shared_ptr<Option>& optionTemplate,
                      const std::vector<std::string>& auxUris,
-                     const std::string& torrentData,
-                     bool adjustAnnounceUri = true)
+                     const ValueBase* torrent, bool adjustAnnounceUri = true)
 {
-  if (torrentData.empty()) {
-    throw DL_ABORT_EX2("Bencode decoding failed",
-                       error_code::BENCODE_PARSE_ERROR);
+  auto option = util::copy(optionTemplate);
+  auto gid = getGID(option);
+  auto rg = std::make_shared<RequestGroup>(gid, option);
+  auto dctx = std::make_shared<DownloadContext>();
+  // may throw exception
+  bittorrent::loadFromMemory(torrent, dctx, option, auxUris,
+                             metaInfoUri.empty() ? "default" : metaInfoUri);
+  for (auto& fe : dctx->getFileEntries()) {
+    auto& uris = fe->getRemainingUris();
+    std::shuffle(std::begin(uris), std::end(uris),
+                 *SimpleRandomizer::getInstance());
   }
-  auto torrentDctx = std::make_shared<DownloadContext>();
-  bittorrent::loadFromMemory(torrentData, torrentDctx, optionTemplate,
-                             std::vector<std::string>(),
-                             metaInfoUri.empty() ? "torrent" : metaInfoUri);
-  auto torrentAttrs = bittorrent::getTorrentAttrs(torrentDctx);
-  auto rg = createLibtorrentRequestGroup(
-      metaInfoUri.empty() ? LibtorrentAttribute::SourceType::TORRENT_DATA
-                          : LibtorrentAttribute::SourceType::TORRENT_FILE,
-      metaInfoUri, torrentData, auxUris, optionTemplate,
-      createBtInfoHashControlFilePath(optionTemplate, torrentAttrs->infoHash),
-      torrentAttrs->infoHash);
-  auto attrs = getLibtorrentAttrs(rg->getDownloadContext());
+  if (metaInfoUri.empty()) {
+    rg->setMetadataInfo(createMetadataInfoDataOnly());
+  }
+  else {
+    rg->setMetadataInfo(createMetadataInfo(gid, metaInfoUri));
+  }
   if (adjustAnnounceUri) {
-    applyTrackerOptions(attrs, rg->getOption(), torrentAttrs);
+    bittorrent::adjustAnnounceUri(bittorrent::getTorrentAttrs(dctx), option);
   }
+  auto sgl = util::parseIntSegments(option->get(PREF_SELECT_FILE));
+  sgl.normalize();
+  dctx->setFileFilter(std::move(sgl));
+  std::istringstream indexOutIn(option->get(PREF_INDEX_OUT));
+  auto indexPaths = util::createIndexPaths(indexOutIn);
+  for (const auto& i : indexPaths) {
+    dctx->setFilePathWithIndex(i.first,
+                               util::applyDir(option->get(PREF_DIR), i.second));
+  }
+  rg->setDownloadContext(dctx);
+
+  if (option->getAsBool(PREF_ENABLE_RPC)) {
+    rg->setPauseRequested(option->getAsBool(PREF_PAUSE));
+  }
+
+  // Remove "metalink" from Accept Type list to avoid server from
+  // responding Metalink file for web-seeding URIs.
+  dctx->setAcceptMetalink(false);
+  removeOneshotOption(option);
   return rg;
 }
 } // namespace
@@ -679,15 +594,67 @@ std::shared_ptr<RequestGroup>
 createBtMagnetRequestGroup(const std::string& magnetLink,
                            const std::shared_ptr<Option>& optionTemplate)
 {
-  auto torrentAttrs = bittorrent::parseMagnet(magnetLink);
-  auto rg = createLibtorrentRequestGroup(
-      LibtorrentAttribute::SourceType::MAGNET, magnetLink, "", {},
-      optionTemplate,
-      createBtInfoHashControlFilePath(optionTemplate, torrentAttrs->infoHash),
-      torrentAttrs->infoHash);
-  auto attrs = getLibtorrentAttrs(rg->getDownloadContext());
-  attrs->pauseAfterMetadata = rg->getOption()->getAsBool(PREF_PAUSE_METADATA);
-  applyTrackerOptions(attrs, rg->getOption(), torrentAttrs.get());
+  auto dctx = std::make_shared<DownloadContext>(METADATA_PIECE_SIZE, 0);
+
+  // We only know info hash. Total Length is unknown at this moment.
+  dctx->markTotalLengthIsUnknown();
+
+  bittorrent::loadMagnet(magnetLink, dctx);
+  auto torrentAttrs = bittorrent::getTorrentAttrs(dctx);
+
+  if (optionTemplate->getAsBool(PREF_BT_LOAD_SAVED_METADATA)) {
+    // Try to read .torrent file saved by aria2 (see
+    // UTMetadataPostDownloadHandler and --bt-save-metadata option).
+    auto torrentFilename =
+        util::applyDir(optionTemplate->get(PREF_DIR),
+                       util::toHex(torrentAttrs->infoHash) + ".torrent");
+
+    bittorrent::ValueBaseBencodeParser parser;
+    auto torrent = parseFile(parser, torrentFilename);
+    if (torrent) {
+      auto rg = createBtRequestGroup(torrentFilename, optionTemplate, {},
+                                     torrent.get());
+      const auto& actualInfoHash =
+          bittorrent::getTorrentAttrs(rg->getDownloadContext())->infoHash;
+
+      if (torrentAttrs->infoHash == actualInfoHash) {
+        A2_LOG_NOTICE(fmt("BitTorrent metadata was loaded from %s",
+                          torrentFilename.c_str()));
+        rg->setMetadataInfo(createMetadataInfo(rg->getGroupId(), magnetLink));
+        return rg;
+      }
+
+      A2_LOG_WARN(
+          fmt("BitTorrent metadata loaded from %s has unexpected infohash %s\n",
+              torrentFilename.c_str(), util::toHex(actualInfoHash).c_str()));
+    }
+  }
+
+  auto option = util::copy(optionTemplate);
+  bittorrent::adjustAnnounceUri(torrentAttrs, option);
+  // torrentAttrs->name may contain "/", but we use basename of
+  // FileEntry::getPath() to print out in-memory download entry.
+  // Since "/" is treated as separator, we replace it with "-".
+  dctx->getFirstFileEntry()->setPath(
+      util::replace(torrentAttrs->name, "/", "-"));
+
+  auto gid = getGID(option);
+  auto rg = std::make_shared<RequestGroup>(gid, option);
+  rg->setFileAllocationEnabled(false);
+  rg->setPreLocalFileCheckEnabled(false);
+  rg->setDownloadContext(dctx);
+  rg->clearPostDownloadHandler();
+  rg->addPostDownloadHandler(
+      download_handlers::getUTMetadataPostDownloadHandler());
+  rg->setDiskWriterFactory(std::make_shared<ByteArrayDiskWriterFactory>());
+  rg->setMetadataInfo(createMetadataInfo(gid, magnetLink));
+  rg->markInMemoryDownload();
+
+  if (option->getAsBool(PREF_ENABLE_RPC)) {
+    rg->setPauseRequested(option->getAsBool(PREF_PAUSE));
+  }
+
+  removeOneshotOption(option);
   return rg;
 }
 } // namespace
@@ -698,10 +665,29 @@ void createRequestGroupForBitTorrent(
     const std::string& metaInfoUri, const std::string& torrentData,
     bool adjustAnnounceUri)
 {
-  std::string data = torrentData;
+  std::unique_ptr<ValueBase> torrent;
+  bittorrent::ValueBaseBencodeParser parser;
   if (torrentData.empty()) {
-    data = readLocalFile(metaInfoUri);
+    torrent = parseFile(parser, metaInfoUri);
   }
+  else {
+    ssize_t error;
+    torrent = parser.parseFinal(torrentData.c_str(), torrentData.size(), error);
+  }
+  if (!torrent) {
+    throw DL_ABORT_EX2("Bencode decoding failed",
+                       error_code::BENCODE_PARSE_ERROR);
+  }
+  createRequestGroupForBitTorrent(result, option, uris, metaInfoUri,
+                                  torrent.get(), adjustAnnounceUri);
+}
+
+void createRequestGroupForBitTorrent(
+    std::vector<std::shared_ptr<RequestGroup>>& result,
+    const std::shared_ptr<Option>& option, const std::vector<std::string>& uris,
+    const std::string& metaInfoUri, const ValueBase* torrent,
+    bool adjustAnnounceUri)
+{
   std::vector<std::string> nargs;
   if (option->get(PREF_PARAMETERIZED_URI) == A2_V_TRUE) {
     unfoldURI(nargs, uris);
@@ -711,13 +697,32 @@ void createRequestGroupForBitTorrent(
   }
   // we ignore -Z option here
   size_t numSplit = option->getAsInt(PREF_SPLIT);
-  auto rg = createBtRequestGroup(metaInfoUri, option, nargs, data,
+  auto rg = createBtRequestGroup(metaInfoUri, option, nargs, torrent,
                                  adjustAnnounceUri);
   rg->setNumConcurrentCommand(numSplit);
   result.push_back(rg);
 }
 
 #endif // ENABLE_BITTORRENT
+
+#ifdef ENABLE_METALINK
+void createRequestGroupForMetalink(
+    std::vector<std::shared_ptr<RequestGroup>>& result,
+    const std::shared_ptr<Option>& option, const std::string& metalinkData)
+{
+  if (metalinkData.empty()) {
+    Metalink2RequestGroup().generate(result, option->get(PREF_METALINK_FILE),
+                                     option,
+                                     option->get(PREF_METALINK_BASE_URI));
+  }
+  else {
+    auto dw = std::make_shared<ByteArrayDiskWriter>();
+    dw->setString(metalinkData);
+    Metalink2RequestGroup().generate(result, dw, option,
+                                     option->get(PREF_METALINK_BASE_URI));
+  }
+}
+#endif // ENABLE_METALINK
 
 namespace {
 class AccRequestGroup {
@@ -741,15 +746,6 @@ public:
 
   void operator()(const std::string& uri)
   {
-#ifdef ENABLE_BITTORRENT
-    if (isRemoteTorrentMetadataUrl(uri) &&
-        option_->get(PREF_TORRENT_METADATA) == "memory") {
-      requestGroups_.push_back(createRemoteTorrentMetadataMemoryRequestGroup(
-          option_, std::vector<std::string>{uri}));
-      return;
-    }
-#endif // ENABLE_BITTORRENT
-
     if (detector_.isStreamProtocol(uri)) {
       std::vector<std::string> streamURIs;
       size_t numIter = option_->getAsInt(PREF_MAX_CONNECTION_PER_SERVER);
@@ -768,9 +764,14 @@ public:
     }
     else if (!ignoreLocalPath_ && detector_.guessTorrentFile(uri)) {
       try {
-        auto torrentData = readLocalFile(uri);
+        bittorrent::ValueBaseBencodeParser parser;
+        auto torrent = parseFile(parser, uri);
+        if (!torrent) {
+          throw DL_ABORT_EX2("Bencode decoding failed",
+                             error_code::BENCODE_PARSE_ERROR);
+        }
         requestGroups_.push_back(
-            createBtRequestGroup(uri, option_, {}, torrentData));
+            createBtRequestGroup(uri, option_, {}, torrent.get()));
       }
       catch (RecoverableException& e) {
         if (throwOnError_) {
@@ -779,7 +780,7 @@ public:
         else {
           // error occurred while parsing torrent file.
           // We simply ignore it.
-          ARIA2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
+          A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
         }
       }
     }
@@ -793,16 +794,34 @@ public:
           throw;
         }
         else {
-          ARIA2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
+          A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
         }
       }
     }
+#ifdef ENABLE_METALINK
+    else if (!ignoreLocalPath_ && detector_.guessMetalinkFile(uri)) {
+      try {
+        Metalink2RequestGroup().generate(requestGroups_, uri, option_,
+                                         option_->get(PREF_METALINK_BASE_URI));
+      }
+      catch (RecoverableException& e) {
+        if (throwOnError_) {
+          throw;
+        }
+        else {
+          // error occurred while parsing metalink file.
+          // We simply ignore it.
+          A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
+        }
+      }
+    }
+#endif // ENABLE_METALINK
     else {
       if (throwOnError_) {
         throw DL_ABORT_EX(fmt(MSG_UNRECOGNIZED_URI, uri.c_str()));
       }
       else {
-        ARIA2_LOG_ERROR(fmt(MSG_UNRECOGNIZED_URI, uri.c_str()));
+        A2_LOG_ERROR(fmt(MSG_UNRECOGNIZED_URI, uri.c_str()));
       }
     }
   }
@@ -821,27 +840,6 @@ public:
   }
 };
 } // namespace
-
-#ifdef ENABLE_BITTORRENT
-namespace {
-class RemoteTorrentMetadataMemoryFilter {
-private:
-  const std::shared_ptr<Option>& option_;
-
-public:
-  explicit RemoteTorrentMetadataMemoryFilter(const std::shared_ptr<Option>& option)
-      : option_(option)
-  {
-  }
-
-  bool operator()(const std::string& uri)
-  {
-    return option_->get(PREF_TORRENT_METADATA) == "memory" &&
-           isRemoteTorrentMetadataUrl(uri);
-  }
-};
-} // namespace
-#endif // ENABLE_BITTORRENT
 
 void createRequestGroupForUri(
     std::vector<std::shared_ptr<RequestGroup>>& result,
@@ -862,26 +860,14 @@ void createRequestGroupForUri(
         AccRequestGroup(result, option, ignoreLocalPath, throwOnError));
   }
   else {
-#ifdef ENABLE_BITTORRENT
-    auto memoryTorrentEnd = std::stable_partition(
-        std::begin(nargs), std::end(nargs),
-        RemoteTorrentMetadataMemoryFilter(option));
-    if (std::begin(nargs) != memoryTorrentEnd) {
-      result.push_back(createRemoteTorrentMetadataMemoryRequestGroup(
-          option, std::vector<std::string>(std::begin(nargs),
-                                           memoryTorrentEnd)));
-    }
-#else  // !ENABLE_BITTORRENT
-    auto memoryTorrentEnd = std::begin(nargs);
-#endif // !ENABLE_BITTORRENT
     auto strmProtoEnd = std::stable_partition(
-        memoryTorrentEnd, std::end(nargs), StreamProtocolFilter());
+        std::begin(nargs), std::end(nargs), StreamProtocolFilter());
     // let's process http/ftp protocols first.
-    if (memoryTorrentEnd != strmProtoEnd) {
+    if (std::begin(nargs) != strmProtoEnd) {
       size_t numIter = option->getAsInt(PREF_MAX_CONNECTION_PER_SERVER);
       size_t numSplit = option->getAsInt(PREF_SPLIT);
       std::vector<std::string> streamURIs;
-      splitURI(streamURIs, memoryTorrentEnd, strmProtoEnd, numSplit, numIter);
+      splitURI(streamURIs, std::begin(nargs), strmProtoEnd, numSplit, numIter);
       try {
         auto rg = createRequestGroup(option, streamURIs, true);
         rg->setNumConcurrentCommand(numSplit);
@@ -892,11 +878,11 @@ void createRequestGroupForUri(
           throw;
         }
         else {
-          ARIA2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
+          A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
         }
       }
     }
-    // process remaining URIs(local BitTorrent files)
+    // process remaining URIs(local metalink, BitTorrent files)
     std::for_each(
         strmProtoEnd, std::end(nargs),
         AccRequestGroup(result, option, ignoreLocalPath, throwOnError));

@@ -141,7 +141,9 @@ bool MessageDigest::isValidHash(const std::string& hashType,
 
 std::string MessageDigest::getCanonicalHashType(const std::string& hashType)
 {
-  // Keep only the historical aliases exposed by earlier aria2 releases.
+  // This is really backward compatibility for Metalink3.  aria2 only
+  // supported sha-1, sha-256 and md5 at Metalink3 era.  So we don't
+  // add alias for sha-224, sha-384 and sha-512.
   if ("sha1" == hashType) {
     return "sha-1";
   }

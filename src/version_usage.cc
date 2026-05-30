@@ -88,7 +88,7 @@ void showUsage(const std::string& keyword,
                const std::shared_ptr<OptionParser>& oparser, const Console& out)
 {
   out->printf(_("Usage: aria2-next [OPTIONS] [URI | MAGNET | ED2K_LINK |"
-                " TORRENT_FILE]..."));
+                " TORRENT_FILE | METALINK_FILE]..."));
   out->printf("\n");
   if (keyword.empty()) {
     // Very short version of usage.
@@ -142,7 +142,7 @@ void showUsage(const std::string& keyword,
     }
   }
   if (keyword == strHelpTag(TAG_BASIC)) {
-    out->printf("URI, MAGNET, ED2K_LINK, TORRENT_FILE:\n");
+    out->printf("URI, MAGNET, ED2K_LINK, TORRENT_FILE, METALINK_FILE:\n");
     out->printf(
         _(" You can specify multiple HTTP(S)/FTP URIs. Unless you specify -Z "
           "option, all\n"
@@ -150,8 +150,8 @@ void showUsage(const std::string& keyword,
     out->printf("\n");
     out->printf(_(" You can also specify arbitrary number of BitTorrent Magnet "
                   "URIs, ED2K file\n"
-                  " links and torrent files stored in a local drive. Please "
-                  "note that they\n"
+                  " links, torrent/metalink files stored in a local drive. "
+                  "Please note that they\n"
                   " are always treated as a separate download."));
     out->printf("\n\n");
     out->printf(_(" You can specify both torrent file with -T option and URIs. "
@@ -173,9 +173,12 @@ void showUsage(const std::string& keyword,
     out->printf("\n\n");
     out->printf(
         _("About the number of connections\n"
-          " Use --split and --max-connection-per-server to set the HTTP(S)/FTP "
-          "segmented transfer limit, and use\n"
-          " --min-split-size to control the minimum segment size.\n"
+          " Since 1.10.0 release, aria2 uses 1 connection per host by default "
+          "and has 20MiB\n"
+          " segment size restriction. So whatever value you specify using -s "
+          "option, it\n"
+          " uses 1 connection per host. To make it behave like 1.9.x, use\n"
+          " --max-connection-per-server=4 --min-split-size=1M.\n"
           "\n"));
   }
   out->printf(_("Refer to man page for more information."));

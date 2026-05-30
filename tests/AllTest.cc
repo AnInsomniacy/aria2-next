@@ -13,7 +13,7 @@
 #include "SocketCore.h"
 #include "util.h"
 #include "console.h"
-#include "Log.h"
+#include "LogFactory.h"
 #include "prefs.h"
 
 namespace {
@@ -58,7 +58,8 @@ int main(int argc, char* argv[])
   // Create output directory
   aria2::util::mkdirs(A2_TEST_OUT_DIR);
 
-  aria2::log::configureForTests();
+  aria2::LogFactory::setConsoleLogLevel(aria2::V_DEBUG);
+  aria2::LogFactory::reconfigure();
 
   CppUnit::Test* suite = CppUnit::TestFactoryRegistry::getRegistry().makeTest();
   if (argc > 1 && std::string(argv[1]) == "--list") {

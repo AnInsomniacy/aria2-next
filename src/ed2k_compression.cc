@@ -145,6 +145,36 @@ bool parseCompressedPartPayload(CompressedPartHeader& header,
   return true;
 }
 
+bool inflateCompressedPartData(std::string& inflatedData,
+                               const std::string& compressedData,
+                               size_t maxInflatedLength)
+{
+  z_stream strm;
+  std::memset(&strm, 0, sizeof(strm));
+  if (inflateInit(&strm) != Z_OK) {
+    return false;
+  }
+
+  inflatedData.assign(maxInflatedLength, '\0');
+  strm.avail_in = compressedData.size();
+  strm.next_in = reinterpret_cast<unsigned char*>(
+      const_cast<char*>(compressedData.data()));
+  strm.avail_out = inflatedData.size();
+  strm.next_out = reinterpret_cast<unsigned char*>(&inflatedData[0]);
+
+  const int rc = inflate(&strm, Z_FINISH);
+  const bool ok = rc == Z_STREAM_END && strm.avail_in == 0;
+  const size_t produced = inflatedData.size() - strm.avail_out;
+  inflateEnd(&strm);
+
+  if (!ok || produced != maxInflatedLength) {
+    inflatedData.clear();
+    return false;
+  }
+  inflatedData.resize(produced);
+  return true;
+}
+
 bool inflatePackedPacketPayload(std::string& inflatedData,
                                 const std::string& compressedData,
                                 size_t maxInflatedLength)

@@ -85,6 +85,10 @@ private:
 
   bool knowsTotalLength_;
 
+  // This member variable is required to avoid to use parse Metalink
+  // (including both Metalink XML and Metalink/HTTP) twice.
+  bool acceptMetalink_;
+
 public:
   DownloadContext();
 
@@ -219,6 +223,9 @@ public:
 
   void releaseRuntimeResource();
 
+  void setAcceptMetalink(bool f) { acceptMetalink_ = f; }
+  bool getAcceptMetalink() const { return acceptMetalink_; }
+
   NetStat& getNetStat() { return netStat_; }
 
   // This method also updates global download length held by
@@ -227,7 +234,6 @@ public:
 
   // This method also updates global upload length held by
   // RequestGroupMan via getOwnerRequestGroup().
-  void updateUpload(size_t bytes);
   void updateUploadLength(size_t bytes);
   void updateUploadSpeed(size_t bytes);
 };

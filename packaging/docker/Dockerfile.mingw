@@ -27,13 +27,34 @@ COPY packaging/scripts/release-size-profile /deps/packaging/scripts/release-size
 
 RUN . packaging/dependencies.env && \
     . packaging/scripts/common.sh && \
+    curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256" && \
+    curl_fetch "$SQLITE_URL" "$SQLITE_ARCHIVE" "$SQLITE_SHA256" && \
     curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256" && \
+    curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256" && \
     curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256" && \
-    curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256" && \
-    curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256" && \
-    curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256" && \
-    curl_fetch "$SPDLOG_URL" "$SPDLOG_ARCHIVE" "$SPDLOG_SHA256" && \
-    curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
+    curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
+
+RUN . packaging/dependencies.env && \
+    . packaging/scripts/release-size-profile windows && \
+    tar xf "$EXPAT_ARCHIVE" && \
+    cd "expat-$EXPAT_VERSION" && \
+    CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
+    ./configure \
+      --disable-shared --enable-static \
+      --prefix="$PREFIX" --host="$HOST" \
+      --build="$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)" && \
+    make -j"$(nproc)" install
+
+RUN . packaging/dependencies.env && \
+    . packaging/scripts/release-size-profile windows && \
+    tar xf "$SQLITE_ARCHIVE" && \
+    cd "sqlite-autoconf-$SQLITE_AUTOCONF_VERSION" && \
+    CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
+    ./configure \
+      --disable-shared --enable-static \
+      --prefix="$PREFIX" --host="$HOST" \
+      --build="$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)" && \
+    make -j"$(nproc)" install
 
 RUN . packaging/dependencies.env && \
     . packaging/scripts/release-size-profile windows && \
@@ -51,6 +72,19 @@ RUN . packaging/dependencies.env && \
 
 RUN . packaging/dependencies.env && \
     . packaging/scripts/release-size-profile windows && \
+    tar xf "$CARES_ARCHIVE" && \
+    cd "c-ares-$CARES_VERSION" && \
+    CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
+    ./configure \
+      --disable-shared --enable-static --without-random \
+      --prefix="$PREFIX" --host="$HOST" \
+      --build="$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)" \
+      LIBS="-lws2_32" \
+      ac_cv_func_if_indextoname=no && \
+    make -j"$(nproc)" install
+
+RUN . packaging/dependencies.env && \
+    . packaging/scripts/release-size-profile windows && \
     tar xf "$OPENSSL_ARCHIVE" && \
     cd "openssl-$OPENSSL_VERSION" && \
     ./Configure mingw64 no-shared no-module no-tests \
@@ -61,37 +95,19 @@ RUN . packaging/dependencies.env && \
     make install_sw
 
 RUN . packaging/dependencies.env && \
-    . packaging/scripts/common.sh && \
     . packaging/scripts/release-size-profile windows && \
-    ARIA2_BUILD_JOBS="$(nproc)" build_libssh2_for_curl \
-      -DCMAKE_SYSTEM_NAME=Windows \
-      -DCMAKE_C_COMPILER="$HOST-gcc" \
-      -DCMAKE_RC_COMPILER="$HOST-windres" \
-      -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
-
-RUN . packaging/dependencies.env && \
-    . packaging/scripts/common.sh && \
-    . packaging/scripts/release-size-profile windows && \
-    ARIA2_BUILD_JOBS="$(nproc)" build_curl \
-      -DCMAKE_SYSTEM_NAME=Windows \
-      -DCMAKE_C_COMPILER="$HOST-gcc" \
-      -DCMAKE_RC_COMPILER="$HOST-windres" \
-      -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
-
-RUN . packaging/dependencies.env && \
-    . packaging/scripts/common.sh && \
-    install_boost_headers && \
-    install_spdlog_headers
-
-RUN . packaging/dependencies.env && \
-    . packaging/scripts/common.sh && \
-    . packaging/scripts/release-size-profile windows && \
-    ARIA2_BUILD_JOBS="$(nproc)" build_libtorrent_rasterbar \
-      -DCMAKE_SYSTEM_NAME=Windows \
-      -DCMAKE_C_COMPILER="$HOST-gcc" \
-      -DCMAKE_CXX_COMPILER="$HOST-g++" \
-      -DCMAKE_RC_COMPILER="$HOST-windres" \
-      -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config
+    tar xf "$LIBSSH2_ARCHIVE" && \
+    cd "libssh2-$LIBSSH2_VERSION" && \
+    CPPFLAGS="-I$PREFIX/include $RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
+    ./configure \
+      --disable-shared --enable-static \
+      --disable-examples-build \
+      --prefix="$PREFIX" --host="$HOST" \
+      --build="$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)" \
+      --with-crypto=openssl --with-libssl-prefix="$PREFIX" \
+      PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
+      LIBS="-lws2_32 -lcrypt32" && \
+    make -j"$(nproc)" install
 
 COPY . /aria2
 WORKDIR /aria2
@@ -105,7 +121,18 @@ RUN . packaging/scripts/release-size-profile windows && \
       -DCMAKE_RC_COMPILER="$HOST-windres" \
       -DCMAKE_BUILD_TYPE=Release \
       -DARIA2_ENABLE_STATIC=ON \
+      -DARIA2_WITH_CARES=ON \
+      -DARIA2_WITH_GNUTLS=OFF \
+      -DARIA2_WITH_OPENSSL=OFF \
+      -DARIA2_WITH_WINTLS=ON \
+      -DARIA2_WITH_SQLITE3=ON \
+      -DARIA2_WITH_LIBXML2=OFF \
+      -DARIA2_WITH_EXPAT=ON \
       -DARIA2_WITH_ZLIB=ON \
+      -DARIA2_WITH_GMP=OFF \
+      -DARIA2_WITH_LIBSSH2=ON \
+      -DARIA2_WITH_LIBGCRYPT=OFF \
+      -DARIA2_WITH_LIBNETTLE=OFF \
       -DARIA2_RELEASE_SIZE_OPTIMIZED=ON \
       -DCMAKE_PREFIX_PATH="$PREFIX" \
       -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \

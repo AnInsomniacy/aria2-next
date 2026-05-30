@@ -10,7 +10,6 @@
  * (at your option) any later version.
  */
 /* copyright --> */
-#include "Log.h"
 #include "Ed2kCommand.h"
 
 #include <algorithm>
@@ -31,6 +30,8 @@
 #include "Ed2kSharedResponder.h"
 #include "Ed2kUploadQueue.h"
 #include "FileEntry.h"
+#include "LogFactory.h"
+#include "Logger.h"
 #include "MessageDigest.h"
 #include "message.h"
 #include "message_digest_helper.h"
@@ -222,14 +223,14 @@ Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
                          bool serverMode, bool countAsDownloadCommand)
     : AbstractCommand(cuid, makeEd2kRequest(endpoint, serverMode),
                       requestGroup->getDownloadContext()->getFirstFileEntry(),
-                      requestGroup, e, nullptr, true, countAsDownloadCommand),
+                      requestGroup, e, nullptr, nullptr, true,
+                      countAsDownloadCommand),
       mode_(serverMode ? Mode::SERVER : Mode::PEER),
       endpoint_(std::move(endpoint)),
       state_(State::INIT),
       connectedPort_(0),
       headerRead_(0),
       bodyRead_(0),
-      bodyConsumeRead_(0),
       peerFileStatusReceived_(false),
       peerFileRequestSent_(false),
       peerAccepted_(false),
@@ -267,14 +268,13 @@ Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
                          const std::shared_ptr<SocketCore>& socket)
     : AbstractCommand(cuid, makeEd2kRequest(endpoint, false),
                       requestGroup->getDownloadContext()->getFirstFileEntry(),
-                      requestGroup, e, socket, true, true),
+                      requestGroup, e, socket, nullptr, true, true),
       mode_(Mode::PEER),
       endpoint_(std::move(endpoint)),
       state_(State::READ_HEADER),
       connectedPort_(endpoint_.port),
       headerRead_(0),
       bodyRead_(0),
-      bodyConsumeRead_(0),
       peerFileStatusReceived_(false),
       peerFileRequestSent_(false),
       peerAccepted_(false),
@@ -392,7 +392,7 @@ void Ed2kCommand::initPeerObfuscation()
   obfuscationMethodRead_ = 0;
   obfuscationPaddingRead_ = 0;
   obfuscationPaddingBuf_.clear();
-  ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+  A2_LOG_DEBUG(fmt("CUID#%" PRId64
                    " - Starting obfuscated ED2K peer handshake with %s:%u.",
                    getCuid(), endpoint_.host.c_str(), endpoint_.port));
 }
@@ -492,7 +492,7 @@ bool Ed2kCommand::readObfuscationPadding()
     obfuscationPaddingRead_ += len;
   }
   obfuscationEnabled_ = true;
-  ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+  A2_LOG_DEBUG(fmt("CUID#%" PRId64
                    " - ED2K peer obfuscation handshake completed with %s:%u.",
                    getCuid(), endpoint_.host.c_str(), endpoint_.port));
   state_ = State::WRITE;
@@ -573,7 +573,7 @@ bool Ed2kCommand::execute()
   }
   catch (DlAbortEx& err) {
     getRequestGroup()->setLastErrorCode(err.getErrorCode(), err.what());
-    ARIA2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, err);
+    A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, err);
     return true;
   }
   catch (DlRetryEx& err) {
@@ -596,13 +596,13 @@ bool Ed2kCommand::execute()
                           retryWait);
       scheduleEd2kPeerCheck(getRequestGroup(), getDownloadEngine());
     }
-    ARIA2_LOG_INFO_EX(EX_EXCEPTION_CAUGHT, err);
+    A2_LOG_INFO_EX(EX_EXCEPTION_CAUGHT, err);
     return true;
   }
   catch (DownloadFailureException& err) {
     getRequestGroup()->setLastErrorCode(err.getErrorCode(), err.what());
     getRequestGroup()->setHaltRequested(true);
-    ARIA2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, err);
+    A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, err);
     return true;
   }
 }
@@ -610,17 +610,14 @@ bool Ed2kCommand::execute()
 void Ed2kCommand::queuePacket(uint8_t protocol, uint8_t opcode,
                               const std::string& payload)
 {
-  ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+  A2_LOG_DEBUG(fmt("CUID#%" PRId64
                    " - Queue ED2K %s packet protocol=0x%02x opcode=0x%02x "
                    "payload=%lu.",
                    getCuid(), mode_ == Mode::SERVER ? "server" : "peer",
                    protocol, opcode,
                    static_cast<unsigned long>(payload.size())));
-  ed2k::OutboundPacket packet;
-  packet.data = ed2k::createPacket(protocol, opcode, payload);
-  packet.fileData = opcode == ed2k::OP_SENDINGPART ||
-                    opcode == ed2k::OP_SENDINGPART_I64;
-  outbox_.push_back(std::move(packet));
+  outbox_.push_back(ed2k::createPacket(protocol, opcode, payload));
+  outboxEncrypted_.push_back(false);
 }
 
 void Ed2kCommand::queueServerLogin()
@@ -639,7 +636,7 @@ bool Ed2kCommand::queueGetSources()
   const auto state = getEd2kServerState(attrs, endpoint_);
   if (attrs->link.size > std::numeric_limits<uint32_t>::max() &&
       state && (state->tcpFlags & ed2k::SRV_TCPFLG_LARGEFILES) == 0) {
-    ARIA2_LOG_INFO(fmt("CUID#%" PRId64
+    A2_LOG_INFO(fmt("CUID#%" PRId64
                     " - ED2K server %s:%u does not advertise large-file "
                     "source requests for %s.",
                     getCuid(), endpoint_.host.c_str(), endpoint_.port,
@@ -928,7 +925,7 @@ void Ed2kCommand::queuePeerPartRequest()
             ed2k::ENDGAME_RECLAIM_STALL_SECONDS, reclaimed) &&
         blockRangeAvailable(ranges, reclaimed)) {
       ranges.push_back(reclaimed);
-      ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+      A2_LOG_DEBUG(fmt("CUID#%" PRId64
                        " - Reclaimed stalled ED2K part request begin=%" PRId64
                        " end=%" PRId64 ".",
                        getCuid(), reclaimed.begin, reclaimed.end));
@@ -940,7 +937,7 @@ void Ed2kCommand::queuePeerPartRequest()
   }
 
   for (const auto& range : ranges) {
-    ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+    A2_LOG_DEBUG(fmt("CUID#%" PRId64
                      " - Queue ED2K part request begin=%" PRId64
                      " end=%" PRId64 ".",
                      getCuid(), range.begin, range.end));
@@ -974,7 +971,7 @@ bool Ed2kCommand::sendPendingCancelTransfer()
   if (!state || !state->cancelTransferSent || !state->requestedParts.empty()) {
     return false;
   }
-  ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+  A2_LOG_DEBUG(fmt("CUID#%" PRId64
                    " - Sending ED2K cancel transfer for reclaimed range.",
                    getCuid()));
   queueCancelTransfer();
@@ -1108,7 +1105,7 @@ void Ed2kCommand::startResolve()
 
 void Ed2kCommand::startConnect()
 {
-  ARIA2_LOG_INFO(fmt("CUID#%" PRId64 " - Connecting to ED2K %s %s:%u.",
+  A2_LOG_INFO(fmt("CUID#%" PRId64 " - Connecting to ED2K %s %s:%u.",
                   getCuid(), mode_ == Mode::SERVER ? "server" : "peer",
                   connectedAddr_.c_str(), connectedPort_));
   createSocket();
@@ -1121,37 +1118,27 @@ void Ed2kCommand::startConnect()
 bool Ed2kCommand::flushOutbox()
 {
   while (!outbox_.empty()) {
-    auto& packet = outbox_.front();
-    if (!packet.encrypted) {
-      encryptPacket(packet.data);
-      packet.encrypted = true;
+    auto& data = outbox_.front();
+    auto& encrypted = outboxEncrypted_.front();
+    if (!encrypted) {
+      encryptPacket(data);
+      encrypted = true;
     }
-    auto writeLength = packet.data.size();
-    if (packet.fileData) {
-      const auto allowed = uploadLimitBucket_.consume(ed2kUploadLimit(),
-                                                      writeLength);
-      if (allowed == 0) {
-        getDownloadEngine()->scheduleRuntimeWake(std::chrono::milliseconds(50));
-        setWriteCheckSocket(getSocket());
-        addCommandSelf();
-        return false;
-      }
-      writeLength = allowed;
-    }
-    auto written = getSocket()->writeData(packet.data.data(), writeLength);
+    auto written = getSocket()->writeData(data.data(), data.size());
     if (written == 0) {
       setWriteCheckSocketIf(getSocket(), getSocket()->wantWrite());
       setReadCheckSocketIf(getSocket(), getSocket()->wantRead());
       addCommandSelf();
       return false;
     }
-    packet.data.erase(0, static_cast<size_t>(written));
-    if (!packet.data.empty()) {
+    data.erase(0, static_cast<size_t>(written));
+    if (!data.empty()) {
       setWriteCheckSocket(getSocket());
       addCommandSelf();
       return false;
     }
     outbox_.pop_front();
+    outboxEncrypted_.pop_front();
   }
   disableWriteCheckSocket();
   if (closeAfterOutbox_) {
@@ -1194,7 +1181,7 @@ bool Ed2kCommand::readHeader()
   if (currentHeader_.payloadSize() > 8_m) {
     throw DL_RETRY_EX("ED2K packet is too large.");
   }
-  ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+  A2_LOG_DEBUG(fmt("CUID#%" PRId64
                    " - Read ED2K %s packet protocol=0x%02x opcode=0x%02x "
                    "payload=%lu.",
                    getCuid(), mode_ == Mode::SERVER ? "server" : "peer",
@@ -1202,7 +1189,6 @@ bool Ed2kCommand::readHeader()
                    static_cast<unsigned long>(currentHeader_.payloadSize())));
   body_.assign(currentHeader_.payloadSize(), '\0');
   bodyRead_ = 0;
-  bodyConsumeRead_ = 0;
   headerRead_ = 0;
   state_ = State::READ_BODY;
   return true;
@@ -1212,22 +1198,6 @@ bool Ed2kCommand::readBody()
 {
   while (bodyRead_ < body_.size()) {
     size_t len = body_.size() - bodyRead_;
-    const bool limitedData =
-        mode_ == Mode::PEER &&
-        (currentHeader_.opcode == ed2k::OP_SENDINGPART ||
-         currentHeader_.opcode == ed2k::OP_SENDINGPART_I64 ||
-         currentHeader_.opcode == ed2k::OP_COMPRESSEDPART ||
-         currentHeader_.opcode == ed2k::OP_COMPRESSEDPART_I64);
-    if (limitedData) {
-      const auto allowed = downloadLimitBucket_.consume(ed2kDownloadLimit(), len);
-      if (allowed == 0) {
-        getDownloadEngine()->scheduleRuntimeWake(std::chrono::milliseconds(50));
-        setReadCheckSocket(getSocket());
-        addCommandSelf();
-        return false;
-      }
-      len = allowed;
-    }
     getSocket()->readData(&body_[bodyRead_], len);
     if (len == 0) {
       if (!getSocket()->wantRead() && !getSocket()->wantWrite()) {
@@ -1246,7 +1216,7 @@ bool Ed2kCommand::readBody()
     if (!ed2k::inflatePackedPacketPayload(inflated, body_, 250_k)) {
       throw DL_RETRY_EX("Bad packed ED2K packet.");
     }
-    ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+    A2_LOG_DEBUG(fmt("CUID#%" PRId64
                      " - Unpacked ED2K packet opcode=0x%02x, "
                      "compressed=%zu, inflated=%zu.",
                      getCuid(), currentHeader_.opcode, body_.size(),
@@ -1259,33 +1229,10 @@ bool Ed2kCommand::readBody()
   handlePacket();
   body_.clear();
   bodyRead_ = 0;
-  bodyConsumeRead_ = 0;
   if (state_ == State::READ_BODY) {
     state_ = State::READ_HEADER;
   }
   return true;
-}
-
-int64_t Ed2kCommand::ed2kDownloadLimit() const
-{
-  auto limit = getRequestGroup()->getMaxDownloadSpeedLimit();
-  auto rgman = getDownloadEngine()->getRequestGroupMan().get();
-  if (rgman && rgman->getMaxOverallDownloadSpeedLimit() > 0) {
-    limit = limit == 0 ? rgman->getMaxOverallDownloadSpeedLimit()
-                       : std::min(limit, rgman->getMaxOverallDownloadSpeedLimit());
-  }
-  return limit;
-}
-
-int64_t Ed2kCommand::ed2kUploadLimit() const
-{
-  auto limit = getRequestGroup()->getMaxUploadSpeedLimit();
-  auto rgman = getDownloadEngine()->getRequestGroupMan().get();
-  if (rgman && rgman->getMaxOverallUploadSpeedLimit() > 0) {
-    limit = limit == 0 ? rgman->getMaxOverallUploadSpeedLimit()
-                       : std::min(limit, rgman->getMaxOverallUploadSpeedLimit());
-  }
-  return limit;
 }
 
 void Ed2kCommand::addPeer(const ed2k::Endpoint& peer)
@@ -1308,33 +1255,18 @@ void Ed2kCommand::schedulePendingPeers()
 
 void Ed2kCommand::handlePartData(int64_t begin, const std::string& data)
 {
-  auto attrs = getEd2kAttrs(getDownloadContext());
   ed2k::PeerTransfer transfer(getDownloadContext().get(), getPieceStorage().get(),
                               getSegmentMan().get(), getCuid());
   auto completedSegment = transfer.writePartData(begin, data);
-  const auto visibleCompletedLength =
-      std::max(getRequestGroup()->getCompletedLength() +
-                   getRequestGroup()->getInFlightCompletedLength(),
-               attrs->visibleCompletedLength);
-  attrs->visibleCompletedLength =
-      attrs->link.size > 0
-          ? std::min(visibleCompletedLength, attrs->link.size)
-          : visibleCompletedLength;
-  removeEd2kPeerCompletedRequestedRange(attrs, endpoint_, begin,
+  removeEd2kPeerCompletedRequestedRange(getEd2kAttrs(getDownloadContext()),
+                                        endpoint_, begin,
                                         begin + static_cast<int64_t>(data.size()),
                                         nowSeconds());
   if (!completedSegment) {
     return;
   }
   if (transfer.completeVerifiedSegment(completedSegment)) {
-    attrs->visibleCompletedLength =
-        std::max(attrs->visibleCompletedLength,
-                 getRequestGroup()->getCompletedLength());
-    if (attrs->link.size > 0) {
-      attrs->visibleCompletedLength =
-          std::min(attrs->visibleCompletedLength, attrs->link.size);
-    }
-    clearEd2kPeerRequestedParts(attrs, endpoint_);
+    clearEd2kPeerRequestedParts(getEd2kAttrs(getDownloadContext()), endpoint_);
   }
 }
 
@@ -1347,7 +1279,7 @@ void Ed2kCommand::handleServerPacket()
       throw DL_RETRY_EX("Bad ED2K server ID change.");
     }
     updateEd2kServerIdChange(attrs, endpoint_, idChange);
-    ARIA2_LOG_INFO(fmt("CUID#%" PRId64
+    A2_LOG_INFO(fmt("CUID#%" PRId64
                     " - ED2K server %s:%u assigned %s ID 0x%08x.",
                     getCuid(), endpoint_.host.c_str(), endpoint_.port,
                     idChange.highId ? "High" : "Low", idChange.clientId));
@@ -1355,7 +1287,7 @@ void Ed2kCommand::handleServerPacket()
       queueSearchRequest();
     }
     else {
-      ARIA2_LOG_INFO(fmt("CUID#%" PRId64
+      A2_LOG_INFO(fmt("CUID#%" PRId64
                       " - ED2K server %s:%u requesting sources for %s.",
                       getCuid(), endpoint_.host.c_str(), endpoint_.port,
                       util::toHex(attrs->link.hash).c_str()));
@@ -1376,7 +1308,7 @@ void Ed2kCommand::handleServerPacket()
     if (!ed2k::parseFoundSourcesPayload(
             sources, body_, attrs->link.hash,
             currentHeader_.opcode == ed2k::OP_FOUNDSOURCES_OBFU)) {
-      ARIA2_LOG_INFO(fmt("CUID#%" PRId64
+      A2_LOG_INFO(fmt("CUID#%" PRId64
                       " - ED2K server %s:%u returned unusable sources.",
                       getCuid(), endpoint_.host.c_str(), endpoint_.port));
       updateEd2kServerSourceResponse(attrs, endpoint_, 0, nowSeconds());
@@ -1399,7 +1331,7 @@ void Ed2kCommand::handleServerPacket()
       }
     }
     mergeEd2kServerSources(attrs, sources, ed2k::PEER_SOURCE_SERVER);
-    ARIA2_LOG_INFO(fmt("CUID#%" PRId64
+    A2_LOG_INFO(fmt("CUID#%" PRId64
                     " - ED2K server %s:%u returned %lu source(s).",
                     getCuid(), endpoint_.host.c_str(), endpoint_.port,
                     static_cast<unsigned long>(sources.size())));
@@ -1437,14 +1369,14 @@ void Ed2kCommand::handleServerPacket()
         pendingCallbackClientIds_.erase(i);
       }
     }
-    ARIA2_LOG_INFO(fmt("CUID#%" PRId64
+    A2_LOG_INFO(fmt("CUID#%" PRId64
                     " - ED2K server %s:%u reported callback failure.",
                     getCuid(), endpoint_.host.c_str(), endpoint_.port));
     state_ = State::READ_HEADER;
     return;
   }
   if (currentHeader_.opcode == ed2k::OP_REJECT) {
-    ARIA2_LOG_INFO(fmt("CUID#%" PRId64
+    A2_LOG_INFO(fmt("CUID#%" PRId64
                     " - ED2K server %s:%u rejected the last command.",
                     getCuid(), endpoint_.host.c_str(), endpoint_.port));
     state_ = State::READ_HEADER;
@@ -1453,7 +1385,7 @@ void Ed2kCommand::handleServerPacket()
   if (currentHeader_.opcode == ed2k::OP_SEARCHRESULT) {
     ed2k::SearchResult result;
     if (!ed2k::parseSearchResultPayload(result, body_, "server")) {
-      ARIA2_LOG_INFO(fmt("CUID#%" PRId64
+      A2_LOG_INFO(fmt("CUID#%" PRId64
                       " - ED2K server %s:%u returned an unusable search result.",
                       getCuid(), endpoint_.host.c_str(), endpoint_.port));
       state_ = State::DONE;
@@ -1475,7 +1407,7 @@ void Ed2kCommand::handleServerPacket()
     if (!ed2k::parseServerMessagePayload(message, body_)) {
       throw DL_RETRY_EX("Bad ED2K server message.");
     }
-    ARIA2_LOG_INFO(fmt("CUID#%" PRId64 " - ED2K server %s:%u message: %s",
+    A2_LOG_INFO(fmt("CUID#%" PRId64 " - ED2K server %s:%u message: %s",
                     getCuid(), endpoint_.host.c_str(), endpoint_.port,
                     message.c_str()));
     updateEd2kServerMessage(attrs, endpoint_, message);
@@ -1826,7 +1758,7 @@ void Ed2kCommand::handlePeerPacket()
       throw DL_RETRY_EX("Bad ED2K part range.");
     }
     const auto data = body_.substr(metaLength);
-    ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+    A2_LOG_DEBUG(fmt("CUID#%" PRId64
                      " - Read ED2K part data begin=%" PRId64
                      " end=%" PRId64 ".",
                      getCuid(), begin, end));

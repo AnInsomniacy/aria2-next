@@ -42,7 +42,7 @@
 #include <vector>
 #include <algorithm>
 
-#include "InternalTypes.h"
+#include <aria2/aria2.h>
 
 namespace aria2 {
 

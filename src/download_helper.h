@@ -53,6 +53,7 @@ class Option;
 class MetadataInfo;
 class DownloadContext;
 class UriListParser;
+class ValueBase;
 class GroupId;
 
 #ifdef ENABLE_BITTORRENT
@@ -68,7 +69,27 @@ void createRequestGroupForBitTorrent(
     const std::string& metaInfoUri, const std::string& torrentData = "",
     bool adjustAnnounceUri = true);
 
+// Create RequestGroup object using already decoded torrent metainfo
+// structure.  If adjustAnnounceUri is true, announce URIs are
+// adjusted using bittorrent::adjustAnnounceUri().  In this function,
+// force-sequential is ignored.
+void createRequestGroupForBitTorrent(
+    std::vector<std::shared_ptr<RequestGroup>>& result,
+    const std::shared_ptr<Option>& option, const std::vector<std::string>& uris,
+    const std::string& metaInfoUri, const ValueBase* torrent,
+    bool adjustAnnounceUri = true);
+
 #endif // ENABLE_BITTORRENT
+
+#ifdef ENABLE_METALINK
+// Create RequestGroup objects using Metalink file specified by
+// metalink-file option. If non-empty metalinkData is specified, it is
+// used as a content of metalink file instead.
+void createRequestGroupForMetalink(
+    std::vector<std::shared_ptr<RequestGroup>>& result,
+    const std::shared_ptr<Option>& option,
+    const std::string& metalinkData = "");
+#endif // ENABLE_METALINK
 
 // Reads one entry from uriListParser and creates RequestGroups from
 // it and store them in result. If the bad entry is found, this
@@ -99,10 +120,11 @@ void createRequestGroupForUriList(
     const std::shared_ptr<Option>& option);
 
 // Create RequestGroup object using provided uris.  If ignoreLocalPath
-// is true, a path to torrent file is ignored.  If throwOnError is true,
-// exception will be thrown when .torrent file cannot be parsed or
-// unrecognized URI is given. If throwOnError is false, these errors are
-// just logged as error.
+// is true, a path to torrent file and metalink file are ignored.  If
+// throwOnError is true, exception will be thrown when Metalink
+// Document or .torrent file cannot be parsed or unrecognized URI is
+// given. If throwOnError is false, these errors are just logged as
+// error.
 void createRequestGroupForUri(
     std::vector<std::shared_ptr<RequestGroup>>& result,
     const std::shared_ptr<Option>& option, const std::vector<std::string>& uris,

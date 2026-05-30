@@ -11,6 +11,7 @@
 #include "a2io.h"
 #include "File.h"
 #include "FatalException.h"
+#include "Cookie.h"
 #include "DefaultDiskWriter.h"
 #include "fmt.h"
 #include "util.h"
@@ -45,6 +46,25 @@ std::string readFile(const std::string& path)
     }
   }
   return ss.str();
+}
+
+std::unique_ptr<Cookie> createCookie(const std::string& name,
+                                     const std::string& value,
+                                     const std::string& domain, bool hostOnly,
+                                     const std::string& path, bool secure)
+{
+  return make_unique<Cookie>(name, value, 0, false, domain, hostOnly, path,
+                             secure, false, 0);
+}
+
+std::unique_ptr<Cookie> createCookie(const std::string& name,
+                                     const std::string& value,
+                                     time_t expiryTime,
+                                     const std::string& domain, bool hostOnly,
+                                     const std::string& path, bool secure)
+{
+  return make_unique<Cookie>(name, value, expiryTime, true, domain, hostOnly,
+                             path, secure, false, 0);
 }
 
 std::string fromHex(const std::string& s)

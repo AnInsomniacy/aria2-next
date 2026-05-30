@@ -60,6 +60,9 @@ public:
   // magnet:?xt=urn:btih:<info-hash>...
   bool guessTorrentMagnet(const std::string& uri) const;
 
+  // Returns true if ProtocolDetector thinks uri is a path of Metalink XML
+  // file, otherwise return false.
+  bool guessMetalinkFile(const std::string& uri) const;
 };
 
 } // namespace aria2

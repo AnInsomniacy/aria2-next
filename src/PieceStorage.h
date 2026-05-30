@@ -47,12 +47,84 @@
 namespace aria2 {
 
 class Piece;
+#ifdef ENABLE_BITTORRENT
+class Peer;
+#endif // ENABLE_BITTORRENT
 class DiskAdaptor;
 class WrDiskCache;
 
 class PieceStorage {
 public:
   virtual ~PieceStorage() = default;
+
+#ifdef ENABLE_BITTORRENT
+  /**
+   * Returns true if the peer has a piece that localhost doesn't have.
+   * Otherwise returns false.
+   */
+  virtual bool hasMissingPiece(const std::shared_ptr<Peer>& peer) = 0;
+
+  // Stores pieces that the peer has but localhost doesn't.  Those
+  // pieces will be marked "used" status in order to prevent other
+  // command from get the same piece. But in end game mode, same
+  // piece may be got by several commands. This function stores N
+  // pieces where the sum of missing block of first N-1 pieces is
+  // less than minMissingBlocks and the sum of missing block of N
+  // pieces is greater than or equal to minMissingBlocks. If there is
+  // M missing pieces left where M < N, M pieces are stored.
+  virtual void getMissingPiece(std::vector<std::shared_ptr<Piece>>& pieces,
+                               size_t minMissingBlocks,
+                               const std::shared_ptr<Peer>& peer,
+                               cuid_t cuid) = 0;
+
+  // Same as getMissingPiece(pieces, minMissingBlocks, peer), but the
+  // indexes in excludedIndexes are excluded.
+  virtual void getMissingPiece(std::vector<std::shared_ptr<Piece>>& pieces,
+                               size_t minMissingBlocks,
+                               const std::shared_ptr<Peer>& peer,
+                               const std::vector<size_t>& excludedIndexes,
+                               cuid_t cuid) = 0;
+
+  // Stores pieces that the peer has but localhost doesn't.  Only
+  // pieces that declared as "fast" are stored.  Those pieces stored
+  // will be marked "used" status in order to prevent other command
+  // from get the same piece. But in end game mode, same piece may be
+  // got by several commands. This function stores N pieces where the
+  // sum of missing block of first N-1 pieces is less than
+  // minMissingBlocks and the sum of missing block of N pieces is
+  // greater than or equal to minMissingBlocks. If there is M missing
+  // pieces left where M < N, M pieces are stored.
+  virtual void getMissingFastPiece(std::vector<std::shared_ptr<Piece>>& pieces,
+                                   size_t minMissingBlocks,
+                                   const std::shared_ptr<Peer>& peer,
+                                   cuid_t cuid) = 0;
+
+  // Same as getMissingFastPiece(pieces, minMissingBlocks, peer), but
+  // the indexes in excludedIndexes are excluded.
+  virtual void getMissingFastPiece(std::vector<std::shared_ptr<Piece>>& pieces,
+                                   size_t minMissingBlocks,
+                                   const std::shared_ptr<Peer>& peer,
+                                   const std::vector<size_t>& excludedIndexes,
+                                   cuid_t cuid) = 0;
+
+  /**
+   * Returns a piece that the peer has but localhost doesn't.
+   * The piece will be marked "used" status in order to prevent other command
+   * from get the same piece. But in end game mode, same piece may be returned
+   * to several commands.
+   */
+  virtual std::shared_ptr<Piece>
+  getMissingPiece(const std::shared_ptr<Peer>& peer, cuid_t cuid) = 0;
+
+  /**
+   * Same as getMissingPiece(const std::shared_ptr<Peer>& peer), but the indexes
+   * in
+   * excludedIndexes are excluded.
+   */
+  virtual std::shared_ptr<Piece>
+  getMissingPiece(const std::shared_ptr<Peer>& peer,
+                  const std::vector<size_t>& excludedIndexes, cuid_t cuid) = 0;
+#endif // ENABLE_BITTORRENT
 
   // Returns true if there is at least one missing and unused piece.
   virtual bool hasMissingUnusedPiece() = 0;
@@ -109,11 +181,7 @@ public:
 
   virtual int64_t getCompletedLength() = 0;
 
-  virtual int64_t getInFlightCompletedLength() = 0;
-
   virtual int64_t getFilteredCompletedLength() = 0;
-
-  virtual int64_t getFilteredInFlightCompletedLength() = 0;
 
   virtual void setupFileFilter() = 0;
 

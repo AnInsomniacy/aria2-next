@@ -53,6 +53,10 @@ namespace rpc {
 
 struct RpcResponse;
 
+#ifdef ENABLE_XML_RPC
+RpcRequest xmlParseMemory(const char* xml, size_t size);
+#endif // ENABLE_XML_RPC
+
 // Creates error response. The |code| is the JSON-RPC error code.  The
 // |msg| is the error message. The |id| is the id of the request .
 RpcResponse createJsonRpcErrorResponse(int code, const std::string& msg,

@@ -1,0 +1,26 @@
+# Local build outputs
+build/
+build-*/
+cmake-build-*/
+
+# Compiler and linker outputs
+*.a
+*.dll
+*.dylib
+*.lib
+*.o
+*.obj
+*.pdb
+*.so
+*.so.*
+
+# Generated headers and metadata
+/lib/includes/wslay/wslayver.h
+
+# Documentation outputs
+/doc/man/
+/doc/sphinx/_build/
+
+# Local editor and OS metadata
+*~
+.DS_Store

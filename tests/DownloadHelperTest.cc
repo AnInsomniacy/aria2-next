@@ -24,8 +24,7 @@
 #include "SelectEventPoll.h"
 #include "Segment.h"
 #include "SegmentMan.h"
-#include "DefaultProgressInfoFile.h"
-#include "AsioRuntime.h"
+#include "DefaultBtProgressInfoFile.h"
 #include "array_fun.h"
 #include "base32.h"
 #include "ed2k_constants.h"
@@ -45,8 +44,6 @@
 #include "util.h"
 #include "FileEntry.h"
 #ifdef ENABLE_BITTORRENT
-#  include "LibtorrentAttribute.h"
-#  include "LibtorrentProgressInfoFile.h"
 #  include "bittorrent_helper.h"
 #endif // ENABLE_BITTORRENT
 
@@ -87,7 +84,6 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kKadCommandQueuesKadCallback);
   CPPUNIT_TEST(testEd2kKadCommandQueueFullForUnknownUploadReask);
   CPPUNIT_TEST(testEd2kKadCommandAckForUploadingPeerReask);
-  CPPUNIT_TEST(testEd2kKadCommandUsesRuntimeTimer);
   CPPUNIT_TEST(testEd2kSourcePolicyAppliesActiveCap);
   CPPUNIT_TEST(testEd2kServerSourceCadencePolicy);
   CPPUNIT_TEST(testEd2kServerSearchCadencePolicy);
@@ -100,7 +96,6 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kPeerTransferAcceptsParallelPieceBlocks);
   CPPUNIT_TEST(testEd2kPeerTransferCancelsOwnerAfterParallelHashFailure);
   CPPUNIT_TEST(testEd2kPeerTransferAppliesAichRecoveryData);
-  CPPUNIT_TEST(testEd2kSchedulingWakesRuntime);
   CPPUNIT_TEST(testEd2kSchedulingKeepsInlineSourceLabel);
   CPPUNIT_TEST(testEd2kPeerSchedulingSkipsBackoff);
   CPPUNIT_TEST(testEd2kPeerSchedulingSkipsConnectingPeer);
@@ -110,19 +105,16 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kSearchResultAppliesLocalFilters);
   CPPUNIT_TEST(testCreateRequestGroupForUri_parameterized);
   CPPUNIT_TEST(testCreateRequestGroupForUriList);
-  CPPUNIT_TEST(testCreateRequestGroupForUriListHttpDirContinue);
 
 #ifdef ENABLE_BITTORRENT
-  CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentTorrent);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_RemoteTorrentMetadataMemory);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentTorrentSelectFile);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentTorrentTrackers);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnet);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnetPauseMetadata);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnetControlFile);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_LibtorrentMagnetTrackers);
+  CPPUNIT_TEST(testCreateRequestGroupForUri_BitTorrent);
+  CPPUNIT_TEST(testCreateRequestGroupForBitTorrent);
 #endif // ENABLE_BITTORRENT
 
+#ifdef ENABLE_METALINK
+  CPPUNIT_TEST(testCreateRequestGroupForUri_Metalink);
+  CPPUNIT_TEST(testCreateRequestGroupForMetalink);
+#endif // ENABLE_METALINK
 
   CPPUNIT_TEST_SUITE_END();
 
@@ -166,7 +158,6 @@ public:
   void testEd2kKadCommandQueuesKadCallback();
   void testEd2kKadCommandQueueFullForUnknownUploadReask();
   void testEd2kKadCommandAckForUploadingPeerReask();
-  void testEd2kKadCommandUsesRuntimeTimer();
   void testEd2kSourcePolicyAppliesActiveCap();
   void testEd2kServerSourceCadencePolicy();
   void testEd2kServerSearchCadencePolicy();
@@ -179,7 +170,6 @@ public:
   void testEd2kPeerTransferAcceptsParallelPieceBlocks();
   void testEd2kPeerTransferCancelsOwnerAfterParallelHashFailure();
   void testEd2kPeerTransferAppliesAichRecoveryData();
-  void testEd2kSchedulingWakesRuntime();
   void testEd2kSchedulingKeepsInlineSourceLabel();
   void testEd2kPeerSchedulingSkipsBackoff();
   void testEd2kPeerSchedulingSkipsConnectingPeer();
@@ -189,19 +179,16 @@ public:
   void testEd2kSearchResultAppliesLocalFilters();
   void testCreateRequestGroupForUri_parameterized();
   void testCreateRequestGroupForUriList();
-  void testCreateRequestGroupForUriListHttpDirContinue();
 
 #ifdef ENABLE_BITTORRENT
-  void testCreateRequestGroupForUri_LibtorrentTorrent();
-  void testCreateRequestGroupForUri_RemoteTorrentMetadataMemory();
-  void testCreateRequestGroupForUri_LibtorrentTorrentSelectFile();
-  void testCreateRequestGroupForUri_LibtorrentTorrentTrackers();
-  void testCreateRequestGroupForUri_LibtorrentMagnet();
-  void testCreateRequestGroupForUri_LibtorrentMagnetPauseMetadata();
-  void testCreateRequestGroupForUri_LibtorrentMagnetControlFile();
-  void testCreateRequestGroupForUri_LibtorrentMagnetTrackers();
+  void testCreateRequestGroupForUri_BitTorrent();
+  void testCreateRequestGroupForBitTorrent();
 #endif // ENABLE_BITTORRENT
 
+#ifdef ENABLE_METALINK
+  void testCreateRequestGroupForUri_Metalink();
+  void testCreateRequestGroupForMetalink();
+#endif // ENABLE_METALINK
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(DownloadHelperTest);
@@ -1494,36 +1481,6 @@ void DownloadHelperTest::testEd2kKadCommandAckForUploadingPeerReask()
   CPPUNIT_ASSERT_EQUAL((uint16_t)0, ack.rank);
 }
 
-void DownloadHelperTest::testEd2kKadCommandUsesRuntimeTimer()
-{
-  std::vector<std::string> uris{
-      "ed2k://|file|aria2%20next.bin|9728001|"
-      "0123456789abcdef0123456789abcdef|/"};
-  option_->put(PREF_DIR, "/tmp");
-  option_->put(PREF_ED2K_SERVER, "203.0.113.10:4661");
-  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
-  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
-  option_->put(PREF_FILE_ALLOCATION, V_NONE);
-  option_->put(PREF_DRY_RUN, A2_V_TRUE);
-
-  std::vector<std::shared_ptr<RequestGroup>> result;
-  createRequestGroupForUri(result, option_, uris);
-  auto group = result[0];
-
-  DownloadEngine engine(make_unique<SelectEventPoll>());
-  engine.setOption(option_.get());
-  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
-      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
-  auto command = make_unique<Ed2kKadCommand>(1, group.get(), &engine);
-  auto commandPtr = command.get();
-
-  commandPtr->testScheduleNextPoll(std::chrono::milliseconds(0));
-  command.release();
-  engine.getRuntime().runReady();
-
-  CPPUNIT_ASSERT(engine.getRuntime().wakeRequested());
-}
-
 void DownloadHelperTest::testEd2kSourcePolicyAppliesActiveCap()
 {
   Ed2kAttribute attrs;
@@ -1831,7 +1788,7 @@ void DownloadHelperTest::testEd2kPeerTransferIgnoresDuplicateData()
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-transfer-duplicate";
   const std::string outfile = outdir + "/aria2 next duplicate transfer.bin";
   File(outfile).remove();
-  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
   File(outdir).mkdirs();
 
   const std::string data = "verified ed2k data";
@@ -1865,7 +1822,7 @@ void DownloadHelperTest::testEd2kPeerTransferAcceptsParallelPieceBlocks()
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-transfer-parallel";
   const std::string outfile = outdir + "/aria2 next parallel transfer.bin";
   File(outfile).remove();
-  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
   File(outdir).mkdirs();
 
   const std::string first(Piece::BLOCK_LENGTH, 'a');
@@ -1903,7 +1860,7 @@ void DownloadHelperTest::testEd2kPeerTransferCancelsOwnerAfterParallelHashFailur
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-transfer-parallel-bad";
   const std::string outfile = outdir + "/aria2 next parallel bad transfer.bin";
   File(outfile).remove();
-  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
   File(outdir).mkdirs();
 
   const std::string first(Piece::BLOCK_LENGTH, 'a');
@@ -1942,7 +1899,7 @@ void DownloadHelperTest::testEd2kPeerTransferAppliesAichRecoveryData()
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-transfer-aich-recovery";
   const std::string outfile = outdir + "/aria2 next aich transfer.bin";
   File(outfile).remove();
-  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
   File(outdir).mkdirs();
 
   std::string block0(ed2k::EMBLOCK_LENGTH, 'a');
@@ -1999,44 +1956,12 @@ void DownloadHelperTest::testEd2kPeerTransferAppliesAichRecoveryData()
   CPPUNIT_ASSERT(!piece->pieceComplete());
 }
 
-void DownloadHelperTest::testEd2kSchedulingWakesRuntime()
-{
-  std::vector<std::string> uris{
-      "ed2k://|file|aria2%20next.bin|9728001|"
-      "0123456789abcdef0123456789abcdef|/"};
-  option_->put(PREF_DIR, "/tmp");
-  option_->put(PREF_ED2K_SERVER, "203.0.113.10:4661");
-  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
-  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
-  option_->put(PREF_FILE_ALLOCATION, V_NONE);
-  option_->put(PREF_DRY_RUN, A2_V_TRUE);
-
-  std::vector<std::shared_ptr<RequestGroup>> result;
-  createRequestGroupForUri(result, option_, uris);
-  auto group = result[0];
-  auto attrs = getEd2kAttrs(group->getDownloadContext());
-
-  ed2k::Endpoint peer;
-  peer.host = "203.0.113.20";
-  peer.port = 4662;
-  addEd2kPeer(attrs, peer);
-
-  DownloadEngine engine(make_unique<SelectEventPoll>());
-  engine.setOption(option_.get());
-  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
-      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
-
-  schedulePendingEd2kPeers(group.get(), &engine);
-
-  CPPUNIT_ASSERT(engine.getRuntime().wakeRequested());
-}
-
 void DownloadHelperTest::testEd2kSchedulingKeepsInlineSourceLabel()
 {
   const std::string outdir = A2_TEST_OUT_DIR "/ed2k-inline-source-label";
   const std::string outfile = outdir + "/aria2 next.bin";
   File(outfile).remove();
-  File(outfile + DefaultProgressInfoFile::getSuffix()).remove();
+  File(outfile + DefaultBtProgressInfoFile::getSuffix()).remove();
   File(outdir).mkdirs();
 
   std::vector<std::string> uris{
@@ -2336,7 +2261,7 @@ void DownloadHelperTest::testCreateRequestGroupForUri_parameterized()
 }
 
 #ifdef ENABLE_BITTORRENT
-void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentTorrent()
+void DownloadHelperTest::testCreateRequestGroupForUri_BitTorrent()
 {
   std::vector<std::string> uris{"http://alpha/file",
                                 A2_TEST_DIR "/test.torrent",
@@ -2364,172 +2289,61 @@ void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentTorrent()
     CPPUNIT_ASSERT_EQUAL(std::string("/tmp/file.out"), ctx->getBasePath());
 
     std::shared_ptr<RequestGroup> torrentGroup = result[1];
+    auto auxURIs =
+        torrentGroup->getDownloadContext()->getFirstFileEntry()->getUris();
+    CPPUNIT_ASSERT(auxURIs.empty());
+    CPPUNIT_ASSERT_EQUAL(3, torrentGroup->getNumConcurrentCommand());
     std::shared_ptr<DownloadContext> btctx = torrentGroup->getDownloadContext();
-    CPPUNIT_ASSERT(btctx->hasAttribute(CTX_ATTR_LIBTORRENT));
-    CPPUNIT_ASSERT_EQUAL(std::string(A2_TEST_DIR "/test.torrent"),
-                         torrentGroup->getMetadataInfo()->getUri());
-    LibtorrentProgressInfoFile torrentInfoFile(btctx);
-    CPPUNIT_ASSERT(torrentInfoFile.getFilename().find("/test.torrent.") ==
-                   std::string::npos);
-    CPPUNIT_ASSERT(torrentInfoFile.getFilename().find(".aria2") !=
-                   std::string::npos);
+    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/aria2-test"), btctx->getBasePath());
   }
 }
+#endif // ENABLE_BITTORRENT
 
-void DownloadHelperTest::testCreateRequestGroupForUri_RemoteTorrentMetadataMemory()
+#ifdef ENABLE_METALINK
+void DownloadHelperTest::testCreateRequestGroupForUri_Metalink()
 {
-  std::vector<std::string> uris{"https://mirror1.example.test/file.torrent",
-                                "https://mirror2.example.test/file.torrent"};
-  option_->put(PREF_TORRENT_METADATA, "memory");
+  std::vector<std::string> uris{"http://alpha/file", "http://bravo/file",
+                                "http://charlie/file", A2_TEST_DIR "/test.xml"};
+  option_->put(PREF_MAX_CONNECTION_PER_SERVER, "1");
+  option_->put(PREF_SPLIT, "2");
   option_->put(PREF_DIR, "/tmp");
-
-  std::vector<std::shared_ptr<RequestGroup>> result;
-  createRequestGroupForUri(result, option_, uris);
-
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
-  CPPUNIT_ASSERT(result[0]->inMemoryDownload());
-  CPPUNIT_ASSERT_EQUAL(1, result[0]->getNumConcurrentCommand());
-  auto xuris = result[0]->getDownloadContext()->getFirstFileEntry()->getUris();
-  CPPUNIT_ASSERT_EQUAL((size_t)2, xuris.size());
-  CPPUNIT_ASSERT_EQUAL(uris[0], xuris[0]);
-  CPPUNIT_ASSERT_EQUAL(uris[1], xuris[1]);
-}
-
-void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentTorrentSelectFile()
-{
-  std::vector<std::string> uris{A2_TEST_DIR "/test.torrent"};
-  option_->put(PREF_DIR, "/tmp");
-  option_->put(PREF_SELECT_FILE, "2");
-
-  std::vector<std::shared_ptr<RequestGroup>> result;
-  createRequestGroupForUri(result, option_, uris);
-
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
-  auto dctx = result[0]->getDownloadContext();
-  CPPUNIT_ASSERT(dctx->hasAttribute(CTX_ATTR_LIBTORRENT));
-  auto attrs = getLibtorrentAttrs(dctx);
-  CPPUNIT_ASSERT_EQUAL(std::string("2"), attrs->selectedFiles);
-  CPPUNIT_ASSERT(attrs->filePriorities.empty());
-}
-
-void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentTorrentTrackers()
-{
-  std::vector<std::string> uris{A2_TEST_DIR "/test.torrent"};
-  option_->put(PREF_DIR, "/tmp");
-  option_->put(PREF_BT_EXCLUDE_TRACKER, "*");
-  option_->put(PREF_BT_TRACKER,
-               "udp://tracker.example:6969/announce,"
-               "https://tracker.example/announce");
-
-  std::vector<std::shared_ptr<RequestGroup>> result;
-  createRequestGroupForUri(result, option_, uris);
-
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
-  auto attrs = getLibtorrentAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrs->trackerUris.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("udp://tracker.example:6969/announce"),
-                       attrs->trackerUris[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string("https://tracker.example/announce"),
-                       attrs->trackerUris[1]);
-  CPPUNIT_ASSERT_EQUAL(0, attrs->trackerTiers[0]);
-  CPPUNIT_ASSERT_EQUAL(1, attrs->trackerTiers[1]);
-}
-
-void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentMagnet()
-{
-  std::vector<std::string> uris{
-      "magnet:?xt=urn:btih:248D0A1CD08284299DE78D5C1ED359BB46717D8C&dn=aria2-test"};
-  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_OUT, "file.out");
   {
     std::vector<std::shared_ptr<RequestGroup>> result;
 
     createRequestGroupForUri(result, option_, uris);
 
-    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
-    auto group = result[0];
-    auto dctx = group->getDownloadContext();
-    CPPUNIT_ASSERT(dctx->hasAttribute(CTX_ATTR_LIBTORRENT));
-    CPPUNIT_ASSERT_EQUAL(uris[0], group->getMetadataInfo()->getUri());
+// group1: http://alpha/file, ...
+// group2-7: 6 file entry in Metalink and 1 torrent file download
+#  ifdef ENABLE_BITTORRENT
+    CPPUNIT_ASSERT_EQUAL((size_t)7, result.size());
+#  else  // !ENABLE_BITTORRENT
+    CPPUNIT_ASSERT_EQUAL((size_t)6, result.size());
+#  endif // !ENABLE_BITTORRENT
+
+    std::shared_ptr<RequestGroup> group = result[0];
+    auto xuris = group->getDownloadContext()->getFirstFileEntry()->getUris();
+    CPPUNIT_ASSERT_EQUAL((size_t)3, xuris.size());
+    for (size_t i = 0; i < 3; ++i) {
+      CPPUNIT_ASSERT_EQUAL(uris[i], xuris[i]);
+    }
+    CPPUNIT_ASSERT_EQUAL(2, group->getNumConcurrentCommand());
+    std::shared_ptr<DownloadContext> ctx = group->getDownloadContext();
+    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/file.out"), ctx->getBasePath());
+
+    std::shared_ptr<RequestGroup> aria2052Group = result[1];
+    CPPUNIT_ASSERT_EQUAL(1, // because of maxconnections attribute
+                         aria2052Group->getNumConcurrentCommand());
+    std::shared_ptr<DownloadContext> aria2052Ctx =
+        aria2052Group->getDownloadContext();
+    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/aria2-0.5.2.tar.bz2"),
+                         aria2052Ctx->getBasePath());
+
+    std::shared_ptr<RequestGroup> aria2051Group = result[2];
+    CPPUNIT_ASSERT_EQUAL(2, aria2051Group->getNumConcurrentCommand());
   }
 }
-
-void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentMagnetPauseMetadata()
-{
-  std::vector<std::string> uris{
-      "magnet:?xt=urn:btih:248D0A1CD08284299DE78D5C1ED359BB46717D8C&dn=aria2-test"};
-  option_->put(PREF_DIR, "/tmp");
-  option_->put(PREF_PAUSE_METADATA, A2_V_TRUE);
-
-  std::vector<std::shared_ptr<RequestGroup>> result;
-  createRequestGroupForUri(result, option_, uris);
-
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
-  auto attrs = getLibtorrentAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT(attrs->pauseAfterMetadata);
-
-  std::vector<std::shared_ptr<RequestGroup>> torrents;
-  createRequestGroupForUri(torrents, option_, {A2_TEST_DIR "/test.torrent"});
-
-  CPPUNIT_ASSERT_EQUAL((size_t)1, torrents.size());
-  auto torrentAttrs = getLibtorrentAttrs(torrents[0]->getDownloadContext());
-  CPPUNIT_ASSERT(!torrentAttrs->pauseAfterMetadata);
-}
-
-void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentMagnetControlFile()
-{
-  option_->put(PREF_DIR, A2_TEST_OUT_DIR);
-
-  std::vector<std::shared_ptr<RequestGroup>> alpha;
-  createRequestGroupForUri(
-      alpha, option_,
-      {"magnet:?xt=urn:btih:1111111111111111111111111111111111111111"});
-  std::vector<std::shared_ptr<RequestGroup>> bravo;
-  createRequestGroupForUri(
-      bravo, option_,
-      {"magnet:?xt=urn:btih:2222222222222222222222222222222222222222"});
-
-  LibtorrentProgressInfoFile alphaFile(alpha[0]->getDownloadContext());
-  LibtorrentProgressInfoFile bravoFile(bravo[0]->getDownloadContext());
-
-  CPPUNIT_ASSERT_EQUAL(std::string(A2_TEST_OUT_DIR
-                                   "/1111111111111111111111111111111111111111"
-                                   ".aria2"),
-                       alphaFile.getFilename());
-  CPPUNIT_ASSERT_EQUAL(std::string(A2_TEST_OUT_DIR
-                                   "/2222222222222222222222222222222222222222"
-                                   ".aria2"),
-                       bravoFile.getFilename());
-  CPPUNIT_ASSERT(alphaFile.getFilename() != bravoFile.getFilename());
-
-  getLibtorrentAttrs(alpha[0]->getDownloadContext())
-      ->setResumeData("fast resume");
-  File(alphaFile.getFilename()).remove();
-  alphaFile.save();
-  CPPUNIT_ASSERT(File(alphaFile.getFilename()).isFile());
-  alphaFile.removeFile();
-}
-
-void DownloadHelperTest::testCreateRequestGroupForUri_LibtorrentMagnetTrackers()
-{
-  std::vector<std::string> uris{
-      "magnet:?xt=urn:btih:248D0A1CD08284299DE78D5C1ED359BB46717D8C"
-      "&dn=aria2-test&tr=http%3A%2F%2Fold.example%2Fannounce"};
-  option_->put(PREF_DIR, "/tmp");
-  option_->put(PREF_BT_EXCLUDE_TRACKER, "http://old.example/announce");
-  option_->put(PREF_BT_TRACKER, "udp://new.example:6969/announce");
-
-  std::vector<std::shared_ptr<RequestGroup>> result;
-  createRequestGroupForUri(result, option_, uris);
-
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
-  auto attrs = getLibtorrentAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->trackerUris.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("udp://new.example:6969/announce"),
-                       attrs->trackerUris[0]);
-  CPPUNIT_ASSERT_EQUAL(0, attrs->trackerTiers[0]);
-}
-#endif // ENABLE_BITTORRENT
-
+#endif // ENABLE_METALINK
 
 void DownloadHelperTest::testCreateRequestGroupForUriList()
 {
@@ -2563,24 +2377,95 @@ void DownloadHelperTest::testCreateRequestGroupForUriList()
   CPPUNIT_ASSERT_EQUAL(std::string(), fileISOCtx->getBasePath());
 }
 
-void DownloadHelperTest::testCreateRequestGroupForUriListHttpDirContinue()
+#ifdef ENABLE_BITTORRENT
+void DownloadHelperTest::testCreateRequestGroupForBitTorrent()
 {
-  option_->put(PREF_MAX_CONNECTION_PER_SERVER, "1");
-  option_->put(PREF_SPLIT, "1");
-  option_->put(PREF_INPUT_FILE, A2_TEST_DIR "/input_uris_http_continue.txt");
+  std::vector<std::string> auxURIs{"http://alpha/file", "http://bravo/file",
+                                   "http://charlie/file"};
+
+  option_->put(PREF_MAX_CONNECTION_PER_SERVER, "2");
+  option_->put(PREF_SPLIT, "5");
+  option_->put(PREF_TORRENT_FILE, A2_TEST_DIR "/test.torrent");
   option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_OUT, "file.out");
+  option_->put(PREF_BT_EXCLUDE_TRACKER, "http://tracker1");
+  {
+    std::vector<std::shared_ptr<RequestGroup>> result;
 
-  std::vector<std::shared_ptr<RequestGroup>> result;
+    createRequestGroupForBitTorrent(result, option_, auxURIs,
+                                    option_->get(PREF_TORRENT_FILE));
 
-  createRequestGroupForUriList(result, option_);
+    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
-  auto dctx = result[0]->getDownloadContext();
-  CPPUNIT_ASSERT_EQUAL(std::string("/restore"), result[0]->getOption()->get(PREF_DIR));
-  CPPUNIT_ASSERT(result[0]->getOption()->getAsBool(PREF_CONTINUE));
-  CPPUNIT_ASSERT(dctx->getFirstRequestedFileEntry());
-  CPPUNIT_ASSERT(dctx->findFileEntryByOffset(0));
+    std::shared_ptr<RequestGroup> group = result[0];
+    auto uris = group->getDownloadContext()->getFirstFileEntry()->getUris();
+    std::sort(std::begin(uris), std::end(uris));
+    // See -s option is ignored. See processRootDictionary() in
+    // bittorrent_helper.cc
+    CPPUNIT_ASSERT_EQUAL((size_t)3, uris.size());
+    for (size_t i = 0; i < auxURIs.size(); ++i) {
+      CPPUNIT_ASSERT_EQUAL(auxURIs[i] + "/aria2-test/aria2/src/aria2c",
+                           uris[i]);
+    }
+    CPPUNIT_ASSERT_EQUAL(5, group->getNumConcurrentCommand());
+    auto attrs = bittorrent::getTorrentAttrs(group->getDownloadContext());
+    // http://tracker1 was deleted.
+    CPPUNIT_ASSERT_EQUAL((size_t)2, attrs->announceList.size());
+  }
+  {
+    // no URIs are given
+    std::vector<std::shared_ptr<RequestGroup>> result;
+    std::vector<std::string> emptyURIs;
+    createRequestGroupForBitTorrent(result, option_, emptyURIs,
+                                    option_->get(PREF_TORRENT_FILE));
+
+    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+    std::shared_ptr<RequestGroup> group = result[0];
+    auto uris = group->getDownloadContext()->getFirstFileEntry()->getUris();
+    CPPUNIT_ASSERT_EQUAL((size_t)0, uris.size());
+  }
+  option_->put(PREF_FORCE_SEQUENTIAL, A2_V_TRUE);
+  {
+    std::vector<std::shared_ptr<RequestGroup>> result;
+
+    createRequestGroupForBitTorrent(result, option_, auxURIs,
+                                    option_->get(PREF_TORRENT_FILE));
+
+    // See --force-requencial is ignored
+    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  }
 }
+#endif // ENABLE_BITTORRENT
 
+#ifdef ENABLE_METALINK
+void DownloadHelperTest::testCreateRequestGroupForMetalink()
+{
+  option_->put(PREF_SPLIT, "5");
+  option_->put(PREF_METALINK_FILE, A2_TEST_DIR "/test.xml");
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_OUT, "file.out");
+  {
+    std::vector<std::shared_ptr<RequestGroup>> result;
+
+    createRequestGroupForMetalink(result, option_);
+
+#  ifdef ENABLE_BITTORRENT
+    CPPUNIT_ASSERT_EQUAL((size_t)6, result.size());
+#  else  // !ENABLE_BITTORRENT
+    CPPUNIT_ASSERT_EQUAL((size_t)5, result.size());
+#  endif // !ENABLE_BITTORRENT
+    std::shared_ptr<RequestGroup> group = result[0];
+    auto uris = group->getDownloadContext()->getFirstFileEntry()->getUris();
+    std::sort(uris.begin(), uris.end());
+    CPPUNIT_ASSERT_EQUAL((size_t)2, uris.size());
+    CPPUNIT_ASSERT_EQUAL(std::string("ftp://ftphost/aria2-0.5.2.tar.bz2"),
+                         uris[0]);
+    CPPUNIT_ASSERT_EQUAL(std::string("http://httphost/aria2-0.5.2.tar.bz2"),
+                         uris[1]);
+    // See numConcurrentCommand is 1 because of maxconnections attribute.
+    CPPUNIT_ASSERT_EQUAL(1, group->getNumConcurrentCommand());
+  }
+}
+#endif // ENABLE_METALINK
 
 } // namespace aria2

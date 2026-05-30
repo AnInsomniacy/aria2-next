@@ -50,7 +50,9 @@
 #include "FileAllocationMan.h"
 #include "CheckIntegrityMan.h"
 #include "DNSCache.h"
-#include "RateLimitScheduler.h"
+#ifdef ENABLE_ASYNC_DNS
+#  include "AsyncNameResolver.h"
+#endif // ENABLE_ASYNC_DNS
 
 namespace aria2 {
 
@@ -58,14 +60,13 @@ class Option;
 class RequestGroupMan;
 class StatCalc;
 class SocketCore;
+class CookieStorage;
+class AuthConfigFactory;
 class Request;
 class EventPoll;
 class Command;
-class AsioRuntime;
-class CurlSession;
-class RpcBeastServer;
 #ifdef ENABLE_BITTORRENT
-class LibtorrentSession;
+class BtRegistry;
 #endif // ENABLE_BITTORRENT
 #ifdef ENABLE_WEBSOCKET
 namespace rpc {
@@ -84,36 +85,61 @@ class DownloadEngine {
 private:
   void waitData();
 
-  void drainRuntime();
-
   std::string sessionId_;
 
   std::unique_ptr<EventPoll> eventPoll_;
 
-  std::unique_ptr<AsioRuntime> runtime_;
-
-  std::unique_ptr<CurlSession> curlSession_;
-
-  RateLimitScheduler rateLimitScheduler_;
-
-  std::vector<std::shared_ptr<RpcBeastServer>> rpcServers_;
-
   std::unique_ptr<StatCalc> statCalc_;
 
   int haltRequested_;
+
+  class SocketPoolEntry {
+  private:
+    std::shared_ptr<SocketCore> socket_;
+    // protocol specific option string
+    std::string options_;
+
+    std::chrono::seconds timeout_;
+
+    Timer registeredTime_;
+
+  public:
+    SocketPoolEntry(const std::shared_ptr<SocketCore>& socket,
+                    const std::string& option, std::chrono::seconds timeout);
+
+    SocketPoolEntry(const std::shared_ptr<SocketCore>& socket,
+                    std::chrono::seconds timeout);
+
+    ~SocketPoolEntry();
+
+    bool isTimeout() const;
+
+    const std::shared_ptr<SocketCore>& getSocket() const { return socket_; }
+
+    const std::string& getOptions() const { return options_; }
+  };
+
+  // key = IP address:port, value = SocketPoolEntry
+  std::multimap<std::string, SocketPoolEntry> socketPool_;
+
+  Timer lastSocketPoolScan_;
 
   bool noWait_;
 
   std::chrono::milliseconds refreshInterval_;
   Timer lastRefresh_;
 
+  std::unique_ptr<CookieStorage> cookieStorage_;
+
 #ifdef ENABLE_BITTORRENT
-  std::unique_ptr<LibtorrentSession> libtorrentSession_;
+  std::unique_ptr<BtRegistry> btRegistry_;
 #endif // ENABLE_BITTORRENT
 
   CUIDCounter cuidCounter_;
 
   std::unique_ptr<DNSCache> dnsCache_;
+
+  std::unique_ptr<AuthConfigFactory> authConfigFactory_;
 
 #ifdef ENABLE_WEBSOCKET
   std::unique_ptr<rpc::WebSocketSessionMan> webSocketSessionMan_;
@@ -127,6 +153,11 @@ private:
   void onEndOfRun();
 
   void afterEachIteration();
+
+  void poolSocket(const std::string& key, const SocketPoolEntry& entry);
+
+  std::multimap<std::string, SocketPoolEntry>::iterator
+  findSocketPoolEntry(const std::string& key);
 
   std::unique_ptr<RequestGroupMan> requestGroupMan_;
   std::unique_ptr<FileAllocationMan> fileAllocationMan_;
@@ -161,9 +192,15 @@ public:
                               Command* command);
   bool deleteSocketForWriteCheck(const std::shared_ptr<SocketCore>& socket,
                                  Command* command);
-  bool addRawSocketCheck(sock_t socket, Command* command, int events);
-  bool deleteRawSocketCheck(sock_t socket, Command* command, int events);
 
+#ifdef ENABLE_ASYNC_DNS
+
+  bool addNameResolverCheck(const std::shared_ptr<AsyncNameResolver>& resolver,
+                            Command* command);
+  bool
+  deleteNameResolverCheck(const std::shared_ptr<AsyncNameResolver>& resolver,
+                          Command* command);
+#endif // ENABLE_ASYNC_DNS
 
   void addCommand(std::vector<std::unique_ptr<Command>> commands);
 
@@ -214,32 +251,69 @@ public:
 
   void setNoWait(bool b);
 
-  AsioRuntime& getRuntime();
-
-  CurlSession& getCurlSession();
-
-  RateLimitScheduler& getRateLimitScheduler() { return rateLimitScheduler_; }
-
-  const RateLimitScheduler& getRateLimitScheduler() const
-  {
-    return rateLimitScheduler_;
-  }
-
-  void refreshRateLimits();
-
-  void wakeRuntime();
-
-  void scheduleRuntimeWake(std::chrono::milliseconds delay);
-
-  void addRpcServer(std::shared_ptr<RpcBeastServer> server);
-
   void addRoutineCommand(std::unique_ptr<Command> command);
 
+  void poolSocket(const std::string& ipaddr, uint16_t port,
+                  const std::string& username, const std::string& proxyhost,
+                  uint16_t proxyport, const std::shared_ptr<SocketCore>& sock,
+                  const std::string& options,
+                  std::chrono::seconds timeout = 15_s);
+
+  void poolSocket(const std::shared_ptr<Request>& request,
+                  const std::string& username,
+                  const std::shared_ptr<Request>& proxyRequest,
+                  const std::shared_ptr<SocketCore>& socket,
+                  const std::string& options,
+                  std::chrono::seconds timeout = 15_s);
+
+  void poolSocket(const std::string& ipaddr, uint16_t port,
+                  const std::string& proxyhost, uint16_t proxyport,
+                  const std::shared_ptr<SocketCore>& sock,
+                  std::chrono::seconds timeout = 15_s);
+
+  void poolSocketForHostname(const std::string& ipaddr, uint16_t port,
+                             const std::string& hostname,
+                             const std::shared_ptr<SocketCore>& sock,
+                             std::chrono::seconds timeout = 15_s);
+
+  void poolSocket(const std::shared_ptr<Request>& request,
+                  const std::shared_ptr<Request>& proxyRequest,
+                  const std::shared_ptr<SocketCore>& socket,
+                  std::chrono::seconds timeout = 15_s);
+
+  std::shared_ptr<SocketCore> popPooledSocket(const std::string& ipaddr,
+                                              uint16_t port,
+                                              const std::string& proxyhost,
+                                              uint16_t proxyport);
+
+  std::shared_ptr<SocketCore>
+  popPooledSocketForHostname(const std::string& ipaddr, uint16_t port,
+                             const std::string& hostname);
+
+  std::shared_ptr<SocketCore>
+  popPooledSocket(std::string& options, const std::string& ipaddr,
+                  uint16_t port, const std::string& username,
+                  const std::string& proxyhost, uint16_t proxyport);
+
+  std::shared_ptr<SocketCore>
+  popPooledSocket(const std::vector<std::string>& ipaddrs, uint16_t port);
+
+  std::shared_ptr<SocketCore>
+  popPooledSocketForHostname(const std::vector<std::string>& ipaddrs,
+                             uint16_t port, const std::string& hostname);
+
+  std::shared_ptr<SocketCore>
+  popPooledSocket(std::string& options, const std::vector<std::string>& ipaddrs,
+                  uint16_t port, const std::string& username);
+
+  void evictSocketPool();
+
+  const std::unique_ptr<CookieStorage>& getCookieStorage() const;
+
 #ifdef ENABLE_BITTORRENT
-  LibtorrentSession& getLibtorrentSession();
-  LibtorrentSession* getInitializedLibtorrentSession() const
+  const std::unique_ptr<BtRegistry>& getBtRegistry() const
   {
-    return libtorrentSession_.get();
+    return btRegistry_;
   }
 #endif // ENABLE_BITTORRENT
 
@@ -262,6 +336,10 @@ public:
                         uint16_t port);
 
   void removeCachedIPAddress(const std::string& hostname, uint16_t port);
+
+  void setAuthConfigFactory(std::unique_ptr<AuthConfigFactory> factory);
+
+  const std::unique_ptr<AuthConfigFactory>& getAuthConfigFactory() const;
 
   void setRefreshInterval(std::chrono::milliseconds interval);
 

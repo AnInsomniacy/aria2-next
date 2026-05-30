@@ -7,8 +7,6 @@
 #include "a2functional.h"
 #include "Exception.h"
 #include "DlRetryEx.h"
-#include "DlAbortEx.h"
-#include "LibsslTLSContext.h"
 #include "TLSContext.h"
 
 namespace aria2 {
@@ -24,8 +22,9 @@ class SocketCoreTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testVerifyHostname);
 #ifdef ENABLE_SSL
   CPPUNIT_TEST(testClientTlsHandshakeRemoteCloseIsRetriable);
-  CPPUNIT_TEST(testOpenSslDefaultCABundleCandidates);
-  CPPUNIT_TEST(testOpenSslRejectsBadContextBeforeHandshake);
+#ifdef HAVE_WINTLS
+  CPPUNIT_TEST(testWinTlsContextAllowsTls13Minimum);
+#endif // HAVE_WINTLS
 #endif // ENABLE_SSL
   CPPUNIT_TEST_SUITE_END();
 
@@ -42,8 +41,9 @@ public:
   void testVerifyHostname();
 #ifdef ENABLE_SSL
   void testClientTlsHandshakeRemoteCloseIsRetriable();
-  void testOpenSslDefaultCABundleCandidates();
-  void testOpenSslRejectsBadContextBeforeHandshake();
+#ifdef HAVE_WINTLS
+  void testWinTlsContextAllowsTls13Minimum();
+#endif // HAVE_WINTLS
 #endif // ENABLE_SSL
 };
 
@@ -280,57 +280,15 @@ void SocketCoreTest::testClientTlsHandshakeRemoteCloseIsRetriable()
   CPPUNIT_ASSERT_THROW(client.tlsConnect("example.org"), DlRetryEx);
 }
 
-void SocketCoreTest::testOpenSslDefaultCABundleCandidates()
+#ifdef HAVE_WINTLS
+void SocketCoreTest::testWinTlsContextAllowsTls13Minimum()
 {
-  const auto candidates = OpenSSLTLSContext::getDefaultCABundleCandidates();
+  std::shared_ptr<TLSContext> tlsContext(
+      TLSContext::make(TLS_CLIENT, TLS_PROTO_TLS13));
 
-  CPPUNIT_ASSERT(std::find(candidates.begin(), candidates.end(),
-                           "/etc/ssl/certs/ca-certificates.crt") !=
-                 candidates.end());
-  CPPUNIT_ASSERT(std::find(candidates.begin(), candidates.end(),
-                           "/etc/pki/tls/certs/ca-bundle.crt") !=
-                 candidates.end());
-  CPPUNIT_ASSERT(std::find(candidates.begin(), candidates.end(),
-                           "/usr/share/ssl/certs/ca-bundle.crt") !=
-                 candidates.end());
-  CPPUNIT_ASSERT(std::find(candidates.begin(), candidates.end(),
-                           "/usr/local/share/certs/ca-root-nss.crt") !=
-                 candidates.end());
-  CPPUNIT_ASSERT(std::find(candidates.begin(), candidates.end(),
-                           "/etc/ssl/cert.pem") != candidates.end());
-  CPPUNIT_ASSERT(std::find(candidates.begin(), candidates.end(),
-                           "/usr/local/etc/ssl/cert.pem") !=
-                 candidates.end());
-  CPPUNIT_ASSERT(std::find(candidates.begin(), candidates.end(),
-                           "/etc/pki/ca-trust/extracted/pem/"
-                           "tls-ca-bundle.pem") != candidates.end());
-  CPPUNIT_ASSERT(std::find(candidates.begin(), candidates.end(),
-                           "/etc/ssl/ca-bundle.pem") != candidates.end());
-  CPPUNIT_ASSERT(std::find(candidates.begin(), candidates.end(),
-                           "/etc/ssl/certs/ca-bundle.crt") !=
-                 candidates.end());
-
-  const auto existing = OpenSSLTLSContext::getExistingDefaultCABundles();
-  for (const auto& path : existing) {
-    CPPUNIT_ASSERT(std::find(candidates.begin(), candidates.end(), path) !=
-                   candidates.end());
-  }
+  CPPUNIT_ASSERT(tlsContext->good());
 }
-
-void SocketCoreTest::testOpenSslRejectsBadContextBeforeHandshake()
-{
-  SocketCore listener;
-  listener.bind("127.0.0.1", 0, AF_INET);
-  listener.beginListen();
-  auto serverEndpoint = listener.getAddrInfo();
-
-  SocketCore client;
-  client.establishConnection("127.0.0.1", serverEndpoint.port);
-
-  SocketCore::setClientTLSContext(std::shared_ptr<TLSContext>());
-  CPPUNIT_ASSERT_THROW(client.tlsConnect("example.org"), DlAbortEx);
-}
-
+#endif // HAVE_WINTLS
 #endif // ENABLE_SSL
 
 } // namespace aria2

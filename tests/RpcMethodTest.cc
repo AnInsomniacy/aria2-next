@@ -20,15 +20,14 @@
 #include "array_fun.h"
 #include "download_helper.h"
 #include "FileEntry.h"
-#include "Piece.h"
-#include "PieceStorage.h"
 #include "RpcMethodFactory.h"
 #include "Ed2kAttribute.h"
 #include "ed2k_hash.h"
 #include "ed2k_link.h"
 #include "ed2k_search.h"
 #ifdef ENABLE_BITTORRENT
-#  include "LibtorrentAttribute.h"
+#  include "BtRegistry.h"
+#  include "BtRuntime.h"
 #  include "bittorrent_helper.h"
 #endif // ENABLE_BITTORRENT
 
@@ -52,15 +51,19 @@ class RpcMethodTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testAddTorrent_withoutTorrent);
   CPPUNIT_TEST(testAddTorrent_notBase64Torrent);
   CPPUNIT_TEST(testAddTorrent_withPosition);
-  CPPUNIT_TEST(testAddTorrentRejectsDuplicateInfoHash);
 #endif // ENABLE_BITTORRENT
+#ifdef ENABLE_METALINK
+  CPPUNIT_TEST(testAddMetalink);
+  CPPUNIT_TEST(testAddMetalink_withoutMetalink);
+  CPPUNIT_TEST(testAddMetalink_notBase64Metalink);
+  CPPUNIT_TEST(testAddMetalink_withPosition);
+#endif // ENABLE_METALINK
   CPPUNIT_TEST(testGetOption);
   CPPUNIT_TEST(testChangeOption);
   CPPUNIT_TEST(testChangeOption_withBadOption);
   CPPUNIT_TEST(testChangeOption_withNotAllowedOption);
   CPPUNIT_TEST(testChangeOption_withoutGid);
   CPPUNIT_TEST(testChangeGlobalOption);
-  CPPUNIT_TEST(testChangeGlobalOptionKeepsExistingLogFile);
   CPPUNIT_TEST(testChangeGlobalOption_withBadOption);
   CPPUNIT_TEST(testChangeGlobalOption_withNotAllowedOption);
   CPPUNIT_TEST(testTellStatus_withoutGid);
@@ -72,23 +75,13 @@ class RpcMethodTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kSearchResultLinkCreatesDownload);
   CPPUNIT_TEST(testGatherStoppedDownload);
   CPPUNIT_TEST(testGatherProgressEd2kStatus);
-  CPPUNIT_TEST(testGatherProgressEd2kVisibleLengthStaysStableWhenPaused);
-  CPPUNIT_TEST(testGatherStoppedDownloadEd2kVisibleLength);
 #ifdef ENABLE_BITTORRENT
-  CPPUNIT_TEST(testGatherProgressLibtorrentStatus);
-  CPPUNIT_TEST(testGatherProgressLibtorrentMetadataDownloading);
-  CPPUNIT_TEST(testGatherProgressLibtorrentMetadataReady);
-  CPPUNIT_TEST(testGatherProgressLibtorrentUsesResumeFallbackWhileChecking);
-  CPPUNIT_TEST(testGatherProgressLibtorrentUsesResumeFallbackBeforeStatus);
-  CPPUNIT_TEST(testGatherProgressLibtorrentUsesResumeFallbackForEmptyLiveStatus);
-  CPPUNIT_TEST(testGatherProgressLibtorrentFilesWithoutNativeBitfield);
-  CPPUNIT_TEST(testGatherProgressLibtorrentAnnounceList);
-  CPPUNIT_TEST(testGetPeersLibtorrentPreservesPeerId);
-  CPPUNIT_TEST(testChangeOptionLibtorrentSelectFile);
-  CPPUNIT_TEST(testUnpauseLibtorrentMagnetAfterMetadataSelectFile);
+  CPPUNIT_TEST(testGatherStoppedDownload_bt);
 #endif // ENABLE_BITTORRENT
   CPPUNIT_TEST(testGatherProgressCommon);
-  CPPUNIT_TEST(testGatherProgressCommonSeparatesInFlightProgress);
+#ifdef ENABLE_BITTORRENT
+  CPPUNIT_TEST(testGatherBitTorrentMetadata);
+#endif // ENABLE_BITTORRENT
   CPPUNIT_TEST(testChangePosition);
   CPPUNIT_TEST(testChangePosition_fail);
   CPPUNIT_TEST(testGetSessionInfo);
@@ -132,15 +125,19 @@ public:
   void testAddTorrent_withoutTorrent();
   void testAddTorrent_notBase64Torrent();
   void testAddTorrent_withPosition();
-  void testAddTorrentRejectsDuplicateInfoHash();
 #endif // ENABLE_BITTORRENT
+#ifdef ENABLE_METALINK
+  void testAddMetalink();
+  void testAddMetalink_withoutMetalink();
+  void testAddMetalink_notBase64Metalink();
+  void testAddMetalink_withPosition();
+#endif // ENABLE_METALINK
   void testGetOption();
   void testChangeOption();
   void testChangeOption_withBadOption();
   void testChangeOption_withNotAllowedOption();
   void testChangeOption_withoutGid();
   void testChangeGlobalOption();
-  void testChangeGlobalOptionKeepsExistingLogFile();
   void testChangeGlobalOption_withBadOption();
   void testChangeGlobalOption_withNotAllowedOption();
   void testTellStatus_withoutGid();
@@ -152,23 +149,13 @@ public:
   void testEd2kSearchResultLinkCreatesDownload();
   void testGatherStoppedDownload();
   void testGatherProgressEd2kStatus();
-  void testGatherProgressEd2kVisibleLengthStaysStableWhenPaused();
-  void testGatherStoppedDownloadEd2kVisibleLength();
 #ifdef ENABLE_BITTORRENT
-  void testGatherProgressLibtorrentStatus();
-  void testGatherProgressLibtorrentMetadataDownloading();
-  void testGatherProgressLibtorrentMetadataReady();
-  void testGatherProgressLibtorrentUsesResumeFallbackWhileChecking();
-  void testGatherProgressLibtorrentUsesResumeFallbackBeforeStatus();
-  void testGatherProgressLibtorrentUsesResumeFallbackForEmptyLiveStatus();
-  void testGatherProgressLibtorrentFilesWithoutNativeBitfield();
-  void testGatherProgressLibtorrentAnnounceList();
-  void testGetPeersLibtorrentPreservesPeerId();
-  void testChangeOptionLibtorrentSelectFile();
-  void testUnpauseLibtorrentMagnetAfterMetadataSelectFile();
+  void testGatherStoppedDownload_bt();
 #endif // ENABLE_BITTORRENT
   void testGatherProgressCommon();
-  void testGatherProgressCommonSeparatesInFlightProgress();
+#ifdef ENABLE_BITTORRENT
+  void testGatherBitTorrentMetadata();
+#endif // ENABLE_BITTORRENT
   void testChangePosition();
   void testChangePosition_fail();
   void testGetSessionInfo();
@@ -381,16 +368,6 @@ RpcRequest createAddTorrentReq()
   req.params->append(std::move(uris));
   return req;
 }
-
-RpcRequest createAddTorrentReq(const std::string& torrentFile)
-{
-  auto req = createReq(AddTorrentRpcMethod::getMethodName());
-  req.params->append(readFile(torrentFile));
-  auto uris = List::g();
-  uris->append("http://localhost/aria2-0.8.2.tar.bz2");
-  req.params->append(std::move(uris));
-  return req;
-}
 } // namespace
 
 void RpcMethodTest::testAddTorrent()
@@ -411,11 +388,9 @@ void RpcMethodTest::testAddTorrent()
   }
   e_->getOption()->put(PREF_RPC_SAVE_UPLOAD_METADATA, A2_V_TRUE);
   {
-    auto res =
-        m.execute(createAddTorrentReq(A2_TEST_DIR "/url-list-singleFile.torrent"),
-                  e_.get());
+    auto res = m.execute(createAddTorrentReq(), e_.get());
     CPPUNIT_ASSERT(File(e_->getOption()->get(PREF_DIR) +
-                        "/0df386cbc3088659f806d1221752a917a1d7fedd.torrent")
+                        "/0a3893293e27ac0490424c06de4d09242215f0a6.torrent")
                        .exists());
     CPPUNIT_ASSERT_EQUAL(0, res.code);
     a2_gid_t gid;
@@ -424,21 +399,26 @@ void RpcMethodTest::testAddTorrent()
 
     auto group = findReservedGroup(e_->getRequestGroupMan().get(), gid);
     CPPUNIT_ASSERT(group);
-    auto dctx = group->getDownloadContext();
-    CPPUNIT_ASSERT(dctx->hasAttribute(CTX_ATTR_LIBTORRENT));
-    auto attrs = getLibtorrentAttrs(dctx);
-    CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->webSeedUris.size());
+    CPPUNIT_ASSERT_EQUAL(e_->getOption()->get(PREF_DIR) +
+                             "/aria2-0.8.2.tar.bz2",
+                         group->getFirstFilePath());
+    CPPUNIT_ASSERT_EQUAL((size_t)1, group->getDownloadContext()
+                                        ->getFirstFileEntry()
+                                        ->getRemainingUris()
+                                        .size());
     CPPUNIT_ASSERT_EQUAL(std::string("http://localhost/aria2-0.8.2.tar.bz2"),
-                         attrs->webSeedUris[0]);
+                         group->getDownloadContext()
+                             ->getFirstFileEntry()
+                             ->getRemainingUris()[0]);
   }
   {
-    auto req = createAddTorrentReq(A2_TEST_DIR "/url-list-multiFile.torrent");
+    auto req = createAddTorrentReq();
     // with options
     std::string dir = A2_TEST_OUT_DIR "/aria2_RpcMethodTest_testAddTorrent";
     File(dir).mkdirs();
     auto opt = Dict::g();
     opt->put(PREF_DIR->k, dir);
-    File(dir + "/c9b87dea1eb0c36e917272dd5220ddf8a47f9654.torrent").remove();
+    File(dir + "/0a3893293e27ac0490424c06de4d09242215f0a6.torrent").remove();
     req.params->append(std::move(opt));
 
     auto res = m.execute(std::move(req), e_.get());
@@ -446,11 +426,11 @@ void RpcMethodTest::testAddTorrent()
     a2_gid_t gid;
     CPPUNIT_ASSERT_EQUAL(
         0, GroupId::toNumericId(gid, downcast<String>(res.param)->s().c_str()));
-    auto group = findReservedGroup(e_->getRequestGroupMan().get(), gid);
-    CPPUNIT_ASSERT(group->getDownloadContext()->hasAttribute(
-        CTX_ATTR_LIBTORRENT));
+    CPPUNIT_ASSERT_EQUAL(dir + "/aria2-0.8.2.tar.bz2",
+                         findReservedGroup(e_->getRequestGroupMan().get(), gid)
+                             ->getFirstFilePath());
     CPPUNIT_ASSERT(
-        File(dir + "/c9b87dea1eb0c36e917272dd5220ddf8a47f9654.torrent")
+        File(dir + "/0a3893293e27ac0490424c06de4d09242215f0a6.torrent")
             .exists());
   }
 }
@@ -496,24 +476,135 @@ void RpcMethodTest::testAddTorrent_withPosition()
                            .size());
 }
 
-void RpcMethodTest::testAddTorrentRejectsDuplicateInfoHash()
-{
-  AddTorrentRpcMethod m;
-  auto res1 = m.execute(createAddTorrentReq(), e_.get());
-  CPPUNIT_ASSERT_EQUAL(0, res1.code);
-
-  auto res2 = m.execute(createAddTorrentReq(), e_.get());
-  CPPUNIT_ASSERT_EQUAL(1, res2.code);
-  auto error = downcast<Dict>(res2.param);
-  CPPUNIT_ASSERT(error);
-  auto message = downcast<String>(error->get("faultString"));
-  CPPUNIT_ASSERT(message);
-  CPPUNIT_ASSERT(message->s().find("Already downloading this torrent") !=
-                 std::string::npos);
-}
-
 #endif // ENABLE_BITTORRENT
 
+#ifdef ENABLE_METALINK
+namespace {
+RpcRequest createAddMetalinkReq()
+{
+  auto req = createReq(AddMetalinkRpcMethod::getMethodName());
+  req.params->append(readFile(A2_TEST_DIR "/2files.metalink"));
+  return req;
+}
+} // namespace
+
+void RpcMethodTest::testAddMetalink()
+{
+  File(e_->getOption()->get(PREF_DIR) +
+       "/c908634fbc257fd56f0114912c2772aeeb4064f4.meta4")
+      .remove();
+  AddMetalinkRpcMethod m;
+  {
+    // Saving upload metadata is disabled by option.
+    auto res = m.execute(createAddMetalinkReq(), e_.get());
+    CPPUNIT_ASSERT_EQUAL(0, res.code);
+    const List* resParams = downcast<List>(res.param);
+    CPPUNIT_ASSERT_EQUAL((size_t)2, resParams->size());
+    a2_gid_t gid1, gid2;
+    CPPUNIT_ASSERT_EQUAL(
+        0, GroupId::toNumericId(
+               gid1, downcast<String>(resParams->get(0))->s().c_str()));
+    CPPUNIT_ASSERT_EQUAL(
+        0, GroupId::toNumericId(
+               gid2, downcast<String>(resParams->get(1))->s().c_str()));
+    CPPUNIT_ASSERT(!File(e_->getOption()->get(PREF_DIR) +
+                         "/c908634fbc257fd56f0114912c2772aeeb4064f4.meta4")
+                        .exists());
+  }
+  e_->getOption()->put(PREF_RPC_SAVE_UPLOAD_METADATA, A2_V_TRUE);
+  {
+    auto res = m.execute(createAddMetalinkReq(), e_.get());
+    CPPUNIT_ASSERT_EQUAL(0, res.code);
+    const List* resParams = downcast<List>(res.param);
+    CPPUNIT_ASSERT_EQUAL((size_t)2, resParams->size());
+    a2_gid_t gid3, gid4;
+    CPPUNIT_ASSERT_EQUAL(
+        0, GroupId::toNumericId(
+               gid3, downcast<String>(resParams->get(0))->s().c_str()));
+    CPPUNIT_ASSERT_EQUAL(
+        0, GroupId::toNumericId(
+               gid4, downcast<String>(resParams->get(1))->s().c_str()));
+    CPPUNIT_ASSERT(File(e_->getOption()->get(PREF_DIR) +
+                        "/c908634fbc257fd56f0114912c2772aeeb4064f4.meta4")
+                       .exists());
+
+    auto tar = findReservedGroup(e_->getRequestGroupMan().get(), gid3);
+    CPPUNIT_ASSERT(tar);
+    CPPUNIT_ASSERT_EQUAL(e_->getOption()->get(PREF_DIR) +
+                             "/aria2-5.0.0.tar.bz2",
+                         tar->getFirstFilePath());
+    auto deb = findReservedGroup(e_->getRequestGroupMan().get(), gid4);
+    CPPUNIT_ASSERT(deb);
+    CPPUNIT_ASSERT_EQUAL(e_->getOption()->get(PREF_DIR) + "/aria2-5.0.0.deb",
+                         deb->getFirstFilePath());
+  }
+  {
+    auto req = createAddMetalinkReq();
+    // with options
+    std::string dir = A2_TEST_OUT_DIR "/aria2_RpcMethodTest_testAddMetalink";
+    File(dir).mkdirs();
+    auto opt = Dict::g();
+    opt->put(PREF_DIR->k, dir);
+    File(dir + "/c908634fbc257fd56f0114912c2772aeeb4064f4.meta4").remove();
+    req.params->append(std::move(opt));
+
+    auto res = m.execute(std::move(req), e_.get());
+    CPPUNIT_ASSERT_EQUAL(0, res.code);
+    const List* resParams = downcast<List>(res.param);
+    CPPUNIT_ASSERT_EQUAL((size_t)2, resParams->size());
+    a2_gid_t gid5;
+    CPPUNIT_ASSERT_EQUAL(
+        0, GroupId::toNumericId(
+               gid5, downcast<String>(resParams->get(0))->s().c_str()));
+    CPPUNIT_ASSERT_EQUAL(dir + "/aria2-5.0.0.tar.bz2",
+                         findReservedGroup(e_->getRequestGroupMan().get(), gid5)
+                             ->getFirstFilePath());
+    CPPUNIT_ASSERT(
+        File(dir + "/c908634fbc257fd56f0114912c2772aeeb4064f4.meta4").exists());
+  }
+}
+
+void RpcMethodTest::testAddMetalink_withoutMetalink()
+{
+  AddMetalinkRpcMethod m;
+  auto res =
+      m.execute(createReq(AddMetalinkRpcMethod::getMethodName()), e_.get());
+  CPPUNIT_ASSERT_EQUAL(1, res.code);
+}
+
+void RpcMethodTest::testAddMetalink_notBase64Metalink()
+{
+  AddMetalinkRpcMethod m;
+  auto req = createReq(AddMetalinkRpcMethod::getMethodName());
+  req.params->append("not metalink");
+  auto res = m.execute(std::move(req), e_.get());
+  CPPUNIT_ASSERT_EQUAL(1, res.code);
+}
+
+void RpcMethodTest::testAddMetalink_withPosition()
+{
+  AddUriRpcMethod m1;
+  auto req1 = createReq(AddUriRpcMethod::getMethodName());
+  auto urisParam1 = List::g();
+  urisParam1->append("http://uri");
+  req1.params->append(std::move(urisParam1));
+  auto res1 = m1.execute(std::move(req1), e_.get());
+  CPPUNIT_ASSERT_EQUAL(0, res1.code);
+
+  AddMetalinkRpcMethod m2;
+  auto req2 = createReq(AddMetalinkRpcMethod::getMethodName());
+  req2.params->append(readFile(A2_TEST_DIR "/2files.metalink"));
+  req2.params->append(Dict::g());
+  req2.params->append(Integer::g(0));
+  auto res2 = m2.execute(std::move(req2), e_.get());
+  CPPUNIT_ASSERT_EQUAL(0, res2.code);
+
+  CPPUNIT_ASSERT_EQUAL(
+      e_->getOption()->get(PREF_DIR) + "/aria2-5.0.0.tar.bz2",
+      getReservedGroup(e_->getRequestGroupMan().get(), 0)->getFirstFilePath());
+}
+
+#endif // ENABLE_METALINK
 
 void RpcMethodTest::testGetOption()
 {
@@ -559,7 +650,14 @@ void RpcMethodTest::testChangeOption()
   opt->put(PREF_MAX_DOWNLOAD_LIMIT->k, "100K");
 #ifdef ENABLE_BITTORRENT
   opt->put(PREF_BT_MAX_PEERS->k, "100");
+  opt->put(PREF_BT_REQUEST_PEER_SPEED_LIMIT->k, "300K");
   opt->put(PREF_MAX_UPLOAD_LIMIT->k, "50K");
+
+  {
+    auto btObject = make_unique<BtObject>();
+    btObject->btRuntime = std::make_shared<BtRuntime>();
+    e_->getBtRegistry()->put(group->getGID(), std::move(btObject));
+  }
 #endif // ENABLE_BITTORRENT
   req.params->append(std::move(opt));
   auto res = m.execute(std::move(req), e_.get());
@@ -571,7 +669,12 @@ void RpcMethodTest::testChangeOption()
   CPPUNIT_ASSERT_EQUAL(std::string("102400"),
                        option->get(PREF_MAX_DOWNLOAD_LIMIT));
 #ifdef ENABLE_BITTORRENT
+  CPPUNIT_ASSERT_EQUAL(std::string("307200"),
+                       option->get(PREF_BT_REQUEST_PEER_SPEED_LIMIT));
+
   CPPUNIT_ASSERT_EQUAL(std::string("100"), option->get(PREF_BT_MAX_PEERS));
+  CPPUNIT_ASSERT_EQUAL(
+      100, e_->getBtRegistry()->get(group->getGID())->btRuntime->getMaxPeers());
 
   CPPUNIT_ASSERT_EQUAL((int)50_k, group->getMaxUploadSpeedLimit());
   CPPUNIT_ASSERT_EQUAL(std::string("51200"),
@@ -641,29 +744,6 @@ void RpcMethodTest::testChangeGlobalOption()
   CPPUNIT_ASSERT_EQUAL(std::string("51200"),
                        e_->getOption()->get(PREF_MAX_OVERALL_UPLOAD_LIMIT));
 #endif // ENABLE_BITTORRENT
-}
-
-void RpcMethodTest::testChangeGlobalOptionKeepsExistingLogFile()
-{
-  option_->put(PREF_LOG_FILE, A2_TEST_OUT_DIR "/aria2_RpcMethodTest.log");
-  option_->put(PREF_LOG_LEVEL, V_INFO);
-  option_->put(PREF_LOG_MAX_SIZE, "1048576");
-  option_->put(PREF_LOG_MAX_FILES, "2");
-  option_->put(PREF_ENABLE_COLOR, A2_V_FALSE);
-  option_->put(PREF_QUIET, A2_V_FALSE);
-
-  ChangeGlobalOptionRpcMethod m;
-  auto req = createReq(ChangeGlobalOptionRpcMethod::getMethodName());
-  auto opt = Dict::g();
-  opt->put(PREF_TERMINAL_LOG_LEVEL->k, V_WARN);
-  req.params->append(std::move(opt));
-  auto res = m.execute(std::move(req), e_.get());
-
-  CPPUNIT_ASSERT_EQUAL(0, res.code);
-  CPPUNIT_ASSERT_EQUAL(std::string(V_WARN),
-                       e_->getOption()->get(PREF_TERMINAL_LOG_LEVEL));
-  CPPUNIT_ASSERT_EQUAL(std::string(A2_TEST_OUT_DIR "/aria2_RpcMethodTest.log"),
-                       e_->getOption()->get(PREF_LOG_FILE));
 }
 
 void RpcMethodTest::testChangeGlobalOption_withBadOption()
@@ -1075,15 +1155,6 @@ void RpcMethodTest::testGatherProgressEd2kStatus()
   CPPUNIT_ASSERT_EQUAL(std::string("ed2k-status.bin"),
                        getString(ed2kStatus, "name"));
   CPPUNIT_ASSERT_EQUAL(std::string("1024"), getString(ed2kStatus, "length"));
-  CPPUNIT_ASSERT(ed2kStatus->containsKey("completedLength"));
-  CPPUNIT_ASSERT(ed2kStatus->containsKey("inFlightCompletedLength"));
-  CPPUNIT_ASSERT(ed2kStatus->containsKey("visibleCompletedLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("0"),
-                       getString(ed2kStatus, "completedLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("0"),
-                       getString(ed2kStatus, "inFlightCompletedLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("0"),
-                       getString(ed2kStatus, "visibleCompletedLength"));
   CPPUNIT_ASSERT_EQUAL(std::string("1"),
                        getString(ed2kStatus, "partHashCount"));
   CPPUNIT_ASSERT_EQUAL(std::string("2222222222222222222222222222222222222222"),
@@ -1116,450 +1187,26 @@ void RpcMethodTest::testGatherProgressEd2kStatus()
                        getString(ed2kStatus, "peerCreditCount"));
 }
 
-void RpcMethodTest::testGatherProgressEd2kVisibleLengthStaysStableWhenPaused()
-{
-  auto dctx = std::make_shared<DownloadContext>(
-      ed2k::PIECE_LENGTH, 1024, A2_TEST_OUT_DIR "/ed2k-paused.bin");
-  auto attrs = std::make_shared<Ed2kAttribute>();
-  attrs->link.type = ed2k::LinkType::FILE;
-  attrs->link.name = "ed2k-paused.bin";
-  attrs->link.size = 1024;
-  attrs->link.hash = std::string(ed2k::HASH_LENGTH, '\x42');
-  attrs->visibleCompletedLength = 768;
-  dctx->setAttribute(CTX_ATTR_ED2K, attrs);
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-  group->setRequestGroupMan(e_->getRequestGroupMan().get());
-
-  auto entry = Dict::g();
-  gatherProgressCommon(entry.get(), group, {"ed2k"});
-
-  auto ed2kStatus = downcast<Dict>(entry->get("ed2k"));
-  CPPUNIT_ASSERT(ed2kStatus);
-  CPPUNIT_ASSERT_EQUAL(std::string("0"),
-                       getString(ed2kStatus, "completedLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("0"),
-                       getString(ed2kStatus, "inFlightCompletedLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("768"),
-                       getString(ed2kStatus, "visibleCompletedLength"));
-}
-
-void RpcMethodTest::testGatherStoppedDownloadEd2kVisibleLength()
-{
-  auto attrs = std::make_shared<Ed2kAttribute>();
-  attrs->link.type = ed2k::LinkType::FILE;
-  attrs->link.name = "ed2k-stopped.bin";
-  attrs->link.size = 1024;
-  attrs->link.hash = std::string(ed2k::HASH_LENGTH, '\x42');
-  attrs->visibleCompletedLength = 900;
-
-  auto result = std::make_shared<DownloadResult>();
-  result->gid = GroupId::create();
-  result->totalLength = 1024;
-  result->completedLength = 0;
-  result->inFlightCompletedLength = 0;
-  result->result = error_code::IN_PROGRESS;
-  result->attrs.resize(MAX_CTX_ATTR);
-  result->attrs[CTX_ATTR_ED2K] = attrs;
-
-  auto entry = Dict::g();
-  gatherStoppedDownload(entry.get(), result, {"ed2k"});
-
-  auto ed2kStatus = downcast<Dict>(entry->get("ed2k"));
-  CPPUNIT_ASSERT(ed2kStatus);
-  CPPUNIT_ASSERT_EQUAL(std::string("900"),
-                       getString(ed2kStatus, "visibleCompletedLength"));
-}
-
 #ifdef ENABLE_BITTORRENT
-void RpcMethodTest::testGatherProgressLibtorrentStatus()
+void RpcMethodTest::testGatherStoppedDownload_bt()
 {
-  auto dctx = std::make_shared<DownloadContext>(1_k, 100_k, "torrent.bin");
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::TORRENT_FILE,
-      A2_TEST_DIR "/single.torrent", "", std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  attrs->status.hasStatus = true;
-  attrs->status.totalLength = 100_k;
-  attrs->status.completedLength = 99_k;
-  attrs->status.uploadedLength = 7_k;
-  attrs->status.downloadSpeed = 1234;
-  attrs->status.uploadSpeed = 55;
-  attrs->status.connections = 8;
-  attrs->status.seeders = 3;
-  attrs->status.infoHash.assign(20, '\x01');
-  attrs->status.name = "torrent.bin";
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
+  auto d = std::make_shared<DownloadResult>();
+  d->gid = GroupId::create();
+  d->infoHash = "2089b05ecca3d829cee5497d2703803b52216d19";
+  d->attrs = std::vector<std::shared_ptr<ContextAttribute>>(MAX_CTX_ATTR);
 
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-  group->initPieceStorage();
-  group->getPieceStorage()->markAllPiecesDone();
+  auto torrentAttr = std::make_shared<TorrentAttribute>();
+  torrentAttr->creationDate = 1000000007;
+  d->attrs[CTX_ATTR_BT] = torrentAttr;
 
   auto entry = Dict::g();
-  gatherProgressCommon(entry.get(), group, {});
-
-  CPPUNIT_ASSERT_EQUAL(std::string("102400"),
-                       getString(entry.get(), "totalLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("101376"),
-                       getString(entry.get(), "completedLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("1234"),
-                       getString(entry.get(), "downloadSpeed"));
-  CPPUNIT_ASSERT_EQUAL(std::string("55"), getString(entry.get(), "uploadSpeed"));
-  CPPUNIT_ASSERT_EQUAL(std::string("7168"), getString(entry.get(), "uploadLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("8"), getString(entry.get(), "connections"));
-  CPPUNIT_ASSERT_EQUAL(util::toHex(std::string(20, '\x01')),
-                       getString(entry.get(), "infoHash"));
-  CPPUNIT_ASSERT(entry->containsKey("bittorrent"));
-  auto btDict = downcast<Dict>(entry->get("bittorrent"));
-  auto infoDict = downcast<Dict>(btDict->get("info"));
-  CPPUNIT_ASSERT_EQUAL(std::string("torrent.bin"),
-                       downcast<String>(infoDict->get("name"))->s());
-}
-
-void RpcMethodTest::testGatherProgressLibtorrentMetadataDownloading()
-{
-  auto dctx = std::make_shared<DownloadContext>(0, 0, "magnet");
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::MAGNET,
-      "magnet:?xt=urn:btih:0101010101010101010101010101010101010101"
-      "&dn=Display%20Name",
-      "", std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  attrs->status.hasStatus = true;
-  attrs->status.hasMetadata = false;
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-
-  auto entry = Dict::g();
-  gatherProgressCommon(entry.get(), group, {"bittorrent"});
+  gatherStoppedDownload(entry.get(), d, {});
 
   auto btDict = downcast<Dict>(entry->get("bittorrent"));
-  CPPUNIT_ASSERT(!btDict->containsKey("info"));
-  CPPUNIT_ASSERT(btDict->containsKey("metadata"));
-  auto metadataDict = downcast<Dict>(btDict->get("metadata"));
-  CPPUNIT_ASSERT_EQUAL(std::string("downloading"),
-                       downcast<String>(metadataDict->get("state"))->s());
-  CPPUNIT_ASSERT(!downcast<Bool>(metadataDict->get("hasMetadata"))->val());
-  CPPUNIT_ASSERT(metadataDict->containsKey("displayName"));
-  CPPUNIT_ASSERT_EQUAL(std::string("Display Name"),
-                       downcast<String>(metadataDict->get("displayName"))->s());
-}
+  CPPUNIT_ASSERT(btDict);
 
-void RpcMethodTest::testGatherProgressLibtorrentMetadataReady()
-{
-  auto dctx = std::make_shared<DownloadContext>(1_k, 100_k, "torrent.bin");
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::MAGNET,
-      "magnet:?xt=urn:btih:0101010101010101010101010101010101010101", "",
-      std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  attrs->status.hasStatus = true;
-  attrs->status.hasMetadata = true;
-  attrs->status.name = "torrent.bin";
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-
-  auto entry = Dict::g();
-  gatherProgressCommon(entry.get(), group, {"bittorrent"});
-
-  auto btDict = downcast<Dict>(entry->get("bittorrent"));
-  auto infoDict = downcast<Dict>(btDict->get("info"));
-  CPPUNIT_ASSERT_EQUAL(std::string("torrent.bin"),
-                       downcast<String>(infoDict->get("name"))->s());
-  CPPUNIT_ASSERT(btDict->containsKey("metadata"));
-  auto metadataDict = downcast<Dict>(btDict->get("metadata"));
-  CPPUNIT_ASSERT_EQUAL(std::string("ready"),
-                       downcast<String>(metadataDict->get("state"))->s());
-  CPPUNIT_ASSERT(downcast<Bool>(metadataDict->get("hasMetadata"))->val());
-  CPPUNIT_ASSERT(!metadataDict->containsKey("displayName"));
-}
-
-void RpcMethodTest::testGatherProgressLibtorrentUsesResumeFallbackWhileChecking()
-{
-  auto dctx = std::make_shared<DownloadContext>(1_k, 100_k, "torrent.bin");
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::TORRENT_FILE,
-      A2_TEST_DIR "/single.torrent", "", std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  attrs->status.hasStatus = true;
-  attrs->status.checking = true;
-  attrs->status.totalLength = 0;
-  attrs->status.completedLength = 0;
-  attrs->resumeStatus.hasStatus = true;
-  attrs->resumeStatus.totalLength = 100_k;
-  attrs->resumeStatus.completedLength = 99_k;
-  attrs->resumeStatus.bitfield.assign(13, '\xff');
-  attrs->resumeStatus.name = "torrent.bin";
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-
-  auto entry = Dict::g();
-  gatherProgressCommon(entry.get(), group, {});
-
-  CPPUNIT_ASSERT_EQUAL(std::string("102400"),
-                       getString(entry.get(), "totalLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("101376"),
-                       getString(entry.get(), "completedLength"));
-  CPPUNIT_ASSERT(entry->containsKey("bittorrent"));
-}
-
-void RpcMethodTest::testGatherProgressLibtorrentUsesResumeFallbackBeforeStatus()
-{
-  auto dctx = std::make_shared<DownloadContext>(1_k, 100_k, "torrent.bin");
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::TORRENT_FILE,
-      A2_TEST_DIR "/single.torrent", "", std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  attrs->resumeStatus.hasStatus = true;
-  attrs->resumeStatus.totalLength = 100_k;
-  attrs->resumeStatus.completedLength = 99_k;
-  attrs->resumeStatus.name = "torrent.bin";
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-
-  auto entry = Dict::g();
-  gatherProgressCommon(entry.get(), group, {});
-
-  CPPUNIT_ASSERT_EQUAL(std::string("102400"),
-                       getString(entry.get(), "totalLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("101376"),
-                       getString(entry.get(), "completedLength"));
-}
-
-void RpcMethodTest::testGatherProgressLibtorrentUsesResumeFallbackForEmptyLiveStatus()
-{
-  auto dctx = std::make_shared<DownloadContext>(1_k, 100_k, "torrent.bin");
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::TORRENT_FILE,
-      A2_TEST_DIR "/single.torrent", "", std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  attrs->status.hasStatus = true;
-  attrs->status.checking = false;
-  attrs->status.totalLength = 0;
-  attrs->status.completedLength = 0;
-  attrs->resumeStatus.hasStatus = true;
-  attrs->resumeStatus.totalLength = 100_k;
-  attrs->resumeStatus.completedLength = 99_k;
-  attrs->resumeStatus.bitfield.assign(13, '\xff');
-  attrs->resumeStatus.name = "torrent.bin";
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-
-  auto entry = Dict::g();
-  gatherProgressCommon(entry.get(), group, {});
-
-  CPPUNIT_ASSERT_EQUAL(std::string("102400"),
-                       getString(entry.get(), "totalLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("101376"),
-                       getString(entry.get(), "completedLength"));
-  CPPUNIT_ASSERT(entry->containsKey("bitfield"));
-}
-
-void RpcMethodTest::testGatherProgressLibtorrentAnnounceList()
-{
-  auto dctx = std::make_shared<DownloadContext>(1_k, 100_k, "torrent.bin");
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::TORRENT_FILE,
-      A2_TEST_DIR "/single.torrent", "", std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  attrs->status.hasStatus = true;
-  attrs->status.name = "torrent.bin";
-  attrs->trackerUris.push_back("udp://tracker1.example:6969/announce");
-  attrs->trackerTiers.push_back(0);
-  attrs->trackerUris.push_back("https://tracker2.example/announce");
-  attrs->trackerTiers.push_back(1);
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-
-  auto entry = Dict::g();
-  gatherProgressCommon(entry.get(), group, {"bittorrent"});
-
-  auto btDict = downcast<Dict>(entry->get("bittorrent"));
-  auto announceList = downcast<List>(btDict->get("announceList"));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, announceList->size());
-  auto tier0 = downcast<List>(announceList->get(0));
-  auto tier1 = downcast<List>(announceList->get(1));
-  CPPUNIT_ASSERT_EQUAL(std::string("udp://tracker1.example:6969/announce"),
-                       downcast<String>(tier0->get(0))->s());
-  CPPUNIT_ASSERT_EQUAL(std::string("https://tracker2.example/announce"),
-                       downcast<String>(tier1->get(0))->s());
-}
-
-void RpcMethodTest::testGatherProgressLibtorrentFilesWithoutNativeBitfield()
-{
-  auto dctx = std::make_shared<DownloadContext>(0, 0, "torrent");
-  std::vector<std::shared_ptr<FileEntry>> entries;
-  entries.push_back(std::make_shared<FileEntry>("file1.bin", 2_g, 0));
-  entries.push_back(std::make_shared<FileEntry>("file2.bin", 2_g + 1_m, 2_g));
-  dctx->setFileEntries(entries.begin(), entries.end());
-  dctx->setPieceLength(0);
-
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::TORRENT_FILE,
-      A2_TEST_DIR "/test.torrent", "", std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  attrs->status.hasStatus = true;
-  attrs->status.totalLength = 4_g + 1_m;
-  attrs->status.completedLength = 0;
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-
-  auto entry = Dict::g();
-  gatherProgressCommon(entry.get(), group, {"files"});
-
-  const List* files = downcast<List>(entry->get("files"));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, files->size());
-  const Dict* file1 = downcast<Dict>(files->get(0));
-  const Dict* file2 = downcast<Dict>(files->get(1));
-  CPPUNIT_ASSERT_EQUAL(std::string("0"),
-                       downcast<String>(file1->get("completedLength"))->s());
-  CPPUNIT_ASSERT_EQUAL(std::string("0"),
-                       downcast<String>(file2->get("completedLength"))->s());
-}
-
-void RpcMethodTest::testGetPeersLibtorrentPreservesPeerId()
-{
-  auto dctx = std::make_shared<DownloadContext>(1_k, 100_k, "torrent.bin");
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::TORRENT_FILE,
-      A2_TEST_DIR "/single.torrent", "", std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  LibtorrentAttribute::Peer peer;
-  peer.peerId = "-qB4250-abcdefghijkl";
-  peer.ip = "127.0.0.1";
-  peer.port = 6881;
-  peer.bitfield.assign(1, static_cast<char>(0xf0));
-  attrs->peers.push_back(peer);
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-  e_->getRequestGroupMan()->addRequestGroup(group);
-
-  GetPeersRpcMethod m;
-  auto req = createReq(GetPeersRpcMethod::getMethodName());
-  req.params->append(GroupId::toHex(group->getGID()));
-  auto res = m.execute(std::move(req), e_.get());
-
-  CPPUNIT_ASSERT_EQUAL(0, res.code);
-  auto peers = downcast<List>(res.param.get());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, peers->size());
-  auto peerDict = downcast<Dict>(peers->get(0));
-  CPPUNIT_ASSERT_EQUAL(std::string("-qB4250-abcdefghijkl"),
-                       downcast<String>(peerDict->get("peerId"))->s());
-  CPPUNIT_ASSERT_EQUAL(std::string("f0"),
-                       downcast<String>(peerDict->get("bitfield"))->s());
-}
-
-void RpcMethodTest::testChangeOptionLibtorrentSelectFile()
-{
-  auto dctx = std::make_shared<DownloadContext>(1_k, 2_k, "torrent");
-  std::vector<std::shared_ptr<FileEntry>> entries;
-  entries.push_back(std::make_shared<FileEntry>("file1", 1_k, 0));
-  entries.push_back(std::make_shared<FileEntry>("file2", 1_k, 1_k));
-  dctx->setFileEntries(entries.begin(), entries.end());
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::TORRENT_FILE,
-      A2_TEST_DIR "/test.torrent", "", std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  auto attrsPtr = attrs.get();
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-  e_->getRequestGroupMan()->addReservedGroup(group);
-
-  ChangeOptionRpcMethod m;
-  auto req = createReq(ChangeOptionRpcMethod::getMethodName());
-  req.params->append(GroupId::toHex(group->getGID()));
-  auto opt = Dict::g();
-  opt->put(PREF_SELECT_FILE->k, "2");
-  req.params->append(std::move(opt));
-  auto res = m.execute(std::move(req), e_.get());
-
-  CPPUNIT_ASSERT_EQUAL(0, res.code);
-  CPPUNIT_ASSERT_EQUAL(std::string("2"), attrsPtr->selectedFiles);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrsPtr->filePriorities.size());
-  CPPUNIT_ASSERT_EQUAL(0, attrsPtr->filePriorities[0]);
-  CPPUNIT_ASSERT_EQUAL(4, attrsPtr->filePriorities[1]);
-}
-
-void RpcMethodTest::testUnpauseLibtorrentMagnetAfterMetadataSelectFile()
-{
-  auto dctx = std::make_shared<DownloadContext>(1_k, 2_k, "torrent");
-  std::vector<std::shared_ptr<FileEntry>> entries;
-  entries.push_back(std::make_shared<FileEntry>("file1", 1_k, 0));
-  entries.push_back(std::make_shared<FileEntry>("file2", 1_k, 1_k));
-  dctx->setFileEntries(entries.begin(), entries.end());
-  auto attrs = make_unique<LibtorrentAttribute>(
-      LibtorrentAttribute::SourceType::MAGNET,
-      "magnet:?xt=urn:btih:0101010101010101010101010101010101010101", "",
-      std::vector<std::string>{},
-      "test_outdir/0101010101010101010101010101010101010101.aria2");
-  auto attrsPtr = attrs.get();
-  attrsPtr->pauseAfterMetadata = true;
-  attrsPtr->metadataPauseApplied = true;
-  dctx->setAttribute(CTX_ATTR_LIBTORRENT, std::move(attrs));
-
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-  group->setPauseRequested(true);
-  e_->getRequestGroupMan()->addReservedGroup(group);
-
-  {
-    ChangeOptionRpcMethod m;
-    auto req = createReq(ChangeOptionRpcMethod::getMethodName());
-    req.params->append(GroupId::toHex(group->getGID()));
-    auto opt = Dict::g();
-    opt->put(PREF_SELECT_FILE->k, "2");
-    req.params->append(std::move(opt));
-    auto res = m.execute(std::move(req), e_.get());
-    CPPUNIT_ASSERT_EQUAL(0, res.code);
-  }
-
-  CPPUNIT_ASSERT_EQUAL(std::string("2"), attrsPtr->selectedFiles);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrsPtr->filePriorities.size());
-  CPPUNIT_ASSERT_EQUAL(0, attrsPtr->filePriorities[0]);
-  CPPUNIT_ASSERT_EQUAL(4, attrsPtr->filePriorities[1]);
-
-  UnpauseRpcMethod m;
-  auto req = createReq(UnpauseRpcMethod::getMethodName());
-  req.params->append(GroupId::toHex(group->getGID()));
-  auto res = m.execute(std::move(req), e_.get());
-
-  CPPUNIT_ASSERT_EQUAL(0, res.code);
-  CPPUNIT_ASSERT(!group->isPauseRequested());
-  CPPUNIT_ASSERT(attrsPtr->metadataPauseApplied);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrsPtr->filePriorities.size());
-  CPPUNIT_ASSERT_EQUAL(0, attrsPtr->filePriorities[0]);
-  CPPUNIT_ASSERT_EQUAL(4, attrsPtr->filePriorities[1]);
+  CPPUNIT_ASSERT_EQUAL((int64_t)1000000007,
+                       downcast<Integer>(btDict->get("creationDate"))->i());
 }
 #endif // ENABLE_BITTORRENT
 
@@ -1617,34 +1264,50 @@ void RpcMethodTest::testGatherProgressCommon()
   CPPUNIT_ASSERT(entry->containsKey("gid"));
 }
 
-void RpcMethodTest::testGatherProgressCommonSeparatesInFlightProgress()
+#ifdef ENABLE_BITTORRENT
+void RpcMethodTest::testGatherBitTorrentMetadata()
 {
-  auto dctx = std::make_shared<DownloadContext>(1_m, 256_m, "file.bin");
-  auto group =
-      std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_));
-  group->setDownloadContext(dctx);
-  group->initPieceStorage();
-  group->getPieceStorage()->markPiecesDone(250_m);
-
-  std::vector<std::shared_ptr<Piece>> inFlightPieces;
-  for (int i = 0; i < 2; ++i) {
-    auto p = std::make_shared<Piece>(250 + i, 1_m);
-    for (int j = 0; j < 32; ++j) {
-      p->completeBlock(j);
-    }
-    inFlightPieces.push_back(p);
-  }
-  group->getPieceStorage()->addInFlightPiece(inFlightPieces);
-
-  auto entry = Dict::g();
-  gatherProgressCommon(entry.get(), group,
-                       {"completedLength", "inFlightCompletedLength"});
-
-  CPPUNIT_ASSERT_EQUAL(std::string("262144000"),
-                       getString(entry.get(), "completedLength"));
-  CPPUNIT_ASSERT_EQUAL(std::string("1048576"),
-                       getString(entry.get(), "inFlightCompletedLength"));
+  auto option = std::make_shared<Option>();
+  option->put(PREF_DIR, ".");
+  auto dctx = std::make_shared<DownloadContext>();
+  bittorrent::load(A2_TEST_DIR "/test.torrent", dctx, option);
+  auto btDict = Dict::g();
+  gatherBitTorrentMetadata(btDict.get(), bittorrent::getTorrentAttrs(dctx));
+  CPPUNIT_ASSERT_EQUAL(std::string("REDNOAH.COM RULES"),
+                       downcast<String>(btDict->get("comment"))->s());
+  CPPUNIT_ASSERT_EQUAL((int64_t)1123456789,
+                       downcast<Integer>(btDict->get("creationDate"))->i());
+  CPPUNIT_ASSERT_EQUAL(std::string("multi"),
+                       downcast<String>(btDict->get("mode"))->s());
+  CPPUNIT_ASSERT_EQUAL(
+      std::string("aria2-test"),
+      downcast<String>(downcast<Dict>(btDict->get("info"))->get("name"))->s());
+  const List* announceList = downcast<List>(btDict->get("announceList"));
+  CPPUNIT_ASSERT_EQUAL((size_t)3, announceList->size());
+  CPPUNIT_ASSERT_EQUAL(
+      std::string("http://tracker1"),
+      downcast<String>(downcast<List>(announceList->get(0))->get(0))->s());
+  CPPUNIT_ASSERT_EQUAL(
+      std::string("http://tracker2"),
+      downcast<String>(downcast<List>(announceList->get(1))->get(0))->s());
+  CPPUNIT_ASSERT_EQUAL(
+      std::string("http://tracker3"),
+      downcast<String>(downcast<List>(announceList->get(2))->get(0))->s());
+  // Remove some keys
+  auto modBtAttrs = bittorrent::getTorrentAttrs(dctx);
+  modBtAttrs->comment.clear();
+  modBtAttrs->creationDate = 0;
+  modBtAttrs->mode = BT_FILE_MODE_NONE;
+  modBtAttrs->metadata.clear();
+  btDict = Dict::g();
+  gatherBitTorrentMetadata(btDict.get(), modBtAttrs);
+  CPPUNIT_ASSERT(!btDict->containsKey("comment"));
+  CPPUNIT_ASSERT(!btDict->containsKey("creationDate"));
+  CPPUNIT_ASSERT(!btDict->containsKey("mode"));
+  CPPUNIT_ASSERT(!btDict->containsKey("info"));
+  CPPUNIT_ASSERT(btDict->containsKey("announceList"));
 }
+#endif // ENABLE_BITTORRENT
 
 void RpcMethodTest::testChangePosition()
 {

@@ -19,7 +19,6 @@
 #include "Ed2kKadState.h"
 #include "Ed2kSharedStore.h"
 #include "Ed2kUploadQueue.h"
-#include "LibtorrentAttribute.h"
 #include "util.h"
 
 namespace aria2 {
@@ -29,8 +28,6 @@ class SessionSerializerTest : public CppUnit::TestFixture {
   CPPUNIT_TEST_SUITE(SessionSerializerTest);
   CPPUNIT_TEST(testSave);
   CPPUNIT_TEST(testSaveErrorDownload);
-  CPPUNIT_TEST(testDoesNotSaveDuplicateInfoHashErrors);
-  CPPUNIT_TEST(testSavesOneEntryPerBtInfoHash);
   CPPUNIT_TEST(testSaveEd2kDownload);
   CPPUNIT_TEST(testSaveEd2kSharedStore);
   CPPUNIT_TEST(testSaveEd2kPeerCredits);
@@ -39,8 +36,6 @@ class SessionSerializerTest : public CppUnit::TestFixture {
 public:
   void testSave();
   void testSaveErrorDownload();
-  void testDoesNotSaveDuplicateInfoHashErrors();
-  void testSavesOneEntryPerBtInfoHash();
   void testSaveEd2kDownload();
   void testSaveEd2kSharedStore();
   void testSaveEd2kPeerCredits();
@@ -50,17 +45,17 @@ CPPUNIT_TEST_SUITE_REGISTRATION(SessionSerializerTest);
 
 void SessionSerializerTest::testSave()
 {
-#if defined(ENABLE_BITTORRENT)
+#if defined(ENABLE_BITTORRENT) && defined(ENABLE_METALINK)
   std::vector<std::string> uris{
       "http://localhost/file", "http://mirror/file",
-      A2_TEST_DIR "/test.torrent",
-      "magnet:?xt=urn:btih:1111111111111111111111111111111111111111"};
+      A2_TEST_DIR "/test.torrent", A2_TEST_DIR "/serialize_session.meta4",
+      "magnet:?xt=urn:btih:248D0A1CD08284299DE78D5C1ED359BB46717D8C"};
   std::vector<std::shared_ptr<RequestGroup>> result;
   std::shared_ptr<Option> option(new Option());
   option->put(PREF_DIR, "/tmp");
   createRequestGroupForUri(result, option, uris);
-  CPPUNIT_ASSERT_EQUAL((size_t)3, result.size());
-  result[2]->getOption()->put(PREF_PAUSE, A2_V_TRUE);
+  CPPUNIT_ASSERT_EQUAL((size_t)5, result.size());
+  result[4]->getOption()->put(PREF_PAUSE, A2_V_TRUE);
   option->put(PREF_MAX_DOWNLOAD_RESULT, "10");
   RequestGroupMan rgman{result, 1, option.get()};
   SessionSerializer s(&rgman);
@@ -131,15 +126,23 @@ void SessionSerializerTest::testSave()
   std::getline(ss, line);
   CPPUNIT_ASSERT_EQUAL(uris[3], line);
   std::getline(ss, line);
+  // local metalink download does not save meaningful GID
+  CPPUNIT_ASSERT(fmt(" gid=%s", GroupId::toHex(result[2]->getGID()).c_str()) !=
+                 line);
+  std::getline(ss, line);
+  CPPUNIT_ASSERT_EQUAL(std::string(" dir=/tmp"), line);
+  std::getline(ss, line);
+  CPPUNIT_ASSERT_EQUAL(uris[4], line);
+  std::getline(ss, line);
   CPPUNIT_ASSERT_EQUAL(
-      fmt(" gid=%s", GroupId::toHex(result[2]->getGID()).c_str()), line);
+      fmt(" gid=%s", GroupId::toHex(result[4]->getGID()).c_str()), line);
   std::getline(ss, line);
   CPPUNIT_ASSERT_EQUAL(std::string(" dir=/tmp"), line);
   std::getline(ss, line);
   CPPUNIT_ASSERT_EQUAL(std::string(" pause=true"), line);
   std::getline(ss, line);
   CPPUNIT_ASSERT(!ss);
-#endif // defined(ENABLE_BITTORRENT)
+#endif // defined(ENABLE_BITTORRENT) && defined(ENABLE_METALINK)
 }
 
 void SessionSerializerTest::testSaveErrorDownload()
@@ -161,69 +164,6 @@ void SessionSerializerTest::testSaveErrorDownload()
   std::string line;
   std::getline(ss, line);
   CPPUNIT_ASSERT_EQUAL(std::string("http://error\t"), line);
-}
-
-void SessionSerializerTest::testDoesNotSaveDuplicateInfoHashErrors()
-{
-  auto option = std::make_shared<Option>();
-  option->put(PREF_DIR, "/tmp");
-  option->put(PREF_MAX_DOWNLOAD_RESULT, "10");
-  RequestGroupMan rgman{std::vector<std::shared_ptr<RequestGroup>>{}, 1,
-                        option.get()};
-
-  auto duplicate =
-      createDownloadResult(error_code::DUPLICATE_INFO_HASH,
-                           "magnet:?xt=urn:btih:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-  duplicate->resultMessage = "torrent already exists in session";
-  rgman.addDownloadResult(duplicate);
-
-  const std::string filename =
-      A2_TEST_OUT_DIR
-      "/aria2_SessionSerializerTest_testDoesNotSaveDuplicateInfoHashErrors";
-  SessionSerializer s(&rgman);
-  s.save(filename);
-
-  std::ifstream ss(filename.c_str(), std::ios::binary);
-  std::string content((std::istreambuf_iterator<char>(ss)),
-                      std::istreambuf_iterator<char>());
-  CPPUNIT_ASSERT_EQUAL(std::string{}, content);
-}
-
-void SessionSerializerTest::testSavesOneEntryPerBtInfoHash()
-{
-#if defined(ENABLE_BITTORRENT)
-  auto option = std::make_shared<Option>();
-  option->put(PREF_DIR, "/tmp");
-  option->put(PREF_MAX_DOWNLOAD_RESULT, "10");
-  option->put(PREF_LISTEN_PORT, "0");
-  option->put(PREF_DHT_LISTEN_PORT, "0");
-
-  const std::string hash1(20, '\x11');
-  const std::string hash2(20, '\x22');
-  std::vector<std::string> uris{
-      "magnet:?xt=urn:btih:1111111111111111111111111111111111111111",
-      "magnet:?xt=urn:btih:1111111111111111111111111111111111111111",
-      "magnet:?xt=urn:btih:2222222222222222222222222222222222222222"};
-  std::vector<std::shared_ptr<RequestGroup>> groups;
-  createRequestGroupForUri(groups, option, uris);
-  CPPUNIT_ASSERT_EQUAL((size_t)3, groups.size());
-  getLibtorrentAttrs(groups[0]->getDownloadContext())->status.infoHash = hash1;
-  getLibtorrentAttrs(groups[1]->getDownloadContext())->status.infoHash = hash1;
-  getLibtorrentAttrs(groups[2]->getDownloadContext())->status.infoHash = hash2;
-
-  RequestGroupMan rgman{groups, 3, option.get()};
-  SessionSerializer serializer(&rgman);
-  const std::string filename =
-      A2_TEST_OUT_DIR "/aria2_SessionSerializerTest_testSavesOneEntryPerBtInfoHash";
-  CPPUNIT_ASSERT(serializer.save(filename));
-
-  std::ifstream in(filename.c_str(), std::ios::binary);
-  std::string content((std::istreambuf_iterator<char>(in)),
-                      std::istreambuf_iterator<char>());
-  CPPUNIT_ASSERT(content.find(uris[0]) != std::string::npos);
-  CPPUNIT_ASSERT(content.find(uris[2]) != std::string::npos);
-  CPPUNIT_ASSERT_EQUAL(content.find(uris[0]), content.rfind(uris[0]));
-#endif // defined(ENABLE_BITTORRENT)
 }
 
 void SessionSerializerTest::testSaveEd2kDownload()

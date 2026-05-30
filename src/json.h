@@ -36,12 +36,86 @@
 #define D_JSON_H
 
 #include "common.h"
-
-#include <string>
+#include "ValueBase.h"
 
 namespace aria2 {
 
 namespace json {
+
+std::string jsonEscape(const std::string& s);
+
+template <typename OutputStream>
+OutputStream& encode(OutputStream& out, const ValueBase* vlb)
+{
+  class JsonValueBaseVisitor : public ValueBaseVisitor {
+  public:
+    JsonValueBaseVisitor(OutputStream& out) : out_(out) {}
+
+    virtual void visit(const String& string) CXX11_OVERRIDE
+    {
+      encodeString(string.s());
+    }
+
+    virtual void visit(const Integer& integer) CXX11_OVERRIDE
+    {
+      out_ << integer.i();
+    }
+
+    virtual void visit(const Bool& boolValue) CXX11_OVERRIDE
+    {
+      out_ << (boolValue.val() ? "true" : "false");
+    }
+
+    virtual void visit(const Null& nullValue) CXX11_OVERRIDE { out_ << "null"; }
+
+    virtual void visit(const List& list) CXX11_OVERRIDE
+    {
+      out_ << "[";
+      if (!list.empty()) {
+        auto i = list.begin();
+        (*i)->accept(*this);
+        ++i;
+        for (auto eoi = list.end(); i != eoi; ++i) {
+          out_ << ",";
+          (*i)->accept(*this);
+        }
+      }
+      out_ << "]";
+    }
+
+    virtual void visit(const Dict& dict) CXX11_OVERRIDE
+    {
+      out_ << "{";
+      if (!dict.empty()) {
+        auto i = dict.begin();
+        encodeString((*i).first);
+        out_ << ":";
+        (*i).second->accept(*this);
+        ++i;
+        for (auto eoi = dict.end(); i != eoi; ++i) {
+          out_ << ",";
+          encodeString((*i).first);
+          out_ << ":";
+          (*i).second->accept(*this);
+        }
+      }
+      out_ << "}";
+    }
+
+  private:
+    void encodeString(const std::string& s)
+    {
+      out_ << "\"" << jsonEscape(s) << "\"";
+    }
+    OutputStream& out_;
+  };
+  JsonValueBaseVisitor visitor(out);
+  vlb->accept(visitor);
+  return out;
+}
+
+// Serializes JSON object or array.
+std::string encode(const ValueBase* json);
 
 struct JsonGetParam {
   std::string request;

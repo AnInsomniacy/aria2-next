@@ -37,8 +37,8 @@
 #include <cassert>
 #include <sstream>
 
-#include "BoostJsonValue.h"
 #include "util.h"
+#include "json.h"
 #ifdef HAVE_ZLIB
 #  include "GZipEncoder.h"
 #endif // HAVE_ZLIB
@@ -46,6 +46,82 @@
 namespace aria2 {
 
 namespace rpc {
+
+namespace {
+template <typename OutputStream>
+void encodeValue(const ValueBase* value, OutputStream& o)
+{
+  class XmlValueBaseVisitor : public ValueBaseVisitor {
+  private:
+    OutputStream& o_;
+
+  public:
+    XmlValueBaseVisitor(OutputStream& o) : o_(o) {}
+
+    virtual ~XmlValueBaseVisitor() = default;
+
+    virtual void visit(const String& v) CXX11_OVERRIDE
+    {
+      o_ << "<value><string>" << util::htmlEscape(v.s()) << "</string></value>";
+    }
+
+    virtual void visit(const Integer& v) CXX11_OVERRIDE
+    {
+      o_ << "<value><int>" << v.i() << "</int></value>";
+    }
+
+    virtual void visit(const Bool& boolValue) CXX11_OVERRIDE {}
+
+    virtual void visit(const Null& nullValue) CXX11_OVERRIDE {}
+
+    virtual void visit(const List& v) CXX11_OVERRIDE
+    {
+      o_ << "<value><array><data>";
+      for (const auto& e : v) {
+        e->accept(*this);
+      }
+      o_ << "</data></array></value>";
+    }
+
+    virtual void visit(const Dict& v) CXX11_OVERRIDE
+    {
+      o_ << "<value><struct>";
+      for (const auto& e : v) {
+        o_ << "<member><name>" << util::htmlEscape(e.first) << "</name>";
+        e.second->accept(*this);
+        o_ << "</member>";
+      }
+      o_ << "</struct></value>";
+    }
+  };
+
+  XmlValueBaseVisitor visitor(o);
+  value->accept(visitor);
+}
+} // namespace
+
+namespace {
+template <typename OutputStream>
+std::string encodeAll(OutputStream& o, int code, const ValueBase* param)
+{
+  o << "<?xml version=\"1.0\"?>"
+    << "<methodResponse>";
+  if (code == 0) {
+    o << "<params>"
+      << "<param>";
+    encodeValue(param, o);
+    o << "</param>"
+      << "</params>";
+  }
+  else {
+    o << "<fault>";
+    encodeValue(param, o);
+    o << "</fault>";
+  }
+  o << "</methodResponse>";
+  return o.str();
+}
+} // namespace
 
 RpcResponse::RpcResponse(int code, RpcResponse::authorization_t authorized,
                          std::unique_ptr<ValueBase> param,
@@ -55,6 +131,23 @@ RpcResponse::RpcResponse(int code, RpcResponse::authorization_t authorized,
       code{code},
       authorized{authorized}
 {
+}
+
+std::string toXml(const RpcResponse& res, bool gzip)
+{
+  if (gzip) {
+#ifdef HAVE_ZLIB
+    GZipEncoder o;
+    o.init();
+    return encodeAll(o, res.code, res.param.get());
+#else  // !HAVE_ZLIB
+    abort();
+#endif // !HAVE_ZLIB
+  }
+  else {
+    std::stringstream o;
+    return encodeAll(o, res.code, res.param.get());
+  }
 }
 
 namespace {
@@ -67,7 +160,7 @@ OutputStream& encodeJsonAll(OutputStream& o, int code, const ValueBase* param,
     o << callback << "(";
   }
   o << "{\"id\":";
-  o << json::serialize(id);
+  json::encode(o, id);
   o << ",\"jsonrpc\":\"2.0\",";
   if (code == 0) {
     o << "\"result\":";
@@ -75,7 +168,7 @@ OutputStream& encodeJsonAll(OutputStream& o, int code, const ValueBase* param,
   else {
     o << "\"error\":";
   }
-  o << json::serialize(param);
+  json::encode(o, param);
   o << "}";
   if (!callback.empty()) {
     o << ")";

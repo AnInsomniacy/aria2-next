@@ -1,7 +1,6 @@
 #include "FeatureConfig.h"
 
 #include <algorithm>
-#include <vector>
 
 #include <cppunit/extensions/HelperMacros.h>
 
@@ -17,14 +16,12 @@ class FeatureConfigTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGetDefaultPort);
   CPPUNIT_TEST(testStrSupportedFeature);
   CPPUNIT_TEST(testFeatureSummary);
-  CPPUNIT_TEST(testUsedLibs);
   CPPUNIT_TEST_SUITE_END();
 
 public:
   void testGetDefaultPort();
   void testStrSupportedFeature();
   void testFeatureSummary();
-  void testUsedLibs();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION(FeatureConfigTest);
@@ -34,9 +31,7 @@ void FeatureConfigTest::testGetDefaultPort()
   CPPUNIT_ASSERT_EQUAL((uint16_t)80, getDefaultPort("http"));
   CPPUNIT_ASSERT_EQUAL((uint16_t)443, getDefaultPort("https"));
   CPPUNIT_ASSERT_EQUAL((uint16_t)21, getDefaultPort("ftp"));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)990, getDefaultPort("ftps"));
   CPPUNIT_ASSERT_EQUAL((uint16_t)22, getDefaultPort("sftp"));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)22, getDefaultPort("scp"));
 }
 
 void FeatureConfigTest::testStrSupportedFeature()
@@ -49,37 +44,58 @@ void FeatureConfigTest::testStrSupportedFeature()
 #endif // ENABLE_SSL
   CPPUNIT_ASSERT(!strSupportedFeature(MAX_FEATURE));
 
+  auto sftp = strSupportedFeature(FEATURE_SFTP);
+#ifdef HAVE_LIBSSH2
+  CPPUNIT_ASSERT(sftp);
+#else  // !HAVE_LIBSSH2
+  CPPUNIT_ASSERT(!sftp);
+#endif // !HAVE_LIBSSH2
 }
 
 void FeatureConfigTest::testFeatureSummary()
 {
-  std::vector<std::string> features;
+  const std::string features[] = {
+
+#ifdef ENABLE_ASYNC_DNS
+      "Async DNS",
+#endif // ENABLE_ASYNC_DNS
 
 #ifdef ENABLE_BITTORRENT
-  features.push_back("BitTorrent");
+      "BitTorrent",
 #endif // ENABLE_BITTORRENT
 
-  features.push_back("ED2K");
+      "ED2K",
+
+#ifdef HAVE_SQLITE3
+      "Firefox3 Cookie",
+#endif // HAVE_SQLITE3
 
 #ifdef HAVE_ZLIB
-  features.push_back("GZip");
+      "GZip",
 #endif // HAVE_ZLIB
 
 #ifdef ENABLE_SSL
-  features.push_back("HTTPS");
+      "HTTPS",
 #endif // ENABLE_SSL
 
-  features.push_back("Message Digest");
+      "Message Digest",
+
+#ifdef ENABLE_METALINK
+      "Metalink",
+#endif // ENABLE_METALINK
+
+#ifdef ENABLE_XML_RPC
+      "XML-RPC",
+#endif // ENABLE_XML_RPC
+
+#ifdef HAVE_LIBSSH2
+      "SFTP",
+#endif // HAVE_LIBSSH2
+  };
 
   std::string featuresString =
       strjoin(std::begin(features), std::end(features), ", ");
   CPPUNIT_ASSERT_EQUAL(featuresString, featureSummary());
-}
-
-void FeatureConfigTest::testUsedLibs()
-{
-  auto libs = usedLibs();
-  CPPUNIT_ASSERT(libs.find("libcurl/") != std::string::npos);
 }
 
 } // namespace aria2

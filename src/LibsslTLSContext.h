@@ -37,7 +37,6 @@
 
 #include "common.h"
 
-#include <vector>
 #include <string>
 
 #include <openssl/ssl.h>
@@ -61,9 +60,6 @@ public:
   virtual bool addSystemTrustedCACerts() CXX11_OVERRIDE;
 
   virtual bool addDefaultCABundle() CXX11_OVERRIDE;
-
-  static std::vector<std::string> getDefaultCABundleCandidates();
-  static std::vector<std::string> getExistingDefaultCABundles();
 
   // certfile can contain multiple certificates.
   virtual bool addTrustedCACertFile(const std::string& certfile) CXX11_OVERRIDE;

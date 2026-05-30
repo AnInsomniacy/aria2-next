@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "SingleFileAllocationIterator.h"
 
 #include <cstring>
@@ -41,6 +40,8 @@
 #include "BinaryStream.h"
 #include "util.h"
 #include "a2io.h"
+#include "Logger.h"
+#include "LogFactory.h"
 
 namespace aria2 {
 
@@ -71,7 +72,7 @@ void SingleFileAllocationIterator::init()
   static bool noticeDone = false;
   if (!noticeDone) {
     noticeDone = true;
-    ARIA2_LOG_INFO(_("Allocating disk space. Use --file-allocation=none to"
+    A2_LOG_NOTICE(_("Allocating disk space. Use --file-allocation=none to"
                     " disable it. See --file-allocation option in man page for"
                     " more details."));
   }

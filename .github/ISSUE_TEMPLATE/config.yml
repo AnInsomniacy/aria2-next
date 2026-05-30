@@ -1,5 +1,0 @@
-blank_issues_enabled: false
-contact_links:
-  - name: Motrix Next application bugs
-    url: https://github.com/AnInsomniacy/motrix-next/issues
-    about: Report UI, installer, update, tray, history, notification, and desktop app issues in Motrix Next.

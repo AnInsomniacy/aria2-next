@@ -237,6 +237,17 @@ public:
 };
 #endif // ENABLE_BITTORRENT
 
+#ifdef ENABLE_METALINK
+class AddMetalinkRpcMethod : public RpcMethod {
+protected:
+  virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
+                                             DownloadEngine* e) CXX11_OVERRIDE;
+
+public:
+  static const char* getMethodName() { return "aria2.addMetalink"; }
+};
+#endif // ENABLE_METALINK
+
 class PurgeDownloadResultRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,

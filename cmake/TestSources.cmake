@@ -14,30 +14,31 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/SegmentTest.cc
   tests/GrowSegmentTest.cc
   tests/SingleFileAllocationIteratorTest.cc
-  tests/StorageTruthTest.cc
-  tests/DefaultProgressInfoFileTest.cc
+  tests/DefaultBtProgressInfoFileTest.cc
   tests/RequestGroupTest.cc
   tests/UtilTest1.cc
   tests/UtilTest2.cc
   tests/UtilSecurityTest.cc
   tests/UriListParserTest.cc
   tests/HttpHeaderProcessorTest.cc
-  tests/HttpRangeValidatorTest.cc
-  tests/CurlRequestContextTest.cc
-  tests/HttpErrorPageDetectorTest.cc
   tests/RequestTest.cc
+  tests/HttpRequestTest.cc
   tests/RequestGroupManTest.cc
+  tests/AuthConfigFactoryTest.cc
+  tests/NetrcAuthResolverTest.cc
+  tests/DefaultAuthResolverTest.cc
   tests/OptionHandlerTest.cc
   tests/SegmentManTest.cc
   tests/BitfieldManTest.cc
+  tests/NetrcTest.cc
   tests/SingletonHolderTest.cc
   tests/HttpHeaderTest.cc
+  tests/HttpResponseTest.cc
   tests/FileTest.cc
   tests/OptionTest.cc
   tests/DefaultDiskWriterTest.cc
   tests/FeatureConfigTest.cc
   tests/VersionUsageTest.cc
-  tests/RateLimitSchedulerTest.cc
   tests/SpeedCalcTest.cc
   tests/MultiDiskAdaptorTest.cc
   tests/MultiFileAllocationIteratorTest.cc
@@ -45,10 +46,19 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/ProtocolDetectorTest.cc
   tests/ExceptionTest.cc
   tests/FmtTest.cc
+  tests/DownloadHandlersTest.cc
   tests/DownloadEngineTest.cc
   tests/SignatureTest.cc
+  tests/ServerStatManTest.cc
+  tests/FeedbackURISelectorTest.cc
+  tests/InorderURISelectorTest.cc
+  tests/ServerStatTest.cc
+  tests/NsCookieParserTest.cc
   tests/DirectDiskAdaptorTest.cc
+  tests/CookieTest.cc
+  tests/CookieStorageTest.cc
   tests/TimeTest.cc
+  tests/FtpConnectionTest.cc
   tests/OptionParserTest.cc
   tests/DNSCacheTest.cc
   tests/DownloadHelperTest.cc
@@ -66,12 +76,13 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/UriTest.cc
   tests/UriSplitTest.cc
   tests/MockSegment.h
+  tests/CookieHelperTest.cc
   tests/JsonTest.cc
-  tests/LogTest.cc
+  tests/ValueBaseJsonParserTest.cc
   tests/RpcResponseTest.cc
   tests/RpcMethodTest.cc
-  tests/RpcHttpHandlerTest.cc
   tests/WebSocketSessionManTest.cc
+  tests/HttpServerTest.cc
   tests/BufferedFileTest.cc
   tests/GeomStreamPieceSelectorTest.cc
   tests/SegListTest.cc
@@ -95,6 +106,10 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/Ed2kSharedStoreTest.cc
 )
 
+set(ARIA2_TEST_SOURCES_ENABLE_XML_RPC
+  tests/XmlRpcRequestParserControllerTest.cc
+)
+
 set(ARIA2_TEST_SOURCES_HAVE_SOME_FALLOCATE
   tests/FallocFileAllocationIteratorTest.cc
 )
@@ -108,14 +123,131 @@ set(ARIA2_TEST_SOURCES_HAVE_ZLIB
   tests/GZipFileTest.cc
 )
 
+set(ARIA2_TEST_SOURCES_HAVE_SQLITE3
+  tests/Sqlite3CookieParserTest.cc
+)
+
 set(ARIA2_TEST_SOURCES_ENABLE_BITTORRENT
-  tests/BittorrentHelperTest.cc
+  tests/BtAllowedFastMessageTest.cc
+  tests/BtBitfieldMessageTest.cc
+  tests/BtCancelMessageTest.cc
+  tests/BtChokeMessageTest.cc
+  tests/BtHandshakeMessageTest.cc
+  tests/BtHaveAllMessageTest.cc
+  tests/BtHaveMessageTest.cc
+  tests/BtHaveNoneMessageTest.cc
+  tests/BtInterestedMessageTest.cc
+  tests/BtKeepAliveMessageTest.cc
+  tests/BtNotInterestedMessageTest.cc
+  tests/BtPieceMessageTest.cc
+  tests/BtPortMessageTest.cc
+  tests/BtRejectMessageTest.cc
+  tests/BtRequestMessageTest.cc
+  tests/BtSuggestPieceMessageTest.cc
+  tests/BtUnchokeMessageTest.cc
+  tests/DefaultPieceStorageTest.cc
+  tests/DefaultBtAnnounceTest.cc
+  tests/DefaultBtMessageDispatcherTest.cc
+  tests/DefaultBtRequestFactoryTest.cc
+  tests/MockBtMessage.h
+  tests/MockBtMessageDispatcher.h
+  tests/MockBtMessageFactory.h
+  tests/AnnounceListTest.cc
+  tests/DefaultPeerStorageTest.cc
+  tests/MockPeerStorage.h
+  tests/ByteArrayDiskWriterTest.cc
+  tests/PeerTest.cc
+  tests/PeerSessionResourceTest.cc
+  tests/ShareRatioSeedCriteriaTest.cc
+  tests/BtRegistryTest.cc
+  tests/BtDependencyTest.cc
+  tests/BtPostDownloadHandlerTest.cc
+  tests/TimeSeedCriteriaTest.cc
+  tests/BtExtendedMessageTest.cc
+  tests/HandshakeExtensionMessageTest.cc
+  tests/UTPexExtensionMessageTest.cc
+  tests/UTMetadataRequestExtensionMessageTest.cc
+  tests/UTMetadataDataExtensionMessageTest.cc
+  tests/UTMetadataRejectExtensionMessageTest.cc
+  tests/UTMetadataRequestTrackerTest.cc
+  tests/UTMetadataRequestFactoryTest.cc
+  tests/UTMetadataPostDownloadHandlerTest.cc
   tests/MagnetTest.cc
+  tests/DefaultBtMessageFactoryTest.cc
+  tests/DefaultExtensionMessageFactoryTest.cc
+  tests/DHTNodeTest.cc
+  tests/DHTBucketTest.cc
+  tests/DHTRoutingTableTest.cc
+  tests/DHTMessageTrackerEntryTest.cc
+  tests/DHTMessageTrackerTest.cc
+  tests/DHTConnectionImplTest.cc
+  tests/DHTPingMessageTest.cc
+  tests/DHTPingReplyMessageTest.cc
+  tests/DHTFindNodeMessageTest.cc
+  tests/DHTFindNodeReplyMessageTest.cc
+  tests/DHTGetPeersMessageTest.cc
+  tests/DHTGetPeersReplyMessageTest.cc
+  tests/DHTAnnouncePeerMessageTest.cc
+  tests/DHTAnnouncePeerReplyMessageTest.cc
+  tests/DHTUnknownMessageTest.cc
+  tests/DHTMessageFactoryImplTest.cc
+  tests/DHTBucketTreeTest.cc
+  tests/DHTPeerAnnounceEntryTest.cc
+  tests/DHTPeerAnnounceStorageTest.cc
+  tests/DHTTokenTrackerTest.cc
+  tests/XORCloserTest.cc
+  tests/DHTIDCloserTest.cc
+  tests/DHTRoutingTableSerializerTest.cc
+  tests/DHTRoutingTableDeserializerTest.cc
+  tests/DHTTaskExecutorTest.cc
+  tests/DHKeyExchangeTest.cc
+  tests/ARC4Test.cc
+  tests/MSEHandshakeTest.cc
+  tests/MockBtAnnounce.h
+  tests/MockBtProgressInfoFile.h
+  tests/MockBtRequestFactory.h
+  tests/MockDHTMessage.h
+  tests/MockDHTMessageCallback.h
+  tests/MockDHTMessageDispatcher.h
+  tests/MockDHTMessageFactory.h
+  tests/MockDHTTask.h
+  tests/MockDHTTaskFactory.h
+  tests/MockDHTTaskQueue.h
+  tests/MockExtensionMessage.h
+  tests/MockExtensionMessageFactory.h
+  tests/MockPieceStorage.h
+  tests/BittorrentHelperTest.cc
+  tests/PriorityPieceSelectorTest.cc
+  tests/MockPieceSelector.h
+  tests/extension_message_test_helper.h
+  tests/LpdMessageDispatcherTest.cc
+  tests/LpdMessageReceiverTest.cc
   tests/Bencode2Test.cc
-  tests/LibtorrentSeedPolicyTest.cc
-  tests/LibtorrentStatCounterTest.cc
+  tests/PeerConnectionTest.cc
+  tests/ValueBaseBencodeParserTest.cc
+  tests/ExtensionMessageRegistryTest.cc
+  tests/UDPTrackerClientTest.cc
+)
+
+set(ARIA2_TEST_SOURCES_ENABLE_METALINK
+  tests/MetalinkerTest.cc
+  tests/MetalinkEntryTest.cc
+  tests/Metalink2RequestGroupTest.cc
+  tests/MetalinkPostDownloadHandlerTest.cc
+  tests/MetalinkHelperTest.cc
+  tests/MetalinkParserControllerTest.cc
+  tests/MetalinkProcessorTest.cc
+)
+
+set(ARIA2_TEST_SOURCES_ENABLE_ASYNC_DNS
+  tests/AsyncNameResolverTest.cc
+  tests/AsyncNameResolverManTest.cc
 )
 
 set(ARIA2_TEST_SOURCES_NOT_HAVE_TIMEGM
   tests/TimegmTest.cc
+)
+
+set(ARIA2_TEST_SOURCES_ENABLE_LIBARIA2
+  tests/Aria2ApiTest.cc
 )

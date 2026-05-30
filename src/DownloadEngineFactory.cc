@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "DownloadEngineFactory.h"
 
 #include <algorithm>
@@ -54,9 +53,14 @@
 #include "TimedHaltCommand.h"
 #include "WatchProcessCommand.h"
 #include "DownloadResult.h"
+#include "ServerStatMan.h"
 #include "a2io.h"
 #include "DownloadContext.h"
 #include "array_fun.h"
+#include "EvictSocketPoolCommand.h"
+#ifdef HAVE_LIBUV
+#  include "LibuvEventPoll.h"
+#endif // HAVE_LIBUV
 #ifdef HAVE_EPOLL
 #  include "EpollEventPoll.h"
 #endif // HAVE_EPOLL
@@ -72,8 +76,8 @@
 #include "SelectEventPoll.h"
 #include "DlAbortEx.h"
 #include "FileAllocationEntry.h"
-#include "AsioPumpCommand.h"
-#include "RpcBeastServer.h"
+#include "HttpListenCommand.h"
+#include "LogFactory.h"
 
 namespace aria2 {
 
@@ -83,6 +87,17 @@ namespace {
 std::unique_ptr<EventPoll> createEventPoll(Option* op)
 {
   const std::string& pollMethod = op->get(PREF_EVENT_POLL);
+#ifdef HAVE_LIBUV
+  if (pollMethod == V_LIBUV) {
+    auto ep = make_unique<LibuvEventPoll>();
+    if (!ep->good()) {
+      throw DL_ABORT_EX("Initializing LibuvEventPoll failed."
+                        " Try --event-poll=select");
+    }
+    return std::move(ep);
+  }
+  else
+#endif // HAVE_LIBUV
 #ifdef HAVE_EPOLL
       if (pollMethod == V_EPOLL) {
     auto ep = make_unique<EpollEventPoll>();
@@ -151,6 +166,9 @@ std::unique_ptr<DownloadEngine> DownloadEngineFactory::newDownloadEngine(
       e->newCUID(), e->getFileAllocationMan().get(), e.get()));
   e->addRoutineCommand(make_unique<CheckIntegrityDispatcherCommand>(
       e->newCUID(), e->getCheckIntegrityMan().get(), e.get()));
+  e->addRoutineCommand(
+      make_unique<EvictSocketPoolCommand>(e->newCUID(), e.get(), 30_s));
+
   if (op->getAsInt(PREF_AUTO_SAVE_INTERVAL) > 0) {
     e->addRoutineCommand(make_unique<AutoSaveCommand>(
         e->newCUID(), e.get(),
@@ -176,23 +194,30 @@ std::unique_ptr<DownloadEngine> DownloadEngineFactory::newDownloadEngine(
         make_unique<WatchProcessCommand>(e->newCUID(), e.get(), pid));
   }
   if (op->getAsBool(PREF_ENABLE_RPC)) {
-    if (op->get(PREF_RPC_SECRET).empty()) {
-      ARIA2_LOG_WARN("No --rpc-secret is set. JSON-RPC requests are unauthenticated.");
+    if (op->get(PREF_RPC_SECRET).empty() && op->get(PREF_RPC_USER).empty()) {
+      A2_LOG_WARN("Neither --rpc-secret nor a combination of --rpc-user and "
+                  "--rpc-passwd is set. This is insecure. It is extremely "
+                  "recommended to specify --rpc-secret with the adequate "
+                  "secrecy or now deprecated --rpc-user and --rpc-passwd.");
     }
     bool ok = false;
+    bool secure = op->getAsBool(PREF_RPC_SECURE);
+    if (secure) {
+      A2_LOG_NOTICE("RPC transport will be encrypted.");
+    }
     static int families[] = {AF_INET, AF_INET6};
     size_t familiesLength = op->getAsBool(PREF_DISABLE_IPV6) ? 1 : 2;
     for (size_t i = 0; i < familiesLength; ++i) {
-      auto server = std::make_shared<RpcBeastServer>(e.get(), families[i]);
-      if (server->bindPort(op->getAsInt(PREF_RPC_LISTEN_PORT))) {
-        e->addRpcServer(std::move(server));
+      auto httpListenCommand = make_unique<HttpListenCommand>(
+          e->newCUID(), e.get(), families[i], secure);
+      if (httpListenCommand->bindPort(op->getAsInt(PREF_RPC_LISTEN_PORT))) {
+        e->addCommand(std::move(httpListenCommand));
         ok = true;
       }
     }
     if (!ok) {
       throw DL_ABORT_EX("Failed to setup RPC server.");
     }
-    e->addCommand(make_unique<AsioPumpCommand>(e->newCUID(), e.get()));
   }
   return e;
 }

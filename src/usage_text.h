@@ -42,9 +42,9 @@
     "                              always relative to the directory given in -d\n" \
     "                              option. When the -Z option is used, this option\n" \
     "                              will be ignored.")
-#define TEXT_LOG_FILE                                                   \
-  _(" --log-file=PATH|auto|off     Set the rotating log file path. 'auto' uses\n" \
-    "                              the platform state/log directory. Default: off.")
+#define TEXT_LOG                                                        \
+  _(" -l, --log=LOG                The file name of the log file. If '-' is\n" \
+    "                              specified, log is written to stdout.")
 #define TEXT_DAEMON                                                     \
   _(" -D, --daemon[=true|false]    Run as daemon. The current working directory will\n" \
     "                              be changed to \"/\" and standard input, standard\n" \
@@ -62,7 +62,7 @@
     "                              --min-split-size option.")
 #define TEXT_RETRY_WAIT                                                 \
   _(" --retry-wait=SEC             Set the seconds to wait between retries. \n" \
-    "                              With SEC > 0, Aria2 Next will retry the download when the\n" \
+    "                              With SEC > 0, aria2 will retry download when the\n" \
     "                              HTTP server returns 503 response.")
 #define TEXT_TIMEOUT                                            \
   _(" -t, --timeout=SEC            Set timeout in seconds.")
@@ -97,12 +97,6 @@
   _(" --http-passwd=PASSWD         Set HTTP password. This affects all URLs.")
 #define TEXT_PROXY_METHOD                                               \
   _(" --proxy-method=METHOD        Set the method to use in proxy request.")
-#define TEXT_PROXY_MODE                                                 \
-  _(" --proxy-mode=MODE            Set proxy resolution mode: auto, direct or\n" \
-    "                              manual. auto uses configured and environment\n" \
-    "                              proxy options. direct disables proxy use.\n" \
-    "                              manual only uses explicitly configured proxy\n" \
-    "                              options.")
 #define TEXT_REFERER                                                    \
   _(" --referer=REFERER            Set an http referrer (Referer). This affects\n" \
     "                              all http/https downloads. If \"*\" is given,\n" \
@@ -121,7 +115,7 @@
 #define TEXT_LOWEST_SPEED_LIMIT                                         \
   _(" --lowest-speed-limit=SPEED   Close connection if download speed is lower than\n" \
     "                              or equal to this value(bytes per sec).\n" \
-    "                              0 means Aria2 Next does not have a lowest speed limit.\n" \
+    "                              0 means aria2 does not have a lowest speed limit.\n" \
     "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
     "                              This option does not affect BitTorrent downloads.")
 #define TEXT_MAX_OVERALL_DOWNLOAD_LIMIT                                 \
@@ -149,7 +143,7 @@
     "                              almost instantly. Don't use 'falloc' with legacy\n" \
     "                              file systems such as ext3 and FAT32 because it\n" \
     "                              takes almost the same time as 'prealloc' and it\n" \
-    "                              blocks Aria2 Next entirely until allocation finishes.\n" \
+    "                              blocks aria2 entirely until allocation finishes.\n" \
     "                              'falloc' may not be available if your system\n" \
     "                              doesn't have posix_fallocate() function.\n" \
     "                              'trunc' uses ftruncate() system call or\n" \
@@ -168,7 +162,7 @@
     "                              corresponding control file doesn't exist.  See\n" \
     "                              also --auto-file-renaming option.")
 #define TEXT_ALLOW_PIECE_LENGTH_CHANGE                                  \
-  _(" --allow-piece-length-change[=true|false] If false is given, Aria2 Next aborts\n" \
+  _(" --allow-piece-length-change[=true|false] If false is given, aria2 aborts\n" \
     "                              download when a piece length is different from\n" \
     "                              one in a control file. If true is given, you can\n" \
     "                              proceed but some download progress will be lost.")
@@ -194,11 +188,15 @@
     "                              If all URIs do not point to the same file, such\n" \
     "                              as the second example above, -Z option is\n" \
     "                              required.")
+#define TEXT_ENABLE_HTTP_KEEP_ALIVE                                     \
+  _(" --enable-http-keep-alive[=true|false] Enable HTTP/1.1 persistent connection.")
+#define TEXT_ENABLE_HTTP_PIPELINING                                     \
+  _(" --enable-http-pipelining[=true|false] Enable HTTP/1.1 pipelining.")
 #define TEXT_CHECK_INTEGRITY                                            \
   _(" -V, --check-integrity[=true|false] Check file integrity by validating piece\n" \
     "                              hashes or a hash of entire file. This option has\n" \
-    "                              effect only in BitTorrent downloads with\n" \
-    "                              checksums or HTTP(S)/FTP downloads with\n" \
+    "                              effect only in BitTorrent, Metalink downloads\n" \
+    "                              with checksums or HTTP(S)/FTP downloads with\n" \
     "                              --checksum option. If piece hashes are provided,\n" \
     "                              this option can detect damaged portions of a file\n" \
     "                              and re-download them. If a hash of entire file is\n" \
@@ -208,6 +206,14 @@
     "                              re-downloaded from scratch. If both piece hashes\n" \
     "                              and a hash of entire file are provided, only\n" \
     "                              piece hashes are used.")
+#define TEXT_BT_HASH_CHECK_SEED                                         \
+  _(" --bt-hash-check-seed[=true|false] If true is given, after hash check using\n" \
+    "                              --check-integrity option and file is complete,\n" \
+    "                              continue to seed file. If you want to check file\n" \
+    "                              and download it only when it is damaged or\n" \
+    "                              incomplete, set this option to false.\n" \
+    "                              This option has effect only on BitTorrent\n" \
+    "                              download.")
 #define TEXT_REALTIME_CHUNK_CHECKSUM                                    \
   _(" --realtime-chunk-checksum[=true|false]  Validate chunk of data by calculating\n" \
     "                              checksum while downloading a file if chunk\n" \
@@ -237,28 +243,58 @@
     "                              for details. See also --deferred-input option.")
 #define TEXT_MAX_CONCURRENT_DOWNLOADS                                   \
   _(" -j, --max-concurrent-downloads=N Set maximum number of parallel downloads for\n" \
-    "                              every static (HTTP/FTP) URL and torrent.")
+    "                              every static (HTTP/FTP) URL, torrent and metalink.\n" \
+    "                              See also --split and --optimize-concurrent-downloads options.")
+#define TEXT_OPTIMIZE_CONCURRENT_DOWNLOADS\
+  _(" --optimize-concurrent-downloads[=true|false|A:B] Optimizes the number of\n" \
+    "                              concurrent downloads according to the bandwidth\n" \
+    "                              available. aria2 uses the download speed observed\n" \
+    "                              in the previous downloads to adapt the number of\n" \
+    "                              downloads launched in parallel according to the\n" \
+    "                              rule N = A + B Log10(speed in Mbps). The\n" \
+    "                              coefficients A and B can be customized in the\n" \
+    "                              option arguments with A and B separated by a\n" \
+    "                              colon. The default values (A=5,B=25) lead to\n" \
+    "                              using typically 5 parallel downloads on 1Mbps\n" \
+    "                              networks and above 50 on 100Mbps networks. The\n" \
+    "                              number of parallel downloads remains constrained\n" \
+    "                              under the maximum defined by the\n" \
+    "                              max-concurrent-downloads parameter.")
 #define TEXT_LOAD_COOKIES                                               \
-  _(" --load-cookies=FILE          Load cookies from FILE using libcurl.")
+  _(" --load-cookies=FILE          Load Cookies from FILE using the Firefox3 format\n" \
+    "                              and Mozilla/Firefox(1.x/2.x)/Netscape format.")
 #define TEXT_SAVE_COOKIES                                               \
-  _(" --save-cookies=FILE          Save cookies to FILE using libcurl.")
+  _(" --save-cookies=FILE          Save Cookies to FILE in Mozilla/Firefox(1.x/2.x)/\n" \
+    "                              Netscape format. If FILE already exists, it is\n" \
+    "                              overwritten. Session Cookies are also saved and\n" \
+    "                              their expiry values are treated as 0.")
 #define TEXT_SHOW_FILES                                                 \
-  _(" -S, --show-files[=true|false] Print file listing of .torrent file and exit.")
+  _(" -S, --show-files[=true|false] Print file listing of .torrent, .meta4 and\n" \
+    "                              .metalink file and exit. More detailed\n" \
+    "                              information will be listed in case of torrent\n" \
+    "                              file.")
 #define TEXT_SELECT_FILE                                                \
   _(" --select-file=INDEX...       Set file to download by specifying its index.\n" \
     "                              You can find the file index using the\n" \
     "                              --show-files option. Multiple indexes can be\n" \
     "                              specified by using ',', for example: \"3,6\".\n" \
     "                              You can also use '-' to specify a range: \"1-5\".\n" \
-    "                              ',' and '-' can be used together.")
+    "                              ',' and '-' can be used together.\n" \
+    "                              When used with the -M option, index may vary\n" \
+    "                              depending on the query(see --metalink-* options).")
 #define TEXT_TORRENT_FILE                                               \
   _(" -T, --torrent-file=TORRENT_FILE  The path to the .torrent file.")
-#define TEXT_TORRENT_METADATA                                           \
-  _(" --torrent-metadata=MODE    Control remote .torrent metadata URLs.\n" \
-    "                              save stores the .torrent file only.\n" \
-    "                              start stores it, then starts BitTorrent.\n" \
-    "                              memory starts BitTorrent without storing it.\n" \
-    "                              Default: start.")
+#define TEXT_FOLLOW_TORRENT                                             \
+  _(" --follow-torrent=true|false|mem If true or mem is specified, when a file\n" \
+    "                              whose suffix is .torrent or content type is\n" \
+    "                              application/x-bittorrent is downloaded, aria2\n" \
+    "                              parses it as a torrent file and downloads files\n" \
+    "                              mentioned in it.\n"                  \
+    "                              If mem is specified, a torrent file is not\n" \
+    "                              written to the disk, but is just kept in memory.\n" \
+    "                              If false is specified, the .torrent file is\n" \
+    "                              downloaded to the disk, but is not parsed as a\n" \
+    "                              torrent and its contents are not downloaded.")
 #define TEXT_LISTEN_PORT                                                \
   _(" --listen-port=PORT...        Set TCP port number for BitTorrent downloads.\n" \
     "                              Multiple ports can be specified by using ',',\n" \
@@ -289,12 +325,20 @@
     "                              If --seed-time option is specified along with\n" \
     "                              this option, seeding ends when at least one of\n" \
     "                              the conditions is satisfied.")
+#define TEXT_PEER_ID_PREFIX                                             \
+  _(" --peer-id-prefix=PEER_ID_PREFIX Specify the prefix of peer ID. The peer ID in\n" \
+    "                              BitTorrent is 20 byte length. If more than 20\n" \
+    "                              bytes are specified, only first 20 bytes are\n" \
+    "                              used. If less than 20 bytes are specified, random\n" \
+    "                              byte data are added to make its length 20 bytes.")
+#define TEXT_PEER_AGENT                                                 \
+  _(" --peer-agent=PEER_AGENT  Set client reported during Extended torrent handshakes")
 #define TEXT_ENABLE_PEER_EXCHANGE                                       \
   _(" --enable-peer-exchange[=true|false] Enable Peer Exchange extension.")
 #define TEXT_ENABLE_DHT                                         \
   _(" --enable-dht[=true|false]    Enable IPv4 DHT functionality. It also enables\n" \
     "                              UDP tracker support. If a private flag is set\n" \
-    "                              in a torrent, Aria2 Next does not use DHT for that\n" \
+    "                              in a torrent, aria2 doesn't use DHT for that\n" \
     "                              download even if ``true`` is given.")
 #define TEXT_DHT_LISTEN_PORT                                            \
   _(" --dht-listen-port=PORT...    Set UDP listening port used by DHT(IPv4, IPv6)\n"   \
@@ -305,17 +349,82 @@
 #define TEXT_DHT_ENTRY_POINT                                            \
   _(" --dht-entry-point=HOST:PORT  Set host and port as an entry point to IPv4 DHT\n" \
     "                              network.")
+#define TEXT_DHT_FILE_PATH                                              \
+  _(" --dht-file-path=PATH         Change the IPv4 DHT routing table file to PATH.")
+#define TEXT_BT_MIN_CRYPTO_LEVEL                                        \
+  _(" --bt-min-crypto-level=plain|arc4 Set minimum level of encryption method.\n" \
+    "                              If several encryption methods are provided by a\n" \
+    "                              peer, aria2 chooses the lowest one which satisfies\n" \
+    "                              the given level.")
 #define TEXT_BT_REQUIRE_CRYPTO                                          \
-  _(" --bt-require-crypto[=true|false] If true is given, Aria2 Next does not accept and\n" \
+  _(" --bt-require-crypto[=true|false] If true is given, aria2 doesn't accept and\n" \
     "                              establish connection with legacy BitTorrent\n" \
-    "                              handshake. Thus Aria2 Next always uses Obfuscation\n" \
+    "                              handshake. Thus aria2 always uses Obfuscation\n" \
     "                              handshake.")
+#define TEXT_BT_REQUEST_PEER_SPEED_LIMIT                                \
+  _(" --bt-request-peer-speed-limit=SPEED If the whole download speed of every\n" \
+    "                              torrent is lower than SPEED, aria2 temporarily\n" \
+    "                              increases the number of peers to try for more\n" \
+    "                              download speed. Configuring this option with your\n" \
+    "                              preferred download speed can increase your\n" \
+    "                              download speed in some cases.\n"     \
+    "                              You can append K or M(1K = 1024, 1M = 1024K).")
 #define TEXT_BT_MAX_OPEN_FILES                                          \
   _(" --bt-max-open-files=NUM      Specify maximum number of files to open in\n" \
-    "                              multi-file BitTorrent downloads globally.")
+    "                              multi-file BitTorrent/Metalink downloads\n" \
+    "                              globally.")
+#define TEXT_BT_SEED_UNVERIFIED                                         \
+  _(" --bt-seed-unverified[=true|false] Seed previously downloaded files without\n" \
+    "                              verifying piece hashes.")
 #define TEXT_BT_MAX_PEERS                                               \
   _(" --bt-max-peers=NUM           Specify the maximum number of peers per torrent.\n" \
-    "                              0 means unlimited.")
+    "                              0 means unlimited.\n"                \
+    "                              See also --bt-request-peer-speed-limit option.")
+#define TEXT_METALINK_FILE                                              \
+  _(" -M, --metalink-file=METALINK_FILE The file path to the .meta4 and .metalink\n" \
+    "                              file. Reads input from stdin when '-' is\n" \
+    "                              specified.")
+#define TEXT_METALINK_SERVERS                                           \
+  _(" -C, --metalink-servers=NUM_SERVERS The number of servers to connect to\n" \
+    "                              simultaneously. Some Metalinks regulate the\n" \
+    "                              number of servers to connect. aria2 strictly\n" \
+    "                              respects them. This means that if Metalink defines\n" \
+    "                              the maxconnections attribute lower than\n" \
+    "                              NUM_SERVERS, then aria2 uses the value of\n" \
+    "                              maxconnections attribute instead of NUM_SERVERS.\n" \
+    "                              See also -s and -j options.")
+#define TEXT_METALINK_VERSION                                           \
+  _(" --metalink-version=VERSION   The version of the file to download.")
+#define TEXT_METALINK_LANGUAGE                                          \
+  _(" --metalink-language=LANGUAGE The language of the file to download.")
+#define TEXT_METALINK_OS                                                \
+  _(" --metalink-os=OS             The operating system of the file to download.")
+#define TEXT_METALINK_LOCATION                                          \
+  _(" --metalink-location=LOCATION[,...] The location of the preferred server.\n" \
+    "                              A comma-delimited list of locations is\n" \
+    "                              acceptable.")
+#define TEXT_METALINK_PREFERRED_PROTOCOL                                \
+  _(" --metalink-preferred-protocol=PROTO Specify preferred protocol. Specify 'none'\n" \
+    "                              if you don't have any preferred protocol.")
+#define TEXT_FOLLOW_METALINK                                            \
+  _(" --follow-metalink=true|false|mem If true or mem is specified, when a file\n" \
+    "                              whose suffix is .meta4 or .metalink, or content\n" \
+    "                              type of application/metalink4+xml or\n" \
+    "                              application/metalink+xml is downloaded, aria2\n" \
+    "                              parses it as a metalink file and downloads files\n" \
+    "                              mentioned in it.\n"                  \
+    "                              If mem is specified, a metalink file is not\n" \
+    "                              written to the disk, but is just kept in memory.\n" \
+    "                              If false is specified, the .metalink file is\n" \
+    "                              downloaded to the disk, but is not parsed as a\n" \
+    "                              metalink file and its contents are not\n" \
+    "                              downloaded.")
+#define TEXT_METALINK_ENABLE_UNIQUE_PROTOCOL                            \
+  _(" --metalink-enable-unique-protocol[=true|false] If true is given and several\n" \
+    "                              protocols are available for a mirror in a metalink\n" \
+    "                              file, aria2 uses one of them.\n"     \
+    "                              Use --metalink-preferred-protocol option to\n" \
+    "                              specify the preference of protocol.")
 #define TEXT_VERSION                                                    \
   _(" -v, --version                Print the version number and exit.")
 #define TEXT_HELP                                                       \
@@ -339,21 +448,17 @@
     "                              aria2-next --header=\"X-A: b78\" --header=\"X-B: 9J1\"\n" \
     "                              http://host/file")
 #define TEXT_QUIET                                                      \
-  _(" -q, --quiet[=true|false]     Make Aria2 Next quiet(no console output).")
+  _(" -q, --quiet[=true|false]     Make aria2 quiet(no console output).")
+#define TEXT_ASYNC_DNS                                          \
+  _(" --async-dns[=true|false]     Enable asynchronous DNS.")
+#define TEXT_FTP_REUSE_CONNECTION                                       \
+  _(" --ftp-reuse-connection[=true|false] Reuse connection in FTP.")
 #define TEXT_SUMMARY_INTERVAL                                           \
   _(" --summary-interval=SEC       Set interval to output download progress summary.\n" \
     "                              Setting 0 suppresses the output.")
-#define TEXT_LOG_LEVEL                                                  \
-  _(" --log-level=LEVEL            Set the default log level for terminal and\n" \
-    "                              file output.")
-#define TEXT_TERMINAL_LOG_LEVEL                                         \
-  _(" --terminal-log-level=LEVEL   Override log level for terminal output.")
-#define TEXT_FILE_LOG_LEVEL                                             \
-  _(" --file-log-level=LEVEL       Override log level for file output.")
-#define TEXT_LOG_MAX_SIZE                                               \
-  _(" --log-max-size=SIZE          Set maximum rotating log file size.")
-#define TEXT_LOG_MAX_FILES                                              \
-  _(" --log-max-files=NUM          Set number of rotating log files to keep.")
+#define TEXT_LOG_LEVEL                                          \
+  _(" --log-level=LEVEL            Set log level to output to file specified using\n" \
+    "                             --log option.")
 #define TEXT_REMOTE_TIME                                                \
   _(" -R, --remote-time[=true|false] Retrieve timestamp of the remote file from the\n" \
     "                              remote HTTP/FTP server and if it is available,\n" \
@@ -364,7 +469,7 @@
     "                              connection is established, this option makes no\n" \
     "                              effect and --timeout option is used instead.")
 #define TEXT_MAX_FILE_NOT_FOUND                                         \
-  _(" --max-file-not-found=NUM     If Aria2 Next receives `file not found' status from the\n" \
+  _(" --max-file-not-found=NUM     If aria2 receives `file not found' status from the\n" \
     "                              remote HTTP/FTP servers NUM times without getting\n" \
     "                              a single byte, then force the download to fail.\n" \
     "                              Specify 0 to disable this option.\n" \
@@ -372,6 +477,38 @@
     "                              HTTP/FTP servers. The number of retry attempt is\n" \
     "                              counted toward --max-tries, so it should be\n" \
     "                              configured too.")
+#define TEXT_URI_SELECTOR                                               \
+  _(" --uri-selector=SELECTOR      Specify URI selection algorithm.\n"  \
+    "                              If 'inorder' is given, URI is tried in the order\n" \
+    "                              appeared in the URI list.\n"         \
+    "                              If 'feedback' is given, aria2 uses download speed\n" \
+    "                              observed in the previous downloads and choose\n" \
+    "                              fastest server in the URI list. This also\n" \
+    "                              effectively skips dead mirrors. The observed\n" \
+    "                              download speed is a part of performance profile\n" \
+    "                              of servers mentioned in --server-stat-of and\n" \
+    "                              --server-stat-if options.\n"         \
+    "                              If 'adaptive' is given, selects one of the best\n" \
+    "                              mirrors for the first and reserved connections.\n" \
+    "                              For supplementary ones, it returns mirrors which\n" \
+    "                              has not been tested yet, and if each of them has\n" \
+    "                              already been tested, returns mirrors which has to\n" \
+    "                              be tested again. Otherwise, it doesn't select\n" \
+    "                              anymore mirrors. Like 'feedback', it uses a\n" \
+    "                              performance profile of servers.")
+#define TEXT_SERVER_STAT_OF                                             \
+  _(" --server-stat-of=FILE        Specify the filename to which performance profile\n" \
+    "                              of the servers is saved. You can load saved data\n" \
+    "                              using --server-stat-if option.")
+#define TEXT_SERVER_STAT_IF                                             \
+  _(" --server-stat-if=FILE        Specify the filename to load performance profile\n" \
+    "                              of the servers. The loaded data will be used in\n" \
+    "                              some URI selector such as 'feedback'.\n" \
+    "                              See also --uri-selector option")
+#define TEXT_SERVER_STAT_TIMEOUT                                        \
+  _(" --server-stat-timeout=SEC    Specifies timeout in seconds to invalidate\n" \
+    "                              performance profile of the servers since the last\n" \
+    "                              contact to them.")
 #define TEXT_ED2K_SERVER                                                \
   _(" --ed2k-server=HOST:PORT[,..] Use ED2K servers to discover file sources.")
 #define TEXT_ED2K_SERVER_LIST                                           \
@@ -389,7 +526,7 @@
 #define TEXT_AUTO_SAVE_INTERVAL                                         \
   _(" --auto-save-interval=SEC     Save a control file(*.aria2) every SEC seconds.\n" \
     "                              If 0 is given, a control file is not saved during\n" \
-    "                              download. Aria2 Next saves a control file when it stops\n" \
+    "                              download. aria2 saves a control file when it stops\n" \
     "                              regardless of the value.")
 #define TEXT_CERTIFICATE                                                \
   _(" --certificate=FILE           Use the client certificate in FILE.\n" \
@@ -426,6 +563,23 @@
     "                              but not the extended version filename*.")
 #define TEXT_EVENT_POLL                                                 \
   _(" --event-poll=POLL            Specify the method for polling events.")
+#define TEXT_BT_EXTERNAL_IP                                             \
+  _(" --bt-external-ip=IPADDRESS   Specify the external IP address to use in\n" \
+    "                              BitTorrent download and DHT. It may be sent to\n" \
+    "                              BitTorrent tracker. For DHT, this option should\n" \
+    "                              be set to report that local node is downloading\n" \
+    "                              a particular torrent. This is critical to use\n" \
+    "                              DHT in a private network. Although this function\n" \
+    "                              is named 'external', it can accept any kind of IP\n" \
+    "                              addresses.")
+#define TEXT_HTTP_AUTH_CHALLENGE                                        \
+  _(" --http-auth-challenge[=true|false] Send HTTP authorization header only when it\n" \
+    "                              is requested by the server. If false is set, then\n" \
+    "                              authorization header is always sent to the server.\n" \
+    "                              There is an exception: if username and password\n" \
+    "                              are embedded in URI, authorization header is\n" \
+    "                              always sent to the server regardless of this\n" \
+    "                              option.")
 #define TEXT_INDEX_OUT                                                  \
   _(" -O, --index-out=INDEX=PATH   Set file path for file with index=INDEX. You can\n" \
     "                              find the file index using the --show-files option.\n" \
@@ -433,11 +587,19 @@
     "                              --dir option. You can use this option multiple\n" \
     "                              times.")
 #define TEXT_DRY_RUN                                                    \
-  _(" --dry-run[=true|false]       If true is given, Aria2 Next just checks whether the\n" \
+  _(" --dry-run[=true|false]       If true is given, aria2 just checks whether the\n" \
     "                              remote file is available and doesn't download\n" \
     "                              data. This option has effect on HTTP/FTP download.\n" \
     "                              BitTorrent downloads are canceled if true is\n" \
     "                              specified.")
+#define TEXT_BT_TRACKER_INTERVAL                                        \
+  _(" --bt-tracker-interval=SEC    Set the interval in seconds between tracker\n" \
+    "                              requests. This completely overrides interval value\n" \
+    "                              and aria2 just uses this value and ignores the\n" \
+    "                              min interval and interval value in the response of\n" \
+    "                              tracker. If 0 is set, aria2 determines interval\n" \
+    "                              based on the response of tracker and the download\n" \
+    "                              progress.")
 #define TEXT_ON_DOWNLOAD_COMPLETE                                       \
   _(" --on-download-complete=COMMAND Set the command to be executed after download\n" \
     "                              completed.\n"                        \
@@ -446,7 +608,7 @@
     "                              See also --on-download-stop option.")
 #define TEXT_ON_DOWNLOAD_START                                          \
   _(" --on-download-start=COMMAND  Set the command to be executed after download\n" \
-    "                              got started. Aria2 Next passes 3 arguments to COMMAND:\n" \
+    "                              got started. aria2 passes 3 arguments to COMMAND:\n" \
     "                              GID, the number of files and file path. See Event\n" \
     "                              Hook in man page for more details.")
 #define TEXT_ON_DOWNLOAD_PAUSE                                          \
@@ -473,6 +635,18 @@
   _(" --bt-stop-timeout=SEC        Stop BitTorrent download if download speed is 0 in\n" \
     "                              consecutive SEC seconds. If 0 is given, this\n" \
     "                              feature is disabled.")
+#define TEXT_BT_PRIORITIZE_PIECE                                        \
+  _(" --bt-prioritize-piece=head[=SIZE],tail[=SIZE] Try to download first and last\n" \
+    "                              pieces of each file first. This is useful for\n" \
+    "                              previewing files. The argument can contain 2\n" \
+    "                              keywords:head and tail. To include both keywords,\n" \
+    "                              they must be separated by comma. These keywords\n" \
+    "                              can take one parameter, SIZE. For example, if\n" \
+    "                              head=SIZE is specified, pieces in the range of\n" \
+    "                              first SIZE bytes of each file get higher priority.\n" \
+    "                              tail=SIZE means the range of last SIZE bytes of\n" \
+    "                              each file. SIZE can include K or M(1K = 1024, 1M =\n" \
+    "                              1024K). If SIZE is omitted, SIZE=1M is used.")
 #define TEXT_INTERFACE                                                  \
   _(" --interface=INTERFACE        Bind sockets to given interface. You can specify\n" \
     "                              interface name, IP address and hostname.")
@@ -485,17 +659,38 @@
     "                              ignored.")
 #define TEXT_DISABLE_IPV6                               \
   _(" --disable-ipv6[=true|false]  Disable IPv6.")
+#define TEXT_BT_SAVE_METADATA                                           \
+  _(" --bt-save-metadata[=true|false] Save metadata as .torrent file. This option has\n" \
+    "                              effect only when BitTorrent Magnet URI is used.\n" \
+    "                              The filename is hex encoded info hash with suffix\n" \
+    "                              .torrent. The directory to be saved is the same\n" \
+    "                              directory where download file is saved. If the\n" \
+    "                              same file already exists, metadata is not saved.\n" \
+    "                              See also --bt-metadata-only option.")
 #define TEXT_HTTP_NO_CACHE                      \
   _(" --http-no-cache[=true|false] Send Cache-Control: no-cache and Pragma: no-cache\n" \
     "                              header to avoid cached content.  If false is\n" \
     "                              given, these headers are not sent and you can add\n" \
     "                              Cache-Control header with a directive you like\n" \
     "                              using --header option.")
+#define TEXT_BT_METADATA_ONLY                   \
+  _(" --bt-metadata-only[=true|false] Download metadata only. The file(s) described\n" \
+    "                              in metadata will not be downloaded. This option\n" \
+    "                              has effect only when BitTorrent Magnet URI is\n" \
+    "                              used. See also --bt-save-metadata option.")
 #define TEXT_HUMAN_READABLE                     \
   _(" --human-readable[=true|false] Print sizes and speed in human readable format\n" \
     "                              (e.g., 1.2Ki, 3.4Mi) in the console readout.")
 #define TEXT_BT_ENABLE_LPD                      \
   _(" --bt-enable-lpd[=true|false] Enable Local Peer Discovery.")
+#define TEXT_BT_LPD_INTERFACE                                           \
+  _(" --bt-lpd-interface=INTERFACE Use given interface for Local Peer Discovery. If\n" \
+    "                              this option is not specified, the default\n" \
+    "                              interface is chosen. You can specify interface\n" \
+    "                              name and IP address.")
+#define TEXT_REUSE_URI                          \
+  _(" --reuse-uri[=true|false]     Reuse already used URIs if no unused URIs are\n" \
+    "                              left.")
 #define TEXT_ALL_PROXY_USER                                             \
   _(" --all-proxy-user=USER        Set user for --all-proxy.")
 #define TEXT_ALL_PROXY_PASSWD                                           \
@@ -518,22 +713,32 @@
     "                              starts from scratch. This will be useful for\n" \
     "                              users behind proxy server which disables resume.")
 #define TEXT_ALWAYS_RESUME                      \
-  _(" --always-resume[=true|false] Always resume download. If true is given, Aria2 Next\n" \
+  _(" --always-resume[=true|false] Always resume download. If true is given, aria2\n" \
     "                              always tries to resume download and if resume is\n" \
     "                              not possible, aborts download. If false is given,\n" \
     "                              when all given URIs do not support resume or\n" \
-    "                              Aria2 Next encounters N URIs which does not support\n" \
+    "                              aria2 encounters N URIs which does not support\n" \
     "                              resume (N is the value specified using\n"   \
-    "                              --max-resume-failure-tries option), Aria2 Next\n" \
+    "                              --max-resume-failure-tries option), aria2\n" \
     "                              downloads file from scratch.\n"       \
     "                              See --max-resume-failure-tries option.")
 #define TEXT_MAX_RESUME_FAILURE_TRIES                                   \
-  _(" --max-resume-failure-tries=N When used with --always-resume=false, Aria2 Next\n" \
-    "                              downloads file from scratch when Aria2 Next detects N\n" \
+  _(" --max-resume-failure-tries=N When used with --always-resume=false, aria2\n" \
+    "                              downloads file from scratch when aria2 detects N\n" \
     "                              number of URIs that does not support resume. If N\n" \
-    "                              is 0, Aria2 Next downloads file from scratch when all\n" \
+    "                              is 0, aria2 downloads file from scratch when all\n" \
     "                              given URIs do not support resume.\n" \
     "                              See --always-resume option.")
+#define TEXT_BT_TRACKER_TIMEOUT                                 \
+  _(" --bt-tracker-timeout=SEC     Set timeout in seconds.")
+#define TEXT_BT_TRACKER_CONNECT_TIMEOUT                                 \
+  _(" --bt-tracker-connect-timeout=SEC Set the connect timeout in seconds to\n" \
+    "                              establish connection to tracker. After the\n" \
+    "                              connection is established, this option makes no\n" \
+    "                              effect and --bt-tracker-timeout option is used\n" \
+    "                              instead.")
+#define TEXT_DHT_MESSAGE_TIMEOUT                \
+  _(" --dht-message-timeout=SEC    Set timeout in seconds.")
 #define TEXT_HTTP_ACCEPT_GZIP                   \
   _(" --http-accept-gzip[=true|false] Send 'Accept-Encoding: deflate, gzip' request\n" \
     "                              header and inflate response if remote server\n" \
@@ -543,8 +748,8 @@
   _(" --save-session=FILE          Save error/unfinished downloads to FILE on exit.\n" \
     "                              You can pass this output file to aria2-next with -i\n" \
     "                              option on restart. Please note that downloads\n" \
-    "                              added by aria2.addTorrent RPC method and whose\n" \
-    "                              metadata could not be saved\n" \
+    "                              added by aria2.addTorrent and aria2.addMetalink\n" \
+    "                              RPC method and whose metadata could not be saved\n" \
     "                              as a file will not be saved. Downloads removed\n" \
     "                              using aria2.remove and aria2.forceRemove will not\n" \
     "                              be saved.")
@@ -552,12 +757,12 @@
   _(" -x, --max-connection-per-server=NUM The maximum number of connections to one\n" \
     "                              server for each download.")
 #define TEXT_MIN_SPLIT_SIZE                     \
-  _(" -k, --min-split-size=SIZE    Aria2 Next does not split less than 2*SIZE byte range.\n" \
+  _(" -k, --min-split-size=SIZE    aria2 does not split less than 2*SIZE byte range.\n" \
     "                              For example, let's consider downloading 20MiB\n" \
-    "                              file. If SIZE is 10M, Aria2 Next can split file into 2\n" \
+    "                              file. If SIZE is 10M, aria2 can split file into 2\n" \
     "                              range [0-10MiB) and [10MiB-20MiB) and download it\n" \
     "                              using 2 sources(if --split >= 2, of course).\n" \
-    "                              If SIZE is 15M, since 2*15M > 20MiB, Aria2 Next does\n" \
+    "                              If SIZE is 15M, since 2*15M > 20MiB, aria2 does\n" \
     "                              not split file and download it using 1 source.\n" \
     "                              You can append K or M(1K = 1024, 1M = 1024K).")
 #define TEXT_CONDITIONAL_GET                    \
@@ -572,6 +777,24 @@
     "                              download completed but before seeding.\n" \
     "                              See --on-download-start option for the\n" \
     "                              requirement of COMMAND.")
+#define TEXT_ENABLE_ASYNC_DNS6                  \
+  _(" --enable-async-dns6[=true|false] Enable IPv6 name resolution in asynchronous\n" \
+    "                              DNS resolver. This option will be ignored when\n" \
+    "                              --async-dns=false.")
+#define TEXT_ENABLE_DHT6                        \
+  _(" --enable-dht6[=true|false]   Enable IPv6 DHT functionality.\n" \
+    "                              Use --dht-listen-port option to specify port\n" \
+    "                              number to listen on. See also --dht-listen-addr6\n" \
+    "                              option.")
+#define TEXT_DHT_LISTEN_ADDR6                   \
+  _(" --dht-listen-addr6=ADDR      Specify address to bind socket for IPv6 DHT. \n" \
+    "                              It should be a global unicast IPv6 address of the\n" \
+    "                              host.")
+#define TEXT_DHT_ENTRY_POINT6                   \
+  _(" --dht-entry-point6=HOST:PORT Set host and port as an entry point to IPv6 DHT\n" \
+    "                              network.")
+#define TEXT_DHT_FILE_PATH6                     \
+  _(" --dht-file-path6=PATH        Change the IPv6 DHT routing table file to PATH.")
 #define TEXT_BT_TRACKER                                                 \
   _(" --bt-tracker=URI[,...]       Comma separated list of additional BitTorrent\n" \
     "                              tracker's announce URI. These URIs are not\n" \
@@ -600,45 +823,71 @@
     "                              downloads are kept in memory regardless of this\n" \
     "                              option value. See\n" \
     "                              --keep-unfinished-download-result option.")
+#define TEXT_ASYNC_DNS_SERVER                   \
+  _(" --async-dns-server=IPADDRESS[,...] Comma separated list of DNS server address\n" \
+    "                              used in asynchronous DNS resolver. Usually\n" \
+    "                              asynchronous DNS resolver reads DNS server\n" \
+    "                              addresses from /etc/resolv.conf. When this option\n" \
+    "                              is used, it uses DNS servers specified in this\n" \
+    "                              option instead of ones in /etc/resolv.conf. You\n" \
+    "                              can specify both IPv4 and IPv6 address. This\n" \
+    "                              option is useful when the system does not have\n" \
+    "                              /etc/resolv.conf and user does not have the\n" \
+    "                              permission to create it.")
 #define TEXT_ENABLE_RPC                                               \
-  _(" --enable-rpc[=true|false]    Enable JSON-RPC server.\n" \
+  _(" --enable-rpc[=true|false]    Enable JSON-RPC/XML-RPC server.\n" \
     "                              It is strongly recommended to set secret\n" \
     "                              authorization token using --rpc-secret option.\n" \
     "                              See also --rpc-listen-port option.")
 #define TEXT_RPC_MAX_REQUEST_SIZE                                   \
-  _(" --rpc-max-request-size=SIZE  Set max size of JSON-RPC request. If Aria2 Next\n" \
+  _(" --rpc-max-request-size=SIZE  Set max size of JSON-RPC/XML-RPC request. If aria2\n" \
     "                              detects the request is more than SIZE bytes, it\n" \
     "                              drops connection.")
+#define TEXT_RPC_USER                               \
+  _(" --rpc-user=USER              Set JSON-RPC/XML-RPC user. This option will be\n" \
+    "                              deprecated in the future release. Migrate to\n" \
+    "                              --rpc-secret option as soon as possible.")
+#define TEXT_RPC_PASSWD                                     \
+  _(" --rpc-passwd=PASSWD          Set JSON-RPC/XML-RPC password. This option will\n" \
+    "                              be deprecated in the future release. Migrate to\n" \
+    "                              --rpc-secret option as soon as possible.")
 #define TEXT_RPC_LISTEN_ALL                                         \
-  _(" --rpc-listen-all[=true|false] Listen incoming JSON-RPC requests on all\n" \
+  _(" --rpc-listen-all[=true|false] Listen incoming JSON-RPC/XML-RPC requests on all\n" \
     "                              network interfaces. If false is given, listen only\n" \
     "                              on local loopback interface.")
 #define TEXT_RPC_LISTEN_PORT                                        \
-  _(" --rpc-listen-port=PORT       Specify a port number for JSON-RPC server\n" \
+  _(" --rpc-listen-port=PORT       Specify a port number for JSON-RPC/XML-RPC server\n" \
     "                              to listen to.")
 #define TEXT_SHOW_CONSOLE_READOUT                                       \
   _(" --show-console-readout[=true|false] Show console readout.")
+#define TEXT_METALINK_BASE_URI                  \
+  _(" --metalink-base-uri=URI      Specify base URI to resolve relative URI in\n" \
+    "                              metalink:url and metalink:metaurl element in a\n" \
+    "                              metalink file stored in local disk. If URI points\n" \
+    "                              to a directory, URI must end with '/'.")
 #define TEXT_STREAM_PIECE_SELECTOR              \
   _(" --stream-piece-selector=SELECTOR Specify piece selection algorithm\n" \
     "                              used in HTTP/FTP download. Piece means fixed\n" \
     "                              length segment which is downloaded in parallel\n" \
     "                              in segmented download. If 'default' is given,\n" \
-    "                              Aria2 Next selects piece so that it reduces the\n" \
+    "                              aria2 selects piece so that it reduces the\n" \
     "                              number of establishing connection. This is\n" \
     "                              reasonable default behaviour because\n" \
     "                              establishing connection is an expensive\n" \
     "                              operation.\n"                        \
-    "                              If 'inorder' is given, Aria2 Next selects piece which\n" \
+    "                              If 'inorder' is given, aria2 selects piece which\n" \
     "                              has minimum index. Index=0 means first of the\n" \
     "                              file. This will be useful to view movie while\n" \
-    "                              downloading it. Please note that Aria2 Next honors\n"     \
+    "                              downloading it. --enable-http-pipelining option\n" \
+    "                              may be useful to reduce reconnection overhead.\n" \
+    "                              Please note that aria2 honors\n"     \
     "                              --min-split-size option, so it will be necessary\n" \
     "                              to specify a reasonable value to\n"  \
     "                              --min-split-size option.\n"          \
-    "                              If 'random' is given, Aria2 Next selects piece\n" \
+    "                              If 'random' is given, aria2 selects piece\n" \
     "                              randomly. Like 'inorder', --min-split-size\n" \
     "                              option is honored.\n"                \
-    "                              If 'geom' is given, at the beginning Aria2 Next\n" \
+    "                              If 'geom' is given, at the beginning aria2\n" \
     "                              selects piece which has minimum index like\n" \
     "                              'inorder', but it exponentially increasingly\n" \
     "                              keeps space from previously selected piece. This\n" \
@@ -683,36 +932,64 @@
     "                              downloads.")
 #define TEXT_PIECE_LENGTH                       \
   _(" --piece-length=LENGTH        Set a piece length for HTTP/FTP downloads. This\n" \
-    "                              is the boundary when Aria2 Next splits a file. All\n" \
+    "                              is the boundary when aria2 splits a file. All\n" \
     "                              splits occur at multiple of this length. This\n" \
-    "                              option will be ignored in BitTorrent downloads.")
+    "                              option will be ignored in BitTorrent downloads.\n" \
+    "                              It will be also ignored if Metalink file\n" \
+    "                              contains piece hashes.")
 #define TEXT_STOP_WITH_PROCESS                                          \
   _(" --stop-with-process=PID      Stop application when process PID is not running.\n" \
-    "                              This is useful if the Aria2 Next process is forked from a\n" \
-    "                              parent process. The parent process can fork Aria2 Next\n" \
+    "                              This is useful if aria2 process is forked from a\n" \
+    "                              parent process. The parent process can fork aria2\n" \
     "                              with its own pid and when parent process exits\n" \
-    "                              for some reason, Aria2 Next can detect it and shutdown\n" \
+    "                              for some reason, aria2 can detect it and shutdown\n" \
     "                              itself.")
 #define TEXT_DEFERRED_INPUT                     \
-  _(" --deferred-input[=true|false] If true is given, Aria2 Next does not read all URIs\n" \
+  _(" --deferred-input[=true|false] If true is given, aria2 does not read all URIs\n" \
     "                              and options from file specified by -i option at\n" \
     "                              startup, but it reads one by one when it needs\n" \
     "                              later. This may reduce memory usage if input\n" \
     "                              file contains a lot of URIs to download.\n" \
-    "                              If false is given, Aria2 Next reads all URIs and\n" \
+    "                              If false is given, aria2 reads all URIs and\n" \
     "                              options at startup.")
+#define TEXT_BT_REMOVE_UNSELECTED_FILE                                  \
+  _(" --bt-remove-unselected-file[=true|false] Removes the unselected files when\n" \
+    "                              download is completed in BitTorrent. To\n" \
+    "                              select files, use --select-file option. If\n" \
+    "                              it is not used, all files are assumed to be\n" \
+    "                              selected. Please use this option with care\n" \
+    "                              because it will actually remove files from\n" \
+    "                              your disk.")
 #define TEXT_ENABLE_MMAP                        \
   _(" --enable-mmap[=true|false]   Map files into memory.")
+#define TEXT_RPC_CERTIFICATE                                            \
+  _(" --rpc-certificate=FILE       Use the certificate in FILE for RPC server.\n" \
+    "                              The certificate must be in PEM format.\n" \
+    "                              Use --rpc-private-key option to specify the\n" \
+    "                              private key. Use --rpc-secure option to enable\n" \
+    "                              encryption.")
+#define TEXT_RPC_PRIVATE_KEY                                            \
+  _(" --rpc-private-key=FILE       Use the private key in FILE for RPC server.\n" \
+    "                              The private key must be decrypted and in PEM\n" \
+    "                              format. Use --rpc-secure option to enable\n" \
+    "                              encryption. See also --rpc-certificate option.")
+#define TEXT_RPC_SECURE                         \
+  _(" --rpc-secure[=true|false]    RPC transport will be encrypted by SSL/TLS.\n" \
+    "                              The RPC clients must use https scheme to access\n" \
+    "                              the server. For WebSocket client, use wss\n" \
+    "                              scheme. Use --rpc-certificate and\n" \
+    "                              --rpc-private-key options to specify the\n" \
+    "                              server certificate and private key.")
 #define TEXT_RPC_SAVE_UPLOAD_METADATA                                   \
-  _(" --rpc-save-upload-metadata[=true|false] Save the uploaded torrent\n" \
-    "                              metadata in the directory specified\n" \
+  _(" --rpc-save-upload-metadata[=true|false] Save the uploaded torrent or\n" \
+    "                              metalink metadata in the directory specified\n" \
     "                              by --dir option. The filename consists of\n" \
     "                              SHA-1 hash hex string of metadata plus\n" \
     "                              extension. For torrent, the extension is\n" \
-    "                              '.torrent'.\n" \
+    "                              '.torrent'. For metalink, it is '.meta4'.\n" \
     "                              If false is given to this option, the\n" \
-    "                              downloads added by aria2.addTorrent will not\n" \
-    "                              be saved by\n" \
+    "                              downloads added by aria2.addTorrent or\n" \
+    "                              aria2.addMetalink will not be saved by\n" \
     "                              --save-session option.")
 #define TEXT_FORCE_SAVE                         \
   _(" --force-save[=true|false]    Save download with --save-session option even\n" \
@@ -730,7 +1007,7 @@
   _(" --disk-cache=SIZE            Enable disk cache. If SIZE is 0, the disk cache\n" \
     "                              is disabled. This feature caches the downloaded\n" \
     "                              data in memory, which grows to at most SIZE\n" \
-    "                              bytes. The cache storage is created for the Aria2 Next\n" \
+    "                              bytes. The cache storage is created for aria2\n" \
     "                              instance and shared by all downloads. The one\n" \
     "                              advantage of the disk cache is reduce the disk\n" \
     "                              I/O because the data are written in larger unit\n" \
@@ -740,7 +1017,7 @@
     "                              from the disk.\n"                    \
     "                              SIZE can include K or M(1K = 1024, 1M = 1024K).")
 #define TEXT_GID                                \
-  _(" --gid=GID                    Set GID manually. Aria2 Next identifies each\n" \
+  _(" --gid=GID                    Set GID manually. aria2 identifies each\n" \
     "                              download by the ID called GID. The GID must be\n" \
     "                              hex string of 16 characters, thus [0-9a-fA-F]\n" \
     "                              are allowed and leading zeros must not be\n" \
@@ -750,12 +1027,14 @@
     "                              This option is useful when restoring the\n" \
     "                              sessions saved using --save-session option. If\n" \
     "                              this option is not used, new GID is generated\n" \
-    "                              by Aria2 Next.")
+    "                              by aria2.")
+#define TEXT_CONSOLE_LOG_LEVEL                                          \
+  _(" --console-log-level=LEVEL    Set log level to output to console.")
 #define TEXT_SAVE_SESSION_INTERVAL                                      \
   _(" --save-session-interval=SEC  Save error/unfinished downloads to a file\n" \
     "                              specified by --save-session option every SEC\n" \
     "                              seconds. If 0 is given, file will be saved only\n" \
-    "                              when Aria2 Next exits.")
+    "                              when aria2 exits.")
 #define TEXT_ENABLE_COLOR                                               \
   _(" --enable-color[=true|false]  Enable color output for a terminal.")
 #define TEXT_RPC_SECRET                                                 \
@@ -783,9 +1062,10 @@
 #define TEXT_PAUSE_METADATA                  \
   _(" --pause-metadata[=true|false]\n"       \
     "                              Pause downloads created as a result of metadata\n" \
-    "                              download. Remote .torrent metadata and magnet\n" \
-    "                              metadata create subsequent downloads from the\n" \
-    "                              fetched metadata.\n" \
+    "                              download. There are 3 types of metadata\n" \
+    "                              downloads in aria2: (1) downloading .torrent\n" \
+    "                              file. (2) downloading torrent metadata using\n" \
+    "                              magnet link. (3) downloading metalink file.\n" \
     "                              These metadata downloads will generate downloads\n" \
     "                              using their metadata. This option pauses these\n" \
     "                              subsequent downloads. This option is effective\n" \
@@ -806,17 +1086,34 @@
 #define TEXT_BT_FORCE_ENCRYPTION                                        \
   _(" --bt-force-encryption[=true|false]\n"                             \
     "                              Requires BitTorrent message payload encryption\n" \
-    "                              and requires the encrypted libtorrent peer\n" \
-    "                              handshake.\n" \
+    "                              with arc4. This is a shorthand of\n" \
+    "                              --bt-require-crypto --bt-min-crypto-level=arc4.\n" \
     "                              If true is given, deny legacy BitTorrent\n" \
     "                              handshake and only use Obfuscation handshake and\n" \
     "                              always encrypt message payload.")
+#define TEXT_SSH_HOST_KEY_MD                                            \
+  _(" --ssh-host-key-md=TYPE=DIGEST\n"                                  \
+    "                              Set checksum for SSH host public key. TYPE is\n" \
+    "                              hash type. The supported hash type is sha-1 or\n" \
+    "                              md5. DIGEST is hex digest. For example:\n" \
+    "                              sha-1=b030503d4de4539dc7885e6f0f5e256704edf4c3\n" \
+    "                              This option can be used to validate server's\n" \
+    "                              public key when SFTP is used. If this option is\n" \
+    "                              not set, which is default, no validation takes\n" \
+    "                              place.")
 #define TEXT_SOCKET_RECV_BUFFER_SIZE                                    \
   _(" --socket-recv-buffer-size=SIZE\n"                                 \
     "                              Set the maximum socket receive buffer in bytes.\n" \
     "                              Specifying 0 will disable this option. This value\n" \
     "                              will be set to socket file descriptor using\n" \
     "                              SO_RCVBUF socket option with setsockopt() call.")
+#define TEXT_BT_ENABLE_HOOK_AFTER_HASH_CHECK                            \
+  _(" --bt-enable-hook-after-hash-check[=true|false] Allow hook command invocation\n" \
+    "                              after hash check (see -V option) in BitTorrent\n" \
+    "                              download. By default, when hash check succeeds,\n" \
+    "                              the command given by --on-bt-download-complete\n" \
+    "                              is executed. To disable this action, give false\n" \
+    "                              to this option.")
 #define TEXT_MAX_MMAP_LIMIT                                             \
   _(" --max-mmap-limit=SIZE        Set the maximum file size to enable mmap (see\n" \
     "                              --enable-mmap option). The file size is\n" \
@@ -838,5 +1135,13 @@
     "                              keep in mind that there is no upper bound to the\n" \
     "                              number of unfinished download result to keep. If\n" \
     "                              that is undesirable, turn this option off.")
+
+#define TEXT_BT_LOAD_SAVED_METADATA \
+  _(" --bt-load-saved-metadata[=true|false]\n" \
+    "                              Before getting torrent metadata from DHT when\n" \
+    "                              downloading with magnet link, first try to read\n" \
+    "                              file saved by --bt-save-metadata option. If it is\n" \
+    "                              successful, then skip downloading metadata from\n" \
+    "                              DHT.")
 
 // clang-format on

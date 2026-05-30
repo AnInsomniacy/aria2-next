@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "WrDiskCacheEntry.h"
 
 #include <cstring>
@@ -40,6 +39,7 @@
 #include "DiskAdaptor.h"
 #include "RecoverableException.h"
 #include "DownloadFailureException.h"
+#include "LogFactory.h"
 #include "fmt.h"
 
 namespace aria2 {
@@ -58,7 +58,7 @@ WrDiskCacheEntry::WrDiskCacheEntry(
 WrDiskCacheEntry::~WrDiskCacheEntry()
 {
   if (!set_.empty()) {
-    ARIA2_LOG_WARN(fmt("WrDiskCacheEntry is not empty size=%lu",
+    A2_LOG_WARN(fmt("WrDiskCacheEntry is not empty size=%lu",
                     static_cast<unsigned long>(size_)));
   }
   deleteDataCells();
@@ -80,7 +80,7 @@ void WrDiskCacheEntry::writeToDisk()
     diskAdaptor_->writeCache(this);
   }
   catch (RecoverableException& e) {
-    ARIA2_LOG_ERROR_EX("Error when trying to flush write cache", e);
+    A2_LOG_ERROR_EX("Error when trying to flush write cache", e);
     error_ = CACHE_ERR_ERROR;
     errorCode_ = e.getErrorCode();
   }
@@ -91,7 +91,7 @@ void WrDiskCacheEntry::clear() { deleteDataCells(); }
 
 bool WrDiskCacheEntry::cacheData(DataCell* dataCell)
 {
-  ARIA2_LOG_DEBUG(fmt("WrDiskCacheEntry cache goff=%" PRId64 ", len=%lu",
+  A2_LOG_DEBUG(fmt("WrDiskCacheEntry cache goff=%" PRId64 ", len=%lu",
                    dataCell->goff, static_cast<unsigned long>(dataCell->len)));
   if (set_.insert(dataCell).second) {
     size_ += dataCell->len;

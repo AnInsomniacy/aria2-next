@@ -63,8 +63,7 @@ bool ProtocolDetector::isStreamProtocol(const std::string& uri) const
 
   auto protocol = uri::getFieldString(us, USR_SCHEME, uri.c_str());
   return util::strieq(protocol, "http") || util::strieq(protocol, "https") ||
-         util::strieq(protocol, "ftp") || util::strieq(protocol, "ftps") ||
-         util::strieq(protocol, "sftp") || util::strieq(protocol, "scp");
+         util::strieq(protocol, "ftp") || util::strieq(protocol, "sftp");
 }
 
 bool ProtocolDetector::guessEd2kLink(const std::string& uri) const
@@ -108,6 +107,23 @@ bool ProtocolDetector::guessTorrentMagnet(const std::string& uri) const
 #else  // !ENABLE_BITTORRENT
   return false;
 #endif // !ENABLE_BITTORRENT
+}
+
+bool ProtocolDetector::guessMetalinkFile(const std::string& uri) const
+{
+  BufferedFile fp(uri.c_str(), BufferedFile::READ);
+  if (fp) {
+    char head[5];
+    if (fp.read(head, sizeof(head)) == sizeof(head)) {
+      return memcmp(head, "<?xml", 5) == 0;
+    }
+    else {
+      return false;
+    }
+  }
+  else {
+    return false;
+  }
 }
 
 } // namespace aria2

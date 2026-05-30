@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "CreateRequestCommand.h"
 #include "InitiateConnectionCommandFactory.h"
 #include "RequestGroup.h"
@@ -44,10 +43,12 @@
 #include "SegmentMan.h"
 #include "prefs.h"
 #include "Option.h"
+#include "RequestGroupMan.h"
 #include "FileEntry.h"
+#include "SocketRecvBuffer.h"
+#include "LogFactory.h"
 #include "wallclock.h"
 #include "DownloadFailureException.h"
-#include "fmt.h"
 
 namespace aria2 {
 
@@ -56,7 +57,8 @@ CreateRequestCommand::CreateRequestCommand(cuid_t cuid,
                                            DownloadEngine* e)
     : AbstractCommand(cuid, std::shared_ptr<Request>(),
                       std::shared_ptr<FileEntry>(), requestGroup, e,
-                      std::shared_ptr<SocketCore>(), false)
+                      std::shared_ptr<SocketCore>(),
+                      std::shared_ptr<SocketRecvBuffer>(), false)
 {
   setStatus(Command::STATUS_ONESHOT_REALTIME);
   disableReadCheckSocket();
@@ -73,26 +75,22 @@ bool CreateRequestCommand::executeInternal()
     setFileEntry(getDownloadContext()->findFileEntryByOffset(
         getSegments().front()->getPositionToWrite()));
   }
-  if (!getFileEntry()) {
-    if (getSegmentMan()) {
-      getSegmentMan()->cancelSegment(getCuid());
-    }
-    throw DOWNLOAD_FAILURE_EXCEPTION2(
-        fmt("Restored segment offset is outside the download file range: %"
-            PRId64,
-            getSegments().empty() ? static_cast<int64_t>(0)
-                                  : getSegments().front()->getPositionToWrite()),
-        error_code::UNKNOWN_ERROR);
+  std::vector<std::pair<size_t, std::string>> usedHosts;
+  if (getOption()->getAsBool(PREF_SELECT_LEAST_USED_HOST)) {
+    getDownloadEngine()->getRequestGroupMan()->getUsedHosts(usedHosts);
   }
-  setRequest(getFileEntry()->getRequest(
-      getOption()->get(PREF_REFERER),
-      // Don't use HEAD request when file size is known.
-      // Use HEAD for dry-run mode.
-      (getFileEntry()->getLength() == 0 &&
-       getOption()->getAsBool(PREF_USE_HEAD)) ||
-              getOption()->getAsBool(PREF_DRY_RUN)
-          ? Request::METHOD_HEAD
-          : Request::METHOD_GET));
+  setRequest(
+      getFileEntry()->getRequest(getRequestGroup()->getURISelector().get(),
+                                 getOption()->getAsBool(PREF_REUSE_URI),
+                                 usedHosts, getOption()->get(PREF_REFERER),
+                                 // Don't use HEAD request when file
+                                 // size is known.
+                                 // Use HEAD for dry-run mode.
+                                 (getFileEntry()->getLength() == 0 &&
+                                  getOption()->getAsBool(PREF_USE_HEAD)) ||
+                                         getOption()->getAsBool(PREF_DRY_RUN)
+                                     ? Request::METHOD_HEAD
+                                     : Request::METHOD_GET));
   if (!getRequest()) {
     if (getSegmentMan()) {
       getSegmentMan()->ignoreSegmentFor(getFileEntry());
@@ -110,7 +108,7 @@ bool CreateRequestCommand::executeInternal()
                        getRequestGroup()->getLastErrorCode());
   }
   else if (getRequest()->getWakeTime() > global::wallclock()) {
-    ARIA2_LOG_DEBUG("This request object is still sleeping.");
+    A2_LOG_DEBUG("This request object is still sleeping.");
     getFileEntry()->poolRequest(getRequest());
     // Reset request of this command. Without this, request is doubly
     // counted (1 for pooled and another one in this command) and

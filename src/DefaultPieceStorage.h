@@ -95,6 +95,15 @@ private:
   std::unique_ptr<StreamPieceSelector> streamPieceSelector_;
 
   WrDiskCache* wrDiskCache_;
+#ifdef ENABLE_BITTORRENT
+  void getMissingPiece(std::vector<std::shared_ptr<Piece>>& pieces,
+                       size_t minMissingBlocks, const unsigned char* bitfield,
+                       size_t length, cuid_t cuid);
+
+  void createFastIndexBitfield(BitfieldMan& bitfield,
+                               const std::shared_ptr<Peer>& peer);
+#endif // ENABLE_BITTORRENT
+
   std::shared_ptr<Piece> checkOutPiece(size_t index, cuid_t cuid);
   //   size_t deleteUsedPiecesByFillRate(int fillRate, size_t toDelete);
   //   void reduceUsedPieces(size_t upperBound);
@@ -116,6 +125,51 @@ public:
                       const Option* option);
 
   virtual ~DefaultPieceStorage();
+
+#ifdef ENABLE_BITTORRENT
+
+  virtual bool
+  hasMissingPiece(const std::shared_ptr<Peer>& peer) CXX11_OVERRIDE;
+
+  virtual void getMissingPiece(std::vector<std::shared_ptr<Piece>>& pieces,
+                               size_t minMissingBlocks,
+                               const std::shared_ptr<Peer>& peer,
+                               cuid_t cuid) CXX11_OVERRIDE;
+
+  virtual void getMissingPiece(std::vector<std::shared_ptr<Piece>>& pieces,
+                               size_t minMissingBlocks,
+                               const std::shared_ptr<Peer>& peer,
+                               const std::vector<size_t>& excludedIndexes,
+                               cuid_t cuid) CXX11_OVERRIDE;
+
+  virtual void getMissingFastPiece(std::vector<std::shared_ptr<Piece>>& pieces,
+                                   size_t minMissingBlocks,
+                                   const std::shared_ptr<Peer>& peer,
+                                   cuid_t cuid) CXX11_OVERRIDE;
+
+  virtual void getMissingFastPiece(std::vector<std::shared_ptr<Piece>>& pieces,
+                                   size_t minMissingBlocks,
+                                   const std::shared_ptr<Peer>& peer,
+                                   const std::vector<size_t>& excludedIndexes,
+                                   cuid_t cuid) CXX11_OVERRIDE;
+
+  virtual std::shared_ptr<Piece>
+  getMissingPiece(const std::shared_ptr<Peer>& peer,
+                  cuid_t cuid) CXX11_OVERRIDE;
+
+  virtual std::shared_ptr<Piece>
+  getMissingPiece(const std::shared_ptr<Peer>& peer,
+                  const std::vector<size_t>& excludedIndexes,
+                  cuid_t cuid) CXX11_OVERRIDE;
+
+  std::shared_ptr<Piece> getMissingFastPiece(const std::shared_ptr<Peer>& peer,
+                                             cuid_t cuid);
+
+  std::shared_ptr<Piece>
+  getMissingFastPiece(const std::shared_ptr<Peer>& peer,
+                      const std::vector<size_t>& excludedIndexes, cuid_t cuid);
+
+#endif // ENABLE_BITTORRENT
 
   virtual bool hasMissingUnusedPiece() CXX11_OVERRIDE;
 
@@ -144,11 +198,7 @@ public:
 
   virtual int64_t getCompletedLength() CXX11_OVERRIDE;
 
-  virtual int64_t getInFlightCompletedLength() CXX11_OVERRIDE;
-
   virtual int64_t getFilteredCompletedLength() CXX11_OVERRIDE;
-
-  virtual int64_t getFilteredInFlightCompletedLength() CXX11_OVERRIDE;
 
   virtual void initStorage() CXX11_OVERRIDE;
 

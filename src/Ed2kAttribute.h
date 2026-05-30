@@ -46,7 +46,6 @@ struct Ed2kAttribute : public ContextAttribute {
   std::vector<std::string> pieceHashes;
   std::string aichRootHash;
   std::vector<ed2k::AichRecoverySet> aichRecoverySets;
-  int64_t visibleCompletedLength = 0;
   ed2k::SearchQuery searchQuery;
   std::vector<ed2k::SearchResultEntry> searchResults;
   std::shared_ptr<ed2k::KadRoutingTable> kadRoutingTable;

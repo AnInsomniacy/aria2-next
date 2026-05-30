@@ -17,8 +17,6 @@ jobs:
   build-and-test:
     name: CMake Build and Test
     runs-on: ubuntu-22.04
-    env:
-      PREFIX: ${{ github.workspace }}/build/ci-deps
 
     steps:
       - uses: actions/checkout@v6
@@ -28,73 +26,29 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             cmake ninja-build pkg-config \
-            libcppunit-dev
+            libcppunit-dev libssl-dev libsqlite3-dev \
+            libxml2-dev zlib1g-dev libssh2-1-dev
 
-      - name: Download dependency sources
+      - name: Build c-ares
         run: |
           . packaging/dependencies.env
           . packaging/scripts/common.sh
-          curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256"
-          curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256"
-          curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
-          curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256"
-          curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256"
-          curl_fetch "$SPDLOG_URL" "$SPDLOG_ARCHIVE" "$SPDLOG_SHA256"
-          curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
-
-      - name: Build zlib
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile linux
-          tar xf "$ZLIB_ARCHIVE" && cd "zlib-$ZLIB_VERSION"
-          CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-          ./configure --prefix=$PREFIX --static
-          make -j$(nproc)
-          make install
-
-      - name: Build OpenSSL
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/release-size-profile linux
-          tar xf "$OPENSSL_ARCHIVE" && cd "openssl-$OPENSSL_VERSION"
-          ./Configure linux-x86_64 no-shared no-module no-tests \
-            --prefix=$PREFIX --libdir=lib \
-            $RELEASE_CFLAGS
-          make -j$(nproc)
-          make install_sw
-
-      - name: Build libssh2 for libcurl
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          . packaging/scripts/release-size-profile linux
-          ARIA2_BUILD_JOBS=$(nproc) build_libssh2_for_curl
-
-      - name: Build libcurl
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          . packaging/scripts/release-size-profile linux
-          ARIA2_BUILD_JOBS=$(nproc) build_curl
-
-      - name: Build Boost headers
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          install_boost_headers
-          install_spdlog_headers
-
-      - name: Build libtorrent-rasterbar
-        run: |
-          source packaging/dependencies.env
-          . packaging/scripts/common.sh
-          . packaging/scripts/release-size-profile linux
-          ARIA2_BUILD_JOBS=$(nproc) build_libtorrent_rasterbar
+          curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256"
+          tar xf "$CARES_ARCHIVE"
+          cmake -S "c-ares-$CARES_VERSION" -B build/ci-cares -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCARES_STATIC=ON \
+            -DCARES_SHARED=OFF \
+            -DCARES_BUILD_TESTS=OFF \
+            -DCARES_BUILD_TOOLS=OFF \
+            -DCMAKE_INSTALL_PREFIX="$PWD/build/ci-deps"
+          cmake --build build/ci-cares
+          cmake --install build/ci-cares
 
       - name: Configure
         run: |
-          PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
-          cmake --preset default -DCMAKE_PREFIX_PATH="$PREFIX"
+          PKG_CONFIG_PATH="$PWD/build/ci-deps/lib/pkgconfig" \
+          cmake --preset default -DCMAKE_PREFIX_PATH="$PWD/build/ci-deps"
 
       - name: Build
         run: cmake --build --preset default
@@ -119,7 +73,5 @@ jobs:
           bash -n scripts/release.sh
           bash -n packaging/scripts/common.sh
           bash -n packaging/scripts/check-runtime-deps
-          bash -n packaging/scripts/linux-musl-release
           bash -n packaging/scripts/mingw-release
           bash -n packaging/scripts/android-release
-          packaging/tests/check-runtime-deps-linux-glibc-nss.sh

@@ -16,15 +16,22 @@
 #cmakedefine DEFAULT_DISK_CACHE "@DEFAULT_DISK_CACHE@"
 
 /* Define to 1 if asynchronous DNS support is enabled. */
+#cmakedefine ENABLE_ASYNC_DNS @ENABLE_ASYNC_DNS@
 
 /* Define to 1 if BitTorrent support is enabled. */
 #cmakedefine ENABLE_BITTORRENT @ENABLE_BITTORRENT@
+
+/* Define to 1 if Metalink support is enabled. */
+#cmakedefine ENABLE_METALINK @ENABLE_METALINK@
 
 /* Define to 1 if ssl support is enabled. */
 #cmakedefine ENABLE_SSL @ENABLE_SSL@
 
 /* Define 1 if WebSocket support is enabled. */
 #cmakedefine ENABLE_WEBSOCKET @ENABLE_WEBSOCKET@
+
+/* Define to 1 if XML-RPC support is enabled. */
+#cmakedefine ENABLE_XML_RPC @ENABLE_XML_RPC@
 
 /* Define to 1 if the system has the type `struct timespec'. */
 #cmakedefine HAVE_A2_STRUCT_TIMESPEC @HAVE_A2_STRUCT_TIMESPEC@
@@ -133,6 +140,13 @@
 /* Define to 1 if you have the 'gettimeofday' function. */
 #cmakedefine HAVE_GETTIMEOFDAY @HAVE_GETTIMEOFDAY@
 
+/* Define to 1 if you have a GMP with sec functions. */
+#cmakedefine HAVE_GMP_SEC @HAVE_GMP_SEC@
+
+/* Define to 1 if you have the 'gnutls_certificate_set_x509_system_trust'
+   function. */
+#cmakedefine HAVE_GNUTLS_CERTIFICATE_SET_X509_SYSTEM_TRUST @HAVE_GNUTLS_CERTIFICATE_SET_X509_SYSTEM_TRUST@
+
 /* Define to 1 if you have the 'gzbuffer' function. */
 #cmakedefine HAVE_GZBUFFER @HAVE_GZBUFFER@
 
@@ -160,13 +174,35 @@
 /* Define to 1 if you have the <langinfo.h> header file. */
 #cmakedefine HAVE_LANGINFO_H @HAVE_LANGINFO_H@
 
-/* Define to 1 if you have libcurl. */
-#cmakedefine HAVE_LIBCURL @HAVE_LIBCURL@
+/* Define to 1 if you have libcares. */
+#cmakedefine HAVE_LIBCARES @HAVE_LIBCARES@
 
+/* Define to 1 if you have libexpat. */
+#cmakedefine HAVE_LIBEXPAT @HAVE_LIBEXPAT@
 
-/* Define to 1 if you have libtorrent-rasterbar. */
-#cmakedefine HAVE_LIBTORRENT_RASTERBAR @HAVE_LIBTORRENT_RASTERBAR@
+/* Define to 1 if you have libgcrypt. */
+#cmakedefine HAVE_LIBGCRYPT @HAVE_LIBGCRYPT@
 
+/* Define to 1 if you have libgmp. */
+#cmakedefine HAVE_LIBGMP @HAVE_LIBGMP@
+
+/* Define to 1 if you have libgnutls. */
+#cmakedefine HAVE_LIBGNUTLS @HAVE_LIBGNUTLS@
+
+/* Define to 1 if you have libnettle. */
+#cmakedefine HAVE_LIBNETTLE @HAVE_LIBNETTLE@
+
+/* Define to 1 if nettle_hash_digest_func omits the digest length argument. */
+#cmakedefine HAVE_NETTLE_HASH_DIGEST_WITHOUT_LENGTH @HAVE_NETTLE_HASH_DIGEST_WITHOUT_LENGTH@
+
+/* Define to 1 if you have libssh2. */
+#cmakedefine HAVE_LIBSSH2 @HAVE_LIBSSH2@
+
+/* Define to 1 if you have libuv. */
+#cmakedefine HAVE_LIBUV @HAVE_LIBUV@
+
+/* Define to 1 if you have libxml2. */
+#cmakedefine HAVE_LIBXML2 @HAVE_LIBXML2@
 
 /* Define to 1 if you have the <limits.h> header file. */
 #cmakedefine HAVE_LIMITS_H @HAVE_LIMITS_H@
@@ -262,6 +298,9 @@
 /* Define to 1 if you have the 'rmdir' function. */
 #cmakedefine HAVE_RMDIR @HAVE_RMDIR@
 
+/* Define to 1 if SCH_CREDENTIALS and TLS_PARAMETERS are available. */
+#cmakedefine HAVE_SCH_CREDENTIALS @HAVE_SCH_CREDENTIALS@
+
 /* Define to 1 if you have the 'select' function. */
 #cmakedefine HAVE_SELECT @HAVE_SELECT@
 
@@ -291,6 +330,12 @@
 
 /* Define to 1 if *_fallocate is available. */
 #cmakedefine HAVE_SOME_FALLOCATE @HAVE_SOME_FALLOCATE@
+
+/* Define to 1 if you have sqlite3. */
+#cmakedefine HAVE_SQLITE3 @HAVE_SQLITE3@
+
+/* Define to 1 if you have the 'sqlite3_open_v2' function. */
+#cmakedefine HAVE_SQLITE3_OPEN_V2 @HAVE_SQLITE3_OPEN_V2@
 
 /* Define to 1 if 'stat' has the bug that it succeeds when given the
    zero-length file name argument. */
@@ -464,6 +509,9 @@
 /* Define to 1 if you have the '__argz_stringify' function. */
 #cmakedefine HAVE___ARGZ_STRINGIFY @HAVE___ARGZ_STRINGIFY@
 
+/* Define to 1 if you have the '__gmpz_powm_sec' function. */
+#cmakedefine HAVE___GMPZ_POWM_SEC @HAVE___GMPZ_POWM_SEC@
+
 /* Define build-type */
 #cmakedefine HOST "@HOST@"
 
@@ -526,6 +574,27 @@
 
 /* Define to 1 if your <sys/time.h> declares 'struct tm'. */
 #cmakedefine TM_IN_SYS_TIME @TM_IN_SYS_TIME@
+
+/* Define to 1 if using gnutls system wide crypto policy . */
+#cmakedefine USE_GNUTLS_SYSTEM_CRYPTO_POLICY @USE_GNUTLS_SYSTEM_CRYPTO_POLICY@
+
+/* Define to 1 if internal ARC4 support is enabled. */
+#cmakedefine USE_INTERNAL_ARC4 @USE_INTERNAL_ARC4@
+
+/* Define to 1 if internal BIGNUM support is enabled. */
+#cmakedefine USE_INTERNAL_BIGNUM @USE_INTERNAL_BIGNUM@
+
+/* What message digest implementation to use */
+#cmakedefine USE_INTERNAL_MD @USE_INTERNAL_MD@
+
+/* What message digest implementation to use */
+#cmakedefine USE_LIBGCRYPT_MD @USE_LIBGCRYPT_MD@
+
+/* What message digest implementation to use */
+#cmakedefine USE_LIBNETTLE_MD @USE_LIBNETTLE_MD@
+
+/* What message digest implementation to use */
+#cmakedefine USE_OPENSSL_MD @USE_OPENSSL_MD@
 
 /* Enable extensions on AIX, Interix, z/OS.  */
 #ifndef _ALL_SOURCE

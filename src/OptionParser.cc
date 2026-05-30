@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "OptionParser.h"
 
 #include <unistd.h>
@@ -53,6 +52,7 @@
 #include "DlAbortEx.h"
 #include "error_code.h"
 #include "UnknownOptionException.h"
+#include "LogFactory.h"
 #include "fmt.h"
 
 namespace aria2 {
@@ -94,7 +94,7 @@ void putOptions(struct option* longOpts, int* plopt, InputIterator first,
       (*longOpts).name = strdup((*first)->getName());
       if ((*longOpts).name == nullptr) {
         auto errNum = errno;
-        ARIA2_LOG_ERROR(
+        A2_LOG_ERROR(
             fmt("strdup() failed: %s", util::safeStrerror(errNum).c_str()));
         exit(EXIT_FAILURE);
       }
@@ -251,7 +251,7 @@ void OptionParser::parse(Option& option, std::istream& is) const
       handler->parse(option, std::string(nv.second.first, nv.second.second));
     }
     else {
-      ARIA2_LOG_WARN(fmt("Unknown option: %s", line.c_str()));
+      A2_LOG_WARN(fmt("Unknown option: %s", line.c_str()));
     }
   }
 }
@@ -265,7 +265,7 @@ void OptionParser::parse(Option& option, const KeyVals& options) const
       handler->parse(option, o.second);
     }
     else {
-      ARIA2_LOG_WARN(fmt("Unknown option: %s", o.first.c_str()));
+      A2_LOG_WARN(fmt("Unknown option: %s", o.first.c_str()));
     }
   }
 }

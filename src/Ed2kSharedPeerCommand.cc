@@ -10,7 +10,6 @@
  * (at your option) any later version.
  */
 /* copyright --> */
-#include "Log.h"
 #include "Ed2kSharedPeerCommand.h"
 
 #include <algorithm>
@@ -21,6 +20,8 @@
 #include "Ed2kSharedResponder.h"
 #include "Ed2kSharedStore.h"
 #include "Ed2kUploadQueue.h"
+#include "LogFactory.h"
+#include "Logger.h"
 #include "Option.h"
 #include "RequestGroupMan.h"
 #include "SocketCore.h"
@@ -119,11 +120,7 @@ void Ed2kSharedPeerCommand::setWriteCheck(bool enabled)
 void Ed2kSharedPeerCommand::queuePacket(uint8_t protocol, uint8_t opcode,
                                         const std::string& payload)
 {
-  ed2k::OutboundPacket packet;
-  packet.data = ed2k::createPacket(protocol, opcode, payload);
-  packet.fileData = opcode == ed2k::OP_SENDINGPART ||
-                    opcode == ed2k::OP_SENDINGPART_I64;
-  outbox_.push_back(std::move(packet));
+  outbox_.push_back(ed2k::createPacket(protocol, opcode, payload));
 }
 
 void Ed2kSharedPeerCommand::queuePeerHelloAnswer()
@@ -144,20 +141,8 @@ void Ed2kSharedPeerCommand::queueEmuleInfo(bool answer)
 bool Ed2kSharedPeerCommand::flushOutbox()
 {
   while (!outbox_.empty()) {
-    auto& packet = outbox_.front();
-    auto writeLength = packet.data.size();
-    if (packet.fileData) {
-      const auto allowed = uploadLimitBucket_.consume(ed2kUploadLimit(),
-                                                      writeLength);
-      if (allowed == 0) {
-        e_->scheduleRuntimeWake(std::chrono::milliseconds(50));
-        setWriteCheck(true);
-        addCommandSelf();
-        return false;
-      }
-      writeLength = allowed;
-    }
-    auto written = socket_->writeData(packet.data.data(), writeLength);
+    auto& data = outbox_.front();
+    auto written = socket_->writeData(data.data(), data.size());
     if (written == 0) {
       setWriteCheck(socket_->wantWrite());
       if (socket_->wantRead()) {
@@ -166,8 +151,8 @@ bool Ed2kSharedPeerCommand::flushOutbox()
       addCommandSelf();
       return false;
     }
-    packet.data.erase(0, static_cast<size_t>(written));
-    if (!packet.data.empty()) {
+    data.erase(0, static_cast<size_t>(written));
+    if (!data.empty()) {
       setWriteCheck(true);
       addCommandSelf();
       return false;
@@ -178,12 +163,6 @@ bool Ed2kSharedPeerCommand::flushOutbox()
   setReadCheck();
   state_ = State::READ_HEADER;
   return true;
-}
-
-int64_t Ed2kSharedPeerCommand::ed2kUploadLimit() const
-{
-  auto rgman = e_->getRequestGroupMan().get();
-  return rgman ? rgman->getMaxOverallUploadSpeedLimit() : 0;
 }
 
 bool Ed2kSharedPeerCommand::readHeader()
@@ -408,7 +387,7 @@ bool Ed2kSharedPeerCommand::execute()
     }
   }
   catch (RecoverableException& ex) {
-    ARIA2_LOG_DEBUG_EX(fmt("CUID#%" PRId64 " - ED2K shared peer failed.",
+    A2_LOG_DEBUG_EX(fmt("CUID#%" PRId64 " - ED2K shared peer failed.",
                         getCuid()),
                     ex);
     return true;

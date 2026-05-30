@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "IteratableChecksumValidator.h"
 
 #include <array>
@@ -46,6 +45,7 @@
 #include "FileEntry.h"
 #include "BitfieldMan.h"
 #include "DownloadContext.h"
+#include "LogFactory.h"
 #include "fmt.h"
 
 namespace aria2 {
@@ -75,7 +75,7 @@ void IteratableChecksumValidator::validateChunk()
       dctx_->setChecksumVerified(true);
     }
     else {
-      ARIA2_LOG_INFO(fmt("Checksum validation failed. expected=%s, actual=%s",
+      A2_LOG_INFO(fmt("Checksum validation failed. expected=%s, actual=%s",
                       util::toHex(dctx_->getDigest()).c_str(),
                       util::toHex(actualDigest).c_str()));
       BitfieldMan bitfield(dctx_->getPieceLength(), dctx_->getTotalLength());

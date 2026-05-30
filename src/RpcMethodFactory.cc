@@ -58,6 +58,9 @@ std::vector<std::string> rpcMethodNames = {
     "aria2.addTorrent",
     "aria2.getPeers",
 #endif // ENABLE_BITTORRENT
+#ifdef ENABLE_METALINK
+    "aria2.addMetalink",
+#endif // ENABLE_METALINK
     "aria2.remove",
     "aria2.pause",
     "aria2.forcePause",
@@ -135,6 +138,12 @@ std::unique_ptr<RpcMethod> createMethod(const std::string& methodName)
     return make_unique<GetPeersRpcMethod>();
   }
 #endif // ENABLE_BITTORRENT
+
+#ifdef ENABLE_METALINK
+  if (methodName == AddMetalinkRpcMethod::getMethodName()) {
+    return make_unique<AddMetalinkRpcMethod>();
+  }
+#endif // ENABLE_METALINK
 
   if (methodName == RemoveRpcMethod::getMethodName()) {
     return make_unique<RemoveRpcMethod>();

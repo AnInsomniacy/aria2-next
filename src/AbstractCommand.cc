@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "AbstractCommand.h"
 
 #include <algorithm>
@@ -43,27 +42,36 @@
 #include "Option.h"
 #include "PeerStat.h"
 #include "SegmentMan.h"
+#include "Logger.h"
 #include "Segment.h"
 #include "DlAbortEx.h"
 #include "DlRetryEx.h"
 #include "DownloadFailureException.h"
 #include "CreateRequestCommand.h"
-#include "RequestGroup.h"
+#include "InitiateConnectionCommandFactory.h"
 #include "StreamCheckIntegrityEntry.h"
 #include "PieceStorage.h"
 #include "SocketCore.h"
 #include "message.h"
 #include "prefs.h"
 #include "fmt.h"
+#include "ServerStat.h"
+#include "RequestGroupMan.h"
 #include "A2STR.h"
 #include "util.h"
+#include "LogFactory.h"
 #include "DownloadContext.h"
 #include "wallclock.h"
 #include "NameResolver.h"
 #include "uri.h"
 #include "FileEntry.h"
 #include "error_code.h"
+#include "SocketRecvBuffer.h"
 #include "ChecksumCheckIntegrityEntry.h"
+#ifdef ENABLE_ASYNC_DNS
+#  include "AsyncNameResolver.h"
+#  include "AsyncNameResolverMan.h"
+#endif // ENABLE_ASYNC_DNS
 
 namespace aria2 {
 
@@ -71,20 +79,25 @@ AbstractCommand::AbstractCommand(
     cuid_t cuid, const std::shared_ptr<Request>& req,
     const std::shared_ptr<FileEntry>& fileEntry, RequestGroup* requestGroup,
     DownloadEngine* e, const std::shared_ptr<SocketCore>& s,
+    const std::shared_ptr<SocketRecvBuffer>& socketRecvBuffer,
     bool incNumConnection, bool incNumStreamCommand)
     : Command(cuid),
       req_(req),
       fileEntry_(fileEntry),
       socket_(s),
+      socketRecvBuffer_(socketRecvBuffer),
+#ifdef ENABLE_ASYNC_DNS
+      asyncNameResolverMan_(make_unique<AsyncNameResolverMan>()),
+#endif // ENABLE_ASYNC_DNS
       requestGroup_(requestGroup),
       e_(e),
       checkPoint_(global::wallclock()),
+      serverStatTimer_(global::wallclock()),
       timeout_(requestGroup->getTimeout()),
       checkSocketIsReadable_(false),
       checkSocketIsWritable_(false),
       incNumConnection_(incNumConnection),
-      incNumStreamCommand_(incNumStreamCommand),
-      httpRangeGeneration_(requestGroup->getHttpRangeGeneration())
+      incNumStreamCommand_(incNumStreamCommand)
 {
   if (socket_ && socket_->isOpen()) {
     setReadCheckSocket(socket_);
@@ -96,12 +109,18 @@ AbstractCommand::AbstractCommand(
     requestGroup_->increaseStreamCommand();
   }
   requestGroup_->increaseNumCommand();
+#ifdef ENABLE_ASYNC_DNS
+  configureAsyncNameResolverMan(asyncNameResolverMan_.get(), e_->getOption());
+#endif // ENABLE_ASYNC_DNS
 }
 
 AbstractCommand::~AbstractCommand()
 {
   disableReadCheckSocket();
   disableWriteCheckSocket();
+#ifdef ENABLE_ASYNC_DNS
+  asyncNameResolverMan_->disableNameResolverCheck(e_, this);
+#endif // ENABLE_ASYNC_DNS
   requestGroup_->decreaseNumCommand();
   if (incNumStreamCommand_) {
     requestGroup_->decreaseStreamCommand();
@@ -111,10 +130,28 @@ AbstractCommand::~AbstractCommand()
   }
 }
 
+void AbstractCommand::useFasterRequest(
+    const std::shared_ptr<Request>& fasterRequest)
+{
+  A2_LOG_INFO(fmt("CUID#%" PRId64 " - Use faster Request hostname=%s, port=%u",
+                  getCuid(), fasterRequest->getHost().c_str(),
+                  fasterRequest->getPort()));
+  // Cancel current Request object and use faster one.
+  fileEntry_->removeRequest(req_);
+  e_->setNoWait(true);
+  e_->addCommand(
+      InitiateConnectionCommandFactory::createInitiateConnectionCommand(
+          getCuid(), fasterRequest, fileEntry_, requestGroup_, e_));
+}
+
 bool AbstractCommand::shouldProcess() const
 {
   if (checkSocketIsReadable_) {
     if (readEventEnabled()) {
+      return true;
+    }
+
+    if (socketRecvBuffer_ && !socketRecvBuffer_->bufferEmpty()) {
       return true;
     }
 
@@ -127,22 +164,37 @@ bool AbstractCommand::shouldProcess() const
     return true;
   }
 
+#ifdef ENABLE_ASYNC_DNS
+  const auto resolverChecked = asyncNameResolverMan_->resolverChecked();
+  if (resolverChecked && asyncNameResolverMan_->getStatus() != 0) {
+    return true;
+  }
+
+  if (!checkSocketIsReadable_ && !checkSocketIsWritable_ && !resolverChecked) {
+    return true;
+  }
+#else  // ENABLE_ASYNC_DNS
   if (!checkSocketIsReadable_ && !checkSocketIsWritable_) {
     return true;
   }
+#endif // ENABLE_ASYNC_DNS
 
   return noCheck();
 }
 
 bool AbstractCommand::execute()
 {
+  A2_LOG_DEBUG(fmt("CUID#%" PRId64
+                   " - socket: read:%d, write:%d, hup:%d, err:%d",
+                   getCuid(), readEventEnabled(), writeEventEnabled(),
+                   hupEventEnabled(), errorEventEnabled()));
   try {
     if (requestGroup_->downloadFinished() || requestGroup_->isHaltRequested()) {
       return true;
     }
 
     if (req_ && req_->removalRequested()) {
-      ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+      A2_LOG_DEBUG(fmt("CUID#%" PRId64
                        " - Discard original URI=%s because it is"
                        " requested.",
                        getCuid(), req_->getUri().c_str()));
@@ -157,12 +209,48 @@ bool AbstractCommand::execute()
 
       if (req_ && segments_.empty()) {
         // This command previously has assigned segments, but it is
-        // canceled. So discard current request chain.
-        ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
+        // canceled. So discard current request chain.  Plus, if no
+        // segment is available when http pipelining is used.
+        A2_LOG_DEBUG(fmt("CUID#%" PRId64
                          " - It seems previously assigned segments"
                          " are canceled. Restart.",
                          getCuid()));
+        // Request::isPipeliningEnabled() == true means aria2
+        // accessed the remote server and discovered that the server
+        // supports pipelining.
+        if (req_ && req_->isPipeliningEnabled()) {
+          e_->poolSocket(req_, createProxyRequest(), socket_);
+        }
         return prepareForRetry(0);
+      }
+
+      // TODO it is not needed to check other PeerStats every time.
+      // Find faster Request when no segment split is allowed.
+      if (req_ && fileEntry_->countPooledRequest() > 0 &&
+          requestGroup_->getPendingLength() < calculateMinSplitSize() * 2) {
+        auto fasterRequest = fileEntry_->findFasterRequest(req_);
+        if (fasterRequest) {
+          useFasterRequest(fasterRequest);
+          return true;
+        }
+      }
+      // Don't use this feature if PREF_MAX_{OVERALL_}DOWNLOAD_LIMIT
+      // is used or total length is unknown.
+      if (req_ && fileEntry_->getLength() > 0 &&
+          e_->getRequestGroupMan()->getMaxOverallDownloadSpeedLimit() == 0 &&
+          requestGroup_->getMaxDownloadSpeedLimit() == 0 &&
+          serverStatTimer_.difference(global::wallclock()) >= 10_s) {
+        serverStatTimer_ = global::wallclock();
+        std::vector<std::pair<size_t, std::string>> usedHosts;
+        if (getOption()->getAsBool(PREF_SELECT_LEAST_USED_HOST)) {
+          getDownloadEngine()->getRequestGroupMan()->getUsedHosts(usedHosts);
+        }
+        auto fasterRequest = fileEntry_->findFasterRequest(
+            req_, usedHosts, e_->getRequestGroupMan()->getServerStatMan());
+        if (fasterRequest) {
+          useFasterRequest(fasterRequest);
+          return true;
+        }
       }
     }
 
@@ -173,8 +261,12 @@ bool AbstractCommand::execute()
         return executeInternal();
       }
 
-      if (!req_ || getDownloadContext()->getFileEntries().size() == 1) {
-        size_t maxSegments = 1;
+      if (!req_ || req_->getMaxPipelinedRequest() == 1 ||
+          // Why the following condition is necessary? That's because
+          // For single file download, SegmentMan::getSegment(cuid)
+          // is more efficient.
+          getDownloadContext()->getFileEntries().size() == 1) {
+        size_t maxSegments = req_ ? req_->getMaxPipelinedRequest() : 1;
         size_t minSplitSize = calculateMinSplitSize();
         while (segments_.size() < maxSegments) {
           auto segment = sm->getSegment(getCuid(), minSplitSize);
@@ -184,11 +276,14 @@ bool AbstractCommand::execute()
           segments_.push_back(segment);
         }
         if (segments_.empty()) {
-          ARIA2_LOG_DEBUG(fmt(MSG_NO_SEGMENT_AVAILABLE, getCuid()));
+          // TODO socket could be pooled here if pipelining is
+          // enabled...  Hmm, I don't think if pipelining is enabled
+          // it does not go here.
+          A2_LOG_INFO(fmt(MSG_NO_SEGMENT_AVAILABLE, getCuid()));
           // When all segments are ignored in SegmentMan, there are
           // no URIs available, so don't retry.
           if (sm->allSegmentsIgnored()) {
-            ARIA2_LOG_DEBUG("All segments are ignored.");
+            A2_LOG_DEBUG("All segments are ignored.");
             // This will execute other idle Commands and let them
             // finish quickly.
             e_->setRefreshInterval(std::chrono::milliseconds(0));
@@ -201,7 +296,7 @@ bool AbstractCommand::execute()
       else {
         // For multi-file downloads
         size_t minSplitSize = calculateMinSplitSize();
-        size_t maxSegments = 1;
+        size_t maxSegments = req_->getMaxPipelinedRequest();
         if (segments_.size() < maxSegments) {
           sm->getSegment(segments_, getCuid(), minSplitSize, fileEntry_,
                          maxSegments);
@@ -216,16 +311,24 @@ bool AbstractCommand::execute()
 
     if (errorEventEnabled()) {
       // older kernel may report "connection refused" here.
+      auto ss = e_->getRequestGroupMan()->getOrCreateServerStat(
+          req_->getHost(), req_->getProtocol());
+      ss->setError();
+
       throw DL_RETRY_EX(
           fmt(MSG_NETWORK_PROBLEM, socket_->getSocketError().c_str()));
     }
 
     if (checkPoint_.difference(global::wallclock()) >= timeout_) {
+      // timeout triggers ServerStat error state.
+      auto ss = e_->getRequestGroupMan()->getOrCreateServerStat(
+          req_->getHost(), req_->getProtocol());
+      ss->setError();
       // When DNS query was timeout, req_->getConnectedAddr() is
       // empty.
       if (!req_->getConnectedAddr().empty()) {
         // Purging IP address cache to renew IP address.
-        ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Marking IP address %s as bad",
+        A2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Marking IP address %s as bad",
                          getCuid(), req_->getConnectedAddr().c_str()));
         e_->markBadIPAddress(req_->getConnectedHostname(),
                              req_->getConnectedAddr(),
@@ -234,7 +337,7 @@ bool AbstractCommand::execute()
       if (e_->findCachedIPAddress(req_->getConnectedHostname(),
                                   req_->getConnectedPort())
               .empty()) {
-        ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64 " - All IP addresses were marked bad."
+        A2_LOG_DEBUG(fmt("CUID#%" PRId64 " - All IP addresses were marked bad."
                          " Removing Entry.",
                          getCuid()));
         e_->removeCachedIPAddress(req_->getConnectedHostname(),
@@ -249,7 +352,7 @@ bool AbstractCommand::execute()
   catch (DlAbortEx& err) {
     requestGroup_->setLastErrorCode(err.getErrorCode(), err.what());
     if (req_) {
-      ARIA2_LOG_ERROR_EX(
+      A2_LOG_ERROR_EX(
           fmt(MSG_DOWNLOAD_ABORTED, getCuid(), req_->getUri().c_str()),
           DL_ABORT_EX2(fmt("URI=%s", req_->getCurrentUri().c_str()), err));
       fileEntry_->addURIResult(req_->getUri(), err.getErrorCode());
@@ -258,7 +361,7 @@ bool AbstractCommand::execute()
       }
     }
     else {
-      ARIA2_LOG_DEBUG_EX(EX_EXCEPTION_CAUGHT, err);
+      A2_LOG_DEBUG_EX(EX_EXCEPTION_CAUGHT, err);
     }
     onAbort();
     tryReserved();
@@ -266,7 +369,7 @@ bool AbstractCommand::execute()
   }
   catch (DlRetryEx& err) {
     assert(req_);
-    ARIA2_LOG_DEBUG_EX(
+    A2_LOG_INFO_EX(
         fmt(MSG_RESTARTING_DOWNLOAD, getCuid(), req_->getUri().c_str()),
         DL_RETRY_EX2(fmt("URI=%s", req_->getCurrentUri().c_str()), err));
     req_->addTryCount();
@@ -276,8 +379,8 @@ bool AbstractCommand::execute()
     const int maxTries = getOption()->getAsInt(PREF_MAX_TRIES);
     bool isAbort = maxTries != 0 && req_->getTryCount() >= maxTries;
     if (isAbort) {
-      ARIA2_LOG_INFO(fmt(MSG_MAX_TRY, getCuid(), req_->getTryCount()));
-      ARIA2_LOG_ERROR_EX(
+      A2_LOG_INFO(fmt(MSG_MAX_TRY, getCuid(), req_->getTryCount()));
+      A2_LOG_ERROR_EX(
           fmt(MSG_DOWNLOAD_ABORTED, getCuid(), req_->getUri().c_str()), err);
       fileEntry_->addURIResult(req_->getUri(), err.getErrorCode());
       requestGroup_->setLastErrorCode(err.getErrorCode(), err.what());
@@ -289,8 +392,7 @@ bool AbstractCommand::execute()
       return true;
     }
 
-    if (err.getErrorCode() == error_code::HTTP_SERVICE_UNAVAILABLE &&
-        req_->getWakeTime() <= global::wallclock()) {
+    if (err.getErrorCode() == error_code::HTTP_SERVICE_UNAVAILABLE) {
       Timer wakeTime(global::wallclock());
       wakeTime.advance(
           std::chrono::seconds(getOption()->getAsInt(PREF_RETRY_WAIT)));
@@ -303,13 +405,13 @@ bool AbstractCommand::execute()
   catch (DownloadFailureException& err) {
     requestGroup_->setLastErrorCode(err.getErrorCode(), err.what());
     if (req_) {
-      ARIA2_LOG_ERROR_EX(
+      A2_LOG_ERROR_EX(
           fmt(MSG_DOWNLOAD_ABORTED, getCuid(), req_->getUri().c_str()),
           DL_ABORT_EX2(fmt("URI=%s", req_->getCurrentUri().c_str()), err));
       fileEntry_->addURIResult(req_->getUri(), err.getErrorCode());
     }
     else {
-      ARIA2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, err);
+      A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, err);
     }
     requestGroup_->setHaltRequested(true);
     getDownloadEngine()->setRefreshInterval(std::chrono::milliseconds(0));
@@ -325,14 +427,14 @@ void AbstractCommand::tryReserved()
     // and there are no URI left. Because file length is unknown, we
     // can assume that there are no in-flight request object.
     if (entry->getLength() == 0 && entry->getRemainingUris().empty()) {
-      ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Not trying next request."
+      A2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Not trying next request."
                        " No reserved/pooled request is remaining and"
                        " total length is still unknown.",
                        getCuid()));
       return;
     }
   }
-  ARIA2_LOG_DEBUG(
+  A2_LOG_DEBUG(
       fmt("CUID#%" PRId64 " - Trying reserved/pooled request.", getCuid()));
   std::vector<std::unique_ptr<Command>> commands;
   requestGroup_->createNextCommand(commands, e_, 1);
@@ -345,23 +447,15 @@ bool AbstractCommand::prepareForRetry(time_t wait)
   if (getPieceStorage()) {
     getSegmentMan()->cancelSegment(getCuid());
   }
-  if (incNumStreamCommand_ &&
-      !requestGroup_->claimStreamRetrySlot(httpRangeGeneration_)) {
-    if (req_) {
-      ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64
-                       " - Discarding retry because stream command limit is"
-                       " already converging.",
-                       getCuid()));
-      fileEntry_->poolRequest(req_);
-      if (getSegmentMan()) {
-        getSegmentMan()->recognizeSegmentFor(fileEntry_);
-      }
-    }
-    return true;
-  }
   if (req_) {
+    // Reset persistentConnection and maxPipelinedRequest to handle
+    // the situation where remote server returns Connection: close
+    // after several pipelined requests.
+    req_->supportsPersistentConnection(true);
+    req_->setMaxPipelinedRequest(1);
+
     fileEntry_->poolRequest(req_);
-    ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Pooling request URI=%s", getCuid(),
+    A2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Pooling request URI=%s", getCuid(),
                      req_->getUri().c_str()));
     if (getSegmentMan()) {
       getSegmentMan()->recognizeSegmentFor(fileEntry_);
@@ -389,7 +483,7 @@ void AbstractCommand::onAbort()
     fileEntry_->removeRequest(req_);
   }
 
-  ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Aborting download", getCuid()));
+  A2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Aborting download", getCuid()));
   if (!getPieceStorage()) {
     return;
   }
@@ -413,10 +507,10 @@ void AbstractCommand::onAbort()
   // Local file exists, but given servers(or at least contacted
   // ones) doesn't support resume. Let's restart download from
   // scratch.
-  ARIA2_LOG_INFO(fmt(_("CUID#%" PRId64 " - Failed to resume download."
+  A2_LOG_NOTICE(fmt(_("CUID#%" PRId64 " - Failed to resume download."
                       " Download from scratch."),
                     getCuid()));
-  ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Gathering URIs that has CANNOT_RESUME"
+  A2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Gathering URIs that has CANNOT_RESUME"
                    " error",
                    getCuid()));
   // Set PREF_ALWAYS_RESUME to A2_V_TRUE to avoid repeating this
@@ -435,7 +529,7 @@ void AbstractCommand::onAbort()
   uris.reserve(res.size());
   std::transform(std::begin(res), std::end(res), std::back_inserter(uris),
                  std::mem_fn(&URIResult::getURI));
-  ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64 " - %lu URIs found.", getCuid(),
+  A2_LOG_DEBUG(fmt("CUID#%" PRId64 " - %lu URIs found.", getCuid(),
                    static_cast<unsigned long int>(uris.size())));
   fileEntry_->addUris(std::begin(uris), std::end(uris));
   getSegmentMan()->recognizeSegmentFor(fileEntry_);
@@ -554,27 +648,6 @@ std::string makeProxyUri(PrefPtr proxyPref, PrefPtr proxyUser,
   }
   return uri::construct(us);
 }
-
-std::string makeLocalProxyUri(PrefPtr proxyPref, PrefPtr proxyUser,
-                              PrefPtr proxyPasswd, const Option* option)
-{
-  if (!option->definedLocal(proxyPref)) {
-    return "";
-  }
-
-  uri::UriStruct us;
-  if (!uri::parse(us, option->get(proxyPref))) {
-    return "";
-  }
-  if (option->definedLocal(proxyUser)) {
-    us.username = option->get(proxyUser);
-  }
-  if (option->definedLocal(proxyPasswd)) {
-    us.password = option->get(proxyPasswd);
-    us.hasPassword = true;
-  }
-  return uri::construct(us);
-}
 } // namespace
 
 namespace {
@@ -586,18 +659,6 @@ std::string getProxyOptionFor(PrefPtr proxyPref, PrefPtr proxyUser,
   if (uri.empty()) {
     return makeProxyUri(PREF_ALL_PROXY, PREF_ALL_PROXY_USER,
                         PREF_ALL_PROXY_PASSWD, option);
-  }
-
-  return uri;
-}
-
-std::string getLocalProxyOptionFor(PrefPtr proxyPref, PrefPtr proxyUser,
-                                   PrefPtr proxyPasswd, const Option* option)
-{
-  std::string uri = makeLocalProxyUri(proxyPref, proxyUser, proxyPasswd, option);
-  if (uri.empty()) {
-    return makeLocalProxyUri(PREF_ALL_PROXY, PREF_ALL_PROXY_USER,
-                             PREF_ALL_PROXY_PASSWD, option);
   }
 
   return uri;
@@ -627,27 +688,17 @@ std::string getProxyUri(const std::string& protocol, const Option* option)
 }
 
 namespace {
-std::string getLocalProxyUri(const std::string& protocol, const Option* option)
+// Returns true if proxy is defined for the given protocol. Otherwise
+// returns false.
+bool isProxyRequest(const std::string& protocol,
+                    const std::shared_ptr<Option>& option)
 {
-  if (protocol == "http") {
-    return getLocalProxyOptionFor(PREF_HTTP_PROXY, PREF_HTTP_PROXY_USER,
-                                  PREF_HTTP_PROXY_PASSWD, option);
-  }
-
-  if (protocol == "https") {
-    return getLocalProxyOptionFor(PREF_HTTPS_PROXY, PREF_HTTPS_PROXY_USER,
-                                  PREF_HTTPS_PROXY_PASSWD, option);
-  }
-
-  if (protocol == "ftp" || protocol == "sftp") {
-    return getLocalProxyOptionFor(PREF_FTP_PROXY, PREF_FTP_PROXY_USER,
-                                  PREF_FTP_PROXY_PASSWD, option);
-  }
-
-  return A2STR::NIL;
+  std::string proxyUri = getProxyUri(protocol, option.get());
+  return !proxyUri.empty();
 }
 } // namespace
 
+namespace {
 bool inNoProxy(const std::shared_ptr<Request>& req, const std::string& noProxy)
 {
   std::vector<Scip> entries;
@@ -682,39 +733,29 @@ bool inNoProxy(const std::shared_ptr<Request>& req, const std::string& noProxy)
   }
   return false;
 }
-
-std::string resolveProxyUri(const std::shared_ptr<Request>& req,
-                            const Option* option)
-{
-  if (option->get(PREF_PROXY_MODE) == V_DIRECT ||
-      inNoProxy(req, option->get(PREF_NO_PROXY))) {
-    return A2STR::NIL;
-  }
-
-  if (option->get(PREF_PROXY_MODE) == V_MANUAL) {
-    return getLocalProxyUri(req->getProtocol(), option);
-  }
-
-  return getProxyUri(req->getProtocol(), option);
-}
+} // namespace
 
 bool AbstractCommand::isProxyDefined() const
 {
-  return !resolveProxyUri(req_, getOption().get()).empty();
+  return isProxyRequest(req_->getProtocol(), getOption()) &&
+         !inNoProxy(req_, getOption()->get(PREF_NO_PROXY));
 }
 
 std::shared_ptr<Request> AbstractCommand::createProxyRequest() const
 {
   std::shared_ptr<Request> proxyRequest;
+  if (inNoProxy(req_, getOption()->get(PREF_NO_PROXY))) {
+    return proxyRequest;
+  }
 
-  std::string proxy = resolveProxyUri(req_, getOption().get());
+  std::string proxy = getProxyUri(req_->getProtocol(), getOption().get());
   if (!proxy.empty()) {
     proxyRequest = std::make_shared<Request>();
     if (proxyRequest->setUri(proxy)) {
-      ARIA2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Using proxy", getCuid()));
+      A2_LOG_DEBUG(fmt("CUID#%" PRId64 " - Using proxy", getCuid()));
     }
     else {
-      ARIA2_LOG_DEBUG(
+      A2_LOG_DEBUG(
           fmt("CUID#%" PRId64 " - Failed to parse proxy string", getCuid()));
       proxyRequest.reset();
     }
@@ -734,7 +775,7 @@ std::string AbstractCommand::resolveHostname(std::vector<std::string>& addrs,
   e_->findAllCachedIPAddresses(std::back_inserter(addrs), hostname, port);
   if (!addrs.empty()) {
     auto ipaddr = addrs.front();
-    ARIA2_LOG_DEBUG(fmt(MSG_DNS_CACHE_HIT, getCuid(), hostname.c_str(),
+    A2_LOG_INFO(fmt(MSG_DNS_CACHE_HIT, getCuid(), hostname.c_str(),
                     strjoin(std::begin(addrs), std::end(addrs), ", ").c_str()));
     return ipaddr;
   }
@@ -748,10 +789,56 @@ std::string AbstractCommand::resolveHostname(std::vector<std::string>& addrs,
     }
     res.resolve(addrs, hostname);
   };
+#ifdef ENABLE_ASYNC_DNS
+  if (getOption()->getAsBool(PREF_ASYNC_DNS)) {
+    if (!asyncNameResolverMan_->started()) {
+      asyncNameResolverMan_->startAsync(hostname, e_, this);
+    }
+    switch (asyncNameResolverMan_->getStatus()) {
+    case -1:
+      if (asyncNameResolverMan_->shouldFallbackToSystemResolver()) {
+        try {
+          resolveWithSystemResolver();
+          A2_LOG_INFO(fmt("CUID#%" PRId64
+                          " - Falling back to system name resolver for %s",
+                          getCuid(), hostname.c_str()));
+          break;
+        }
+        catch (const DlAbortEx& ex) {
+          throw DL_ABORT_EX2(
+              fmt(MSG_NAME_RESOLUTION_FAILED, getCuid(), hostname.c_str(),
+                  asyncNameResolverMan_->getLastError().c_str()),
+              ex);
+        }
+      }
+      if (!isProxyRequest(req_->getProtocol(), getOption())) {
+        e_->getRequestGroupMan()
+            ->getOrCreateServerStat(req_->getHost(), req_->getProtocol())
+            ->setError();
+      }
+      throw DL_ABORT_EX2(fmt(MSG_NAME_RESOLUTION_FAILED, getCuid(),
+                             hostname.c_str(),
+                             asyncNameResolverMan_->getLastError().c_str()),
+                         error_code::NAME_RESOLVE_ERROR);
+    case 0:
+      return A2STR::NIL;
+
+    case 1:
+      asyncNameResolverMan_->getResolvedAddress(addrs);
+      if (addrs.empty()) {
+        throw DL_ABORT_EX2(fmt(MSG_NAME_RESOLUTION_FAILED, getCuid(),
+                               hostname.c_str(), "No address returned"),
+                           error_code::NAME_RESOLVE_ERROR);
+      }
+      break;
+    }
+  }
+  else
+#endif // ENABLE_ASYNC_DNS
   {
     resolveWithSystemResolver();
   }
-  ARIA2_LOG_DEBUG(fmt(MSG_NAME_RESOLUTION_COMPLETE, getCuid(), hostname.c_str(),
+  A2_LOG_INFO(fmt(MSG_NAME_RESOLUTION_COMPLETE, getCuid(), hostname.c_str(),
                   strjoin(std::begin(addrs), std::end(addrs), ", ").c_str()));
   for (const auto& addr : addrs) {
     e_->cacheIPAddress(hostname, addr, port);
@@ -780,13 +867,27 @@ bool AbstractCommand::checkIfConnectionEstablished(
     return true;
   }
 
+  // See also InitiateConnectionCommand::executeInternal()
   e_->markBadIPAddress(connectedHostname, connectedAddr, connectedPort);
   if (e_->findCachedIPAddress(connectedHostname, connectedPort).empty()) {
     e_->removeCachedIPAddress(connectedHostname, connectedPort);
+    // Don't set error if proxy server is used and its method is GET.
+    if (resolveProxyMethod(req_->getProtocol()) != V_GET ||
+        !isProxyRequest(req_->getProtocol(), getOption())) {
+      e_->getRequestGroupMan()
+          ->getOrCreateServerStat(req_->getHost(), req_->getProtocol())
+          ->setError();
+    }
     throw DL_RETRY_EX(fmt(MSG_ESTABLISHING_CONNECTION_FAILED, error.c_str()));
   }
 
-  throw DL_RETRY_EX(fmt(MSG_ESTABLISHING_CONNECTION_FAILED, error.c_str()));
+  A2_LOG_INFO(fmt(MSG_CONNECT_FAILED_AND_RETRY, getCuid(),
+                  connectedAddr.c_str(), connectedPort));
+  e_->setNoWait(true);
+  e_->addCommand(
+      InitiateConnectionCommandFactory::createInitiateConnectionCommand(
+          getCuid(), req_, fileEntry_, requestGroup_, e_));
+  return false;
 }
 
 const std::string&
@@ -811,6 +912,10 @@ void AbstractCommand::createSocket()
 
 int32_t AbstractCommand::calculateMinSplitSize() const
 {
+  if (req_ && req_->isPipeliningEnabled()) {
+    return getDownloadContext()->getPieceLength();
+  }
+
   return getOption()->getAsInt(PREF_MIN_SPLIT_SIZE);
 }
 
@@ -845,6 +950,17 @@ const std::shared_ptr<SegmentMan>& AbstractCommand::getSegmentMan() const
 const std::shared_ptr<PieceStorage>& AbstractCommand::getPieceStorage() const
 {
   return requestGroup_->getPieceStorage();
+}
+
+void AbstractCommand::checkSocketRecvBuffer()
+{
+  if (socketRecvBuffer_->bufferEmpty() &&
+      socket_->getRecvBufferedLength() == 0) {
+    return;
+  }
+
+  setStatus(Command::STATUS_ONESHOT_REALTIME);
+  e_->setNoWait(true);
 }
 
 void AbstractCommand::addCommandSelf()

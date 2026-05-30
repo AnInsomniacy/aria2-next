@@ -53,7 +53,12 @@ DownloadContext::DownloadContext()
       downloadStopTime_(Timer::zero()),
       pieceLength_(0),
       checksumVerified_(false),
-      knowsTotalLength_(true)
+      knowsTotalLength_(true),
+#ifdef ENABLE_METALINK
+      acceptMetalink_(true)
+#else  // !ENABLE_METALINK
+      acceptMetalink_(false)
+#endif // !ENABLE_METALINK
 {
 }
 
@@ -64,7 +69,12 @@ DownloadContext::DownloadContext(int32_t pieceLength, int64_t totalLength,
       downloadStopTime_(Timer::zero()),
       pieceLength_(pieceLength),
       checksumVerified_(false),
-      knowsTotalLength_(true)
+      knowsTotalLength_(true),
+#ifdef ENABLE_METALINK
+      acceptMetalink_(true)
+#else  // !ENABLE_METALINK
+      acceptMetalink_(false)
+#endif // !ENABLE_METALINK
 {
   fileEntries_.push_back(
       std::make_shared<FileEntry>(std::move(path), totalLength, 0));
@@ -311,15 +321,6 @@ void DownloadContext::updateUploadSpeed(size_t bytes)
   auto rgman = ownerRequestGroup_->getRequestGroupMan();
   if (rgman) {
     rgman->getNetStat().updateUploadSpeed(bytes);
-  }
-}
-
-void DownloadContext::updateUpload(size_t bytes)
-{
-  netStat_.updateUpload(bytes);
-  auto rgman = ownerRequestGroup_->getRequestGroupMan();
-  if (rgman) {
-    rgman->getNetStat().updateUpload(bytes);
   }
 }
 

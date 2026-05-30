@@ -1,6 +1,6 @@
 # AGENTS.md - aria2-next
 
-This file defines repository rules for AI coding agents. Human contributors should start with [README.md](README.md), [docs/README.md](docs/README.md), [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md), [packaging/README.md](packaging/README.md), [tools/README.md](tools/README.md), [third_party/README.md](third_party/README.md), and [docs/maintenance/README.md](docs/maintenance/README.md).
+This file defines repository rules for AI coding agents. Human contributors should start with [README.md](README.md), [packaging/README.md](packaging/README.md), [tools/README.md](tools/README.md), [third_party/README.md](third_party/README.md), and [docs/maintenance/README.md](docs/maintenance/README.md).
 
 > [!IMPORTANT]
 > All changes must meet industrial-grade quality. Find the root cause before changing code, keep behavior compatible unless the task explicitly changes it, avoid unrelated churn, and verify the exact build or release path affected by the change.
@@ -9,11 +9,11 @@ This file defines repository rules for AI coding agents. Human contributors shou
 
 | Area | Ownership |
 | --- | --- |
-| Core | C99 and C++17 Aria2 Next command-line client and core implementation |
+| Core | C99 and C++11 aria2 command-line client and core implementation |
 | Build | CMake 3.25+ with Ninja as the default generator |
 | Tests | CTest plus the CppUnit test suite |
 | Packaging | Cross-platform release automation under `packaging/` and `.github/workflows/release.yml` |
-| Third-party source | Maintained third-party source with local ownership rules |
+| Third-party source | Vendored `third_party/wslay` with local ownership rules |
 
 ## Key Paths
 
@@ -24,11 +24,10 @@ This file defines repository rules for AI coding agents. Human contributors shou
 | `cmake/modules/` | Build options, probes, dependencies, targets, tests, and summary output |
 | `cmake/Sources.cmake` | Core source inventory |
 | `cmake/TestSources.cmake` | Test source inventory |
-| `src/` | Aria2 Next core, CLI, protocol, disk, RPC, and platform code |
+| `src/` | aria2 core, CLI, protocol, disk, RPC, and platform code |
+| `src/includes/aria2/` | Public libaria2 headers |
 | `tests/` | CppUnit tests and fixtures |
 | `docs/` | Manual sources, completion tooling, and maintenance records |
-| `.github/ISSUE_TEMPLATE/` | GitHub issue forms for bugs, feature requests, and usage questions |
-| `.github/PULL_REQUEST_TEMPLATE.md` | Pull request scope, verification, compatibility, release-note, and AI-disclosure checklist |
 | `packaging/` | Release dependencies, Dockerfiles, cross-build scripts, and package assets |
 | `packaging/dependencies.env` | Release dependency version source |
 | `third_party/` | Bundled third-party source |
@@ -82,12 +81,6 @@ Manual workflow runs are for release-path validation. Official release assets ar
 Use `./scripts/release.sh` for releases. This script verifies the local build, stages changes, commits if needed, creates an annotated tag, and pushes the commit and tag. It does not create the GitHub Release, generate release notes, or trigger GitHub Actions manually.
 
 After `release.sh` succeeds, generate an English release title and release notes from the commits included in the release, show them to the maintainer, and wait for approval before creating the GitHub Release. Releases must not be marked as pre-releases. Creating the GitHub Release triggers the official release workflow and asset upload.
-
-When writing release notes to a temporary file for `gh release create` or
-`gh release edit`, use a macOS-compatible `mktemp` template whose final
-characters are the placeholder `X` characters, such as
-`mktemp /tmp/aria2-next-release-notes.XXXXXX`. Do not append a suffix after
-the placeholder.
 
 Release title format:
 
@@ -190,7 +183,7 @@ Do not hide new test failures with `|| true`. Existing tolerated diagnostics mus
 
 ## Source Conventions
 
-Follow the existing C and C++ style. Keep C++ at the repository's C++17 baseline unless the project intentionally raises the baseline. Avoid drive-by rewrites and broad formatting churn.
+Follow the existing C and C++ style. Keep C++ at the repository's C++11 baseline unless the project intentionally raises the baseline. Avoid drive-by rewrites and broad formatting churn.
 
 Prefer accurate CMake detection and existing config-header patterns over scattered compatibility macros. Add helpers only when they remove real duplication or contain platform-specific behavior cleanly.
 
@@ -199,8 +192,6 @@ Changes under `third_party/` must preserve third-party ownership. Limit edits th
 ## Documentation
 
 Keep documentation synchronized with behavior. If a CMake option, dependency baseline, supported platform, artifact name, release command, or directory path changes, update the relevant documentation in the same change.
-
-If support process, release integrity, security reporting, privacy-relevant network behavior, issue triage, or PR expectations change, update the matching files under `docs/` and `.github/` in the same change.
 
 `docs/maintenance/` is for durable audit records only. Do not commit temporary API payloads, scratch logs, generated reports, or local caches there.
 

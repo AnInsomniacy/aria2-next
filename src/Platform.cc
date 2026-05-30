@@ -39,14 +39,24 @@
 
 #include <iostream>
 
-#ifdef HAVE_LIBCURL
-#  include <curl/curl.h>
-#endif // HAVE_LIBCURL
 #ifdef HAVE_OPENSSL
 #  include <openssl/err.h>
 #  include <openssl/ssl.h>
 #endif // HAVE_OPENSSL
+#ifdef HAVE_LIBGCRYPT
+#  include <gcrypt.h>
+#endif // HAVE_LIBGCRYPT
+#ifdef HAVE_LIBGNUTLS
+#  include <gnutls/gnutls.h>
+#endif // HAVE_LIBGNUTLS
 
+#ifdef ENABLE_ASYNC_DNS
+#  include <ares.h>
+#endif // ENABLE_ASYNC_DNS
+
+#ifdef HAVE_LIBSSH2
+#  include <libssh2.h>
+#endif // HAVE_LIBSSH2
 
 #include "a2netcompat.h"
 #include "DlAbortEx.h"
@@ -55,10 +65,27 @@
 #include "console.h"
 #include "OptionParser.h"
 #include "prefs.h"
+#ifdef HAVE_LIBGMP
+#  include "a2gmp.h"
+#endif // HAVE_LIBGMP
+#include "LogFactory.h"
 #include "util.h"
 #include "SocketCore.h"
 
 namespace aria2 {
+
+#ifdef HAVE_LIBGNUTLS
+namespace {
+void gnutls_log_callback(int level, const char* str)
+{
+  using namespace aria2;
+  // GnuTLS adds a newline. Drop it.
+  std::string msg(str);
+  msg.resize(msg.size() - 1);
+  A2_LOG_DEBUG(fmt("GnuTLS: <%d> %s", level, msg.c_str()));
+}
+} // namespace
+#endif // HAVE_LIBGNUTLS
 
 bool Platform::initialized_ = false;
 
@@ -77,14 +104,9 @@ bool Platform::setUp()
     return false;
   }
   initialized_ = true;
-#ifdef HAVE_LIBCURL
-  CURLcode curlCode = curl_global_init(CURL_GLOBAL_DEFAULT);
-  if (curlCode != CURLE_OK) {
-    initialized_ = false;
-    throw DL_ABORT_EX(
-        fmt("curl_global_init failed: %s", curl_easy_strerror(curlCode)));
-  }
-#endif // HAVE_LIBCURL
+#ifdef HAVE_LIBGMP
+  global::initGmp();
+#endif // HAVE_LIBGMP
 #ifdef HAVE_OPENSSL
   // RC4 is in the legacy provider.
   legacy_provider_ = OSSL_PROVIDER_load(nullptr, "legacy");
@@ -97,7 +119,42 @@ bool Platform::setUp()
     throw DL_ABORT_EX("OSSL_PROVIDER_load 'default' failed.");
   }
 #endif   // HAVE_OPENSSL
+#ifdef HAVE_LIBGCRYPT
+  if (!gcry_check_version("1.2.4")) {
+    throw DL_ABORT_EX("gcry_check_version() failed.");
+  }
+  gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
+  gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
+#endif // HAVE_LIBGCRYPT
+#ifdef HAVE_LIBGNUTLS
+  {
+    int r = gnutls_global_init();
+    if (r != GNUTLS_E_SUCCESS) {
+      throw DL_ABORT_EX(
+          fmt("gnutls_global_init() failed, cause:%s", gnutls_strerror(r)));
+    }
 
+    gnutls_global_set_log_function(gnutls_log_callback);
+    gnutls_global_set_log_level(0);
+  }
+#endif // HAVE_LIBGNUTLS
+
+#ifdef CARES_HAVE_ARES_LIBRARY_INIT
+  int aresErrorCode;
+  if ((aresErrorCode = ares_library_init(ARES_LIB_INIT_ALL)) != 0) {
+    global::cerr()->printf("ares_library_init() failed:%s\n",
+                           ares_strerror(aresErrorCode));
+  }
+#endif // CARES_HAVE_ARES_LIBRARY_INIT
+
+#ifdef HAVE_LIBSSH2
+  {
+    auto rv = libssh2_init(0);
+    if (rv != 0) {
+      throw DL_ABORT_EX(fmt("libssh2_init() failed, code: %d", rv));
+    }
+  }
+#endif // HAVE_LIBSSH2
 
 #ifdef HAVE_WINSOCK2_H
   WSADATA wsaData;
@@ -128,10 +185,6 @@ bool Platform::tearDown()
   SocketCore::setServerTLSContext(nullptr);
 #endif // ENABLE_SSL
 
-#ifdef HAVE_LIBCURL
-  curl_global_cleanup();
-#endif // HAVE_LIBCURL
-
 #ifdef HAVE_OPENSSL
   if (default_provider_) {
     OSSL_PROVIDER_unload(default_provider_);
@@ -143,6 +196,18 @@ bool Platform::tearDown()
     legacy_provider_ = nullptr;
   }
 #endif   // HAVE_OPENSSL
+
+#ifdef HAVE_LIBGNUTLS
+  gnutls_global_deinit();
+#endif // HAVE_LIBGNUTLS
+
+#ifdef CARES_HAVE_ARES_LIBRARY_CLEANUP
+  ares_library_cleanup();
+#endif // CARES_HAVE_ARES_LIBRARY_CLEANUP
+
+#ifdef HAVE_LIBSSH2
+  libssh2_exit();
+#endif // HAVE_LIBSSH2
 
 #ifdef HAVE_WINSOCK2_H
   WSACleanup();

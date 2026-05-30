@@ -39,10 +39,8 @@ namespace aria2 {
 const char* strContextAttributeType(ContextAttributeType key)
 {
   switch (key) {
-  case CTX_ATTR_LIBTORRENT:
-    return "libtorrent-rasterbar";
-  case CTX_ATTR_TORRENT_METADATA:
-    return "BitTorrent metadata";
+  case CTX_ATTR_BT:
+    return "BitTorrent";
   case CTX_ATTR_ED2K:
     return "ED2K";
   default:

@@ -8,6 +8,7 @@
 #include "DownloadContext.h"
 #include "util.h"
 #include "RecoverableException.h"
+#include "AnnounceTier.h"
 #include "FixedNumberRandomizer.h"
 #include "FileEntry.h"
 #include "array_fun.h"
@@ -17,7 +18,6 @@
 #include "base32.h"
 #include "Option.h"
 #include "prefs.h"
-#include "TorrentMetadataConstants.h"
 
 namespace aria2 {
 
@@ -37,10 +37,13 @@ class BittorrentHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGetNameMulti);
   CPPUNIT_TEST(testGetNameSingle);
   CPPUNIT_TEST(testOverrideName);
-  CPPUNIT_TEST(testGetSingleAnnounceList);
-  CPPUNIT_TEST(testGetMultiAnnounceList);
+  CPPUNIT_TEST(testGetAnnounceTier);
+  CPPUNIT_TEST(testGetAnnounceTierAnnounceList);
   CPPUNIT_TEST(testGetPieceLength);
   CPPUNIT_TEST(testGetInfoHashAsString);
+  CPPUNIT_TEST(testGetPeerId);
+  CPPUNIT_TEST(testGetPeerAgent);
+  CPPUNIT_TEST(testComputeFastSet);
   CPPUNIT_TEST(testGetFileEntries_multiFileUrlList);
   CPPUNIT_TEST(testGetFileEntries_singleFileUrlList);
   CPPUNIT_TEST(testGetFileEntries_singleFileUrlListEndsWithSlash);
@@ -58,11 +61,15 @@ class BittorrentHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testSetFileFilter_multi);
   CPPUNIT_TEST(testUTF8Torrent);
   CPPUNIT_TEST(testEtc);
+  CPPUNIT_TEST(testCheckBitfield);
   CPPUNIT_TEST(testMetadata);
   CPPUNIT_TEST(testParseMagnet);
   CPPUNIT_TEST(testParseMagnet_base32);
   CPPUNIT_TEST(testMetadata2Torrent);
   CPPUNIT_TEST(testTorrent2Magnet);
+  CPPUNIT_TEST(testExtractPeerFromString);
+  CPPUNIT_TEST(testExtractPeerFromList);
+  CPPUNIT_TEST(testExtract2PeersFromList);
   CPPUNIT_TEST(testPackcompact);
   CPPUNIT_TEST(testUnpackcompact);
   CPPUNIT_TEST(testRemoveAnnounceUri);
@@ -90,10 +97,13 @@ public:
   void testGetNameMulti();
   void testGetNameSingle();
   void testOverrideName();
-  void testGetSingleAnnounceList();
-  void testGetMultiAnnounceList();
+  void testGetAnnounceTier();
+  void testGetAnnounceTierAnnounceList();
   void testGetPieceLength();
   void testGetInfoHashAsString();
+  void testGetPeerId();
+  void testGetPeerAgent();
+  void testComputeFastSet();
   void testGetFileEntries_multiFileUrlList();
   void testGetFileEntries_singleFileUrlList();
   void testGetFileEntries_singleFileUrlListEndsWithSlash();
@@ -111,11 +121,15 @@ public:
   void testSetFileFilter_multi();
   void testUTF8Torrent();
   void testEtc();
+  void testCheckBitfield();
   void testMetadata();
   void testParseMagnet();
   void testParseMagnet_base32();
   void testMetadata2Torrent();
   void testTorrent2Magnet();
+  void testExtractPeerFromString();
+  void testExtractPeerFromList();
+  void testExtract2PeersFromList();
   void testPackcompact();
   void testUnpackcompact();
   void testRemoveAnnounceUri();
@@ -257,7 +271,7 @@ void BittorrentHelperTest::testOverrideName()
                        getTorrentAttrs(dctx)->name);
 }
 
-void BittorrentHelperTest::testGetSingleAnnounceList()
+void BittorrentHelperTest::testGetAnnounceTier()
 {
   std::shared_ptr<DownloadContext> dctx(new DownloadContext());
   load(A2_TEST_DIR "/single.torrent", dctx, option_);
@@ -270,7 +284,7 @@ void BittorrentHelperTest::testGetSingleAnnounceList()
                        attrs->announceList[0][0]);
 }
 
-void BittorrentHelperTest::testGetMultiAnnounceList()
+void BittorrentHelperTest::testGetAnnounceTierAnnounceList()
 {
   std::shared_ptr<DownloadContext> dctx(new DownloadContext());
   load(A2_TEST_DIR "/test.torrent", dctx, option_);
@@ -306,6 +320,50 @@ void BittorrentHelperTest::testGetInfoHashAsString()
 
   CPPUNIT_ASSERT_EQUAL(std::string("248d0a1cd08284299de78d5c1ed359bb46717d8c"),
                        getInfoHashString(dctx));
+}
+
+void BittorrentHelperTest::testGetPeerId()
+{
+  std::string peerId = generatePeerId("aria2-");
+  CPPUNIT_ASSERT(peerId.find("aria2-") == 0);
+  CPPUNIT_ASSERT_EQUAL((size_t)20, peerId.size());
+}
+
+void BittorrentHelperTest::testGetPeerAgent()
+{
+  setStaticPeerAgent("");
+  std::string peerAgent = generateStaticPeerAgent("aria2/-1.-1.-1");
+  CPPUNIT_ASSERT_EQUAL(std::string("aria2/-1.-1.-1"), peerAgent);
+  CPPUNIT_ASSERT_EQUAL(std::string("aria2/-1.-1.-1"),
+                       bittorrent::getStaticPeerAgent());
+}
+
+void BittorrentHelperTest::testComputeFastSet()
+{
+  std::string ipaddr = "192.168.0.1";
+  unsigned char infoHash[20];
+  memset(infoHash, 0, sizeof(infoHash));
+  infoHash[0] = 0xff;
+  int fastSetSize = 10;
+  size_t numPieces = 1000;
+  {
+    auto fastSet = computeFastSet(ipaddr, numPieces, infoHash, fastSetSize);
+    size_t ans[] = {686, 459, 278, 200, 404, 834, 64, 203, 760, 950};
+    CPPUNIT_ASSERT(std::equal(fastSet.begin(), fastSet.end(), std::begin(ans)));
+  }
+  ipaddr = "10.0.0.1";
+  {
+    auto fastSet = computeFastSet(ipaddr, numPieces, infoHash, fastSetSize);
+    size_t ans[] = {568, 188, 466, 452, 550, 662, 109, 226, 398, 11};
+    CPPUNIT_ASSERT(std::equal(fastSet.begin(), fastSet.end(), std::begin(ans)));
+  }
+  // See when pieces < fastSetSize
+  numPieces = 9;
+  {
+    auto fastSet = computeFastSet(ipaddr, numPieces, infoHash, fastSetSize);
+    size_t ans[] = {8, 6, 7, 5, 1, 4, 0, 2, 3};
+    CPPUNIT_ASSERT(std::equal(fastSet.begin(), fastSet.end(), std::begin(ans)));
+  }
 }
 
 void BittorrentHelperTest::testGetFileEntries_multiFileUrlList()
@@ -724,6 +782,28 @@ void BittorrentHelperTest::testEtc()
   CPPUNIT_ASSERT_EQUAL((time_t)1123456789, getTorrentAttrs(dctx)->creationDate);
 }
 
+void BittorrentHelperTest::testCheckBitfield()
+{
+  unsigned char bitfield[] = {0xff, 0xe0};
+  checkBitfield(bitfield, sizeof(bitfield), 11);
+  try {
+    checkBitfield(bitfield, sizeof(bitfield), 17);
+    CPPUNIT_FAIL("exception must be thrown.");
+  }
+  catch (RecoverableException& e) {
+    // success
+  }
+  // Change last byte
+  bitfield[1] = 0xf0;
+  try {
+    checkBitfield(bitfield, sizeof(bitfield), 11);
+    CPPUNIT_FAIL("exception must be thrown.");
+  }
+  catch (RecoverableException& e) {
+    // success
+  }
+}
+
 void BittorrentHelperTest::testMetadata()
 {
   auto dctx = std::make_shared<DownloadContext>();
@@ -804,6 +884,74 @@ void BittorrentHelperTest::testTorrent2Magnet()
                   "&tr=http%3A%2F%2Ftracker2"
                   "&tr=http%3A%2F%2Ftracker3"),
       torrent2Magnet(getTorrentAttrs(dctx)));
+}
+
+void BittorrentHelperTest::testExtractPeerFromString()
+{
+  std::string hextext = "100210354527354678541237324732171ae1";
+  hextext += "20010db8bd0501d2288a1fc0000110ee1ae2";
+  std::string peersstr = "36:" + fromHex(hextext);
+  auto str = bencode2::decode(peersstr);
+  std::deque<std::shared_ptr<Peer>> peers;
+  extractPeer(str.get(), AF_INET6, std::back_inserter(peers));
+  CPPUNIT_ASSERT_EQUAL((size_t)2, peers.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("1002:1035:4527:3546:7854:1237:3247:3217"),
+                       peers[0]->getIPAddress());
+  CPPUNIT_ASSERT_EQUAL((uint16_t)6881, peers[0]->getPort());
+  CPPUNIT_ASSERT_EQUAL(std::string("2001:db8:bd05:1d2:288a:1fc0:1:10ee"),
+                       peers[1]->getIPAddress());
+  CPPUNIT_ASSERT_EQUAL((uint16_t)6882, peers[1]->getPort());
+
+  hextext = "c0a800011ae1";
+  hextext += "c0a800021ae2";
+  peersstr = "12:" + fromHex(hextext);
+  str = bencode2::decode(peersstr);
+  peers.clear();
+  extractPeer(str.get(), AF_INET, std::back_inserter(peers));
+  CPPUNIT_ASSERT_EQUAL((size_t)2, peers.size());
+  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"), peers[0]->getIPAddress());
+  CPPUNIT_ASSERT_EQUAL((uint16_t)6881, peers[0]->getPort());
+  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.2"), peers[1]->getIPAddress());
+  CPPUNIT_ASSERT_EQUAL((uint16_t)6882, peers[1]->getPort());
+}
+
+void BittorrentHelperTest::testExtractPeerFromList()
+{
+  std::string peersString =
+      "d5:peersld2:ip11:192.168.0.17:peer id20:aria2-00000000000000"
+      "4:porti2006eeee";
+
+  auto dict = bencode2::decode(peersString);
+
+  std::deque<std::shared_ptr<Peer>> peers;
+  extractPeer(downcast<Dict>(dict)->get("peers"), AF_INET,
+              std::back_inserter(peers));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, peers.size());
+  auto& peer = *peers.begin();
+  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"), peer->getIPAddress());
+  CPPUNIT_ASSERT_EQUAL((uint16_t)2006, peer->getPort());
+}
+
+void BittorrentHelperTest::testExtract2PeersFromList()
+{
+  std::string peersString =
+      "d5:peersld2:ip11:192.168.0.17:peer id20:aria2-00000000000000"
+      "4:porti65535eed2:ip11:192.168.0.27:peer id20:aria2-00000000000000"
+      "4:porti2007eeee";
+
+  auto dict = bencode2::decode(peersString);
+
+  std::deque<std::shared_ptr<Peer>> peers;
+  extractPeer(downcast<Dict>(dict)->get("peers"), AF_INET,
+              std::back_inserter(peers));
+  CPPUNIT_ASSERT_EQUAL((size_t)2, peers.size());
+  auto& peer = *peers.begin();
+  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"), peer->getIPAddress());
+  CPPUNIT_ASSERT_EQUAL((uint16_t)65535, peer->getPort());
+
+  peer = *(peers.begin() + 1);
+  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.2"), peer->getIPAddress());
+  CPPUNIT_ASSERT_EQUAL((uint16_t)2007, peer->getPort());
 }
 
 void BittorrentHelperTest::testPackcompact()

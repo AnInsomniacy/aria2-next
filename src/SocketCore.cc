@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "SocketCore.h"
 
 #ifdef HAVE_IPHLPAPI_H
@@ -57,11 +56,15 @@
 #include "util.h"
 #include "TimeA2.h"
 #include "a2functional.h"
+#include "LogFactory.h"
 #include "A2STR.h"
 #ifdef ENABLE_SSL
 #  include "TLSContext.h"
 #  include "TLSSession.h"
 #endif // ENABLE_SSL
+#ifdef HAVE_LIBSSH2
+#  include "SSHSession.h"
+#endif // HAVE_LIBSSH2
 
 namespace aria2 {
 
@@ -183,7 +186,7 @@ void applySocketBufferSize(sock_t fd)
   if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (a2_sockopt_t)&recvBufSize,
                  sizeof(recvBufSize)) < 0) {
     auto errNum = SOCKET_ERRNO;
-    ARIA2_LOG_WARN(fmt("Failed to set socket buffer size. Cause: %s",
+    A2_LOG_WARN(fmt("Failed to set socket buffer size. Cause: %s",
                     errorMsg(errNum).c_str()));
   }
 }
@@ -462,7 +465,7 @@ void SocketCore::establishConnection(const std::string& host, uint16_t port,
         if (::bind(fd, &soaddr.su.sa, soaddr.suLength) == -1) {
           errNum = SOCKET_ERRNO;
           error = errorMsg(errNum);
-          ARIA2_LOG_DEBUG(fmt(EX_SOCKET_BIND, error.c_str()));
+          A2_LOG_DEBUG(fmt(EX_SOCKET_BIND, error.c_str()));
         }
         else {
           bindSuccess = true;
@@ -586,7 +589,7 @@ void SocketCore::applyIpDscp()
 #endif
   }
   catch (RecoverableException& e) {
-    ARIA2_LOG_INFO_EX("Applying DSCP value failed", e);
+    A2_LOG_INFO_EX("Applying DSCP value failed", e);
   }
 }
 
@@ -636,6 +639,13 @@ void SocketCore::closeConnection()
     tlsSession_.reset();
   }
 #endif // ENABLE_SSL
+
+#ifdef HAVE_LIBSSH2
+  if (sshSession_) {
+    sshSession_->closeConnection();
+    sshSession_.reset();
+  }
+#endif // HAVE_LIBSSH2
 
   if (sockfd_ != (sock_t)-1) {
     shutdown(sockfd_, SHUT_WR);
@@ -834,29 +844,15 @@ void SocketCore::readData(void* data, size_t& len)
   wantRead_ = false;
   wantWrite_ = false;
 
-  if (!secure_) {
-    // Cast for Windows recv()
-    while ((ret = recv(sockfd_, reinterpret_cast<char*>(data), len, 0)) == -1 &&
-           SOCKET_ERRNO == A2_EINTR)
-      ;
-    int errNum = SOCKET_ERRNO;
-    if (ret == -1) {
-      if (!A2_WOULDBLOCK(errNum)) {
-        throw DL_RETRY_EX(fmt(EX_SOCKET_RECV, errorMsg(errNum).c_str()));
-      }
-      wantRead_ = true;
-      ret = 0;
-    }
-  }
-  else {
-#ifdef ENABLE_SSL
-    ret = tlsSession_->readData(data, len);
+#ifdef HAVE_LIBSSH2
+  if (sshSession_) {
+    ret = sshSession_->readData(data, len);
     if (ret < 0) {
-      if (ret != TLS_ERR_WOULDBLOCK) {
+      if (ret != SSH_ERR_WOULDBLOCK) {
         throw DL_RETRY_EX(
-            fmt(EX_SOCKET_RECV, tlsSession_->getLastErrorString().c_str()));
+            fmt(EX_SOCKET_RECV, sshSession_->getLastErrorString().c_str()));
       }
-      if (tlsSession_->checkDirection() == TLS_WANT_READ) {
+      if (sshSession_->checkDirection() == SSH_WANT_READ) {
         wantRead_ = true;
       }
       else {
@@ -864,8 +860,42 @@ void SocketCore::readData(void* data, size_t& len)
       }
       ret = 0;
     }
-#endif // ENABLE_SSL
   }
+  else
+#endif // HAVE_LIBSSH2
+    if (!secure_) {
+      // Cast for Windows recv()
+      while ((ret = recv(sockfd_, reinterpret_cast<char*>(data), len, 0)) ==
+                 -1 &&
+             SOCKET_ERRNO == A2_EINTR)
+        ;
+      int errNum = SOCKET_ERRNO;
+      if (ret == -1) {
+        if (!A2_WOULDBLOCK(errNum)) {
+          throw DL_RETRY_EX(fmt(EX_SOCKET_RECV, errorMsg(errNum).c_str()));
+        }
+        wantRead_ = true;
+        ret = 0;
+      }
+    }
+    else {
+#ifdef ENABLE_SSL
+      ret = tlsSession_->readData(data, len);
+      if (ret < 0) {
+        if (ret != TLS_ERR_WOULDBLOCK) {
+          throw DL_RETRY_EX(
+              fmt(EX_SOCKET_RECV, tlsSession_->getLastErrorString().c_str()));
+        }
+        if (tlsSession_->checkDirection() == TLS_WANT_READ) {
+          wantRead_ = true;
+        }
+        else {
+          wantWrite_ = true;
+        }
+        ret = 0;
+      }
+#endif // ENABLE_SSL
+    }
 
   len = ret;
 }
@@ -887,11 +917,6 @@ bool SocketCore::tlsHandshake(TLSContext* tlsctx, const std::string& hostname)
   wantRead_ = false;
   wantWrite_ = false;
 
-  if (!tlsctx || !tlsctx->good()) {
-    throw DL_ABORT_EX(fmt(EX_SSL_INIT_FAILURE,
-                          "TLS context is not initialized"));
-  }
-
   if (secure_ == A2_TLS_CONNECTED) {
     // Already connected!
     return true;
@@ -899,19 +924,16 @@ bool SocketCore::tlsHandshake(TLSContext* tlsctx, const std::string& hostname)
 
   if (secure_ == A2_TLS_NONE) {
     // Do some initial setup
-    ARIA2_LOG_DEBUG("Creating TLS session");
+    A2_LOG_DEBUG("Creating TLS session");
     tlsSession_.reset(TLSSession::make(tlsctx));
-    if (!tlsSession_) {
-      throw DL_ABORT_EX(fmt(EX_SSL_INIT_FAILURE,
-                            "TLS session could not be created"));
-    }
     auto rv = tlsSession_->init(sockfd_);
     if (rv != TLS_ERR_OK) {
       std::string error = tlsSession_->getLastErrorString();
       tlsSession_.reset();
       throw DL_ABORT_EX(fmt(EX_SSL_INIT_FAILURE, error.c_str()));
     }
-    // Check hostname is not numeric and it includes ".".
+    // Check hostname is not numeric and it includes ".". Setting
+    // "localhost" will produce TLS alert with GNUTLS.
     if (tlsctx->getSide() == TLS_CLIENT && !util::isNumericHost(hostname) &&
         hostname.find(".") != std::string::npos) {
       rv = tlsSession_->setSNIHostname(hostname);
@@ -922,7 +944,7 @@ bool SocketCore::tlsHandshake(TLSContext* tlsctx, const std::string& hostname)
     }
     // Done with the setup, now let handshaking begin immediately.
     secure_ = A2_TLS_HANDSHAKING;
-    ARIA2_LOG_DEBUG("TLS Handshaking");
+    A2_LOG_DEBUG("TLS Handshaking");
   }
 
   if (secure_ == A2_TLS_HANDSHAKING) {
@@ -968,7 +990,7 @@ bool SocketCore::tlsHandshake(TLSContext* tlsctx, const std::string& hostname)
 
       auto peerInfo = ss.str();
 
-      ARIA2_LOG_DEBUG(fmt("Securely connected to %s with %s", peerInfo.c_str(),
+      A2_LOG_DEBUG(fmt("Securely connected to %s with %s", peerInfo.c_str(),
                        tlsVersion.c_str()));
 
       // 2. We're connected now!
@@ -1014,6 +1036,157 @@ bool SocketCore::tlsHandshake(TLSContext* tlsctx, const std::string& hostname)
 }
 
 #endif // ENABLE_SSL
+
+#ifdef HAVE_LIBSSH2
+
+bool SocketCore::sshHandshake(const std::string& hashType,
+                              const std::string& digest)
+{
+  wantRead_ = false;
+  wantWrite_ = false;
+
+  if (!sshSession_) {
+    sshSession_ = make_unique<SSHSession>();
+    if (sshSession_->init(sockfd_) == SSH_ERR_ERROR) {
+      throw DL_ABORT_EX("Could not create SSH session");
+    }
+  }
+  auto rv = sshSession_->handshake();
+  if (rv == SSH_ERR_WOULDBLOCK) {
+    sshCheckDirection();
+    return false;
+  }
+  if (rv == SSH_ERR_ERROR) {
+    throw DL_ABORT_EX(fmt("SSH handshake failure: %s",
+                          sshSession_->getLastErrorString().c_str()));
+  }
+  if (!hashType.empty()) {
+    auto actualDigest = sshSession_->hostkeyMessageDigest(hashType);
+    if (actualDigest.empty()) {
+      throw DL_ABORT_EX(fmt("Empty host key fingerprint from SSH layer: "
+                            "perhaps hash type %s is not supported?",
+                            hashType.c_str()));
+    }
+    if (digest != actualDigest) {
+      throw DL_ABORT_EX(fmt("Unexpected SSH host key: expected %s, actual %s",
+                            util::toHex(digest).c_str(),
+                            util::toHex(actualDigest).c_str()));
+    }
+  }
+  return true;
+}
+
+bool SocketCore::sshAuthPassword(const std::string& user,
+                                 const std::string& password)
+{
+  assert(sshSession_);
+
+  wantRead_ = false;
+  wantWrite_ = false;
+
+  auto rv = sshSession_->authPassword(user, password);
+  if (rv == SSH_ERR_WOULDBLOCK) {
+    sshCheckDirection();
+    return false;
+  }
+  if (rv == SSH_ERR_ERROR) {
+    throw DL_ABORT_EX(fmt("SSH authentication failure: %s",
+                          sshSession_->getLastErrorString().c_str()));
+  }
+  return true;
+}
+
+bool SocketCore::sshSFTPOpen(const std::string& path)
+{
+  assert(sshSession_);
+
+  wantRead_ = false;
+  wantWrite_ = false;
+
+  auto rv = sshSession_->sftpOpen(path);
+  if (rv == SSH_ERR_WOULDBLOCK) {
+    sshCheckDirection();
+    return false;
+  }
+  if (rv == SSH_ERR_ERROR) {
+    throw DL_ABORT_EX(fmt("SSH opening SFTP path %s failed: %s", path.c_str(),
+                          sshSession_->getLastErrorString().c_str()));
+  }
+  return true;
+}
+
+bool SocketCore::sshSFTPClose()
+{
+  assert(sshSession_);
+
+  wantRead_ = false;
+  wantWrite_ = false;
+
+  auto rv = sshSession_->sftpClose();
+  if (rv == SSH_ERR_WOULDBLOCK) {
+    sshCheckDirection();
+    return false;
+  }
+  if (rv == SSH_ERR_ERROR) {
+    throw DL_ABORT_EX(fmt("SSH closing SFTP failed: %s",
+                          sshSession_->getLastErrorString().c_str()));
+  }
+  return true;
+}
+
+bool SocketCore::sshSFTPStat(int64_t& totalLength, time_t& mtime,
+                             const std::string& path)
+{
+  assert(sshSession_);
+
+  wantRead_ = false;
+  wantWrite_ = false;
+
+  auto rv = sshSession_->sftpStat(totalLength, mtime);
+  if (rv == SSH_ERR_WOULDBLOCK) {
+    sshCheckDirection();
+    return false;
+  }
+  if (rv == SSH_ERR_ERROR) {
+    throw DL_ABORT_EX(fmt("SSH stat SFTP path %s filed: %s", path.c_str(),
+                          sshSession_->getLastErrorString().c_str()));
+  }
+  return true;
+}
+
+void SocketCore::sshSFTPSeek(int64_t pos)
+{
+  assert(sshSession_);
+
+  sshSession_->sftpSeek(pos);
+}
+
+bool SocketCore::sshGracefulShutdown()
+{
+  assert(sshSession_);
+  auto rv = sshSession_->gracefulShutdown();
+  if (rv == SSH_ERR_WOULDBLOCK) {
+    sshCheckDirection();
+    return false;
+  }
+  if (rv == SSH_ERR_ERROR) {
+    throw DL_ABORT_EX(fmt("SSH graceful shutdown failed: %s",
+                          sshSession_->getLastErrorString().c_str()));
+  }
+  return true;
+}
+
+void SocketCore::sshCheckDirection()
+{
+  if (sshSession_->checkDirection() == SSH_WANT_READ) {
+    wantRead_ = true;
+  }
+  else {
+    wantWrite_ = true;
+  }
+}
+
+#endif // HAVE_LIBSSH2
 
 ssize_t SocketCore::writeData(const void* data, size_t len,
                               const std::string& host, uint16_t port)
@@ -1117,7 +1290,7 @@ void SocketCore::bindAddress(const std::string& iface)
     s = getnameinfo(&a.su.sa, a.suLength, host, NI_MAXHOST, nullptr, 0,
                     NI_NUMERICHOST);
     if (s == 0) {
-      ARIA2_LOG_DEBUG(fmt("Sockets will bind to %s", host));
+      A2_LOG_DEBUG(fmt("Sockets will bind to %s", host));
     }
   }
   bindAddrsList_.push_back(bindAddrs_);
@@ -1147,7 +1320,7 @@ void SocketCore::bindAllAddress(const std::string& ifaces)
       s = getnameinfo(&a.su.sa, a.suLength, host, NI_MAXHOST, nullptr, 0,
                       NI_NUMERICHOST);
       if (s == 0) {
-        ARIA2_LOG_DEBUG(fmt("Sockets will bind to %s", host));
+        A2_LOG_DEBUG(fmt("Sockets will bind to %s", host));
       }
     }
   }
@@ -1179,14 +1352,14 @@ size_t SocketCore::getRecvBufferedLength() const
 std::vector<SockAddr> SocketCore::getInterfaceAddress(const std::string& iface,
                                                       int family, int aiFlags)
 {
-  ARIA2_LOG_DEBUG(fmt("Finding interface %s", iface.c_str()));
+  A2_LOG_DEBUG(fmt("Finding interface %s", iface.c_str()));
   std::vector<SockAddr> ifAddrs;
 #ifdef HAVE_GETIFADDRS
   // First find interface in interface addresses
   struct ifaddrs* ifaddr = nullptr;
   if (getifaddrs(&ifaddr) == -1) {
     int errNum = SOCKET_ERRNO;
-    ARIA2_LOG_INFO(
+    A2_LOG_INFO(
         fmt(MSG_INTERFACE_NOT_FOUND, iface.c_str(), errorMsg(errNum).c_str()));
   }
   else {
@@ -1231,7 +1404,7 @@ std::vector<SockAddr> SocketCore::getInterfaceAddress(const std::string& iface,
     s = callGetaddrinfo(&res, iface.c_str(), nullptr, family, SOCK_STREAM,
                         aiFlags, 0);
     if (s) {
-      ARIA2_LOG_INFO(fmt(MSG_INTERFACE_NOT_FOUND, iface.c_str(), gai_strerror(s)));
+      A2_LOG_INFO(fmt(MSG_INTERFACE_NOT_FOUND, iface.c_str(), gai_strerror(s)));
     }
     else {
       std::unique_ptr<addrinfo, decltype(&freeaddrinfo)> resDeleter(
@@ -1412,7 +1585,7 @@ const uint32_t APIPA_IPV4_END = 2852061183u;   // 169.254.255.255
 void checkAddrconfig()
 {
 #ifdef HAVE_IPHLPAPI_H
-  ARIA2_LOG_DEBUG("Checking configured addresses");
+  A2_LOG_INFO("Checking configured addresses");
   ULONG bufsize = 15_k;
   ULONG retval = 0;
   IP_ADAPTER_ADDRESSES* buf = 0;
@@ -1428,7 +1601,7 @@ void checkAddrconfig()
     buf = 0;
   } while (retval == ERROR_BUFFER_OVERFLOW && numTry < MAX_TRY);
   if (retval != NO_ERROR) {
-    ARIA2_LOG_DEBUG("GetAdaptersAddresses failed. Assume both IPv4 and IPv6 "
+    A2_LOG_INFO("GetAdaptersAddresses failed. Assume both IPv4 and IPv6 "
                 " addresses are configured.");
     return;
   }
@@ -1473,20 +1646,20 @@ void checkAddrconfig()
                        NI_MAXHOST, 0, 0, NI_NUMERICHOST);
       if (rv == 0) {
         if (found) {
-          ARIA2_LOG_DEBUG(fmt("Found configured address: %s", host));
+          A2_LOG_INFO(fmt("Found configured address: %s", host));
         }
         else {
-          ARIA2_LOG_DEBUG(fmt("Not considered: %s", host));
+          A2_LOG_INFO(fmt("Not considered: %s", host));
         }
       }
     }
   }
   free(buf);
 
-  ARIA2_LOG_DEBUG(fmt("IPv4 configured=%d, IPv6 configured=%d", ipv4AddrConfigured,
+  A2_LOG_INFO(fmt("IPv4 configured=%d, IPv6 configured=%d", ipv4AddrConfigured,
                   ipv6AddrConfigured));
 #elif defined(HAVE_GETIFADDRS)
-  ARIA2_LOG_DEBUG("Checking configured addresses");
+  A2_LOG_INFO("Checking configured addresses");
   ipv4AddrConfigured = false;
   ipv6AddrConfigured = false;
   ifaddrs* ifaddr = nullptr;
@@ -1494,7 +1667,7 @@ void checkAddrconfig()
   rv = getifaddrs(&ifaddr);
   if (rv == -1) {
     int errNum = SOCKET_ERRNO;
-    ARIA2_LOG_DEBUG(fmt("getifaddrs failed. Cause: %s", errorMsg(errNum).c_str()));
+    A2_LOG_INFO(fmt("getifaddrs failed. Cause: %s", errorMsg(errNum).c_str()));
     return;
   }
   std::unique_ptr<ifaddrs, decltype(&freeifaddrs)> ifaddrDeleter(ifaddr,
@@ -1534,17 +1707,17 @@ void checkAddrconfig()
                      NI_NUMERICHOST);
     if (rv == 0) {
       if (found) {
-        ARIA2_LOG_DEBUG(fmt("Found configured address: %s", host));
+        A2_LOG_INFO(fmt("Found configured address: %s", host));
       }
       else {
-        ARIA2_LOG_DEBUG(fmt("Not considered: %s", host));
+        A2_LOG_INFO(fmt("Not considered: %s", host));
       }
     }
   }
-  ARIA2_LOG_DEBUG(fmt("IPv4 configured=%d, IPv6 configured=%d", ipv4AddrConfigured,
+  A2_LOG_INFO(fmt("IPv4 configured=%d, IPv6 configured=%d", ipv4AddrConfigured,
                   ipv6AddrConfigured));
 #else  // !HAVE_GETIFADDRS
-  ARIA2_LOG_DEBUG("getifaddrs is not available. Assume IPv4 and IPv6 addresses"
+  A2_LOG_INFO("getifaddrs is not available. Assume IPv4 and IPv6 addresses"
               " are configured.");
 #endif // !HAVE_GETIFADDRS
 }

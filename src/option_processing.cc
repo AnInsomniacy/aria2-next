@@ -33,13 +33,12 @@
  */
 /* copyright --> */
 #include "common.h"
-#include "Log.h"
 
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
 
-#include "InternalTypes.h"
+#include <aria2/aria2.h>
 #include "Option.h"
 #include "prefs.h"
 #include "OptionParser.h"
@@ -60,6 +59,7 @@
 #include "BufferedFile.h"
 #include "console.h"
 #include "array_fun.h"
+#include "LogFactory.h"
 #ifndef HAVE_DAEMON
 #  include "daemon.h"
 #endif // !HAVE_DAEMON
@@ -307,6 +307,9 @@ error_code::Value option_processing(Option& op, bool standalone,
 #ifdef ENABLE_BITTORRENT
       op.blank(PREF_TORRENT_FILE) &&
 #endif // ENABLE_BITTORRENT
+#ifdef ENABLE_METALINK
+      op.blank(PREF_METALINK_FILE) &&
+#endif // ENABLE_METALINK
       op.blank(PREF_INPUT_FILE)) {
     if (uris.empty()) {
       global::cerr()->printf(MSG_URI_REQUIRED);
@@ -333,7 +336,7 @@ error_code::Value option_processing(Option& op, bool standalone,
     }
   }
   if (op.getAsBool(PREF_DEFERRED_INPUT) && op.defined(PREF_SAVE_SESSION)) {
-    ARIA2_LOG_WARN("--deferred-input is disabled because of the presence of "
+    A2_LOG_WARN("--deferred-input is disabled because of the presence of "
                 "--save-session");
     op.remove(PREF_DEFERRED_INPUT);
   }

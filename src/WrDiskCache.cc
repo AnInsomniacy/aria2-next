@@ -32,13 +32,13 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "WrDiskCache.h"
 
 #include <algorithm>
 #include <cassert>
 
 #include "WrDiskCacheEntry.h"
+#include "LogFactory.h"
 #include "fmt.h"
 
 namespace aria2 {
@@ -48,7 +48,7 @@ WrDiskCache::WrDiskCache(size_t limit) : limit_(limit), total_(0), clock_(0) {}
 WrDiskCache::~WrDiskCache()
 {
   if (total_) {
-    ARIA2_LOG_WARN(fmt("Write disk cache is not empty size=%lu",
+    A2_LOG_WARN(fmt("Write disk cache is not empty size=%lu",
                     static_cast<unsigned long>(total_)));
   }
 }
@@ -64,7 +64,7 @@ bool WrDiskCache::add(WrDiskCacheEntry* ent)
     return true;
   }
   else {
-    ARIA2_LOG_WARN(fmt("Found duplicate cache entry a.{size=%lu,clock=%" PRId64
+    A2_LOG_WARN(fmt("Found duplicate cache entry a.{size=%lu,clock=%" PRId64
                     "} b{size=%lu,clock=%" PRId64 "}",
                     static_cast<unsigned long>((*rv.first)->getSize()),
                     (*rv.first)->getLastUpdate(),
@@ -77,7 +77,7 @@ bool WrDiskCache::add(WrDiskCacheEntry* ent)
 bool WrDiskCache::remove(WrDiskCacheEntry* ent)
 {
   if (set_.erase(ent)) {
-    ARIA2_LOG_DEBUG(fmt("Removed cache entry size=%lu, clock=%" PRId64,
+    A2_LOG_DEBUG(fmt("Removed cache entry size=%lu, clock=%" PRId64,
                      static_cast<unsigned long>(ent->getSize()),
                      ent->getLastUpdate()));
     total_ -= ent->getSize();
@@ -93,7 +93,7 @@ bool WrDiskCache::update(WrDiskCacheEntry* ent, ssize_t delta)
   if (!set_.erase(ent)) {
     auto i = std::find(set_.begin(), set_.end(), ent);
     if (i == set_.end()) {
-      ARIA2_LOG_WARN(fmt("Restoring missing write cache entry size=%lu, delta=%ld",
+      A2_LOG_WARN(fmt("Restoring missing write cache entry size=%lu, delta=%ld",
                       static_cast<unsigned long>(ent->getSize()),
                       static_cast<long>(delta)));
       ent->setSizeKey(ent->getSize());
@@ -105,11 +105,15 @@ bool WrDiskCache::update(WrDiskCacheEntry* ent, ssize_t delta)
       ensureLimit();
       return true;
     }
-    ARIA2_LOG_WARN(fmt("Reindexing write cache entry size=%lu, delta=%ld",
+    A2_LOG_WARN(fmt("Reindexing write cache entry size=%lu, delta=%ld",
                     static_cast<unsigned long>(ent->getSize()),
                     static_cast<long>(delta)));
     set_.erase(i);
   }
+  A2_LOG_DEBUG(fmt("Update cache entry size=%lu, delta=%ld, clock=%" PRId64,
+                   static_cast<unsigned long>(ent->getSize()),
+                   static_cast<long>(delta), ent->getLastUpdate()));
+
   ent->setSizeKey(ent->getSize());
   ent->setLastUpdate(++clock_);
   set_.insert(ent);
@@ -127,7 +131,7 @@ void WrDiskCache::ensureLimit()
   while (total_ > limit_) {
     auto i = set_.begin();
     WrDiskCacheEntry* ent = *i;
-    ARIA2_LOG_DEBUG(fmt("Force flush cache entry size=%lu, clock=%" PRId64,
+    A2_LOG_DEBUG(fmt("Force flush cache entry size=%lu, clock=%" PRId64,
                      static_cast<unsigned long>(ent->getSizeKey()),
                      ent->getLastUpdate()));
     total_ -= ent->getSize();

@@ -1,12 +1,8 @@
 cmake_minimum_required(VERSION 3.25)
 
-if(POLICY CMP0167)
-  cmake_policy(SET CMP0167 NEW)
-endif()
-
 project(
   aria2
-  VERSION 2.3.6
+  VERSION 2.1.4
   DESCRIPTION "High speed download utility"
   HOMEPAGE_URL "https://github.com/AnInsomniacy/aria2-next"
   LANGUAGES C CXX)

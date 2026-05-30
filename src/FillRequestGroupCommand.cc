@@ -32,15 +32,17 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "FillRequestGroupCommand.h"
 #include "DownloadEngine.h"
 #include "RequestGroupMan.h"
 #include "RequestGroup.h"
 #include "RecoverableException.h"
 #include "message.h"
+#include "Logger.h"
+#include "LogFactory.h"
 #include "DownloadContext.h"
 #include "fmt.h"
+#include "wallclock.h"
 
 namespace aria2 {
 
@@ -68,7 +70,7 @@ bool FillRequestGroupCommand::execute()
         rgman->fillRequestGroupFromReserver(e_);
       }
       catch (RecoverableException& ex) {
-        ARIA2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, ex);
+        A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, ex);
         // Re-request queue check to fulfill the requests of all
         // downloads, some might come after this exception.
         rgman->requestQueueCheck();
@@ -79,6 +81,17 @@ bool FillRequestGroupCommand::execute()
     }
   }
   e_->addRoutineCommand(std::unique_ptr<Command>(this));
+
+  // let's make sure we come back here every second or so
+  // if we use the optimize-concurrent-download option
+  if (rgman->getOptimizeConcurrentDownloads()) {
+    const auto& now = global::wallclock();
+    if (std::chrono::duration_cast<std::chrono::seconds>(
+            lastExecTime.difference(now)) >= 1_s) {
+      lastExecTime = now;
+      rgman->requestQueueCheck();
+    }
+  }
 
   return false;
 }

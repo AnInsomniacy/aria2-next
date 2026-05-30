@@ -32,18 +32,40 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "rpc_helper.h"
+#include "XmlParser.h"
 #include "RpcRequest.h"
+#include "XmlRpcRequestParserStateMachine.h"
+#include "message.h"
+#include "DlAbortEx.h"
 #include "DownloadEngine.h"
 #include "RpcMethod.h"
 #include "RpcResponse.h"
 #include "RpcMethodFactory.h"
+#include "LogFactory.h"
 #include "fmt.h"
 
 namespace aria2 {
 
 namespace rpc {
+
+#ifdef ENABLE_XML_RPC
+RpcRequest xmlParseMemory(const char* xml, size_t size)
+{
+  XmlRpcRequestParserStateMachine psm;
+  if (xml::XmlParser(&psm).parseFinal(xml, size) < 0) {
+    throw DL_ABORT_EX(MSG_CANNOT_PARSE_XML_RPC_REQUEST);
+  }
+  std::unique_ptr<List> params;
+  if (downcast<List>(psm.getCurrentFrameValue())) {
+    params.reset(static_cast<List*>(psm.popCurrentFrameValue().release()));
+  }
+  else {
+    params = List::g();
+  }
+  return {psm.getMethodName(), std::move(params)};
+}
+#endif // ENABLE_XML_RPC
 
 RpcResponse createJsonRpcErrorResponse(int code, const std::string& msg,
                                        std::unique_ptr<ValueBase> id)
@@ -78,7 +100,7 @@ RpcResponse processJsonRpcRequest(Dict* jsondict, DownloadEngine* e)
     // TODO No support for Named params
     return createJsonRpcErrorResponse(-32602, "Invalid params.", std::move(id));
   }
-  ARIA2_LOG_DEBUG(fmt("Executing RPC method %s", methodName->s().c_str()));
+  A2_LOG_INFO(fmt("Executing RPC method %s", methodName->s().c_str()));
   RpcRequest req = {methodName->s(), std::move(params), std::move(id), true};
   return getMethod(methodName->s())->execute(std::move(req), e);
 }

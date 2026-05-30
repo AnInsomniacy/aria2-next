@@ -32,12 +32,12 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "RequestGroup.h"
 
 #include <cassert>
 #include <algorithm>
 
+#include "PostDownloadHandler.h"
 #include "DownloadEngine.h"
 #include "SegmentMan.h"
 #include "NullProgressInfoFile.h"
@@ -47,6 +47,8 @@
 #include "File.h"
 #include "message.h"
 #include "util.h"
+#include "LogFactory.h"
+#include "Logger.h"
 #include "DiskAdaptor.h"
 #include "DiskWriterFactory.h"
 #include "RecoverableException.h"
@@ -57,42 +59,69 @@
 #include "DlAbortEx.h"
 #include "DownloadFailureException.h"
 #include "RequestGroupMan.h"
-#include "DefaultProgressInfoFile.h"
+#include "DefaultBtProgressInfoFile.h"
 #include "DefaultPieceStorage.h"
+#include "download_handlers.h"
 #include "Ed2kAttribute.h"
 #include "Ed2kCommand.h"
 #include "Ed2kListenCommand.h"
 #include "Ed2kKadCommand.h"
+#include "MemoryBufferPreDownloadHandler.h"
+#include "DownloadHandlerConstants.h"
 #include "Option.h"
 #include "FileEntry.h"
-#include "LibtorrentAttribute.h"
-#include "LibtorrentProgressInfoFile.h"
 #include "Request.h"
-#include "AbstractCommand.h"
 #include "FileAllocationIterator.h"
 #include "fmt.h"
 #include "A2STR.h"
+#include "URISelector.h"
+#include "InorderURISelector.h"
+#include "PieceSelector.h"
+#include "a2functional.h"
+#include "SocketCore.h"
+#include "SimpleRandomizer.h"
+#include "Segment.h"
+#include "SocketRecvBuffer.h"
+#include "RequestGroupCriteria.h"
 #include "CheckIntegrityCommand.h"
 #include "ChecksumCheckIntegrityEntry.h"
-#include "uri.h"
 #ifdef ENABLE_BITTORRENT
-#  include "LibtorrentCommand.h"
+#  include "bittorrent_helper.h"
+#  include "BtRegistry.h"
+#  include "BtCheckIntegrityEntry.h"
+#  include "DefaultPeerStorage.h"
+#  include "DefaultBtAnnounce.h"
+#  include "BtRuntime.h"
+#  include "BtSetup.h"
+#  include "BtPostDownloadHandler.h"
+#  include "DHTSetup.h"
+#  include "DHTRegistry.h"
+#  include "DHTNode.h"
+#  include "DHTRoutingTable.h"
+#  include "DHTTaskQueue.h"
+#  include "DHTTaskFactory.h"
+#  include "DHTTokenTracker.h"
+#  include "DHTMessageDispatcher.h"
+#  include "DHTMessageReceiver.h"
+#  include "DHTMessageFactory.h"
+#  include "DHTMessageCallback.h"
+#  include "BtMessageFactory.h"
+#  include "BtRequestFactory.h"
+#  include "BtMessageDispatcher.h"
+#  include "BtMessageReceiver.h"
+#  include "PeerConnection.h"
+#  include "ExtensionMessageFactory.h"
+#  include "DHTPeerAnnounceStorage.h"
+#  include "DHTEntryPointNameResolveCommand.h"
+#  include "LongestSequencePieceSelector.h"
+#  include "PriorityPieceSelector.h"
+#  include "bittorrent_helper.h"
 #endif // ENABLE_BITTORRENT
+#ifdef ENABLE_METALINK
+#  include "MetalinkPostDownloadHandler.h"
+#endif // ENABLE_METALINK
 
 namespace aria2 {
-
-#ifdef ENABLE_BITTORRENT
-namespace {
-bool shouldUseLibtorrentResumeStatus(const LibtorrentAttribute* attrs)
-{
-  return attrs->resumeStatus.hasStatus &&
-         (!attrs->status.hasStatus || attrs->status.checking ||
-          (attrs->status.totalLength == 0 &&
-           attrs->status.completedLength == 0 && !attrs->status.complete &&
-           attrs->resumeStatus.totalLength > 0));
-}
-} // namespace
-#endif // ENABLE_BITTORRENT
 
 RequestGroup::RequestGroup(const std::shared_ptr<GroupId>& gid,
                            const std::shared_ptr<Option>& option)
@@ -100,7 +129,12 @@ RequestGroup::RequestGroup(const std::shared_ptr<GroupId>& gid,
       gid_(gid),
       option_(option),
       progressInfoFile_(std::make_shared<NullProgressInfoFile>()),
+      uriSelector_(make_unique<InorderURISelector>()),
       requestGroupMan_(nullptr),
+#ifdef ENABLE_BITTORRENT
+      btRuntime_(nullptr),
+      peerStorage_(nullptr),
+#endif // ENABLE_BITTORRENT
       followingGID_(0),
       lastModifiedTime_(Time::null()),
       timeout_(option->getAsInt(PREF_TIMEOUT)),
@@ -113,10 +147,6 @@ RequestGroup::RequestGroup(const std::shared_ptr<GroupId>& gid,
       maxDownloadSpeedLimit_(option->getAsInt(PREF_MAX_DOWNLOAD_LIMIT)),
       maxUploadSpeedLimit_(option->getAsInt(PREF_MAX_UPLOAD_LIMIT)),
       resumeFailureCount_(0),
-      httpRangeEnabled_(true),
-      httpRangeGeneration_(0),
-      httpRangeFallbackRetryIssued_(false),
-      httpMetadataRangeProbeRequired_(false),
       haltReason_(RequestGroup::NONE),
       lastErrorCode_(error_code::UNDEFINED),
       saveControlFile_(true),
@@ -129,6 +159,10 @@ RequestGroup::RequestGroup(const std::shared_ptr<GroupId>& gid,
       seedOnly_(false)
 {
   fileAllocationEnabled_ = option_->get(PREF_FILE_ALLOCATION) != V_NONE;
+  if (!option_->getAsBool(PREF_DRY_RUN)) {
+    initializePreDownloadHandler();
+    initializePostDownloadHandler();
+  }
 }
 
 RequestGroup::~RequestGroup() = default;
@@ -143,13 +177,6 @@ bool RequestGroup::isCheckIntegrityReady()
 
 bool RequestGroup::downloadFinished() const
 {
-#ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
-    auto attrs = getLibtorrentAttrs(downloadContext_);
-    return attrs->status.hasStatus && attrs->status.complete &&
-           !attrs->status.sharing;
-  }
-#endif // ENABLE_BITTORRENT
   if (!pieceStorage_) {
     return false;
   }
@@ -158,48 +185,10 @@ bool RequestGroup::downloadFinished() const
 
 bool RequestGroup::allDownloadFinished() const
 {
-#ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
-    auto attrs = getLibtorrentAttrs(downloadContext_);
-    return attrs->status.hasStatus && attrs->status.complete &&
-           !attrs->status.seeding;
-  }
-#endif // ENABLE_BITTORRENT
   if (!pieceStorage_) {
     return false;
   }
   return pieceStorage_->allDownloadFinished();
-}
-
-bool RequestGroup::queueChecksumValidationIfNeeded(DownloadEngine* e)
-{
-  if (!e || !e->getCheckIntegrityMan() || !downloadContext_ ||
-      !pieceStorage_ || !downloadFinished() ||
-      !downloadContext_->getPieceHashType().empty() ||
-      !downloadContext_->isChecksumVerificationNeeded()) {
-    return false;
-  }
-
-  auto entry = make_unique<ChecksumCheckIntegrityEntry>(this);
-  if (!entry->isValidationReady()) {
-    return false;
-  }
-
-  entry->initValidator();
-  entry->cutTrailingGarbage();
-  disableSaveControlFile();
-  e->getCheckIntegrityMan()->pushEntry(std::move(entry));
-  return true;
-}
-
-bool RequestGroup::shouldRemoveControlFileOnFinish() const
-{
-#ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
-    return allDownloadFinished();
-  }
-#endif // ENABLE_BITTORRENT
-  return allDownloadFinished() && !option_->getAsBool(PREF_FORCE_SAVE);
 }
 
 std::pair<error_code::Value, std::string> RequestGroup::downloadResult() const
@@ -236,7 +225,7 @@ void RequestGroup::closeFile()
 std::unique_ptr<CheckIntegrityEntry>
 RequestGroup::createCheckIntegrityEntry(FileOpenMode fileOpenMode)
 {
-  auto infoFile = std::make_shared<DefaultProgressInfoFile>(
+  auto infoFile = std::make_shared<DefaultBtProgressInfoFile>(
       downloadContext_, pieceStorage_, option_.get());
 
   if (option_->getAsBool(PREF_CHECK_INTEGRITY) &&
@@ -258,13 +247,13 @@ RequestGroup::createCheckIntegrityEntry(FileOpenMode fileOpenMode)
     loadAndOpenFile(infoFile);
     if (downloadFinished()) {
       if (downloadContext_->isChecksumVerificationNeeded()) {
-        ARIA2_LOG_INFO(MSG_HASH_CHECK_NOT_DONE);
+        A2_LOG_INFO(MSG_HASH_CHECK_NOT_DONE);
         auto tempEntry = make_unique<ChecksumCheckIntegrityEntry>(this);
         tempEntry->setRedownload(true);
         return std::move(tempEntry);
       }
       downloadContext_->setChecksumVerified(true);
-      ARIA2_LOG_INFO(fmt(MSG_DOWNLOAD_ALREADY_COMPLETED, gid_->toHex().c_str(),
+      A2_LOG_NOTICE(fmt(MSG_DOWNLOAD_ALREADY_COMPLETED, gid_->toHex().c_str(),
                         downloadContext_->getBasePath().c_str()));
       return nullptr;
     }
@@ -303,11 +292,11 @@ void RequestGroup::createInitialCommand(
               downloadContext_->getBasePath().c_str()),
           error_code::DUPLICATE_DOWNLOAD);
     }
-    auto progressInfoFile = std::make_shared<DefaultProgressInfoFile>(
+    auto progressInfoFile = std::make_shared<DefaultBtProgressInfoFile>(
         downloadContext_, nullptr, option_.get());
     adjustFilename(progressInfoFile);
     initPieceStorage();
-    progressInfoFile = std::make_shared<DefaultProgressInfoFile>(
+    progressInfoFile = std::make_shared<DefaultBtProgressInfoFile>(
         downloadContext_, pieceStorage_, option_.get());
     removeDefunctControlFile(progressInfoFile);
     if (progressInfoFile->exists()) {
@@ -363,22 +352,189 @@ void RequestGroup::createInitialCommand(
     return;
   }
 #ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
+  if (downloadContext_->hasAttribute(CTX_ATTR_BT)) {
+    auto torrentAttrs = bittorrent::getTorrentAttrs(downloadContext_);
+    bool metadataGetMode = torrentAttrs->metadata.empty();
     if (option_->getAsBool(PREF_DRY_RUN)) {
       throw DOWNLOAD_FAILURE_EXCEPTION(
           "Cancel BitTorrent download in dry-run context.");
     }
-    auto progressInfoFile =
-        std::make_shared<LibtorrentProgressInfoFile>(downloadContext_);
+    auto& btRegistry = e->getBtRegistry();
+    if (btRegistry->getDownloadContext(torrentAttrs->infoHash)) {
+      // TODO If metadataGetMode == false and each FileEntry has
+      // URI, then go without BT.
+      throw DOWNLOAD_FAILURE_EXCEPTION2(
+          fmt("InfoHash %s is already registered.",
+              bittorrent::getInfoHashString(downloadContext_).c_str()),
+          error_code::DUPLICATE_INFO_HASH);
+    }
+    if (metadataGetMode) {
+      // Use UnknownLengthPieceStorage.
+      initPieceStorage();
+    }
+    else if (e->getRequestGroupMan()->isSameFileBeingDownloaded(this)) {
+      throw DOWNLOAD_FAILURE_EXCEPTION2(
+          fmt(EX_DUPLICATE_FILE_DOWNLOAD,
+              downloadContext_->getBasePath().c_str()),
+          error_code::DUPLICATE_DOWNLOAD);
+    }
+    else {
+      initPieceStorage();
+      if (downloadContext_->getFileEntries().size() > 1) {
+        pieceStorage_->setupFileFilter();
+      }
+    }
+
+    std::shared_ptr<DefaultBtProgressInfoFile> progressInfoFile;
+    if (!metadataGetMode) {
+      progressInfoFile = std::make_shared<DefaultBtProgressInfoFile>(
+          downloadContext_, pieceStorage_, option_.get());
+    }
+
+    auto btRuntime = std::make_shared<BtRuntime>();
+    btRuntime->setMaxPeers(option_->getAsInt(PREF_BT_MAX_PEERS));
+    btRuntime_ = btRuntime.get();
+    if (progressInfoFile) {
+      progressInfoFile->setBtRuntime(btRuntime);
+    }
+
+    auto peerStorage = std::make_shared<DefaultPeerStorage>();
+    peerStorage->setBtRuntime(btRuntime);
+    peerStorage->setPieceStorage(pieceStorage_);
+    peerStorage_ = peerStorage.get();
+    if (progressInfoFile) {
+      progressInfoFile->setPeerStorage(peerStorage);
+    }
+
+    auto btAnnounce = std::make_shared<DefaultBtAnnounce>(
+        downloadContext_.get(), option_.get());
+    btAnnounce->setBtRuntime(btRuntime);
+    btAnnounce->setPieceStorage(pieceStorage_);
+    btAnnounce->setPeerStorage(peerStorage);
+    btAnnounce->setUserDefinedInterval(
+        std::chrono::seconds(option_->getAsInt(PREF_BT_TRACKER_INTERVAL)));
+    btAnnounce->shuffleAnnounce();
+
+    assert(!btRegistry->get(gid_->getNumericId()));
+    btRegistry->put(
+        gid_->getNumericId(),
+        make_unique<BtObject>(
+            downloadContext_, pieceStorage_, peerStorage, btAnnounce, btRuntime,
+            (progressInfoFile ? progressInfoFile : progressInfoFile_)));
+
+    if (option_->getAsBool(PREF_ENABLE_DHT) ||
+        (!e->getOption()->getAsBool(PREF_DISABLE_IPV6) &&
+         option_->getAsBool(PREF_ENABLE_DHT6))) {
+
+      if (option_->getAsBool(PREF_ENABLE_DHT)) {
+        std::vector<std::unique_ptr<Command>> c, rc;
+        std::tie(c, rc) = DHTSetup().setup(e, AF_INET);
+
+        e->addCommand(std::move(c));
+        for (auto& a : rc) {
+          e->addRoutineCommand(std::move(a));
+        }
+      }
+
+      if (!e->getOption()->getAsBool(PREF_DISABLE_IPV6) &&
+          option_->getAsBool(PREF_ENABLE_DHT6)) {
+        std::vector<std::unique_ptr<Command>> c, rc;
+        std::tie(c, rc) = DHTSetup().setup(e, AF_INET6);
+
+        e->addCommand(std::move(c));
+        for (auto& a : rc) {
+          e->addRoutineCommand(std::move(a));
+        }
+      }
+      const auto& nodes = torrentAttrs->nodes;
+      if (!torrentAttrs->privateTorrent && !nodes.empty()) {
+        if (DHTRegistry::isInitialized()) {
+          auto command = make_unique<DHTEntryPointNameResolveCommand>(
+              e->newCUID(), e, AF_INET, nodes);
+          const auto& data = DHTRegistry::getData();
+          command->setTaskQueue(data.taskQueue.get());
+          command->setTaskFactory(data.taskFactory.get());
+          command->setRoutingTable(data.routingTable.get());
+          command->setLocalNode(data.localNode);
+          e->addCommand(std::move(command));
+        }
+
+        if (DHTRegistry::isInitialized6()) {
+          auto command = make_unique<DHTEntryPointNameResolveCommand>(
+              e->newCUID(), e, AF_INET6, nodes);
+          const auto& data = DHTRegistry::getData6();
+          command->setTaskQueue(data.taskQueue.get());
+          command->setTaskFactory(data.taskFactory.get());
+          command->setRoutingTable(data.routingTable.get());
+          command->setLocalNode(data.localNode);
+          e->addCommand(std::move(command));
+        }
+      }
+    }
+    else if (metadataGetMode) {
+      A2_LOG_NOTICE(_("For BitTorrent Magnet URI, enabling DHT is strongly"
+                      " recommended. See --enable-dht option."));
+    }
+
+    if (metadataGetMode) {
+      BtCheckIntegrityEntry{this}.onDownloadIncomplete(commands, e);
+      return;
+    }
+
+    removeDefunctControlFile(progressInfoFile);
+    {
+      int64_t actualFileSize = pieceStorage_->getDiskAdaptor()->size();
+      if (actualFileSize == downloadContext_->getTotalLength()) {
+        // First, make DiskAdaptor read-only mode to allow the
+        // program to seed file in read-only media.
+        pieceStorage_->getDiskAdaptor()->enableReadOnly();
+      }
+      else {
+        // Open file in writable mode to allow the program
+        // truncate the file to downloadContext_->getTotalLength()
+        A2_LOG_DEBUG(fmt("File size not match. File is opened in writable"
+                         " mode. Expected:%" PRId64 " Actual:%" PRId64 "",
+                         downloadContext_->getTotalLength(), actualFileSize));
+      }
+    }
+    // Call Load, Save and file allocation command here
     if (progressInfoFile->exists()) {
+      // load .aria2 file if it exists.
       progressInfoFile->load();
+      pieceStorage_->getDiskAdaptor()->openFile();
+    }
+    else if (pieceStorage_->getDiskAdaptor()->fileExists()) {
+      if (!option_->getAsBool(PREF_CHECK_INTEGRITY) &&
+          !option_->getAsBool(PREF_ALLOW_OVERWRITE) &&
+          !option_->getAsBool(PREF_BT_SEED_UNVERIFIED)) {
+        // TODO we need this->haltRequested = true?
+        throw DOWNLOAD_FAILURE_EXCEPTION2(
+            fmt(MSG_FILE_ALREADY_EXISTS,
+                downloadContext_->getBasePath().c_str()),
+            error_code::FILE_ALREADY_EXISTS);
+      }
+      pieceStorage_->getDiskAdaptor()->openFile();
+      if (option_->getAsBool(PREF_BT_SEED_UNVERIFIED)) {
+        pieceStorage_->markAllPiecesDone();
+      }
+    }
+    else {
+      pieceStorage_->getDiskAdaptor()->openFile();
     }
     progressInfoFile_ = progressInfoFile;
-    commands.push_back(make_unique<LibtorrentCommand>(e->newCUID(), this, e));
-    e->setNoWait(true);
+
+    auto entry = make_unique<BtCheckIntegrityEntry>(this);
+    // --bt-seed-unverified=true is given and download has completed, skip
+    // validation for piece hashes.
+    if (option_->getAsBool(PREF_BT_SEED_UNVERIFIED) &&
+        pieceStorage_->downloadFinished()) {
+      entry->onDownloadFinished(commands, e);
+    }
+    else {
+      processCheckIntegrityEntry(commands, std::move(entry), e);
+    }
     return;
   }
-
 #endif // ENABLE_BITTORRENT
 
   if (downloadContext_->getFileEntries().size() == 1) {
@@ -389,7 +545,7 @@ void RequestGroup::createInitialCommand(
       createNextCommand(commands, e, 1);
       return;
     }
-    auto progressInfoFile = std::make_shared<DefaultProgressInfoFile>(
+    auto progressInfoFile = std::make_shared<DefaultBtProgressInfoFile>(
         downloadContext_, nullptr, option_.get());
     adjustFilename(progressInfoFile);
     initPieceStorage();
@@ -419,7 +575,7 @@ void RequestGroup::createInitialCommand(
   if (downloadContext_->getFileEntries().size() > 1) {
     pieceStorage_->setupFileFilter();
   }
-  auto progressInfoFile = std::make_shared<DefaultProgressInfoFile>(
+  auto progressInfoFile = std::make_shared<DefaultBtProgressInfoFile>(
       downloadContext_, pieceStorage_, option_.get());
   removeDefunctControlFile(progressInfoFile);
   // Call Load, Save and file allocation command here
@@ -477,9 +633,43 @@ void RequestGroup::initPieceStorage()
   if (downloadContext_->knowsTotalLength() &&
       // Following conditions are needed for chunked encoding with
       // content-length = 0. Google's dl server used this before.
-      downloadContext_->getTotalLength() > 0) {
+      (downloadContext_->getTotalLength() > 0
+#ifdef ENABLE_BITTORRENT
+       || downloadContext_->hasAttribute(CTX_ATTR_BT)
+#endif // ENABLE_BITTORRENT
+           )) {
+#ifdef ENABLE_BITTORRENT
     auto ps =
         std::make_shared<DefaultPieceStorage>(downloadContext_, option_.get());
+    if (downloadContext_->hasAttribute(CTX_ATTR_BT)) {
+      if (isUriSuppliedForRequsetFileEntry(
+              downloadContext_->getFileEntries().begin(),
+              downloadContext_->getFileEntries().end())) {
+        // Use LongestSequencePieceSelector when HTTP/FTP/BitTorrent
+        // integrated downloads.
+        A2_LOG_DEBUG("Using LongestSequencePieceSelector");
+        ps->setPieceSelector(make_unique<LongestSequencePieceSelector>());
+      }
+      if (option_->defined(PREF_BT_PRIORITIZE_PIECE)) {
+        std::vector<size_t> result;
+        util::parsePrioritizePieceRange(result,
+                                        option_->get(PREF_BT_PRIORITIZE_PIECE),
+                                        downloadContext_->getFileEntries(),
+                                        downloadContext_->getPieceLength());
+        if (!result.empty()) {
+          std::shuffle(std::begin(result), std::end(result),
+                       *SimpleRandomizer::getInstance());
+          auto priSelector =
+              make_unique<PriorityPieceSelector>(ps->popPieceSelector());
+          priSelector->setPriorityPiece(std::begin(result), std::end(result));
+          ps->setPieceSelector(std::move(priSelector));
+        }
+      }
+    }
+#else  // !ENABLE_BITTORRENT
+    auto ps =
+        std::make_shared<DefaultPieceStorage>(downloadContext_, option_.get());
+#endif // !ENABLE_BITTORRENT
     if (requestGroupMan_) {
       ps->setWrDiskCache(requestGroupMan_->getWrDiskCache());
     }
@@ -516,12 +706,12 @@ void RequestGroup::initPieceStorage()
           DiskAdaptor::FILE_ALLOC_FALLOC &&
       isFileAllocationEnabled()) {
     if (!util::gainPrivilege(SE_MANAGE_VOLUME_NAME)) {
-      ARIA2_LOG_WARN("--file-allocation=falloc will not work properly.");
+      A2_LOG_WARN("--file-allocation=falloc will not work properly.");
     }
     else {
-      ARIA2_LOG_DEBUG("SE_MANAGE_VOLUME_NAME privilege acquired");
+      A2_LOG_DEBUG("SE_MANAGE_VOLUME_NAME privilege acquired");
 
-      ARIA2_LOG_WARN(
+      A2_LOG_WARN(
           "--file-allocation=falloc will use SetFileValidData() API, and "
           "aria2 uses uninitialized disk space which may contain "
           "confidential data as the download file space. If it is "
@@ -559,7 +749,7 @@ bool RequestGroup::downloadFinishedByFileLength()
 }
 
 void RequestGroup::adjustFilename(
-    const std::shared_ptr<ProgressInfoFile>& infoFile)
+    const std::shared_ptr<BtProgressInfoFile>& infoFile)
 {
   if (!isPreLocalFileCheckEnabled()) {
     // OK, no need to care about filename.
@@ -570,14 +760,14 @@ void RequestGroup::adjustFilename(
     if (requestGroupMan_->isSameFileBeingDownloaded(this)) {
       // The file name must be renamed
       tryAutoFileRenaming();
-      ARIA2_LOG_INFO(fmt(MSG_FILE_RENAMED, getFirstFilePath().c_str()));
+      A2_LOG_NOTICE(fmt(MSG_FILE_RENAMED, getFirstFilePath().c_str()));
       return;
     }
   }
   if (!option_->getAsBool(PREF_DRY_RUN) &&
       option_->getAsBool(PREF_REMOVE_CONTROL_FILE) && infoFile->exists()) {
     infoFile->removeFile();
-    ARIA2_LOG_INFO(fmt(_("Removed control file for %s because it is requested by"
+    A2_LOG_NOTICE(fmt(_("Removed control file for %s because it is requested by"
                         " user."),
                       infoFile->getFilename().c_str()));
   }
@@ -601,20 +791,20 @@ void RequestGroup::adjustFilename(
 }
 
 void RequestGroup::removeDefunctControlFile(
-    const std::shared_ptr<ProgressInfoFile>& progressInfoFile)
+    const std::shared_ptr<BtProgressInfoFile>& progressInfoFile)
 {
   // Remove the control file if download file doesn't exist
   if (progressInfoFile->exists() &&
       !pieceStorage_->getDiskAdaptor()->fileExists()) {
     progressInfoFile->removeFile();
-    ARIA2_LOG_INFO(fmt(MSG_REMOVED_DEFUNCT_CONTROL_FILE,
+    A2_LOG_NOTICE(fmt(MSG_REMOVED_DEFUNCT_CONTROL_FILE,
                       progressInfoFile->getFilename().c_str(),
                       downloadContext_->getBasePath().c_str()));
   }
 }
 
 void RequestGroup::loadAndOpenFile(
-    const std::shared_ptr<ProgressInfoFile>& progressInfoFile,
+    const std::shared_ptr<BtProgressInfoFile>& progressInfoFile,
     FileOpenMode fileOpenMode)
 {
   try {
@@ -663,7 +853,7 @@ void RequestGroup::shouldCancelDownloadForSafety()
   }
 
   tryAutoFileRenaming();
-  ARIA2_LOG_INFO(fmt(MSG_FILE_RENAMED, getFirstFilePath().c_str()));
+  A2_LOG_NOTICE(fmt(MSG_FILE_RENAMED, getFirstFilePath().c_str()));
 }
 
 void RequestGroup::tryAutoFileRenaming()
@@ -702,7 +892,7 @@ void RequestGroup::tryAutoFileRenaming()
   for (int i = 1; i < 10000; ++i) {
     auto newfilename = fmt("%s.%d%s", fn.c_str(), i, ext.c_str());
     File newfile(newfilename);
-    File ctrlfile(newfile.getPath() + DefaultProgressInfoFile::getSuffix());
+    File ctrlfile(newfile.getPath() + DefaultBtProgressInfoFile::getSuffix());
     if (!newfile.exists() || (newfile.exists() && ctrlfile.exists())) {
       downloadContext_->getFirstFileEntry()->setPath(newfile.getPath());
       return;
@@ -723,9 +913,7 @@ void RequestGroup::createNextCommandWithAdj(
   }
   else {
     numCommand = std::min(downloadContext_->getNumPieces(),
-                          static_cast<size_t>(httpRangeEnabled_
-                                                  ? numConcurrentCommand_
-                                                  : 1));
+                          static_cast<size_t>(numConcurrentCommand_));
     numCommand += numAdj;
   }
 
@@ -746,40 +934,18 @@ void RequestGroup::createNextCommand(
       numCommand = 1;
     }
   }
-  else if (numStreamCommand_ >= (httpRangeEnabled_ ? numConcurrentCommand_ : 1)) {
+  else if (numStreamCommand_ >= numConcurrentCommand_) {
     numCommand = 0;
   }
   else {
-    auto limit = httpRangeEnabled_ ? numConcurrentCommand_ : 1;
-    numCommand = std::min(downloadContext_->getNumPieces(),
-                          static_cast<size_t>(limit - numStreamCommand_));
+    numCommand = std::min(
+        downloadContext_->getNumPieces(),
+        static_cast<size_t>(numConcurrentCommand_ - numStreamCommand_));
   }
 
   if (numCommand > 0) {
     createNextCommand(commands, e, numCommand);
   }
-}
-
-int RequestGroup::countNextCommandForCompletedStream() const
-{
-  int activeAfterCurrent = std::max(0, numStreamCommand_ - 1);
-  int target;
-  if (getTotalLength() == 0) {
-    target = 1;
-  }
-  else {
-    auto limit = httpRangeEnabled_ ? numConcurrentCommand_ : 1;
-    target = static_cast<int>(
-        std::min(downloadContext_->getNumPieces(),
-                 static_cast<size_t>(limit)));
-  }
-  return std::max(0, target - activeAfterCurrent);
-}
-
-void RequestGroup::createNextCommandForCompletedStream(
-    std::vector<std::unique_ptr<Command>>& commands, DownloadEngine* e)
-{
-  createNextCommand(commands, e, countNextCommandForCompletedStream());
 }
 
 void RequestGroup::createNextCommand(
@@ -795,45 +961,6 @@ void RequestGroup::createNextCommand(
   }
 }
 
-void RequestGroup::disableHttpRangeForDownload()
-{
-  if (!httpRangeEnabled_) {
-    return;
-  }
-  httpRangeEnabled_ = false;
-  ++httpRangeGeneration_;
-  httpRangeFallbackRetryIssued_ = false;
-  if (segmentMan_) {
-    segmentMan_->cancelAllSegments();
-    segmentMan_->eraseSegmentWrittenLengthMemo();
-  }
-  if (pieceStorage_) {
-    pieceStorage_->markPiecesDone(0);
-  }
-}
-
-void RequestGroup::requireHttpMetadataRangeProbe()
-{
-  httpMetadataRangeProbeRequired_ = true;
-}
-
-bool RequestGroup::claimStreamRetrySlot(uint64_t commandHttpRangeGeneration)
-{
-  if (httpRangeEnabled_ || commandHttpRangeGeneration == httpRangeGeneration_) {
-    return true;
-  }
-  if (httpRangeFallbackRetryIssued_) {
-    return false;
-  }
-  httpRangeFallbackRetryIssued_ = true;
-  return true;
-}
-
-void RequestGroup::setNumConcurrentCommand(int num)
-{
-  numConcurrentCommand_ = num;
-}
-
 std::string RequestGroup::getFirstFilePath() const
 {
   assert(downloadContext_);
@@ -846,17 +973,6 @@ std::string RequestGroup::getFirstFilePath() const
 
 int64_t RequestGroup::getTotalLength() const
 {
-#ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
-    auto attrs = getLibtorrentAttrs(downloadContext_);
-    if (shouldUseLibtorrentResumeStatus(attrs)) {
-      return attrs->resumeStatus.totalLength;
-    }
-    if (attrs->status.hasStatus || attrs->status.totalLength > 0) {
-      return attrs->status.totalLength;
-    }
-  }
-#endif // ENABLE_BITTORRENT
   if (!pieceStorage_) {
     return 0;
   }
@@ -870,17 +986,6 @@ int64_t RequestGroup::getTotalLength() const
 
 int64_t RequestGroup::getCompletedLength() const
 {
-#ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
-    auto attrs = getLibtorrentAttrs(downloadContext_);
-    if (shouldUseLibtorrentResumeStatus(attrs)) {
-      return attrs->resumeStatus.completedLength;
-    }
-    if (attrs->status.hasStatus || attrs->status.completedLength > 0) {
-      return attrs->status.completedLength;
-    }
-  }
-#endif // ENABLE_BITTORRENT
   if (!pieceStorage_) {
     return 0;
   }
@@ -890,24 +995,6 @@ int64_t RequestGroup::getCompletedLength() const
   }
 
   return pieceStorage_->getCompletedLength();
-}
-
-int64_t RequestGroup::getInFlightCompletedLength() const
-{
-#ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
-    return 0;
-  }
-#endif // ENABLE_BITTORRENT
-  if (!pieceStorage_) {
-    return 0;
-  }
-
-  if (pieceStorage_->isSelectiveDownloadingMode()) {
-    return pieceStorage_->getFilteredInFlightCompletedLength();
-  }
-
-  return pieceStorage_->getInFlightCompletedLength();
 }
 
 void RequestGroup::validateFilename(const std::string& expectedFilename,
@@ -959,9 +1046,8 @@ int RequestGroup::getNumConnection() const
 {
   int numConnection = numStreamConnection_;
 #ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
-    auto attrs = getLibtorrentAttrs(downloadContext_);
-    numConnection += attrs->status.connections;
+  if (btRuntime_) {
+    numConnection += btRuntime_->getConnections();
   }
 #endif // ENABLE_BITTORRENT
   return numConnection;
@@ -973,7 +1059,7 @@ void RequestGroup::decreaseNumCommand()
 {
   --numCommand_;
   if (!numCommand_ && requestGroupMan_) {
-    ARIA2_LOG_DEBUG(fmt("GID#%s - Request queue check", gid_->toHex().c_str()));
+    A2_LOG_DEBUG(fmt("GID#%s - Request queue check", gid_->toHex().c_str()));
     requestGroupMan_->requestQueueCheck();
   }
 }
@@ -982,14 +1068,9 @@ TransferStat RequestGroup::calculateStat() const
 {
   TransferStat stat = downloadContext_->getNetStat().toTransferStat();
 #ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
-    auto attrs = getLibtorrentAttrs(downloadContext_);
-    if (attrs->status.hasStatus) {
-      stat.downloadSpeed = attrs->status.downloadSpeed;
-      stat.uploadSpeed = attrs->status.uploadSpeed;
-      stat.allTimeUploadLength = attrs->status.uploadedLength;
-    }
-    return stat;
+  if (btRuntime_) {
+    stat.allTimeUploadLength =
+        btRuntime_->getUploadLengthAtStartup() + stat.sessionUploadLength;
   }
 #endif // ENABLE_BITTORRENT
   return stat;
@@ -1002,10 +1083,15 @@ void RequestGroup::setHaltRequested(bool f, HaltReason haltReason)
     pauseRequested_ = false;
     haltReason_ = haltReason;
     if (!numCommand_ && requestGroupMan_) {
-      ARIA2_LOG_DEBUG(fmt("GID#%s - Request queue check", gid_->toHex().c_str()));
+      A2_LOG_DEBUG(fmt("GID#%s - Request queue check", gid_->toHex().c_str()));
       requestGroupMan_->requestQueueCheck();
     }
   }
+#ifdef ENABLE_BITTORRENT
+  if (btRuntime_) {
+    btRuntime_->setHalt(f);
+  }
+#endif // ENABLE_BITTORRENT
 }
 
 void RequestGroup::setForceHaltRequested(bool f, HaltReason haltReason)
@@ -1020,6 +1106,11 @@ void RequestGroup::setRestartRequested(bool f) { restartRequested_ = f; }
 
 void RequestGroup::releaseRuntimeResource(DownloadEngine* e)
 {
+#ifdef ENABLE_BITTORRENT
+  e->getBtRegistry()->remove(gid_->getNumericId());
+  btRuntime_ = nullptr;
+  peerStorage_ = nullptr;
+#endif // ENABLE_BITTORRENT
   if (pieceStorage_) {
     pieceStorage_->removeAdvertisedPiece(Timer::zero());
   }
@@ -1030,6 +1121,81 @@ void RequestGroup::releaseRuntimeResource(DownloadEngine* e)
   // Reset seedOnly_, so that we can handle pause/unpause-ing seeding
   // torrent with --bt-detach-seed-only.
   seedOnly_ = false;
+}
+
+void RequestGroup::preDownloadProcessing()
+{
+  A2_LOG_DEBUG(fmt("Finding PreDownloadHandler for path %s.",
+                   getFirstFilePath().c_str()));
+  try {
+    for (const auto& pdh : preDownloadHandlers_) {
+      if (pdh->canHandle(this)) {
+        pdh->execute(this);
+        return;
+      }
+    }
+  }
+  catch (RecoverableException& ex) {
+    A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, ex);
+    return;
+  }
+
+  A2_LOG_DEBUG("No PreDownloadHandler found.");
+  return;
+}
+
+void RequestGroup::postDownloadProcessing(
+    std::vector<std::shared_ptr<RequestGroup>>& groups)
+{
+  A2_LOG_DEBUG(fmt("Finding PostDownloadHandler for path %s.",
+                   getFirstFilePath().c_str()));
+  try {
+    for (const auto& pdh : postDownloadHandlers_) {
+      if (pdh->canHandle(this)) {
+        pdh->getNextRequestGroups(groups, this);
+        return;
+      }
+    }
+  }
+  catch (RecoverableException& ex) {
+    A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, ex);
+  }
+
+  A2_LOG_DEBUG("No PostDownloadHandler found.");
+}
+
+void RequestGroup::initializePreDownloadHandler()
+{
+#ifdef ENABLE_BITTORRENT
+  if (option_->get(PREF_FOLLOW_TORRENT) == V_MEM) {
+    preDownloadHandlers_.push_back(
+        download_handlers::getBtPreDownloadHandler());
+  }
+#endif // ENABLE_BITTORRENT
+#ifdef ENABLE_METALINK
+  if (option_->get(PREF_FOLLOW_METALINK) == V_MEM) {
+    preDownloadHandlers_.push_back(
+        download_handlers::getMetalinkPreDownloadHandler());
+  }
+#endif // ENABLE_METALINK
+}
+
+void RequestGroup::initializePostDownloadHandler()
+{
+#ifdef ENABLE_BITTORRENT
+  if (option_->getAsBool(PREF_FOLLOW_TORRENT) ||
+      option_->get(PREF_FOLLOW_TORRENT) == V_MEM) {
+    postDownloadHandlers_.push_back(
+        download_handlers::getBtPostDownloadHandler());
+  }
+#endif // ENABLE_BITTORRENT
+#ifdef ENABLE_METALINK
+  if (option_->getAsBool(PREF_FOLLOW_METALINK) ||
+      option_->get(PREF_FOLLOW_METALINK) == V_MEM) {
+    postDownloadHandlers_.push_back(
+        download_handlers::getMetalinkPostDownloadHandler());
+  }
+#endif // ENABLE_METALINK
 }
 
 bool RequestGroup::isDependencyResolved()
@@ -1051,19 +1217,28 @@ void RequestGroup::setDiskWriterFactory(
   diskWriterFactory_ = diskWriterFactory;
 }
 
+void RequestGroup::addPostDownloadHandler(const PostDownloadHandler* handler)
+{
+  postDownloadHandlers_.push_back(handler);
+}
+
+void RequestGroup::addPreDownloadHandler(const PreDownloadHandler* handler)
+{
+  preDownloadHandlers_.push_back(handler);
+}
+
+void RequestGroup::clearPostDownloadHandler() { postDownloadHandlers_.clear(); }
+
+void RequestGroup::clearPreDownloadHandler() { preDownloadHandlers_.clear(); }
+
 void RequestGroup::setPieceStorage(
     const std::shared_ptr<PieceStorage>& pieceStorage)
 {
   pieceStorage_ = pieceStorage;
 }
 
-void RequestGroup::setSegmentMan(const std::shared_ptr<SegmentMan>& segmentMan)
-{
-  segmentMan_ = segmentMan;
-}
-
 void RequestGroup::setProgressInfoFile(
-    const std::shared_ptr<ProgressInfoFile>& progressInfoFile)
+    const std::shared_ptr<BtProgressInfoFile>& progressInfoFile)
 {
   progressInfoFile_ = progressInfoFile;
 }
@@ -1078,7 +1253,7 @@ bool RequestGroup::needsFileAllocation() const
 
 std::shared_ptr<DownloadResult> RequestGroup::createDownloadResult() const
 {
-  ARIA2_LOG_DEBUG(fmt("GID#%s - Creating DownloadResult.", gid_->toHex().c_str()));
+  A2_LOG_DEBUG(fmt("GID#%s - Creating DownloadResult.", gid_->toHex().c_str()));
   TransferStat st = calculateStat();
   auto res = std::make_shared<DownloadResult>();
   res->gid = gid_;
@@ -1099,7 +1274,6 @@ std::shared_ptr<DownloadResult> RequestGroup::createDownloadResult() const
   res->metadataInfo = metadataInfo_;
   res->totalLength = getTotalLength();
   res->completedLength = getCompletedLength();
-  res->inFlightCompletedLength = getInFlightCompletedLength();
   res->uploadLength = st.allTimeUploadLength;
   if (pieceStorage_ && pieceStorage_->getBitfieldLength() > 0) {
     res->bitfield.assign(pieceStorage_->getBitfield(),
@@ -1107,10 +1281,9 @@ std::shared_ptr<DownloadResult> RequestGroup::createDownloadResult() const
                              pieceStorage_->getBitfieldLength());
   }
 #ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
-    auto attrs = getLibtorrentAttrs(downloadContext_);
-    res->infoHash = attrs->status.infoHash;
-    res->bitfield = attrs->status.bitfield;
+  if (downloadContext_->hasAttribute(CTX_ATTR_BT)) {
+    const unsigned char* p = bittorrent::getInfoHash(downloadContext_);
+    res->infoHash.assign(p, p + INFO_HASH_LENGTH);
   }
 #endif // ENABLE_BITTORRENT
   res->pieceLength = downloadContext_->getPieceLength();
@@ -1121,10 +1294,31 @@ std::shared_ptr<DownloadResult> RequestGroup::createDownloadResult() const
 
 void RequestGroup::reportDownloadFinished()
 {
-  ARIA2_LOG_INFO(fmt(MSG_FILE_DOWNLOAD_COMPLETED,
+  A2_LOG_NOTICE(fmt(MSG_FILE_DOWNLOAD_COMPLETED,
                     inMemoryDownload()
                         ? getFirstFilePath().c_str()
                         : downloadContext_->getBasePath().c_str()));
+  uriSelector_->resetCounters();
+#ifdef ENABLE_BITTORRENT
+  if (downloadContext_->hasAttribute(CTX_ATTR_BT)) {
+    TransferStat stat = calculateStat();
+    int64_t completedLength = getCompletedLength();
+    double shareRatio = completedLength == 0
+                            ? 0.0
+                            : 1.0 * stat.allTimeUploadLength / completedLength;
+    auto attrs = bittorrent::getTorrentAttrs(downloadContext_);
+    if (!attrs->metadata.empty()) {
+      A2_LOG_NOTICE(fmt(MSG_SHARE_RATIO_REPORT, shareRatio,
+                        util::abbrevSize(stat.allTimeUploadLength).c_str(),
+                        util::abbrevSize(completedLength).c_str()));
+    }
+  }
+#endif // ENABLE_BITTORRENT
+}
+
+void RequestGroup::setURISelector(std::unique_ptr<URISelector> uriSelector)
+{
+  uriSelector_ = std::move(uriSelector);
 }
 
 void RequestGroup::applyLastModifiedTimeToLocalFiles()
@@ -1132,10 +1326,10 @@ void RequestGroup::applyLastModifiedTimeToLocalFiles()
   if (!pieceStorage_ || !lastModifiedTime_.good()) {
     return;
   }
-  ARIA2_LOG_INFO(fmt("Applying Last-Modified time: %s",
+  A2_LOG_INFO(fmt("Applying Last-Modified time: %s",
                   lastModifiedTime_.toHTTPDate().c_str()));
   size_t n = pieceStorage_->getDiskAdaptor()->utime(Time(), lastModifiedTime_);
-  ARIA2_LOG_INFO(fmt("Last-Modified attrs of %lu files were updated.",
+  A2_LOG_INFO(fmt("Last-Modified attrs of %lu files were updated.",
                   static_cast<unsigned long>(n)));
 }
 
@@ -1205,7 +1399,7 @@ void RequestGroup::setDownloadContext(
 bool RequestGroup::p2pInvolved() const
 {
 #ifdef ENABLE_BITTORRENT
-  return downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT);
+  return downloadContext_->hasAttribute(CTX_ATTR_BT);
 #else  // !ENABLE_BITTORRENT
   return false;
 #endif // !ENABLE_BITTORRENT
@@ -1228,11 +1422,9 @@ void RequestGroup::enableSeedOnly()
 bool RequestGroup::isSeeder() const
 {
 #ifdef ENABLE_BITTORRENT
-  if (downloadContext_->hasAttribute(CTX_ATTR_LIBTORRENT)) {
-    auto attrs = getLibtorrentAttrs(downloadContext_);
-    return attrs->status.hasStatus && attrs->status.sharing;
-  }
-  return false;
+  return downloadContext_->hasAttribute(CTX_ATTR_BT) &&
+         !bittorrent::getTorrentAttrs(downloadContext_)->metadata.empty() &&
+         downloadFinished();
 #else  // !ENABLE_BITTORRENT
   return false;
 #endif // !ENABLE_BITTORRENT

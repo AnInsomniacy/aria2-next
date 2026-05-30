@@ -36,7 +36,7 @@
 
 #include <cstring>
 
-#include "ValueBaseFrameController.h"
+#include "XmlRpcRequestParserController.h"
 #include "ValueBaseStructParserStateImpl.h"
 #include "ValueBase.h"
 
@@ -61,7 +61,7 @@ std::unique_ptr<ValueBase> ValueBaseStructParserStateMachine::noResult()
 }
 
 ValueBaseStructParserStateMachine::ValueBaseStructParserStateMachine()
-    : ctrl_{make_unique<ValueBaseFrameController>()}
+    : ctrl_{make_unique<rpc::XmlRpcRequestParserController>()}
 {
   stateStack_.push(valueState);
 }
@@ -136,7 +136,7 @@ void ValueBaseStructParserStateMachine::popArrayFrame()
 
 void ValueBaseStructParserStateMachine::popDictFrame()
 {
-  ctrl_->popDictFrame();
+  ctrl_->popStructFrame();
 }
 
 void ValueBaseStructParserStateMachine::pushFrame() { ctrl_->pushFrame(); }

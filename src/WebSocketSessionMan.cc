@@ -32,17 +32,17 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "WebSocketSessionMan.h"
 
 #include <algorithm>
 #include <cassert>
 
-#include "BoostJsonValue.h"
+#include "WebSocketSession.h"
 #include "RequestGroup.h"
-#include "RpcWebSocketSession.h"
-#include "ValueBase.h"
+#include "json.h"
 #include "util.h"
+#include "WebSocketInteractionCommand.h"
+#include "LogFactory.h"
 
 namespace aria2 {
 
@@ -53,23 +53,23 @@ WebSocketSessionMan::WebSocketSessionMan() {}
 WebSocketSessionMan::~WebSocketSessionMan() = default;
 
 void WebSocketSessionMan::addSession(
-    const std::shared_ptr<RpcWebSocketSession>& session)
+    const std::shared_ptr<WebSocketSession>& wsSession)
 {
-  ARIA2_LOG_DEBUG("WebSocket session added.");
-  sessions_.insert(session);
+  A2_LOG_DEBUG("WebSocket session added.");
+  sessions_.insert(wsSession);
 }
 
 void WebSocketSessionMan::removeSession(
-    const std::shared_ptr<RpcWebSocketSession>& session)
+    const std::shared_ptr<WebSocketSession>& wsSession)
 {
-  ARIA2_LOG_DEBUG("WebSocket session removed.");
-  sessions_.erase(session);
+  A2_LOG_DEBUG("WebSocket session removed.");
+  sessions_.erase(wsSession);
 }
 
 size_t WebSocketSessionMan::countNotificationRecipients() const
 {
   return std::count_if(sessions_.begin(), sessions_.end(),
-                       [](const std::shared_ptr<RpcWebSocketSession>& session) {
+                       [](const std::shared_ptr<WebSocketSession>& session) {
                          return session->isAuthorized();
                        });
 }
@@ -85,12 +85,13 @@ void WebSocketSessionMan::addNotification(const std::string& method,
   auto params = List::g();
   params->append(std::move(eventSpec));
   dict->put("params", std::move(params));
-  std::string msg = json::serialize(dict.get());
+  std::string msg = json::encode(dict.get());
   for (auto& session : sessions_) {
     if (!session->isAuthorized()) {
       continue;
     }
-    session->sendText(msg);
+    session->addTextMessage(msg, false);
+    session->getCommand()->updateWriteCheck();
   }
 }
 

@@ -15,7 +15,6 @@
 
 #include "common.h"
 #include "ed2k_link.h"
-#include "Ed2kOutboundPacket.h"
 
 #include <deque>
 #include <string>
@@ -34,7 +33,7 @@ class SharedResponder {
 private:
   SharedStore* store_;
   UploadQueue* uploadQueue_;
-  std::deque<OutboundPacket>* outbox_;
+  std::deque<std::string>* outbox_;
   Endpoint endpoint_;
   std::string userHash_;
   RequestGroupMan* rgman_;
@@ -42,14 +41,12 @@ private:
   const SharedFile* findFile(const std::string& hash) const;
   void queuePacket(uint8_t protocol, uint8_t opcode,
                    const std::string& payload);
-  void queuePacket(uint8_t protocol, uint8_t opcode,
-                   const std::string& payload, bool fileData);
 
 public:
   SharedResponder(SharedStore* store, UploadQueue* uploadQueue,
                   RequestGroupMan* rgman, const Endpoint& endpoint,
                   const std::string& userHash,
-                  std::deque<OutboundPacket>& outbox);
+                  std::deque<std::string>& outbox);
 
   bool hasFile(const std::string& hash) const;
   void queueNoFile(const std::string& fileHash);

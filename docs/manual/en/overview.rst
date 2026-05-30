@@ -1,4 +1,4 @@
-Aria2 Next - The maintained download engine
+aria2 - The ultra fast download utility
 =======================================
 
 Aria2 Next maintenance note
@@ -19,26 +19,28 @@ You must use this program at your own risk.
 Introduction
 ------------
 
-Aria2 Next is a utility for downloading files. The supported protocols are
-HTTP(S), FTP, SFTP, BitTorrent, and ED2K file links. Aria2 Next can download a
+aria2 is a utility for downloading files. The supported protocols are
+HTTP(S), FTP, SFTP, BitTorrent, Metalink, and ED2K file links. aria2 can download a
 file from multiple sources/protocols and tries to utilize your maximum
-download bandwidth. It supports downloading a file from HTTP(S)/FTP/SFTP and
-BitTorrent at the same time, while the data downloaded from HTTP(S)/FTP/SFTP is
-uploaded to the BitTorrent swarm.
+download bandwidth. It supports downloading a file from
+HTTP(S)/FTP/SFTP and BitTorrent at the same time, while the data
+downloaded from HTTP(S)/FTP/SFTP is uploaded to the BitTorrent
+swarm. Using Metalink's chunk checksums, aria2 automatically validates
+chunks of data while downloading a file like BitTorrent.
 
-Aria2 Next includes native ED2K/eMule support reimplemented inside Aria2 Next's
-engine architecture from authoritative eMule, aMule, MLDonkey,
+Aria2 Next includes native ED2K/eMule support reimplemented inside aria2's
+existing engine architecture from authoritative eMule, aMule, MLDonkey,
 Wireshark, and protocol documentation references. The reference-alignment work
 is tracked in ``docs/maintenance/ed2k-refactor/``. Core ED2K/eMule behavior has
-been ported where it fits Aria2 Next, while obsolete legacy structures were
+been ported where it fits aria2-next, while obsolete legacy structures were
 removed or replaced with existing compatible integration surfaces.
 
 The maintained fork is located at https://github.com/AnInsomniacy/aria2-next.
-It preserves the maintained aria2-compatible command-line, configuration, session,
-and JSON-RPC surfaces.
+It preserves aria2 command-line, configuration, session, JSON-RPC, and
+libaria2 compatibility.
 
-See the `upstream aria2 Online Manual
-<https://aria2.github.io/manual/en/html/>`_ as a compatibility reference for inherited options and RPC methods.
+See the upstream `aria2 Online Manual
+<https://aria2.github.io/manual/en/html/>`_ to learn how to use aria2.
 
 Features
 --------
@@ -48,9 +50,11 @@ Here is a list of features:
 * Command-line interface
 * Download files through HTTP(S)/FTP/SFTP/BitTorrent/ED2K
 * Segmented downloading
+* Metalink version 4 (RFC 5854) support(HTTP/FTP/SFTP/BitTorrent)
+* Metalink version 3.0 support(HTTP/FTP/SFTP/BitTorrent)
+* Metalink/HTTP (RFC 6249) support
 * HTTP/1.1 implementation
 * HTTP Proxy support
-* Proxy resolution modes for automatic, direct, and explicitly configured proxy use
 * HTTP BASIC authentication support
 * HTTP Proxy authentication support
 * Well-known environment variables for proxy: ``http_proxy``,
@@ -70,14 +74,16 @@ Here is a list of features:
 * BitTorrent extensions: Fast extension, DHT, PEX, MSE/PSE,
   Multi-Tracker, UDP tracker
 * BitTorrent `WEB-Seeding <http://getright.com/seedtorrent.html>`_.
-  Aria2 Next requests chunks larger than the piece size to reduce the request
+  aria2 requests chunk more than piece size to reduce the request
   overhead. It also supports pipelined requests with piece size.
 * BitTorrent Local Peer Discovery
 * Rename/change the directory structure of BitTorrent downloads
   completely
-* JSON-RPC over HTTP and WebSocket interface
+* JSON-RPC (over HTTP and WebSocket)/XML-RPC interface
 * Run as a daemon process
-* Selective download in multi-file torrents
+* Selective download in multi-file torrent/Metalink
+* Chunk checksum validation in Metalink
+* Can disable segmented downloading in Metalink
 * Netrc support
 * Configuration file support
 * Download URIs found in a text file or stdin and the destination
@@ -93,8 +99,7 @@ Versioning
 Aria2 Next uses semantic versions. ``CMakeLists.txt`` is the version source of
 truth, and release tags use ``v{PROJECT_VERSION}``. Official release artifacts
 are built by the GitHub release workflow after a matching GitHub Release is
-published. Manual release workflow runs can validate release or debug profiles
-without publishing official assets.
+published.
 
 How to get source code
 ----------------------
@@ -112,63 +117,154 @@ Dependency
 ======================== ========================================
 features                  dependency
 ======================== ========================================
-HTTPS                    OpenSSL through libcurl and Aria2 Next
-SFTP and SCP             libcurl with its selected SSH backend
-BitTorrent               libtorrent-rasterbar and Boost headers
-ED2K                     Native Aria2 Next protocol code
-Checksum                 OpenSSL plus zlib for adler32 when enabled
-gzip and deflate         libcurl and zlib
-JSON-RPC over WebSocket  Boost.Beast and Boost.JSON
+HTTPS                    OpenSSL or GnuTLS or Windows
+SFTP                     libssh2
+BitTorrent               None. Optional: libnettle+libgmp or libgcrypt
+                         or OpenSSL (see note)
+ED2K                     None
+Metalink                 libxml2 or Expat.
+Checksum                 None. Optional: OpenSSL or libnettle or libgcrypt
+                         or Windows (see note)
+gzip, deflate in HTTP    zlib
+Async DNS                C-Ares
+Firefox3/Chromium cookie libsqlite3
+XML-RPC                  libxml2 or Expat.
+JSON-RPC over WebSocket  libnettle or libgcrypt or OpenSSL
 ======================== ========================================
 
-Aria2 Next uses OpenSSL as the only direct TLS and crypto backend. ED2K keeps
-its narrow native MD4 implementation for protocol compatibility and uses
-OpenSSL-backed MD5, SHA-1, and RC4 paths for remaining hash and obfuscation
-needs.
 
-You can disable BitTorrent support with ``-DARIA2_ENABLE_BITTORRENT=OFF``.
+.. note::
+
+  libxml2 has precedence over Expat if both libraries are installed.
+  If you prefer Expat, configure CMake with ``-DARIA2_WITH_LIBXML2=OFF -DARIA2_WITH_EXPAT=ON``.
+
+.. note::
+
+  OpenSSL has precedence over GnuTLS if both libraries are installed.
+  If you prefer GnuTLS, configure CMake with
+  ``-DARIA2_WITH_OPENSSL=OFF -DARIA2_WITH_GNUTLS=ON``.
+
+  On Windows, there is SSL implementation available that is based on
+  the native Windows SSL capabilities (Schannel) and it will be
+  preferred.  Hence neither GnuTLS nor OpenSSL is required on that
+  platform.  If you would like to disable this behavior, configure CMake with
+  ``-DARIA2_WITH_WINTLS=OFF``.
+
+.. note::
+
+  libnettle has precedence over libgcrypt if both libraries are
+  installed.  If you prefer libgcrypt, configure CMake with
+  ``-DARIA2_WITH_LIBNETTLE=OFF -DARIA2_WITH_LIBGCRYPT=ON``. If OpenSSL is selected over
+  GnuTLS, neither libnettle nor libgcrypt will be used.
+
+  If none of the optional dependencies are installed, an internal
+  implementation that only supports md5 and sha1 will be used.
+
+  On Windows, there is SSL implementation available that is based on
+  the native Windows capabilities and it will be preferred, unless aria2 is configured with ``-DARIA2_WITH_WINTLS=OFF``.
+
+A user can have one of the following configurations for SSL and crypto
+libraries:
+
+* OpenSSL
+* GnuTLS + libgcrypt
+* GnuTLS + libnettle
+* Windows TLS (Windows only)
+
+You can disable BitTorrent and Metalink support with
+``-DARIA2_ENABLE_BITTORRENT=OFF`` and ``-DARIA2_ENABLE_METALINK=OFF``.
+
+To enable async DNS support, you need c-ares.
+
+* c-ares: http://c-ares.haxx.se/
 
 How to build
 ------------
 
-Aria2 Next is primarily written in C++ and currently requires a C++17-aware
-compiler because the modernized runtime and dependency integration use C++17.
+aria2 is primarily written in C++. Initially, it was written based on
+C++98/C++03 standard features. We are now migrating aria2 to the C++11
+standard. The current source code requires a C++11 aware compiler. For
+well-known compilers, such as g++ and clang, the ``-std=c++11`` or
+``-std=c++0x`` flag must be supported.
 
-To build Aria2 Next from the source package, install CMake, Ninja, pkg-config, a
-C++17 compiler, and the development packages for the maintained dependency set:
+To build aria2 from the source package, you need the following
+development packages (package name may vary depending on the
+distribution you use):
 
-* libcurl-dev      (Required for HTTP, HTTPS, FTP, FTPS, SFTP, and SCP)
-* libssl-dev       (Required for TLS, crypto, checksums, and ED2K obfuscation)
-* libtorrent-rasterbar-dev (Required for BitTorrent support)
-* libboost-dev     (Required for Boost.JSON, Boost.Beast, Boost.Asio, and BitTorrent)
-* zlib1g-dev       (Required for compression and adler32 support when enabled)
+* libgnutls-dev    (Required for HTTPS, BitTorrent, Checksum support)
+* nettle-dev       (Required for BitTorrent, Checksum support)
+* libgmp-dev       (Required for BitTorrent)
+* libssh2-1-dev    (Required for SFTP support)
+* libc-ares-dev    (Required for async DNS support)
+* libxml2-dev      (Required for Metalink support)
+* zlib1g-dev       (Required for gzip, deflate decoding support in HTTP)
+* libsqlite3-dev   (Required for Firefox3/Chromium cookie support)
 * pkg-config       (Required to detect installed libraries)
-* cppunit          (Required to build the test suite)
+
+You can use libgcrypt-dev instead of nettle-dev and libgmp-dev:
+
+* libgpg-error-dev (Required for BitTorrent, Checksum support)
+* libgcrypt-dev    (Required for BitTorrent, Checksum support)
+
+You can use libssl-dev instead of
+libgnutls-dev, nettle-dev, libgmp-dev, libgpg-error-dev and libgcrypt-dev:
+
+* libssl-dev       (Required for HTTPS, BitTorrent, Checksum support)
+
+You can use libexpat1-dev instead of libxml2-dev:
+
+* libexpat1-dev    (Required for Metalink support)
+
+On Fedora you need the following packages: gcc, gcc-c++, kernel-devel,
+libgcrypt-devel, libxml2-devel, openssl-devel, cppunit
+
+Source builds require CMake, Ninja, pkg-config, a C++11 compiler, and the
+development packages for the features you want to enable. Modern maintained
+builds require OpenSSL 3.5 LTS or newer when the OpenSSL backend is selected.
+Install the documentation toolchain if you want to build the manual and man
+page::
+
+    $ python3 -m pip install 'sphinx>=8.2,<9' 'sphinx-rtd-theme>=3.0,<4'
+
+The quickest local build uses the default preset::
+
+    $ cmake --preset default
+    $ cmake --build --preset default
+    $ ctest --preset default
+
+A plain CMake invocation is also supported::
+
+    $ cmake -S . -B build/default -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    $ cmake --build build/default
+    $ ctest --test-dir build/default --output-on-failure
+
+To request a static release-style build, use::
+
+    $ cmake -S . -B build/static -G Ninja -DARIA2_ENABLE_STATIC=ON
+    $ cmake --build build/static
 
 The executable is located at ``build/default/aria2-next`` when using the default
 preset.
 
-The CMake configure step checks the maintained dependency set and fails with a
-clear error if a required dependency is missing.
+The CMake configure step checks available libraries and enables as many
+features as possible except experimental features not enabled by default.
 
-Aria2 Next checks the certificate of HTTPS servers by default. Official
-release builds use the platform trust source selected by their libcurl build:
-Windows uses the native certificate store, macOS uses Apple SecTrust, Linux uses
-libcurl/OpenSSL CA auto-discovery with default OpenSSL fallback paths, and
-Android shells may need an explicit ``--ca-certificate`` path. Set
-``-DARIA2_CA_BUNDLE=/path/to/ca-bundle`` to add an explicit direct OpenSSL
-bundle fallback for custom builds.
+Since 1.1.0, aria2 checks the certificate of HTTPS servers by default. If you
+build with OpenSSL or a recent GnuTLS version that has
+``gnutls_certificate_set_x509_system_trust()``, and the library is properly
+configured to locate the system-wide CA certificate store, aria2 loads those
+certificates at startup. If that system lookup fails, aria2 uses a detected CA
+bundle path as the backend fallback. Set
+``-DARIA2_CA_BUNDLE=/path/to/ca-bundle`` to choose that fallback explicitly.
 
-Proxy behavior is controlled by ``--proxy-mode``. ``auto`` is the command-line
-default and permits configured proxy options plus environment proxy variables.
-``direct`` disables proxy use for HTTP, HTTPS, and FTP transfers. ``manual``
-uses only explicitly configured Aria2 Next proxy options.
+Using WinTLS automatically uses the system certificate store, so an explicit CA
+bundle is not necessary for that backend.
 
 By default, the bash completion file named ``aria2-next`` is installed to the
 default documentation directory. To change that directory, set
 ``-DARIA2_BASH_COMPLETION_DIR=/path/to/directory``.
 
-Aria2 Next uses CppUnit for automated unit testing. CTest runs the tests executable.
+aria2 uses CppUnit for automated unit testing. CTest runs the tests executable.
 
 See `Cross-compiling Windows binary`_ to create a Windows binary.
 See `Cross-compiling Android binary`_ to create an Android binary.
@@ -179,7 +275,7 @@ Cross-compiling Windows binary
 In this section, we describe how to build a Windows binary using a
 mingw-w64 (http://mingw-w64.org/doku.php) cross-compiler on Debian
 Linux. The MinGW (http://www.mingw.org/) may not be able to build
-Aria2 Next.
+aria2.
 
 The easiest way to build a Windows binary is using
 ``packaging/docker/Dockerfile.mingw``. If you cannot use Dockerfile, then
@@ -191,11 +287,11 @@ toolchain file or explicit ``CMAKE_SYSTEM_NAME``, compiler, prefix, and
 Windows cross-build implementation. It assumes the following libraries have been
 built for cross-compilation:
 
+* c-ares
+* expat
+* sqlite3
 * zlib
-* libcurl
-* OpenSSL
-* Boost
-* libtorrent-rasterbar
+* libssh2
 * cppunit
 
 Some environment variables can be adjusted to change build settings:
@@ -213,7 +309,9 @@ Some environment variables can be adjusted to change build settings:
   ``PKG_CONFIG_LIBDIR``.
 
 For example, a 64-bit Windows build uses ``-DCMAKE_SYSTEM_NAME=Windows`` with
-``x86_64-w64-mingw32-gcc`` and ``x86_64-w64-mingw32-g++``.
+``x86_64-w64-mingw32-gcc`` and ``x86_64-w64-mingw32-g++``. If you want an
+installable libaria2 build, enable ``-DARIA2_ENABLE_LIBARIA2=ON`` and prepare
+matching shared or static external libraries.
 
 Cross-compiling Android binary
 ------------------------------
@@ -228,14 +326,14 @@ The maintained release workflow and Android Dockerfile are the reference Android
 cross-build implementations. They assume the following libraries have been built
 for cross-compilation:
 
-* libcurl
+* c-ares
 * openssl
+* expat
 * zlib
-* Boost
-* libtorrent-rasterbar
+* libssh2
 
 Build the dependency libraries as static libraries and install them under a
-single Android prefix. Then configure Aria2 Next with CMake using the Android NDK
+single Android prefix. Then configure aria2 with CMake using the Android NDK
 toolchain variables. The maintained Dockerfile reads the NDK baseline from
 ``packaging/dependencies.env`` and passes
 ``CMAKE_SYSTEM_NAME=Android``, ``CMAKE_ANDROID_NDK``,
@@ -250,42 +348,14 @@ Install the documentation dependencies first::
 
     $ python3 -m pip install 'sphinx>=8.2,<9' 'sphinx-rtd-theme>=3.0,<4'
 
-Aria2 Next man pages will be built when you run ``make`` if they are not
-up-to-date.  You can also build an HTML version of the Aria2 Next man page by
+aria2 man pages will be built when you run ``make`` if they are not
+up-to-date.  You can also build an HTML version of the aria2 man page by
 ``make html`` from the relevant ``docs/manual/<language>`` directory.
 The HTML version manual is also available
 `online <https://aria2.github.io/manual/en/html/>`_.
 
 BitTorrent
 -----------
-
-Aria2 Next uses libtorrent-rasterbar as its only BitTorrent backend.
-Torrent files and magnet links are routed through libtorrent for peer
-protocol, DHT, PEX, local peer discovery, UDP trackers, piece picking,
-endgame behavior, disk I/O, metadata exchange, and resume state.
-
-During magnet metadata download, JSON-RPC status reports metadata state under
-``bittorrent.metadata``. ``bittorrent.info`` is emitted only after stable
-torrent metadata exists.
-
-HTTP segmented transfer behavior
---------------------------------
-
-Segmented HTTP and HTTPS transfers validate ranged responses before writing
-body data. A valid ranged response must use status ``206 Partial Content``,
-provide a matching ``Content-Range`` header, and use identity encoding for the
-byte stream. If a server ignores Range and returns ``200 OK`` with the full
-body, Aria2 Next can downgrade that task to a single full-body transfer instead
-of writing full-body data into a fixed segment.
-
-ED2K progress
--------------
-
-ED2K exposes stable visible progress for frontends through
-``ed2k.visibleCompletedLength`` in addition to the lower level verified
-progress model. This prevents paused or waiting ED2K tasks from displaying a
-progress regression when in-flight data exists but has not yet become verified
-completed length.
 
 About file names
 ~~~~~~~~~~~~~~~~
@@ -305,17 +375,27 @@ multi-file mode
     downloaded files can be specified by -d option.
 
 Before download starts, a complete directory structure is created if
-needed. By default, Aria2 Next opens at most 100 files mentioned in
+needed. By default, aria2 opens at most 100 files mentioned in
 .torrent file, and directly writes to and reads from these files.
 The number of files to open simultaneously can be controlled by
 ``--bt-max-open-files`` option.
 
-DHT and UDP tracker
-~~~~~~~~~~~~~~~~~~~
+DHT
+~~~
 
-libtorrent-rasterbar owns the DHT and UDP tracker implementation. Use
-``--enable-dht`` and ``--dht-listen-port`` to control the DHT session
-and UDP listening ports exposed through Aria2 Next.
+aria2 supports mainline compatible DHT. By default, the routing table
+for IPv4 DHT is saved to ``$XDG_CACHE_HOME/aria2/dht.dat`` and the
+routing table for IPv6 DHT is saved to
+``$XDG_CACHE_HOME/aria2/dht6.dat`` unless files exist at
+``$HOME/.aria2/dht.dat`` or ``$HOME/.aria2/dht6.dat``. aria2 uses the
+same port number to listen on for both IPv4 and IPv6 DHT.
+
+UDP tracker
+~~~~~~~~~~~
+
+UDP tracker support is enabled when IPv4 DHT is enabled.  The port
+number of the UDP tracker is shared with DHT. Use ``--dht-listen-port``
+option to change the port number.
 
 Other things should be noted
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -323,13 +403,64 @@ Other things should be noted
 * ``-o`` option is used to change the file name of .torrent file itself,
   not a file name of a file in .torrent file. For this purpose, use
   ``--index-out`` option instead.
-* The port numbers that Aria2 Next uses by default are 6881-6999 for TCP
+* The port numbers that aria2 uses by default are 6881-6999 for TCP
   and UDP.
-* Aria2 Next does not configure port-forwarding automatically. Please
+* aria2 doesn't configure port-forwarding automatically. Please
   configure your router or firewall manually.
-* The default maximum number of peers per torrent is 55.
-* As of release 0.10.0, Aria2 Next stops sending request messages after
+* The maximum number of peers is 55. This limit may be exceeded when
+  the download rate is low. This download rate can be adjusted using
+  ``--bt-request-peer-speed-limit`` option.
+* As of release 0.10.0, aria2 stops sending request messages after
   selective download completes.
+
+Metalink
+--------
+
+The current Metalink implementation supports HTTP(S)/FTP/SFTP/BitTorrent.
+Other protocols in Metalink documents are ignored. Both Metalink4 (RFC 5854) and
+Metalink version 3.0 documents are supported.
+
+For checksum verification, md5, sha-1, sha-224, sha-256, sha-384, and
+sha-512 are supported. If multiple hash algorithms are provided, aria2
+uses a stronger one. If whole file checksum verification fails, aria2
+doesn't retry the download and just exits with a non-zero return code.
+
+The supported user preferences are version, language, location,
+protocol, and os.
+
+If chunk checksums are provided in the Metalink file, aria2 automatically
+validates chunks of data during download. This behavior can be turned
+off by a command-line option.
+
+If a signature is included in a Metalink file, aria2 saves it as a file
+after the completion of the download.  The file name is download
+file name + ".sig". If the same file already exists, the signature file is
+not saved.
+
+In Metalink4, a multi-file torrent could appear in metalink:metaurl
+element.  Since aria2 cannot download 2 same torrents at the same
+time, aria2 groups files in metalink:file element which has the same
+BitTorrent metaurl, and downloads them from a single BitTorrent swarm.
+This is a basically multi-file torrent download with file selection, so
+the adjacent files which are not in Metalink document but share the same
+piece with the selected file are also created.
+
+If relative URI is specified in metalink:url or metalink:metaurl
+element, aria2 uses the URI of Metalink file as base URI to resolve
+the relative URI. If relative URI is found in the Metalink file which is
+read from the local disk, aria2 uses the value of ``--metalink-base-uri``
+option as base URI. If this option is not specified, the relative URI
+will be ignored.
+
+Metalink/HTTP
+-------------
+
+The current implementation only uses rel=duplicate links.  aria2
+understands Digest header fields and check whether it matches the
+digest value from other sources. If it differs, drop the connection.
+aria2 also uses this digest value to perform checksum verification
+after the download is finished. aria2 recognizes geo value. To tell aria2
+which location you prefer, you can use ``--metalink-location`` option.
 
 netrc
 -----
@@ -341,13 +472,23 @@ should have correct permissions(600).
 WebSocket
 ---------
 
-The WebSocket server embedded in Aria2 Next implements the specification
+The WebSocket server embedded in aria2 implements the specification
 defined in RFC 6455. The supported protocol version is 13.
+
+libaria2
+--------
+
+The libaria2 is a C++ library that offers aria2 functionality to the
+client code. Currently, libaria2 is not built by default. To enable
+libaria2, use ``-DARIA2_ENABLE_LIBARIA2=ON`` CMake option.  By default,
+only the shared library is built. To build a static library, use
+``-DARIA2_ENABLE_STATIC=ON`` CMake option as well. See libaria2
+documentation to know how to use API.
 
 References
 ----------
 
-* `upstream aria2 Online Manual <https://aria2.github.io/manual/en/html/>`_
+* `aria2 Online Manual <https://aria2.github.io/manual/en/html/>`_
 * https://github.com/AnInsomniacy/aria2-next
 * `RFC 959 FILE TRANSFER PROTOCOL (FTP) <http://tools.ietf.org/html/rfc959>`_
 * `RFC 1738 Uniform Resource Locators (URL) <http://tools.ietf.org/html/rfc1738>`_
@@ -356,6 +497,8 @@ References
 * `RFC 3659 Extensions to FTP <http://tools.ietf.org/html/rfc3659>`_
 * `RFC 3986 Uniform Resource Identifier (URI): Generic Syntax <http://tools.ietf.org/html/rfc3986>`_
 * `RFC 4038 Application Aspects of IPv6 Transition <http://tools.ietf.org/html/rfc4038>`_
+* `RFC 5854 The Metalink Download Description Format <http://tools.ietf.org/html/rfc5854>`_
+* `RFC 6249 Metalink/HTTP: Mirrors and Hashes <http://tools.ietf.org/html/rfc6249>`_
 * `RFC 6265 HTTP State Management Mechanism <http://tools.ietf.org/html/rfc6265>`_
 * `RFC 6266 Use of the Content-Disposition Header Field in the Hypertext Transfer Protocol (HTTP) <http://tools.ietf.org/html/rfc6266>`_
 * `RFC 6455 The WebSocket Protocol <http://tools.ietf.org/html/rfc6455>`_
@@ -370,7 +513,6 @@ References
 * `BitTorrent: Multitracker Metadata Extension <http://www.bittorrent.org/beps/bep_0012.html>`_
 * `BitTorrent: UDP Tracker Protocol for BitTorrent <http://www.bittorrent.org/beps/bep_0015.html>`_
   and `BitTorrent udp-tracker protocol specification <http://www.rasterbar.com/products/libtorrent/udp_tracker_protocol.html>`_.
-* `libtorrent-rasterbar <https://www.libtorrent.org/>`_
 * `BitTorrent: WebSeed - HTTP/FTP Seeding (GetRight style) <http://www.bittorrent.org/beps/bep_0019.html>`_
 * `BitTorrent: Private Torrents <http://www.bittorrent.org/beps/bep_0027.html>`_
 * `BitTorrent: BitTorrent DHT Extensions for IPv6 <http://www.bittorrent.org/beps/bep_0032.html>`_

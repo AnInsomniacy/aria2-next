@@ -845,7 +845,8 @@ template <typename T> std::shared_ptr<T> copy(const std::shared_ptr<T>& a)
   return std::make_shared<T>(*a.get());
 }
 
-// If hostname is numeric, returns true only when domain == hostname.
+// This is a bit different from cookie_helper::domainMatch().  If
+// hostname is numeric host, then returns true if domain == hostname.
 // That is if domain starts with ".", then returns true if domain is a
 // suffix of hostname.  If domain does not start with ".", then
 // returns true if domain == hostname.  Otherwise returns true.

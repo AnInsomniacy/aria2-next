@@ -66,8 +66,6 @@ struct DownloadResult {
 
   int64_t completedLength;
 
-  int64_t inFlightCompletedLength;
-
   int64_t uploadLength;
 
   std::shared_ptr<GroupId> gid;

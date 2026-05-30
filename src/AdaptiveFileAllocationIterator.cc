@@ -32,11 +32,12 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "AdaptiveFileAllocationIterator.h"
 #include "BinaryStream.h"
 #include "SingleFileAllocationIterator.h"
 #include "RecoverableException.h"
+#include "LogFactory.h"
+#include "Logger.h"
 #include "a2functional.h"
 #ifdef HAVE_FALLOCATE
 #  include "FallocFileAllocationIterator.h"
@@ -57,19 +58,19 @@ void AdaptiveFileAllocationIterator::allocateChunk()
   if (!allocator_) {
 #ifdef HAVE_FALLOCATE
     try {
-      ARIA2_LOG_DEBUG("Testing file system supports fallocate.");
+      A2_LOG_DEBUG("Testing file system supports fallocate.");
       if (offset_ < totalLength_) {
         int64_t len =
             std::min(totalLength_ - offset_, static_cast<int64_t>(4_k));
         stream_->allocate(offset_, len, false);
         offset_ += len;
       }
-      ARIA2_LOG_DEBUG("File system supports fallocate.");
+      A2_LOG_DEBUG("File system supports fallocate.");
       allocator_ = make_unique<FallocFileAllocationIterator>(stream_, offset_,
                                                              totalLength_);
     }
     catch (RecoverableException& e) {
-      ARIA2_LOG_DEBUG("File system does not support fallocate.");
+      A2_LOG_DEBUG("File system does not support fallocate.");
       auto salloc = make_unique<SingleFileAllocationIterator>(stream_, offset_,
                                                               totalLength_);
       salloc->init();

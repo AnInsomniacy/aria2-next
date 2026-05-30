@@ -16,10 +16,8 @@
 #include "AbstractCommand.h"
 #include "ed2k_compression.h"
 #include "ed2k_link.h"
-#include "Ed2kOutboundPacket.h"
 #include "ed2k_packet.h"
 #include "ed2k_peer.h"
-#include "RateLimitTokenBucket.h"
 
 #include <array>
 #include <memory>
@@ -61,13 +59,13 @@ private:
   std::string connectedHostname_;
   std::string connectedAddr_;
   uint16_t connectedPort_;
-  std::deque<ed2k::OutboundPacket> outbox_;
+  std::deque<std::string> outbox_;
+  std::deque<bool> outboxEncrypted_;
   std::array<char, 6> headerBuf_;
   size_t headerRead_;
   ed2k::PacketHeader currentHeader_;
   std::string body_;
   size_t bodyRead_;
-  size_t bodyConsumeRead_;
   bool peerFileStatusReceived_;
   bool peerFileRequestSent_;
   bool peerAccepted_;
@@ -77,8 +75,6 @@ private:
   bool incoming_;
   bool serverRequestSent_;
   bool closeAfterOutbox_;
-  RateLimitTokenBucket downloadLimitBucket_;
-  RateLimitTokenBucket uploadLimitBucket_;
   std::deque<uint32_t> pendingCallbackClientIds_;
   ed2k::EmulePeerInfo localPeerInfo_;
   ed2k::EmulePeerInfo remotePeerInfo_;
@@ -118,9 +114,6 @@ private:
   bool flushOutbox();
   bool readHeader();
   bool readBody();
-  bool consumeLimitedBody();
-  int64_t ed2kDownloadLimit() const;
-  int64_t ed2kUploadLimit() const;
   void handlePacket();
   void handleServerPacket();
   void handlePeerPacket();

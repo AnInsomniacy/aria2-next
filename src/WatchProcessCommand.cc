@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 /*
  * Copyright 2011 Emmanuel Engelhart <kelson@kiwix.org>
  *
@@ -54,6 +53,8 @@
 #include "WatchProcessCommand.h"
 #include "DownloadEngine.h"
 #include "RequestGroupMan.h"
+#include "LogFactory.h"
+#include "Logger.h"
 #include "fmt.h"
 
 #ifdef __APPLE__
@@ -82,7 +83,7 @@ void WatchProcessCommand::process()
 {
   // Check process pid_ is running. If it is not running, shutdown
   // aria2.
-  ARIA2_LOG_DEBUG(fmt("Checking proess %u", pid_));
+  A2_LOG_DEBUG(fmt("Checking proess %u", pid_));
   bool waiting = true;
 #ifdef _WIN32
   HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, pid_);
@@ -111,7 +112,7 @@ void WatchProcessCommand::process()
   }
 #endif
   if (!waiting) {
-    ARIA2_LOG_INFO(fmt("CUID#%" PRId64
+    A2_LOG_INFO(fmt("CUID#%" PRId64
                     " - Process %u is not running. Commencing shutdown.",
                     getCuid(), pid_));
     if (forceHalt_) {

@@ -37,18 +37,39 @@
 #include <sstream>
 #include <cstring>
 
-#ifdef HAVE_LIBCURL
-#  include <curl/curl.h>
-#endif // HAVE_LIBCURL
 #ifdef HAVE_ZLIB
 #  include <zlib.h>
 #endif // HAVE_ZLIB
+#ifdef HAVE_LIBXML2
+#  include <libxml/xmlversion.h>
+#endif // HAVE_LIBXML2
+#ifdef HAVE_LIBEXPAT
+#  include <expat.h>
+#endif // HAVE_LIBEXPAT
+#ifdef HAVE_SQLITE3
+#  include <sqlite3.h>
+#endif // HAVE_SQLITE3
+#ifdef HAVE_LIBGNUTLS
+#  include <gnutls/gnutls.h>
+#endif // HAVE_LIBGNUTLS
 #ifdef HAVE_OPENSSL
 #  include <openssl/opensslv.h>
 #endif // HAVE_OPENSSL
+#ifdef HAVE_LIBGMP
+#  include <gmp.h>
+#endif // HAVE_LIBGMP
+#ifdef HAVE_LIBGCRYPT
+#  include <gcrypt.h>
+#endif // HAVE_LIBGCRYPT
+#ifdef HAVE_LIBCARES
+#  include <ares.h>
+#endif // HAVE_LIBCARES
 #ifdef HAVE_SYS_UTSNAME_H
 #  include <sys/utsname.h>
 #endif // HAVE_SYS_UTSNAME_H
+#ifdef HAVE_LIBSSH2
+#  include <libssh2.h>
+#endif // HAVE_LIBSSH2
 #include "util.h"
 
 namespace aria2 {
@@ -64,13 +85,7 @@ uint16_t getDefaultPort(const std::string& protocol)
   else if (protocol == "ftp") {
     return 21;
   }
-  else if (protocol == "ftps") {
-    return 990;
-  }
   else if (protocol == "sftp") {
-    return 22;
-  }
-  else if (protocol == "scp") {
     return 22;
   }
   else {
@@ -100,6 +115,14 @@ std::string featureSummary()
 const char* strSupportedFeature(int feature)
 {
   switch (feature) {
+  case (FEATURE_ASYNC_DNS):
+#ifdef ENABLE_ASYNC_DNS
+    return "Async DNS";
+#else  // !ENABLE_ASYNC_DNS
+    return nullptr;
+#endif // !ENABLE_ASYNC_DNS
+    break;
+
   case (FEATURE_BITTORRENT):
 #ifdef ENABLE_BITTORRENT
     return "BitTorrent";
@@ -110,6 +133,14 @@ const char* strSupportedFeature(int feature)
 
   case (FEATURE_ED2K):
     return "ED2K";
+    break;
+
+  case (FEATURE_FF3_COOKIE):
+#ifdef HAVE_SQLITE3
+    return "Firefox3 Cookie";
+#else  // !HAVE_SQLITE3
+    return nullptr;
+#endif // !HAVE_SQLITE3
     break;
 
   case (FEATURE_GZIP):
@@ -132,6 +163,30 @@ const char* strSupportedFeature(int feature)
     return "Message Digest";
     break;
 
+  case (FEATURE_METALINK):
+#ifdef ENABLE_METALINK
+    return "Metalink";
+#else  // !ENABLE_METALINK
+    return nullptr;
+#endif // !ENABLE_METALINK
+    break;
+
+  case (FEATURE_XML_RPC):
+#ifdef ENABLE_XML_RPC
+    return "XML-RPC";
+#else  // !ENABLE_XML_RPC
+    return nullptr;
+#endif // !ENABLE_XML_RPC
+    break;
+
+  case (FEATURE_SFTP):
+#ifdef HAVE_LIBSSH2
+    return "SFTP";
+#else  // !HAVE_LIBSSH2
+    return nullptr;
+#endif // !HAVE_LIBSSH2
+    break;
+
   default:
     return nullptr;
   }
@@ -140,20 +195,46 @@ const char* strSupportedFeature(int feature)
 std::string usedLibs()
 {
   std::string res;
-#ifdef HAVE_LIBCURL
-  auto curlInfo = curl_version_info(CURLVERSION_NOW);
-  if (curlInfo && curlInfo->version) {
-    res += "libcurl/";
-    res += curlInfo->version;
-    res += " ";
-  }
-#endif // HAVE_LIBCURL
 #ifdef HAVE_ZLIB
   res += "zlib/" ZLIB_VERSION " ";
 #endif // HAVE_ZLIB
+#ifdef HAVE_LIBXML2
+  res += "libxml2/" LIBXML_DOTTED_VERSION " ";
+#endif // HAVE_LIBXML2
+#ifdef HAVE_LIBEXPAT
+  res += fmt("expat/%d.%d.%d ", XML_MAJOR_VERSION, XML_MINOR_VERSION,
+             XML_MICRO_VERSION);
+#endif // HAVE_LIBEXPAT
+#ifdef HAVE_SQLITE3
+  res += "sqlite3/" SQLITE_VERSION " ";
+#endif // HAVE_SQLITE3
+#ifdef HAVE_WINTLS
+  res += "WinTLS ";
+#endif // HAVE_WINTLS
+#ifdef HAVE_LIBGNUTLS
+  res += "GnuTLS/" GNUTLS_VERSION " ";
+#endif // HAVE_LIBGNUTLS
 #ifdef HAVE_OPENSSL
   res += "OpenSSL/" OPENSSL_VERSION_STR " ";
 #endif // HAVE_OPENSSL
+#ifdef HAVE_LIBNETTLE
+  // No library version in header files.
+  res += "nettle ";
+#endif // HAVE_LIBNETTLE
+#ifdef HAVE_LIBGMP
+  res += fmt("GMP/%d.%d.%d ", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR,
+             __GNU_MP_VERSION_PATCHLEVEL);
+#endif // HAVE_LIBGMP
+#ifdef HAVE_LIBGCRYPT
+  res += "libgcrypt/" GCRYPT_VERSION " ";
+#endif // HAVE_LIBGCRYPT
+#ifdef HAVE_LIBCARES
+  res += "c-ares/" ARES_VERSION_STR " ";
+#endif // HAVE_LIBCARES
+
+#ifdef HAVE_LIBSSH2
+  res += "libssh2/" LIBSSH2_VERSION " ";
+#endif // HAVE_LIBSSH2
 
   if (!res.empty()) {
     res.erase(res.length() - 1);

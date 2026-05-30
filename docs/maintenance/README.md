@@ -26,17 +26,6 @@ maintenance task owns its own subdirectory.
 | `ed2k-download-hardening/capability-ledger.csv` | Active aMule-runtime capability and pruning ledger |
 | `ed2k-download-hardening/checkpoints/` | Active narrow ED2K download hardening checkpoint matrices |
 | `ed2k-download-hardening/progress.md` | Active chronological ED2K download hardening progress log |
-| `libtorrent-bt-migration/overview.md` | Active tracker entry point for the libtorrent BitTorrent replacement |
-| `libtorrent-bt-migration/roadmap.csv` | Active checkpoint index for the libtorrent BitTorrent replacement |
-| `libtorrent-bt-migration/capability-ledger.csv` | Active BitTorrent capability migration and removal ledger |
-| `libtorrent-bt-migration/checkpoints/` | Active checkpoint matrices for the libtorrent BitTorrent replacement |
-| `libtorrent-bt-migration/progress.md` | Active chronological libtorrent BitTorrent replacement progress log |
-| `core-modernization/overview.md` | Active tracker entry point for the core modernization migration |
-| `core-modernization/roadmap.csv` | Active checkpoint index for core modernization |
-| `core-modernization/capability-ledger.csv` | Active capability migration, retention, replacement, and removal ledger |
-| `core-modernization/dependency-ledger.csv` | Active dependency ownership, packaging, and removal ledger |
-| `core-modernization/checkpoints/` | Active checkpoint matrices for core modernization |
-| `core-modernization/progress.md` | Active chronological core modernization progress log |
 
 Maintenance records should be durable and compact. Temporary API payloads,
 scratch research files, generated reports, local caches, and conversation logs

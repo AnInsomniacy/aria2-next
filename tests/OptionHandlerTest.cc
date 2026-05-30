@@ -19,7 +19,6 @@ class OptionHandlerTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testNumberOptionHandler_min_max);
   CPPUNIT_TEST(testUnitNumberOptionHandler);
   CPPUNIT_TEST(testParameterOptionHandler);
-  CPPUNIT_TEST(testTorrentMetadataOptionHandler);
   CPPUNIT_TEST(testDefaultOptionHandler);
   CPPUNIT_TEST(testFloatNumberOptionHandler);
   CPPUNIT_TEST(testFloatNumberOptionHandler_min);
@@ -37,7 +36,6 @@ public:
   void testNumberOptionHandler_min_max();
   void testUnitNumberOptionHandler();
   void testParameterOptionHandler();
-  void testTorrentMetadataOptionHandler();
   void testDefaultOptionHandler();
   void testFloatNumberOptionHandler();
   void testFloatNumberOptionHandler_min();
@@ -178,28 +176,6 @@ void OptionHandlerTest::testParameterOptionHandler()
   }
   CPPUNIT_ASSERT_EQUAL(std::string("value1, value2"),
                        handler.createPossibleValuesString());
-}
-
-void OptionHandlerTest::testTorrentMetadataOptionHandler()
-{
-  ParameterOptionHandler handler(PREF_TORRENT_METADATA, "", "start",
-                                 {"save", "start", "memory"});
-  Option option;
-  handler.parse(option, "save");
-  CPPUNIT_ASSERT_EQUAL(std::string("save"),
-                       option.get(PREF_TORRENT_METADATA));
-  handler.parse(option, "start");
-  CPPUNIT_ASSERT_EQUAL(std::string("start"),
-                       option.get(PREF_TORRENT_METADATA));
-  handler.parse(option, "memory");
-  CPPUNIT_ASSERT_EQUAL(std::string("memory"),
-                       option.get(PREF_TORRENT_METADATA));
-  try {
-    handler.parse(option, "follow");
-    CPPUNIT_FAIL("exception must be thrown.");
-  }
-  catch (Exception& e) {
-  }
 }
 
 void OptionHandlerTest::testDefaultOptionHandler()

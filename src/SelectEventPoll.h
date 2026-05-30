@@ -41,6 +41,9 @@
 #include <map>
 
 #include "a2functional.h"
+#ifdef ENABLE_ASYNC_DNS
+#  include "AsyncNameResolver.h"
+#endif // ENABLE_ASYNC_DNS
 
 namespace aria2 {
 
@@ -110,6 +113,40 @@ private:
     void processEvents(int events);
   };
 
+#ifdef ENABLE_ASYNC_DNS
+
+  class AsyncNameResolverEntry {
+  private:
+    std::shared_ptr<AsyncNameResolver> nameResolver_;
+
+    Command* command_;
+
+  public:
+    AsyncNameResolverEntry(
+        const std::shared_ptr<AsyncNameResolver>& nameResolver,
+        Command* command);
+
+    AsyncNameResolverEntry(const AsyncNameResolverEntry&) = delete;
+    AsyncNameResolverEntry(AsyncNameResolverEntry&&) = default;
+
+    bool operator==(const AsyncNameResolverEntry& entry)
+    {
+      return *nameResolver_ == *entry.nameResolver_ &&
+             command_ == entry.command_;
+    }
+
+    bool operator<(const AsyncNameResolverEntry& entry)
+    {
+      return nameResolver_.get() < entry.nameResolver_.get() ||
+             (nameResolver_.get() == entry.nameResolver_.get() &&
+              command_ < entry.command_);
+    }
+
+    ares_socket_t getFds(fd_set* rfdsPtr, fd_set* wfdsPtr);
+
+    void process(fd_set* rfdsPtr, fd_set* wfdsPtr);
+  };
+#endif // ENABLE_ASYNC_DNS
 
   fd_set rfdset_;
   fd_set wfdset_;
@@ -122,6 +159,12 @@ private:
 
   typedef std::map<sock_t, SocketEntry> SocketEntrySet;
   SocketEntrySet socketEntries_;
+#ifdef ENABLE_ASYNC_DNS
+  typedef std::map<std::pair<AsyncNameResolver*, Command*>,
+                   AsyncNameResolverEntry>
+      AsyncNameResolverEntrySet;
+  AsyncNameResolverEntrySet nameResolverEntries_;
+#endif // ENABLE_ASYNC_DNS
 
   void updateFdSet();
 
@@ -137,6 +180,15 @@ public:
 
   virtual bool deleteEvents(sock_t socket, Command* command,
                             EventPoll::EventType events) CXX11_OVERRIDE;
+#ifdef ENABLE_ASYNC_DNS
+
+  virtual bool
+  addNameResolver(const std::shared_ptr<AsyncNameResolver>& resolver,
+                  Command* command) CXX11_OVERRIDE;
+  virtual bool
+  deleteNameResolver(const std::shared_ptr<AsyncNameResolver>& resolver,
+                     Command* command) CXX11_OVERRIDE;
+#endif // ENABLE_ASYNC_DNS
 };
 
 } // namespace aria2

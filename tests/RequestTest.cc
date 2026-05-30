@@ -2,6 +2,9 @@
 
 #include <cppunit/extensions/HelperMacros.h>
 
+#include "Netrc.h"
+#include "DefaultAuthResolver.h"
+#include "NetrcAuthResolver.h"
 #include "uri.h"
 
 namespace aria2 {
@@ -12,10 +15,13 @@ class RequestTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testSetUri1);
   CPPUNIT_TEST(testSetUri2);
   CPPUNIT_TEST(testSetUri7);
+  CPPUNIT_TEST(testSetUri_supportsPersistentConnection);
   CPPUNIT_TEST(testRedirectUri);
   CPPUNIT_TEST(testRedirectUri2);
+  CPPUNIT_TEST(testRedirectUri_supportsPersistentConnection);
   CPPUNIT_TEST(testRedirectUri_uriNormalization);
   CPPUNIT_TEST(testResetUri);
+  CPPUNIT_TEST(testResetUri_supportsPersistentConnection);
   CPPUNIT_TEST(testInnerLink);
   CPPUNIT_TEST(testInnerLinkInReferer);
   CPPUNIT_TEST(testGetURIHost);
@@ -25,10 +31,13 @@ public:
   void testSetUri1();
   void testSetUri2();
   void testSetUri7();
+  void testSetUri_supportsPersistentConnection();
   void testRedirectUri();
   void testRedirectUri2();
+  void testRedirectUri_supportsPersistentConnection();
   void testRedirectUri_uriNormalization();
   void testResetUri();
+  void testResetUri_supportsPersistentConnection();
   void testInnerLink();
   void testInnerLinkInReferer();
   void testGetURIHost();
@@ -87,6 +96,7 @@ void RequestTest::testSetUri7()
 void RequestTest::testRedirectUri()
 {
   Request req;
+  req.supportsPersistentConnection(false);
   req.setUri("http://aria.rednoah.com:8080/aria2/index.html");
 
   // See port number is preserved.
@@ -96,6 +106,8 @@ void RequestTest::testRedirectUri()
   CPPUNIT_ASSERT_EQUAL(1, req.getRedirectCount());
 
   CPPUNIT_ASSERT(req.redirectUri("http://aria.rednoah.co.jp/"));
+  // persistent connection flag is set to be true after redirection
+  CPPUNIT_ASSERT(req.supportsPersistentConnection());
   // uri must be the same
   CPPUNIT_ASSERT_EQUAL(std::string("http://aria.rednoah.com:8080/aria2/"
                                    "index.html"),
@@ -194,6 +206,36 @@ void RequestTest::testInnerLinkInReferer()
   req.setReferer("http://aria.rednoah.com/home.html#top");
   CPPUNIT_ASSERT_EQUAL(std::string("http://aria.rednoah.com/home.html"),
                        req.getReferer());
+}
+
+void RequestTest::testSetUri_supportsPersistentConnection()
+{
+  Request req;
+  CPPUNIT_ASSERT(req.setUri("http://host/file"));
+  req.supportsPersistentConnection(false);
+  CPPUNIT_ASSERT(!req.supportsPersistentConnection());
+  req.setUri("http://host/file");
+  CPPUNIT_ASSERT(req.supportsPersistentConnection());
+}
+
+void RequestTest::testResetUri_supportsPersistentConnection()
+{
+  Request req;
+  CPPUNIT_ASSERT(req.setUri("http://host/file"));
+  req.supportsPersistentConnection(false);
+  CPPUNIT_ASSERT(!req.supportsPersistentConnection());
+  req.resetUri();
+  CPPUNIT_ASSERT(req.supportsPersistentConnection());
+}
+
+void RequestTest::testRedirectUri_supportsPersistentConnection()
+{
+  Request req;
+  CPPUNIT_ASSERT(req.setUri("http://host/file"));
+  req.supportsPersistentConnection(false);
+  CPPUNIT_ASSERT(!req.supportsPersistentConnection());
+  req.redirectUri("http://host/file");
+  CPPUNIT_ASSERT(req.supportsPersistentConnection());
 }
 
 void RequestTest::testRedirectUri_uriNormalization()

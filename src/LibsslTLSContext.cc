@@ -32,10 +32,8 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "LibsslTLSContext.h"
 
-#include <algorithm>
 #include <cassert>
 #include <sstream>
 
@@ -43,10 +41,11 @@
 #include <openssl/pkcs12.h>
 #include <openssl/bio.h>
 
+#include "LogFactory.h"
+#include "Logger.h"
 #include "fmt.h"
 #include "message.h"
 #include "BufferedFile.h"
-#include "File.h"
 
 namespace {
 struct bio_deleter {
@@ -107,7 +106,7 @@ OpenSSLTLSContext::OpenSSLTLSContext(TLSSessionSide side, TLSVersion minVer)
   }
   else {
     good_ = false;
-    ARIA2_LOG_ERROR(fmt("SSL_CTX_new() failed. Cause: %s",
+    A2_LOG_ERROR(fmt("SSL_CTX_new() failed. Cause: %s",
                      ERR_error_string(ERR_get_error(), nullptr)));
     return;
   }
@@ -148,7 +147,7 @@ OpenSSLTLSContext::OpenSSLTLSContext(TLSSessionSide side, TLSVersion minVer)
 #endif
   if (SSL_CTX_set_cipher_list(sslCtx_, "HIGH:!aNULL:!eNULL") == 0) {
     good_ = false;
-    ARIA2_LOG_ERROR(fmt("SSL_CTX_set_cipher_list() failed. Cause: %s",
+    A2_LOG_ERROR(fmt("SSL_CTX_set_cipher_list() failed. Cause: %s",
                      ERR_error_string(ERR_get_error(), nullptr)));
   }
 
@@ -161,34 +160,28 @@ bool OpenSSLTLSContext::good() const { return good_; }
 bool OpenSSLTLSContext::addCredentialFile(const std::string& certfile,
                                           const std::string& keyfile)
 {
-  if (!sslCtx_) {
-    return false;
-  }
   if (keyfile.empty()) {
     return addP12CredentialFile(certfile);
   }
   if (SSL_CTX_use_PrivateKey_file(sslCtx_, keyfile.c_str(), SSL_FILETYPE_PEM) !=
       1) {
-    ARIA2_LOG_ERROR(fmt("Failed to load private key from %s. Cause: %s",
+    A2_LOG_ERROR(fmt("Failed to load private key from %s. Cause: %s",
                      keyfile.c_str(),
                      ERR_error_string(ERR_get_error(), nullptr)));
     return false;
   }
   if (SSL_CTX_use_certificate_chain_file(sslCtx_, certfile.c_str()) != 1) {
-    ARIA2_LOG_ERROR(fmt("Failed to load certificate from %s. Cause: %s",
+    A2_LOG_ERROR(fmt("Failed to load certificate from %s. Cause: %s",
                      certfile.c_str(),
                      ERR_error_string(ERR_get_error(), nullptr)));
     return false;
   }
-  ARIA2_LOG_INFO(fmt("Credential files(cert=%s, key=%s) were successfully added.",
+  A2_LOG_INFO(fmt("Credential files(cert=%s, key=%s) were successfully added.",
                   certfile.c_str(), keyfile.c_str()));
   return true;
 }
 bool OpenSSLTLSContext::addP12CredentialFile(const std::string& p12file)
 {
-  if (!sslCtx_) {
-    return false;
-  }
   std::stringstream ss;
   BufferedFile(p12file.c_str(), BufferedFile::READ).transfer(ss);
 
@@ -198,23 +191,41 @@ bool OpenSSLTLSContext::addP12CredentialFile(const std::string& p12file)
   bio_t bio(BIO_new_mem_buf(ptr, len));
 
   if (!bio) {
-    ARIA2_LOG_ERROR("Failed to open PKCS12 file: no memory.");
+    A2_LOG_ERROR("Failed to open PKCS12 file: no memory.");
     return false;
   }
   p12_t p12(d2i_PKCS12_bio(bio.get(), nullptr));
   if (!p12) {
-    ARIA2_LOG_ERROR(fmt("Failed to open PKCS12 file: %s. "
-                     "If you meant to use PEM, also specify --private-key.",
-                     ERR_error_string(ERR_get_error(), nullptr)));
+    if (side_ == TLS_SERVER) {
+      A2_LOG_ERROR(fmt("Failed to open PKCS12 file: %s. "
+                       "If you meant to use PEM, you'll also have to specify "
+                       "--rpc-private-key. See the manual.",
+                       ERR_error_string(ERR_get_error(), nullptr)));
+    }
+    else {
+      A2_LOG_ERROR(fmt("Failed to open PKCS12 file: %s. "
+                       "If you meant to use PEM, you'll also have to specify "
+                       "--private-key. See the manual.",
+                       ERR_error_string(ERR_get_error(), nullptr)));
+    }
     return false;
   }
   EVP_PKEY* pkey;
   X509* cert;
   STACK_OF(X509)* ca = nullptr;
   if (!PKCS12_parse(p12.get(), "", &pkey, &cert, &ca)) {
-    ARIA2_LOG_ERROR(fmt("Failed to parse PKCS12 file: %s. "
-                     "If you meant to use PEM, also specify --private-key.",
-                     ERR_error_string(ERR_get_error(), nullptr)));
+    if (side_ == TLS_SERVER) {
+      A2_LOG_ERROR(fmt("Failed to parse PKCS12 file: %s. "
+                       "If you meant to use PEM, you'll also have to specify "
+                       "--rpc-private-key. See the manual.",
+                       ERR_error_string(ERR_get_error(), nullptr)));
+    }
+    else {
+      A2_LOG_ERROR(fmt("Failed to parse PKCS12 file: %s. "
+                       "If you meant to use PEM, you'll also have to specify "
+                       "--private-key. See the manual.",
+                       ERR_error_string(ERR_get_error(), nullptr)));
+    }
     return false;
   }
 
@@ -223,105 +234,61 @@ bool OpenSSLTLSContext::addP12CredentialFile(const std::string& p12file)
   x509_sk_t ca_holder(ca);
 
   if (!pkey || !cert) {
-    ARIA2_LOG_ERROR(fmt("Failed to use PKCS12 file: no pkey or cert %s",
+    A2_LOG_ERROR(fmt("Failed to use PKCS12 file: no pkey or cert %s",
                      ERR_error_string(ERR_get_error(), nullptr)));
     return false;
   }
   if (!SSL_CTX_use_PrivateKey(sslCtx_, pkey)) {
-    ARIA2_LOG_ERROR(fmt("Failed to use PKCS12 file pkey: %s",
+    A2_LOG_ERROR(fmt("Failed to use PKCS12 file pkey: %s",
                      ERR_error_string(ERR_get_error(), nullptr)));
     return false;
   }
   if (!SSL_CTX_use_certificate(sslCtx_, cert)) {
-    ARIA2_LOG_ERROR(fmt("Failed to use PKCS12 file cert: %s",
+    A2_LOG_ERROR(fmt("Failed to use PKCS12 file cert: %s",
                      ERR_error_string(ERR_get_error(), nullptr)));
     return false;
   }
   if (ca && sk_X509_num(ca) && !SSL_CTX_add_extra_chain_cert(sslCtx_, ca)) {
-    ARIA2_LOG_ERROR(fmt("Failed to use PKCS12 file chain: %s",
+    A2_LOG_ERROR(fmt("Failed to use PKCS12 file chain: %s",
                      ERR_error_string(ERR_get_error(), nullptr)));
     return false;
   }
 
-  ARIA2_LOG_INFO("Using certificate and key from PKCS12 file");
+  A2_LOG_INFO("Using certificate and key from PKCS12 file");
   return true;
 }
 
 bool OpenSSLTLSContext::addSystemTrustedCACerts()
 {
-  if (!sslCtx_) {
-    return false;
-  }
   if (SSL_CTX_set_default_verify_paths(sslCtx_) != 1) {
-    ARIA2_LOG_INFO(fmt(MSG_LOADING_SYSTEM_TRUSTED_CA_CERTS_FAILED,
+    A2_LOG_INFO(fmt(MSG_LOADING_SYSTEM_TRUSTED_CA_CERTS_FAILED,
                     ERR_error_string(ERR_get_error(), nullptr)));
     return false;
   }
   else {
-    ARIA2_LOG_INFO("System trusted CA certificates were successfully added.");
+    A2_LOG_INFO("System trusted CA certificates were successfully added.");
     return true;
   }
 }
 
 bool OpenSSLTLSContext::addDefaultCABundle()
 {
-  if (!sslCtx_) {
-    return false;
-  }
 #ifdef CA_BUNDLE
-  if (File(CA_BUNDLE).isFile()) {
-    return addTrustedCACertFile(CA_BUNDLE);
-  }
-#endif // CA_BUNDLE
-  for (const auto& path : getExistingDefaultCABundles()) {
-    if (addTrustedCACertFile(path)) {
-      return true;
-    }
-  }
+  return addTrustedCACertFile(CA_BUNDLE);
+#else  // !CA_BUNDLE
   return false;
-}
-
-std::vector<std::string> OpenSSLTLSContext::getDefaultCABundleCandidates()
-{
-  std::vector<std::string> candidates = {
-      "/etc/ssl/certs/ca-certificates.crt",
-      "/etc/pki/tls/certs/ca-bundle.crt",
-      "/usr/share/ssl/certs/ca-bundle.crt",
-      "/usr/local/share/certs/ca-root-nss.crt",
-      "/etc/ssl/cert.pem",
-      "/usr/local/etc/ssl/cert.pem",
-      "/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem",
-      "/etc/ssl/ca-bundle.pem",
-      "/etc/ssl/certs/ca-bundle.crt",
-  };
-  candidates.erase(std::unique(candidates.begin(), candidates.end()),
-                   candidates.end());
-  return candidates;
-}
-
-std::vector<std::string> OpenSSLTLSContext::getExistingDefaultCABundles()
-{
-  std::vector<std::string> paths;
-  for (const auto& path : getDefaultCABundleCandidates()) {
-    if (File(path).isFile()) {
-      paths.push_back(path);
-    }
-  }
-  return paths;
+#endif // !CA_BUNDLE
 }
 
 bool OpenSSLTLSContext::addTrustedCACertFile(const std::string& certfile)
 {
-  if (!sslCtx_) {
-    return false;
-  }
   if (SSL_CTX_load_verify_locations(sslCtx_, certfile.c_str(), nullptr) != 1) {
-    ARIA2_LOG_ERROR(fmt(MSG_LOADING_TRUSTED_CA_CERT_FAILED, certfile.c_str(),
+    A2_LOG_ERROR(fmt(MSG_LOADING_TRUSTED_CA_CERT_FAILED, certfile.c_str(),
                      ERR_error_string(ERR_get_error(), nullptr)));
     return false;
   }
   else {
-    ARIA2_LOG_INFO("Trusted CA certificates were successfully added.");
+    A2_LOG_INFO("Trusted CA certificates were successfully added.");
     return true;
   }
 }

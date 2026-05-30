@@ -24,7 +24,7 @@ if(NOT ARIA2_CA_BUNDLE AND NOT WIN32)
       /etc/ssl/cert.pem)
     if(EXISTS "${aria2_ca_bundle_candidate}")
       set(ARIA2_CA_BUNDLE "${aria2_ca_bundle_candidate}" CACHE FILEPATH
-          "CA bundle fallback path for OpenSSL builds" FORCE)
+          "CA bundle fallback path for OpenSSL and GnuTLS builds" FORCE)
       break()
     endif()
   endforeach()
@@ -285,102 +285,91 @@ if(ARIA2_WITH_ZLIB AND ZLIB_FOUND)
   check_function_exists(gzsetparams HAVE_GZSETPARAMS)
   cmake_pop_check_state()
 endif()
-if(ARIA2_WITH_ZLIB AND NOT ZLIB_FOUND)
-  message(FATAL_ERROR
-    "aria2-next requires zlib ${ARIA2_MIN_ZLIB_VERSION} or newer.")
+
+aria2_pkg_check(LIBXML2 "libxml-2.0>=${ARIA2_MIN_LIBXML2_VERSION}")
+if(ARIA2_WITH_LIBXML2 AND LIBXML2_FOUND)
+  set(HAVE_LIBXML2 1)
 endif()
 
-aria2_pkg_check(LIBCURL "libcurl>=${ARIA2_MIN_LIBCURL_VERSION}")
-if(NOT LIBCURL_FOUND)
-  message(FATAL_ERROR
-    "aria2-next requires libcurl ${ARIA2_MIN_LIBCURL_VERSION} or newer. "
-    "Install libcurl development files.")
+if(ARIA2_WITH_EXPAT AND NOT HAVE_LIBXML2)
+  aria2_pkg_check(EXPAT "expat")
+  if(EXPAT_FOUND)
+    set(HAVE_LIBEXPAT 1)
+  endif()
 endif()
-set(HAVE_LIBCURL 1)
 
+aria2_pkg_check(SQLITE3 "sqlite3>=${ARIA2_MIN_SQLITE3_VERSION}")
+if(ARIA2_WITH_SQLITE3 AND SQLITE3_FOUND)
+  set(HAVE_SQLITE3 1)
+  cmake_push_check_state(RESET)
+  set(CMAKE_REQUIRED_LIBRARIES PkgConfig::SQLITE3)
+  check_function_exists(sqlite3_open_v2 HAVE_SQLITE3_OPEN_V2)
+  cmake_pop_check_state()
+endif()
+
+aria2_pkg_check(LIBCARES "libcares>=${ARIA2_MIN_LIBCARES_VERSION}")
+if(ARIA2_WITH_CARES AND LIBCARES_FOUND)
+  set(HAVE_LIBCARES 1)
+  set(ENABLE_ASYNC_DNS 1)
+endif()
+
+aria2_pkg_check(LIBSSH2 "libssh2>=${ARIA2_MIN_LIBSSH2_VERSION}")
+if(ARIA2_WITH_LIBSSH2 AND LIBSSH2_FOUND)
+  set(HAVE_LIBSSH2 1)
+endif()
+
+aria2_pkg_check(LIBUV "libuv>=${ARIA2_MIN_LIBUV_VERSION}")
+if(ARIA2_WITH_LIBUV AND LIBUV_FOUND)
+  set(HAVE_LIBUV 1)
+endif()
+
+aria2_pkg_check(LIBGNUTLS "gnutls>=${ARIA2_MIN_GNUTLS_VERSION}")
 aria2_pkg_check(OPENSSL "openssl>=${ARIA2_MIN_OPENSSL_VERSION}")
-aria2_pkg_check(LIBTORRENT_RASTERBAR "libtorrent-rasterbar")
+aria2_pkg_check(LIBNETTLE "nettle>=${ARIA2_MIN_LIBNETTLE_VERSION}")
+aria2_pkg_check(LIBGCRYPT "libgcrypt>=${ARIA2_MIN_LIBGCRYPT_VERSION}")
 
-find_package(spdlog CONFIG QUIET)
-if(NOT spdlog_FOUND)
-  set(_aria2_spdlog_roots)
-  if(ARIA2_SPDLOG_ROOT)
-    list(APPEND _aria2_spdlog_roots "${ARIA2_SPDLOG_ROOT}")
-  endif()
-  get_filename_component(_aria2_parent_dir "${CMAKE_CURRENT_SOURCE_DIR}" DIRECTORY)
-  get_filename_component(_aria2_parent_dir "${_aria2_parent_dir}" DIRECTORY)
-  list(APPEND _aria2_spdlog_roots
-    "${CMAKE_CURRENT_SOURCE_DIR}/../spdlog"
-    "${_aria2_parent_dir}/oss/spdlog")
-
-  foreach(_aria2_spdlog_root IN LISTS _aria2_spdlog_roots)
-    if(EXISTS "${_aria2_spdlog_root}/include/spdlog/spdlog.h")
-      add_library(spdlog::spdlog INTERFACE IMPORTED)
-      target_include_directories(spdlog::spdlog INTERFACE
-        "${_aria2_spdlog_root}/include")
-      set(spdlog_FOUND TRUE)
-      break()
-    endif()
-  endforeach()
-
-  if(NOT TARGET spdlog::spdlog)
-    find_path(SPDLOG_INCLUDE_DIR NAMES spdlog/spdlog.h)
-    if(SPDLOG_INCLUDE_DIR)
-      add_library(spdlog::spdlog INTERFACE IMPORTED)
-      target_include_directories(spdlog::spdlog INTERFACE
-        "${SPDLOG_INCLUDE_DIR}")
-      set(spdlog_FOUND TRUE)
-    endif()
-  endif()
-endif()
-if(NOT TARGET spdlog::spdlog)
-  message(FATAL_ERROR
-    "aria2-next requires spdlog 1.17.0 or newer. Install spdlog, set "
-    "CMAKE_PREFIX_PATH, or set ARIA2_SPDLOG_ROOT to a spdlog checkout.")
+if(LIBNETTLE_FOUND)
+  cmake_push_check_state(RESET)
+  set(CMAKE_REQUIRED_LIBRARIES PkgConfig::LIBNETTLE)
+  check_cxx_source_compiles("
+#include <nettle/nettle-meta.h>
+int main() {
+  nettle_sha1.digest(0, 0);
+  return 0;
+}" HAVE_NETTLE_HASH_DIGEST_WITHOUT_LENGTH)
+  cmake_pop_check_state()
 endif()
 
-find_package(Boost ${ARIA2_MIN_BOOST_VERSION} CONFIG QUIET COMPONENTS json)
-if(NOT Boost_FOUND)
-  find_path(Boost_INCLUDE_DIR
-    NAMES boost/version.hpp boost/json.hpp boost/json/src.hpp)
-  if(Boost_INCLUDE_DIR)
-    file(READ "${Boost_INCLUDE_DIR}/boost/version.hpp" _boost_version_h)
-    string(REGEX MATCH
-      "#define BOOST_VERSION[ \t]+([0-9]+)"
-      _boost_version_match "${_boost_version_h}")
-    if(_boost_version_match)
-      set(_boost_version_number "${CMAKE_MATCH_1}")
-      math(EXPR _boost_major "${_boost_version_number} / 100000")
-      math(EXPR _boost_minor "(${_boost_version_number} / 100) % 1000")
-      math(EXPR _boost_patch "${_boost_version_number} % 100")
-      set(Boost_VERSION
-        "${_boost_major}.${_boost_minor}.${_boost_patch}")
-      if(Boost_VERSION VERSION_GREATER_EQUAL ARIA2_MIN_BOOST_VERSION)
-        set(Boost_FOUND TRUE)
-        set(ARIA2_BOOST_HEADER_ONLY TRUE)
-        add_library(Boost::headers INTERFACE IMPORTED)
-        target_include_directories(Boost::headers INTERFACE
-          "${Boost_INCLUDE_DIR}")
-        add_library(Boost::json INTERFACE IMPORTED)
-        target_link_libraries(Boost::json INTERFACE Boost::headers)
-        target_compile_definitions(Boost::json INTERFACE
-          ARIA2_BOOST_JSON_HEADER_ONLY=1)
-      endif()
-    endif()
-  endif()
-endif()
-
-if(OPENSSL_FOUND)
-  set(HAVE_OPENSSL 1)
-else()
-  message(FATAL_ERROR
-    "aria2-next requires OpenSSL ${ARIA2_MIN_OPENSSL_VERSION} or newer for "
-    "TLS, message digests, and ED2K obfuscation. Install OpenSSL development "
-    "files.")
-endif()
-
-if(ARIA2_ENABLE_SSL)
+set(have_native_tls OFF)
+if(ARIA2_ENABLE_SSL AND WIN32 AND ARIA2_WITH_WINTLS)
+  cmake_push_check_state(RESET)
+  check_cxx_source_compiles("
+#include <winsock2.h>
+#include <windows.h>
+#include <security.h>
+#include <schnlsp.h>
+int main() {
+  SCH_CREDENTIALS credentials;
+  TLS_PARAMETERS tls_parameters;
+  credentials.dwVersion = SCH_CREDENTIALS_VERSION;
+  credentials.cTlsParameters = 1;
+  credentials.pTlsParameters = &tls_parameters;
+  return 0;
+}" HAVE_SCH_CREDENTIALS)
+  cmake_pop_check_state()
+  set(HAVE_WINTLS 1)
   set(ENABLE_SSL 1)
+  set(have_native_tls ON)
+elseif(ARIA2_ENABLE_SSL AND ARIA2_WITH_OPENSSL AND OPENSSL_FOUND)
+  set(HAVE_OPENSSL 1)
+  set(ENABLE_SSL 1)
+elseif(ARIA2_ENABLE_SSL AND ARIA2_WITH_GNUTLS AND LIBGNUTLS_FOUND)
+  set(HAVE_LIBGNUTLS 1)
+  set(ENABLE_SSL 1)
+  cmake_push_check_state(RESET)
+  set(CMAKE_REQUIRED_LIBRARIES PkgConfig::LIBGNUTLS)
+  check_function_exists(gnutls_certificate_set_x509_system_trust HAVE_GNUTLS_CERTIFICATE_SET_X509_SYSTEM_TRUST)
+  cmake_pop_check_state()
 endif()
 
 if(HAVE_OPENSSL)
@@ -393,22 +382,57 @@ if(HAVE_OPENSSL)
   cmake_pop_check_state()
 endif()
 
+if(ARIA2_WITH_LIBNETTLE AND LIBNETTLE_FOUND AND NOT HAVE_OPENSSL AND NOT have_native_tls)
+  set(HAVE_LIBNETTLE 1)
+endif()
+
+if(ARIA2_WITH_GMP AND ARIA2_ENABLE_BITTORRENT AND NOT HAVE_OPENSSL AND (HAVE_LIBNETTLE OR have_native_tls))
+  check_library_exists(gmp __gmpz_init "" HAVE_LIBGMP)
+  if(HAVE_LIBGMP)
+    check_library_exists(gmp __gmpz_powm_sec "" HAVE___GMPZ_POWM_SEC)
+    if(HAVE___GMPZ_POWM_SEC)
+      set(HAVE_GMP_SEC 1)
+    endif()
+  endif()
+endif()
+
+if(ARIA2_WITH_LIBGCRYPT AND LIBGCRYPT_FOUND AND NOT HAVE_OPENSSL AND NOT HAVE_LIBNETTLE AND NOT have_native_tls)
+  set(HAVE_LIBGCRYPT 1)
+endif()
+
+if(HAVE_OPENSSL)
+  set(USE_OPENSSL_MD 1)
+elseif(HAVE_LIBNETTLE)
+  set(USE_LIBNETTLE_MD 1)
+elseif(HAVE_LIBGCRYPT)
+  set(USE_LIBGCRYPT_MD 1)
+else()
+  set(USE_INTERNAL_MD 1)
+endif()
+
+if(NOT HAVE_LIBGMP AND NOT HAVE_LIBGCRYPT AND NOT HAVE_OPENSSL)
+  set(USE_INTERNAL_BIGNUM 1)
+endif()
+if(NOT HAVE_LIBNETTLE AND NOT HAVE_LIBGCRYPT AND NOT HAVE_OPENSSL)
+  set(USE_INTERNAL_ARC4 1)
+endif()
+
 if(ARIA2_ENABLE_BITTORRENT)
-  if(NOT LIBTORRENT_RASTERBAR_FOUND)
-    message(FATAL_ERROR
-      "BitTorrent support now requires libtorrent-rasterbar. "
-      "Install libtorrent-rasterbar development files or configure with "
-      "-DARIA2_ENABLE_BITTORRENT=OFF.")
-  endif()
-  if(NOT Boost_FOUND)
-    message(FATAL_ERROR
-      "BitTorrent support now requires Boost headers for "
-      "libtorrent-rasterbar. Install Boost development files or configure "
-      "with -DARIA2_ENABLE_BITTORRENT=OFF.")
-  endif()
-  set(HAVE_LIBTORRENT_RASTERBAR 1)
   set(ENABLE_BITTORRENT 1)
+endif()
+if(HAVE_LIBXML2 OR HAVE_LIBEXPAT)
+  set(HAVE_SOME_XMLLIB 1)
+  set(ENABLE_XML_RPC 1)
+endif()
+if(ARIA2_ENABLE_METALINK AND HAVE_SOME_XMLLIB)
+  set(ENABLE_METALINK 1)
 endif()
 if(ARIA2_ENABLE_WEBSOCKET)
   set(ENABLE_WEBSOCKET 1)
+endif()
+if(ARIA2_ENABLE_LIBARIA2)
+  set(ENABLE_LIBARIA2 1)
+endif()
+if(ARIA2_WITH_GNUTLS_SYSTEM_CRYPTO_POLICY)
+  set(USE_GNUTLS_SYSTEM_CRYPTO_POLICY 1)
 endif()

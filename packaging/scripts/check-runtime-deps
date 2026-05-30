@@ -18,9 +18,7 @@ if [ ! -f "$binary" ]; then
 fi
 
 tmp=${TMPDIR:-/tmp}/aria2-runtime-deps.$$
-deps_tmp=$tmp.deps
-strings_tmp=$tmp.strings
-trap 'rm -f "$deps_tmp" "$strings_tmp"' EXIT HUP INT TERM
+trap 'rm -f "$tmp"' EXIT HUP INT TERM
 
 fail_unexpected() {
   dep=$1
@@ -39,7 +37,7 @@ check_windows() {
       sub(/^[[:space:]]*DLL Name:[[:space:]]*/, "")
       print
     }' |
-    sort -fu > "$deps_tmp"
+    sort -fu > "$tmp"
 
   while IFS= read -r dep; do
     dep_lc=$(printf '%s\n' "$dep" | tr '[:upper:]' '[:lower:]')
@@ -47,13 +45,13 @@ check_windows() {
       api-ms-win-crt-private-*.dll)
         fail_unexpected "$dep"
         ;;
-      api-ms-win-*.dll|advapi32.dll|bcrypt.dll|cfgmgr32.dll|crypt32.dll|dnsapi.dll|gdi32.dll|iphlpapi.dll|kernel32.dll|msvcrt.dll|mswsock.dll|normaliz.dll|ntdll.dll|ole32.dll|oleaut32.dll|psapi.dll|rpcrt4.dll|secur32.dll|shell32.dll|shlwapi.dll|ucrtbase.dll|user32.dll|version.dll|winmm.dll|ws2_32.dll|wsock32.dll)
+      api-ms-win-*.dll|advapi32.dll|bcrypt.dll|cfgmgr32.dll|crypt32.dll|dnsapi.dll|gdi32.dll|iphlpapi.dll|kernel32.dll|msvcrt.dll|normaliz.dll|ntdll.dll|ole32.dll|oleaut32.dll|psapi.dll|rpcrt4.dll|secur32.dll|shell32.dll|shlwapi.dll|ucrtbase.dll|user32.dll|version.dll|winmm.dll|ws2_32.dll|wsock32.dll)
         ;;
       *)
         fail_unexpected "$dep"
         ;;
     esac
-  done < "$deps_tmp"
+  done < "$tmp"
 }
 
 check_elf() {
@@ -78,26 +76,16 @@ check_elf() {
         print dep
       }
     ' |
-    sort -fu > "$deps_tmp"
+    sort -fu > "$tmp"
 
   if [ "$platform" = linux ]; then
-    if [ -s "$deps_tmp" ]; then
-      dep=$(sed -n '1p' "$deps_tmp")
+    if [ -s "$tmp" ]; then
+      dep=$(sed -n '1p' "$tmp")
       fail_unexpected "$dep"
     fi
 
     if "$reader" -l "$binary" | grep -q 'Requesting program interpreter'; then
       fail_unexpected "ELF interpreter"
-    fi
-
-    command -v strings >/dev/null 2>&1 || {
-      echo "Runtime dependency check failed: strings is required for Linux ELF binaries" >&2
-      exit 1
-    }
-
-    strings "$binary" > "$strings_tmp"
-    if grep -F -q -e 'libnss_' -e '__nss_' -e 'GNU C Library' -e 'ld-linux' "$strings_tmp"; then
-      fail_unexpected "static glibc/NSS marker"
     fi
 
     return
@@ -111,7 +99,7 @@ check_elf() {
         fail_unexpected "$dep"
         ;;
     esac
-  done < "$deps_tmp"
+  done < "$tmp"
 }
 
 check_macos() {
@@ -125,7 +113,7 @@ check_macos() {
       dep = $1
       print dep
     }' |
-    sort -fu > "$deps_tmp"
+    sort -fu > "$tmp"
 
   while IFS= read -r dep; do
     case "$dep" in
@@ -135,7 +123,7 @@ check_macos() {
         fail_unexpected "$dep"
         ;;
     esac
-  done < "$deps_tmp"
+  done < "$tmp"
 }
 
 case "$platform" in

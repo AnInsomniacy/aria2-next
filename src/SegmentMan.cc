@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "SegmentMan.h"
 
 #include <cassert>
@@ -44,6 +43,8 @@
 #include "prefs.h"
 #include "PiecedSegment.h"
 #include "GrowSegment.h"
+#include "LogFactory.h"
+#include "Logger.h"
 #include "PieceStorage.h"
 #include "PeerStat.h"
 #include "Option.h"
@@ -136,13 +137,13 @@ SegmentMan::checkoutSegment(cuid_t cuid, const std::shared_ptr<Piece>& piece)
   if (!piece) {
     return nullptr;
   }
-  ARIA2_LOG_DEBUG(fmt("Attach segment#%lu to CUID#%" PRId64 ".",
+  A2_LOG_DEBUG(fmt("Attach segment#%lu to CUID#%" PRId64 ".",
                    static_cast<unsigned long>(piece->getIndex()), cuid));
 
   if (piece->getWrDiskCacheEntry()) {
     // Flush cached data here, because the cached data may be overlapped
     // if BT peers are involved.
-    ARIA2_LOG_DEBUG(fmt(
+    A2_LOG_DEBUG(fmt(
         "Flushing cached data, size=%lu",
         static_cast<unsigned long>(piece->getWrDiskCacheEntry()->getSize())));
     flushWrDiskCache(pieceStorage_->getWrDiskCache(), piece);
@@ -159,7 +160,7 @@ SegmentMan::checkoutSegment(cuid_t cuid, const std::shared_ptr<Piece>& piece)
   }
   auto entry = std::make_shared<SegmentEntry>(cuid, segment);
   usedSegmentEntries_.push_back(entry);
-  ARIA2_LOG_DEBUG(fmt("index=%lu, length=%" PRId64 ", segmentLength=%" PRId64 ","
+  A2_LOG_DEBUG(fmt("index=%lu, length=%" PRId64 ", segmentLength=%" PRId64 ","
                    " writtenLength=%" PRId64,
                    static_cast<unsigned long>(segment->getIndex()),
                    segment->getLength(), segment->getSegmentLength(),
@@ -169,7 +170,7 @@ SegmentMan::checkoutSegment(cuid_t cuid, const std::shared_ptr<Piece>& piece)
     auto positr = segmentWrittenLengthMemo_.find(segment->getIndex());
     if (positr != segmentWrittenLengthMemo_.end()) {
       const auto writtenLength = (*positr).second;
-      ARIA2_LOG_DEBUG(fmt("writtenLength(in memo)=%" PRId64
+      A2_LOG_DEBUG(fmt("writtenLength(in memo)=%" PRId64
                        ", writtenLength=%" PRId64,
                        writtenLength, segment->getWrittenLength()));
       //  If the difference between cached writtenLength and segment's
@@ -284,7 +285,7 @@ std::shared_ptr<Segment> SegmentMan::getCleanSegmentIfOwnerIsIdle(cuid_t cuid,
 void SegmentMan::cancelSegmentInternal(cuid_t cuid,
                                        const std::shared_ptr<Segment>& segment)
 {
-  ARIA2_LOG_DEBUG(fmt("Canceling segment#%lu",
+  A2_LOG_DEBUG(fmt("Canceling segment#%lu",
                    static_cast<unsigned long>(segment->getIndex())));
   const std::shared_ptr<Piece>& piece = segment->getPiece();
   // TODO In PieceStorage::cancelPiece(), WrDiskCacheEntry may be
@@ -292,7 +293,7 @@ void SegmentMan::cancelSegmentInternal(cuid_t cuid,
   if (piece->getWrDiskCacheEntry()) {
     // Flush cached data here, because the cached data may be overlapped
     // if BT peers are involved.
-    ARIA2_LOG_DEBUG(fmt(
+    A2_LOG_DEBUG(fmt(
         "Flushing cached data, size=%lu",
         static_cast<unsigned long>(piece->getWrDiskCacheEntry()->getSize())));
     flushWrDiskCache(pieceStorage_->getWrDiskCache(), piece);
@@ -302,7 +303,7 @@ void SegmentMan::cancelSegmentInternal(cuid_t cuid,
   piece->setUsedBySegment(false);
   pieceStorage_->cancelPiece(piece, cuid);
   segmentWrittenLengthMemo_[segment->getIndex()] = segment->getWrittenLength();
-  ARIA2_LOG_DEBUG(fmt("Memorized segment index=%lu, writtenLength=%" PRId64,
+  A2_LOG_DEBUG(fmt("Memorized segment index=%lu, writtenLength=%" PRId64,
                    static_cast<unsigned long>(segment->getIndex()),
                    segment->getWrittenLength()));
 }
@@ -480,7 +481,7 @@ size_t SegmentMan::countFreePieceFrom(size_t index) const
 
 void SegmentMan::ignoreSegmentFor(const std::shared_ptr<FileEntry>& fileEntry)
 {
-  ARIA2_LOG_DEBUG(fmt("ignoring segment for path=%s, offset=%" PRId64
+  A2_LOG_DEBUG(fmt("ignoring segment for path=%s, offset=%" PRId64
                    ", length=%" PRId64 "",
                    fileEntry->getPath().c_str(), fileEntry->getOffset(),
                    fileEntry->getLength()));

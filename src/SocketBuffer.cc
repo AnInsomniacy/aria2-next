@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "SocketBuffer.h"
 
 #include <cassert>
@@ -42,6 +41,7 @@
 #include "DlAbortEx.h"
 #include "message.h"
 #include "fmt.h"
+#include "LogFactory.h"
 #include "a2functional.h"
 
 namespace aria2 {
@@ -160,7 +160,7 @@ ssize_t SocketBuffer::send()
     if (slen == 0 && !socket_->wantRead() && !socket_->wantWrite()) {
       throw DL_ABORT_EX(fmt(EX_SOCKET_SEND, "Connection closed."));
     }
-    // ARIA2_LOG_INFO(fmt("num=%zu, amount=%d, bufq.size()=%zu, SEND=%d",
+    // A2_LOG_NOTICE(fmt("num=%zu, amount=%d, bufq.size()=%zu, SEND=%d",
     //                   num, amount, bufq_.size(), slen));
     totalslen += slen;
 

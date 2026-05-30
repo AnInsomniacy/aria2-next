@@ -54,6 +54,8 @@ namespace aria2 {
 class DownloadEngine;
 class Command;
 struct DownloadResult;
+class ServerStatMan;
+class ServerStat;
 class Option;
 class OutputFile;
 class UriListParser;
@@ -80,6 +82,12 @@ private:
 
   int maxConcurrentDownloads_;
 
+  bool optimizeConcurrentDownloads_;
+  double optimizeConcurrentDownloadsCoeffA_;
+  double optimizeConcurrentDownloadsCoeffB_;
+  int optimizationSpeed_;
+  Timer optimizationSpeedTimer_;
+
   // The number of simultaneous active downloads, excluding seed only
   // item if PREF_BT_DETACH_SEED_ONLY is true.  We rely on this
   // variable to maintain the number of concurrent downloads.  If
@@ -88,6 +96,8 @@ private:
   size_t numActive_;
 
   const Option* option_;
+
+  std::shared_ptr<ServerStatMan> serverStatMan_;
 
   int maxOverallDownloadSpeedLimit_;
 
@@ -135,9 +145,14 @@ private:
       const char* status,
       const std::shared_ptr<DownloadResult>& downloadResult) const;
 
+  void configureRequestGroup(
+      const std::shared_ptr<RequestGroup>& requestGroup) const;
+
   void addRequestGroupIndex(const std::shared_ptr<RequestGroup>& group);
   void addRequestGroupIndex(
       const std::vector<std::shared_ptr<RequestGroup>>& groups);
+
+  int optimizeConcurrentDownloads();
 
 public:
   RequestGroupMan(std::vector<std::shared_ptr<RequestGroup>> requestGroups,
@@ -201,12 +216,16 @@ public:
 
   bool removeReservedGroup(a2_gid_t gid);
 
+  bool getOptimizeConcurrentDownloads() const
+  {
+    return optimizeConcurrentDownloads_;
+  }
+
+  bool setupOptimizeConcurrentDownloads();
+
   void showDownloadResults(OutputFile& o, bool full) const;
 
   bool isSameFileBeingDownloaded(RequestGroup* requestGroup) const;
-
-  bool isSameLibtorrentInfoHashBeingDownloaded(
-      const RequestGroup* requestGroup) const;
 
   TransferStat calculateStat();
 
@@ -271,6 +290,21 @@ public:
     return unfinishedDownloadResults_;
   }
 
+  std::shared_ptr<ServerStat> findServerStat(const std::string& hostname,
+                                             const std::string& protocol) const;
+
+  std::shared_ptr<ServerStat>
+  getOrCreateServerStat(const std::string& hostname,
+                        const std::string& protocol);
+
+  bool addServerStat(const std::shared_ptr<ServerStat>& serverStat);
+
+  bool loadServerStat(const std::string& filename);
+
+  bool saveServerStat(const std::string& filename) const;
+
+  void removeStaleServerStat(const std::chrono::seconds& timeout);
+
   // Returns true if current download speed exceeds
   // maxOverallDownloadSpeedLimit_.  Always returns false if
   // maxOverallDownloadSpeedLimit_ == 0.  Otherwise returns false.
@@ -311,6 +345,14 @@ public:
   void clearQueueCheck() { queueCheck_ = false; }
 
   bool queueCheckRequested() const { return queueCheck_; }
+
+  // Returns currently used hosts and its use count.
+  void getUsedHosts(std::vector<std::pair<size_t, std::string>>& usedHosts);
+
+  const std::shared_ptr<ServerStatMan>& getServerStatMan() const
+  {
+    return serverStatMan_;
+  }
 
   void setMaxDownloadResult(size_t v) { maxDownloadResult_ = v; }
 

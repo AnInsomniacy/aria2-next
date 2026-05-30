@@ -1,0 +1,120 @@
+/* <!-- copyright */
+/*
+ * aria2 - The high speed download utility
+ *
+ * Copyright (C) 2006 Tatsuhiro Tsujikawa
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+ *
+ * In addition, as a special exception, the copyright holders give
+ * permission to link the code of portions of this program with the
+ * OpenSSL library under certain conditions as described in each
+ * individual source file, and distribute linked combinations
+ * including the two.
+ * You must obey the GNU General Public License in all respects
+ * for all of the code used other than OpenSSL.  If you modify
+ * file(s) with this exception, you may extend this exception to your
+ * version of the file(s), but you are not obligated to do so.  If you
+ * do not wish to do so, delete this exception statement from your
+ * version.  If you delete this exception statement from all source
+ * files in the program, then also delete it here.
+ */
+/* copyright --> */
+#ifndef D_ASYNC_NAME_RESOLVER_H
+#define D_ASYNC_NAME_RESOLVER_H
+
+#include "common.h"
+
+#include <string>
+#include <vector>
+
+#include <ares.h>
+
+#include "a2netcompat.h"
+
+namespace aria2 {
+
+struct AsyncNameResolverSocketEntry {
+  ares_socket_t fd;
+  int events;
+};
+
+class AsyncNameResolver {
+  friend void callback(void* arg, int status, int timeouts,
+                       ares_addrinfo* result);
+
+public:
+  enum STATUS {
+    STATUS_READY,
+    STATUS_QUERYING,
+    STATUS_SUCCESS,
+    STATUS_ERROR,
+  };
+
+private:
+  std::vector<AsyncNameResolverSocketEntry> socks_;
+  STATUS status_;
+  int errorCode_;
+  int family_;
+  ares_channel channel_;
+  bool channelInitialized_;
+
+  std::vector<std::string> resolvedAddresses_;
+  std::string error_;
+  std::string hostname_;
+
+public:
+  AsyncNameResolver(int family, const std::string& servers);
+
+  ~AsyncNameResolver();
+
+  void resolve(const std::string& name);
+
+  const std::vector<std::string>& getResolvedAddresses() const
+  {
+    return resolvedAddresses_;
+  }
+
+  const std::string& getError() const { return error_; }
+
+  int getErrorCode() const { return errorCode_; }
+
+  STATUS getStatus() const { return status_; }
+
+  ares_socket_t getFds(fd_set* rfdsPtr, fd_set* wfdsPtr) const;
+
+  void process(fd_set* rfdsPtr, fd_set* wfdsPtr);
+
+  int getFamily() const { return family_; }
+#ifdef HAVE_LIBCARES
+
+  const std::vector<AsyncNameResolverSocketEntry>& getsock() const;
+
+  void process(ares_socket_t readfd, ares_socket_t writefd);
+
+#endif // HAVE_LIBCARES
+
+  bool operator==(const AsyncNameResolver& resolver) const;
+
+  void setAddr(const std::string& addrString);
+
+  const std::string& getHostname() const { return hostname_; }
+
+  void handle_sock_state(ares_socket_t sock, int read, int write);
+};
+
+} // namespace aria2
+
+#endif // D_ASYNC_NAME_RESOLVER_H

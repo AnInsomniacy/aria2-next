@@ -34,6 +34,9 @@
 /* copyright --> */
 #include "json.h"
 
+#include <sstream>
+
+#include "array_fun.h"
 #include "a2functional.h"
 #include "util.h"
 #include "base64.h"
@@ -41,6 +44,60 @@
 namespace aria2 {
 
 namespace json {
+
+std::string jsonEscape(const std::string& s)
+{
+  std::string t;
+  for (std::string::const_iterator i = s.begin(), eoi = s.end(); i != eoi;
+       ++i) {
+    if (*i == '"' || *i == '\\' || *i == '/') {
+      t += "\\";
+      t += *i;
+    }
+    else if (*i == '\b') {
+      t += "\\b";
+    }
+    else if (*i == '\f') {
+      t += "\\f";
+    }
+    else if (*i == '\n') {
+      t += "\\n";
+    }
+    else if (*i == '\r') {
+      t += "\\r";
+    }
+    else if (*i == '\t') {
+      t += "\\t";
+    }
+    else if (in(static_cast<unsigned char>(*i), 0x00u, 0x1Fu)) {
+      t += "\\u00";
+      char temp[3];
+      temp[2] = '\0';
+      temp[0] = (*i >> 4);
+      temp[1] = (*i) & 0x0Fu;
+      for (int j = 0; j < 2; ++j) {
+        if (temp[j] < 10) {
+          temp[j] += '0';
+        }
+        else {
+          temp[j] += 'A' - 10;
+        }
+      }
+      t += temp;
+    }
+    else {
+      t.append(i, i + 1);
+    }
+  }
+  return t;
+}
+
+// Serializes JSON object or array.
+std::string encode(const ValueBase* json)
+{
+  std::ostringstream out;
+  return encode(out, json).str();
+}
 
 JsonGetParam::JsonGetParam(const std::string& request,
                            const std::string& callback)

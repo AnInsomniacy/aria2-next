@@ -44,12 +44,10 @@ ENV AR=$TOOLCHAIN/bin/llvm-ar \
 RUN . packaging/dependencies.env && \
     . packaging/scripts/common.sh && \
     curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256" && \
+    curl_fetch "$EXPAT_URL" "$EXPAT_ARCHIVE" "$EXPAT_SHA256" && \
     curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256" && \
-    curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256" && \
-    curl_fetch "$CURL_URL" "$CURL_ARCHIVE" "$CURL_SHA256" && \
-    curl_fetch "$BOOST_URL" "$BOOST_ARCHIVE" "$BOOST_SHA256" && \
-    curl_fetch "$SPDLOG_URL" "$SPDLOG_ARCHIVE" "$SPDLOG_SHA256" && \
-    curl_fetch "$LIBTORRENT_URL" "$LIBTORRENT_ARCHIVE" "$LIBTORRENT_SHA256"
+    curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256" && \
+    curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
 
 RUN . packaging/dependencies.env && \
     . packaging/scripts/release-size-profile android && \
@@ -59,6 +57,18 @@ RUN . packaging/dependencies.env && \
     ./Configure no-shared no-module no-tests --prefix="$PREFIX" android-arm64 $RELEASE_CFLAGS && \
     make -j"$(nproc)" && \
     make install_sw
+
+RUN . packaging/dependencies.env && \
+    . packaging/scripts/release-size-profile android && \
+    tar xf "$EXPAT_ARCHIVE" && \
+    cd "expat-$EXPAT_VERSION" && \
+    CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
+    ./configure \
+      --host="$HOST" \
+      --build="$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)" \
+      --prefix="$PREFIX" \
+      --disable-shared && \
+    make -j"$(nproc)" install
 
 RUN . packaging/dependencies.env && \
     . packaging/scripts/release-size-profile android && \
@@ -73,39 +83,28 @@ RUN . packaging/dependencies.env && \
     make -j"$(nproc)" install
 
 RUN . packaging/dependencies.env && \
-    . packaging/scripts/common.sh && \
     . packaging/scripts/release-size-profile android && \
-    ARIA2_BUILD_JOBS="$(nproc)" build_libssh2_for_curl \
-      -DCMAKE_SYSTEM_NAME=Android \
-      -DCMAKE_ANDROID_NDK="$NDK" \
-      -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
-      -DCMAKE_ANDROID_STL_TYPE=c++_static \
-      -DCMAKE_SYSTEM_VERSION="$API"
+    tar xf "$CARES_ARCHIVE" && \
+    cd "c-ares-$CARES_VERSION" && \
+    CPPFLAGS="$RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
+    ./configure \
+      --host="$HOST" \
+      --build="$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)" \
+      --prefix="$PREFIX" \
+      --disable-shared && \
+    make -j"$(nproc)" install
 
 RUN . packaging/dependencies.env && \
-    . packaging/scripts/common.sh && \
     . packaging/scripts/release-size-profile android && \
-    ARIA2_BUILD_JOBS="$(nproc)" build_curl \
-      -DCMAKE_SYSTEM_NAME=Android \
-      -DCMAKE_ANDROID_NDK="$NDK" \
-      -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
-      -DCMAKE_ANDROID_STL_TYPE=c++_static \
-      -DCMAKE_SYSTEM_VERSION="$API"
-
-RUN . packaging/dependencies.env && \
-    . packaging/scripts/common.sh && \
-    install_boost_headers && \
-    install_spdlog_headers
-
-RUN . packaging/dependencies.env && \
-    . packaging/scripts/common.sh && \
-    . packaging/scripts/release-size-profile android && \
-    ARIA2_BUILD_JOBS="$(nproc)" build_libtorrent_rasterbar \
-      -DCMAKE_SYSTEM_NAME=Android \
-      -DCMAKE_ANDROID_NDK="$NDK" \
-      -DCMAKE_ANDROID_ARCH_ABI=arm64-v8a \
-      -DCMAKE_ANDROID_STL_TYPE=c++_static \
-      -DCMAKE_SYSTEM_VERSION="$API"
+    tar xf "$LIBSSH2_ARCHIVE" && \
+    cd "libssh2-$LIBSSH2_VERSION" && \
+    CPPFLAGS="-I$PREFIX/include $RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
+    ./configure \
+      --host="$HOST" \
+      --build="$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)" \
+      --prefix="$PREFIX" \
+      --disable-shared && \
+    make -j"$(nproc)" install
 
 COPY . /root/build/aria2
 WORKDIR /root/build/aria2
@@ -120,7 +119,15 @@ RUN . packaging/scripts/release-size-profile android && \
       -DCMAKE_SYSTEM_VERSION="$API" \
       -DCMAKE_BUILD_TYPE=Release \
       -DARIA2_ENABLE_STATIC=ON \
+      -DARIA2_WITH_WINTLS=OFF \
+      -DARIA2_WITH_GNUTLS=OFF \
+      -DARIA2_WITH_OPENSSL=ON \
+      -DARIA2_WITH_LIBXML2=OFF \
+      -DARIA2_WITH_EXPAT=ON \
+      -DARIA2_WITH_CARES=ON \
       -DARIA2_WITH_ZLIB=ON \
+      -DARIA2_WITH_SQLITE3=OFF \
+      -DARIA2_WITH_LIBSSH2=ON \
       -DARIA2_RELEASE_SIZE_OPTIMIZED=ON \
       -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
       -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \

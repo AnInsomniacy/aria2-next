@@ -43,6 +43,9 @@
 
 #include "Event.h"
 #include "a2functional.h"
+#ifdef ENABLE_ASYNC_DNS
+#  include "AsyncNameResolver.h"
+#endif // ENABLE_ASYNC_DNS
 
 namespace aria2 {
 
@@ -52,8 +55,11 @@ private:
 
   typedef Event<KSocketEntry> KEvent;
   typedef CommandEvent<KSocketEntry, EpollEventPoll> KCommandEvent;
+  typedef ADNSEvent<KSocketEntry, EpollEventPoll> KADNSEvent;
+  typedef AsyncNameResolverEntry<EpollEventPoll> KAsyncNameResolverEntry;
+  friend class AsyncNameResolverEntry<EpollEventPoll>;
 
-  class KSocketEntry : public SocketEntry<KCommandEvent> {
+  class KSocketEntry : public SocketEntry<KCommandEvent, KADNSEvent> {
   public:
     KSocketEntry(sock_t socket);
 
@@ -68,6 +74,12 @@ private:
 private:
   typedef std::map<sock_t, KSocketEntry> KSocketEntrySet;
   KSocketEntrySet socketEntries_;
+#ifdef ENABLE_ASYNC_DNS
+  typedef std::map<std::pair<AsyncNameResolver*, Command*>,
+                   KAsyncNameResolverEntry>
+      KAsyncNameResolverEntrySet;
+  KAsyncNameResolverEntrySet nameResolverEntries_;
+#endif // ENABLE_ASYNC_DNS
 
   int epfd_;
 
@@ -80,6 +92,12 @@ private:
   bool addEvents(sock_t socket, const KEvent& event);
 
   bool deleteEvents(sock_t socket, const KEvent& event);
+
+  bool addEvents(sock_t socket, Command* command, int events,
+                 const std::shared_ptr<AsyncNameResolver>& rs);
+
+  bool deleteEvents(sock_t socket, Command* command,
+                    const std::shared_ptr<AsyncNameResolver>& rs);
 
 public:
   EpollEventPoll();
@@ -95,6 +113,15 @@ public:
 
   virtual bool deleteEvents(sock_t socket, Command* command,
                             EventPoll::EventType events) CXX11_OVERRIDE;
+#ifdef ENABLE_ASYNC_DNS
+
+  virtual bool
+  addNameResolver(const std::shared_ptr<AsyncNameResolver>& resolver,
+                  Command* command) CXX11_OVERRIDE;
+  virtual bool
+  deleteNameResolver(const std::shared_ptr<AsyncNameResolver>& resolver,
+                     Command* command) CXX11_OVERRIDE;
+#endif // ENABLE_ASYNC_DNS
 
   static const int IEV_READ = EPOLLIN;
   static const int IEV_WRITE = EPOLLOUT;

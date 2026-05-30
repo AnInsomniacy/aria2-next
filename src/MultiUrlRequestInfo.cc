@@ -32,7 +32,6 @@
  * files in the program, then also delete it here.
  */
 /* copyright --> */
-#include "Log.h"
 #include "MultiUrlRequestInfo.h"
 
 #include <signal.h>
@@ -42,6 +41,8 @@
 
 #include "RequestGroupMan.h"
 #include "DownloadEngine.h"
+#include "LogFactory.h"
+#include "Logger.h"
 #include "RequestGroup.h"
 #include "prefs.h"
 #include "DownloadEngineFactory.h"
@@ -51,7 +52,10 @@
 #include "Option.h"
 #include "ConsoleStatCalc.h"
 #include "NullStatCalc.h"
+#include "CookieStorage.h"
 #include "File.h"
+#include "Netrc.h"
+#include "AuthConfigFactory.h"
 #include "SessionSerializer.h"
 #include "TimeA2.h"
 #include "fmt.h"
@@ -69,6 +73,9 @@
 #ifdef ENABLE_SSL
 #  include "TLSContext.h"
 #endif // ENABLE_SSL
+#ifdef ENABLE_ASYNC_DNS
+#  include "AsyncNameResolver.h"
+#endif // ENABLE_ASYNC_DNS
 
 namespace aria2 {
 
@@ -161,7 +168,7 @@ void MultiUrlRequestInfo::printMessageForContinue()
   if (!option_->getAsBool(PREF_QUIET)) {
     global::cout()->printf(
         "\n%s\n%s\n",
-        _("Aria2 Next will resume the download if the transfer is restarted."),
+        _("aria2 will resume download if the transfer is restarted."),
         _("If there are any errors, then see the log file. See '-l' option in "
           "help/man page for details."));
   }
@@ -172,6 +179,28 @@ int MultiUrlRequestInfo::prepare()
   global::globalHaltRequested = 0;
   try {
     SingletonHolder<Notifier>::instance(make_unique<Notifier>());
+
+#ifdef ENABLE_SSL
+    if (option_->getAsBool(PREF_ENABLE_RPC) &&
+        option_->getAsBool(PREF_RPC_SECURE)) {
+      if (option_->blank(PREF_RPC_CERTIFICATE)) {
+        throw DL_ABORT_EX("Specify --rpc-certificate and --rpc-private-key "
+                          "options in order to use secure RPC.");
+      }
+      // We set server TLS context to the SocketCore before creating
+      // DownloadEngine instance.
+      auto minTLSVer = util::toTLSVersion(option_->get(PREF_MIN_TLS_VERSION));
+      std::shared_ptr<TLSContext> svTlsContext(
+          TLSContext::make(TLS_SERVER, minTLSVer));
+      if (!svTlsContext->addCredentialFile(
+              option_->get(PREF_RPC_CERTIFICATE),
+              option_->get(PREF_RPC_PRIVATE_KEY))) {
+        throw DL_ABORT_EX("Loading private key and/or certificate for secure "
+                          "RPC failed.");
+      }
+      SocketCore::setServerTLSContext(svTlsContext);
+    }
+#endif // ENABLE_SSL
 
     // RequestGroups will be transferred to DownloadEngine
     e_ = DownloadEngineFactory().newDownloadEngine(option_.get(),
@@ -185,6 +214,41 @@ int MultiUrlRequestInfo::prepare()
     }
 #endif // ENABLE_WEBSOCKET
 
+    if (!option_->blank(PREF_LOAD_COOKIES)) {
+      File cookieFile(option_->get(PREF_LOAD_COOKIES));
+      if (cookieFile.isFile() &&
+          e_->getCookieStorage()->load(cookieFile.getPath(),
+                                       Time().getTimeFromEpoch())) {
+        A2_LOG_INFO(
+            fmt("Loaded cookies from '%s'.", cookieFile.getPath().c_str()));
+      }
+      else {
+        A2_LOG_ERROR(
+            fmt(MSG_LOADING_COOKIE_FAILED, cookieFile.getPath().c_str()));
+      }
+    }
+
+    auto authConfigFactory = make_unique<AuthConfigFactory>();
+    File netrccf(option_->get(PREF_NETRC_PATH));
+    if (!option_->getAsBool(PREF_NO_NETRC) && netrccf.isFile()) {
+#ifdef __MINGW32__
+      // Windows OS does not have permission, so set it to 0.
+      mode_t mode = 0;
+#else  // !__MINGW32__
+      mode_t mode = netrccf.mode();
+#endif // !__MINGW32__
+      if (mode & (S_IRWXG | S_IRWXO)) {
+        A2_LOG_NOTICE(fmt(MSG_INCORRECT_NETRC_PERMISSION,
+                          option_->get(PREF_NETRC_PATH).c_str()));
+      }
+      else {
+        auto netrc = make_unique<Netrc>();
+        netrc->parse(option_->get(PREF_NETRC_PATH));
+        authConfigFactory->setNetrc(std::move(netrc));
+      }
+    }
+    e_->setAuthConfigFactory(std::move(authConfigFactory));
+
 #ifdef ENABLE_SSL
     auto minTLSVer = util::toTLSVersion(option_->get(PREF_MIN_TLS_VERSION));
     std::shared_ptr<TLSContext> clTlsContext(
@@ -197,20 +261,26 @@ int MultiUrlRequestInfo::prepare()
     if (!option_->blank(PREF_CA_CERTIFICATE)) {
       if (!clTlsContext->addTrustedCACertFile(
               option_->get(PREF_CA_CERTIFICATE))) {
-        ARIA2_LOG_INFO(MSG_WARN_NO_CA_CERT);
+        A2_LOG_INFO(MSG_WARN_NO_CA_CERT);
       }
     }
     else if (option_->getAsBool(PREF_CHECK_CERTIFICATE)) {
       const bool systemTrusted = clTlsContext->addSystemTrustedCACerts();
       const bool defaultBundle = clTlsContext->addDefaultCABundle();
       if (!systemTrusted && !defaultBundle) {
-        ARIA2_LOG_INFO(MSG_WARN_NO_CA_CERT);
+        A2_LOG_INFO(MSG_WARN_NO_CA_CERT);
       }
     }
     clTlsContext->setVerifyPeer(option_->getAsBool(PREF_CHECK_CERTIFICATE));
     SocketCore::setClientTLSContext(clTlsContext);
 #endif
 
+    std::string serverStatIf = option_->get(PREF_SERVER_STAT_IF);
+    if (!serverStatIf.empty()) {
+      e_->getRequestGroupMan()->loadServerStat(serverStatIf);
+      e_->getRequestGroupMan()->removeStaleServerStat(
+          std::chrono::seconds(option_->getAsInt(PREF_SERVER_STAT_TIMEOUT)));
+    }
     e_->setStatCalc(getStatCalc(option_));
     if (uriListParser_) {
       e_->getRequestGroupMan()->setUriListParser(uriListParser_);
@@ -221,7 +291,7 @@ int MultiUrlRequestInfo::prepare()
     e_->getRequestGroupMan()->getNetStat().downloadStart();
   }
   catch (RecoverableException& e) {
-    ARIA2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
+    A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
     SingletonHolder<Notifier>::clear();
     if (useSignalHandler_) {
       resetSignalHandlers();
@@ -234,6 +304,14 @@ int MultiUrlRequestInfo::prepare()
 error_code::Value MultiUrlRequestInfo::getResult()
 {
   error_code::Value returnValue = error_code::FINISHED;
+  if (!option_->blank(PREF_SAVE_COOKIES)) {
+    e_->getCookieStorage()->saveNsFormat(option_->get(PREF_SAVE_COOKIES));
+  }
+
+  const std::string& serverStatOf = option_->get(PREF_SERVER_STAT_OF);
+  if (!serverStatOf.empty()) {
+    e_->getRequestGroupMan()->saveServerStat(serverStatOf);
+  }
   if (!option_->getAsBool(PREF_QUIET) &&
       option_->get(PREF_DOWNLOAD_RESULT) != A2_V_HIDE) {
     e_->getRequestGroupMan()->showDownloadResults(
@@ -257,11 +335,11 @@ error_code::Value MultiUrlRequestInfo::getResult()
   if (!option_->blank(PREF_SAVE_SESSION)) {
     const std::string& filename = option_->get(PREF_SAVE_SESSION);
     if (sessionSerializer.save(filename)) {
-      ARIA2_LOG_INFO(
+      A2_LOG_NOTICE(
           fmt(_("Serialized session to '%s' successfully."), filename.c_str()));
     }
     else {
-      ARIA2_LOG_INFO(
+      A2_LOG_NOTICE(
           fmt(_("Failed to serialize session to '%s'."), filename.c_str()));
     }
   }
@@ -280,7 +358,7 @@ error_code::Value MultiUrlRequestInfo::execute()
     e_->run();
   }
   catch (RecoverableException& e) {
-    ARIA2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
+    A2_LOG_ERROR_EX(EX_EXCEPTION_CAUGHT, e);
   }
   error_code::Value returnValue = getResult();
   if (useSignalHandler_) {

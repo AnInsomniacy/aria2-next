@@ -45,7 +45,6 @@ DownloadResult::DownloadResult()
       sessionTime(0),
       totalLength(0),
       completedLength(0),
-      inFlightCompletedLength(0),
       uploadLength(0),
       following(0),
       numPieces(0),

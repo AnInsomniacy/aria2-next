@@ -14,11 +14,9 @@
 #define D_ED2K_SHARED_PEER_COMMAND_H
 
 #include "Command.h"
-#include "Ed2kOutboundPacket.h"
 #include "ed2k_link.h"
 #include "ed2k_packet.h"
 #include "ed2k_peer.h"
-#include "RateLimitTokenBucket.h"
 
 #include <array>
 #include <deque>
@@ -41,7 +39,7 @@ private:
   ed2k::Endpoint endpoint_;
   std::shared_ptr<SocketCore> socket_;
   State state_;
-  std::deque<ed2k::OutboundPacket> outbox_;
+  std::deque<std::string> outbox_;
   std::array<char, 6> headerBuf_;
   size_t headerRead_;
   ed2k::PacketHeader currentHeader_;
@@ -50,10 +48,8 @@ private:
   ed2k::EmulePeerInfo localPeerInfo_;
   ed2k::EmulePeerInfo remotePeerInfo_;
   bool writeCheck_;
-  RateLimitTokenBucket uploadLimitBucket_;
 
   bool flushOutbox();
-  int64_t ed2kUploadLimit() const;
   bool readHeader();
   bool readBody();
   void handlePacket();

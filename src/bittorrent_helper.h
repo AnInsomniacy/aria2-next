@@ -45,6 +45,8 @@
 
 #include "TorrentAttribute.h"
 #include "a2netcompat.h"
+#include "Peer.h"
+#include "ValueBase.h"
 #include "util.h"
 #include "DownloadContext.h"
 #include "TimeA2.h"
@@ -52,6 +54,7 @@
 namespace aria2 {
 
 class DownloadContext;
+class Randomizer;
 class Option;
 
 namespace bittorrent {
@@ -97,6 +100,13 @@ void loadFromMemory(const std::string& context,
                     const std::string& defaultName,
                     const std::string& overrideName = "");
 
+void loadFromMemory(const ValueBase* torrent,
+                    const std::shared_ptr<DownloadContext>& ctx,
+                    const std::shared_ptr<Option>& option,
+                    const std::vector<std::string>& uris,
+                    const std::string& defaultName,
+                    const std::string& overrideName = "");
+
 // Parses BitTorrent Magnet URI and returns
 // std::unique_ptr<TorrentAttribute> which includes infoHash, name and
 // announceList. If parsing operation failed, an RecoverableException
@@ -113,6 +123,36 @@ std::unique_ptr<TorrentAttribute> parseMagnet(const std::string& magnet);
 // RecoverableException will be thrown.
 void loadMagnet(const std::string& magnet,
                 const std::shared_ptr<DownloadContext>& ctx);
+
+// Generates Peer ID. BitTorrent specification says Peer ID is 20-byte
+// length.  This function uses peerIdPrefix as a Peer ID and it is
+// less than 20bytes, random bytes are generated and appended to it. If
+// peerIdPrefix is larger than 20bytes, first 20bytes are used.
+std::string generatePeerId(const std::string& peerIdPrefix);
+
+// Generates Peer ID and stores it in static variable. This function
+// uses generatePeerId(peerIdPrefix) to produce Peer ID.
+const std::string& generateStaticPeerId(const std::string& peerIdPrefix);
+
+const std::string& generateStaticPeerAgent(const std::string& peerAgent);
+
+// Returns Peer ID statically stored by generateStaticPeerId().  If
+// Peer ID is not stored yet, this function calls
+// generateStaticPeerId("aria2-")
+const unsigned char* getStaticPeerId();
+
+const std::string& getStaticPeerAgent();
+
+// Set newPeerId as a static Peer ID. newPeerId must be 20-byte
+// length.
+void setStaticPeerId(const std::string& newPeerId);
+
+void setStaticPeerAgent(const std::string& newPeerAgent);
+
+// Computes fast set index and returns them.
+std::vector<size_t> computeFastSet(const std::string& ipaddr, size_t numPieces,
+                                   const unsigned char* infoHash,
+                                   size_t fastSetSize);
 
 // Make sure that don't receive return value into std::shared_ptr.
 TorrentAttribute* getTorrentAttrs(DownloadContext* dctx);
@@ -155,6 +195,20 @@ void setIntParam(unsigned char* dest, uint32_t param);
 // network byte order.
 void setShortIntParam(unsigned char* dest, uint16_t param);
 
+// Returns message ID located at first byte:msg[0]
+uint8_t getId(const unsigned char* msg);
+
+void checkIndex(size_t index, size_t pieces);
+void checkBegin(int32_t begin, int32_t pieceLength);
+void checkLength(int32_t length);
+void checkRange(int32_t begin, int32_t length, int32_t pieceLength);
+void checkBitfield(const unsigned char* bitfield, size_t bitfieldLength,
+                   size_t pieces);
+
+// Initialize msg with 0 and set payloadLength and messageId.
+void createPeerMessageString(unsigned char* msg, size_t msgLength,
+                             size_t payloadLength, uint8_t messageId);
+
 /**
  * Creates compact form(packed address + 2bytes port) and stores the
  * results in compact.  This function looks addr and if it is IPv4
@@ -175,6 +229,17 @@ size_t packcompact(unsigned char* compact, const std::string& addr,
  */
 std::pair<std::string, uint16_t> unpackcompact(const unsigned char* compact,
                                                int family);
+
+// Throws exception if threshold >= actual
+void assertPayloadLengthGreater(size_t threshold, size_t actual,
+                                const char* msgName);
+
+// Throws exception if expected != actual
+void assertPayloadLengthEqual(size_t expected, size_t actual,
+                              const char* msgName);
+
+// Throws exception if expected is not equal to id from data.
+void assertID(uint8_t expected, const unsigned char* data, const char* msgName);
 
 // Converts attrs into torrent data. This function does not guarantee
 // the returned string is valid torrent data.
@@ -201,6 +266,71 @@ void addAnnounceUri(TorrentAttribute* attrs,
 // converted to std::vector<std::string> and call addAnnounceUri().
 void adjustAnnounceUri(TorrentAttribute* attrs,
                        const std::shared_ptr<Option>& option);
+
+template <typename OutputIterator>
+void extractPeer(const ValueBase* peerData, int family, OutputIterator dest)
+{
+  class PeerListValueBaseVisitor : public ValueBaseVisitor {
+  private:
+    OutputIterator dest_;
+    int family_;
+
+  public:
+    PeerListValueBaseVisitor(OutputIterator dest, int family)
+        : dest_(dest), family_(family)
+    {
+    }
+
+    virtual ~PeerListValueBaseVisitor() = default;
+
+    virtual void visit(const String& peerData) CXX11_OVERRIDE
+    {
+      int unit = family_ == AF_INET ? 6 : 18;
+      size_t length = peerData.s().size();
+      if (length % unit == 0) {
+        const unsigned char* base =
+            reinterpret_cast<const unsigned char*>(peerData.s().data());
+        const unsigned char* end = base + length;
+        for (; base != end; base += unit) {
+          std::pair<std::string, uint16_t> p = unpackcompact(base, family_);
+          if (p.first.empty()) {
+            continue;
+          }
+          *dest_++ = std::make_shared<Peer>(p.first, p.second);
+        }
+      }
+    }
+
+    virtual void visit(const Integer& v) CXX11_OVERRIDE {}
+    virtual void visit(const Bool& v) CXX11_OVERRIDE {}
+    virtual void visit(const Null& v) CXX11_OVERRIDE {}
+
+    virtual void visit(const List& peerData) CXX11_OVERRIDE
+    {
+      for (auto& elem : peerData) {
+        const Dict* peerDict = downcast<Dict>(elem);
+        if (!peerDict) {
+          continue;
+        }
+        static const std::string IP = "ip";
+        static const std::string PORT = "port";
+        const String* ip = downcast<String>(peerDict->get(IP));
+        const Integer* port = downcast<Integer>(peerDict->get(PORT));
+        if (!ip || !port || !(0 < port->i() && port->i() < 65536)) {
+          continue;
+        }
+        *dest_ = std::make_shared<Peer>(ip->s(), port->i());
+        ++dest_;
+      }
+    }
+
+    virtual void visit(const Dict& v) CXX11_OVERRIDE {}
+  };
+  if (peerData) {
+    PeerListValueBaseVisitor visitor(dest, family);
+    peerData->accept(visitor);
+  }
+}
 
 int getCompactLength(int family);
 

@@ -44,10 +44,8 @@ struct ContextAttribute {
 };
 
 enum ContextAttributeType {
-  // For libtorrent-rasterbar BitTorrent
-  CTX_ATTR_LIBTORRENT,
-  // Parsed torrent metadata used by non-runtime helpers.
-  CTX_ATTR_TORRENT_METADATA,
+  // For BitTorrent
+  CTX_ATTR_BT,
   // For ED2K
   CTX_ATTR_ED2K,
   // Max value of attribute type to use allocate vector to hold
