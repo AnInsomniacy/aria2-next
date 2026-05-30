@@ -116,18 +116,24 @@
   _(" --lowest-speed-limit=SPEED   Close connection if download speed is lower than\n" \
     "                              or equal to this value(bytes per sec).\n" \
     "                              0 means aria2 does not have a lowest speed limit.\n" \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              Decimal values are allowed. You can append K or\n" \
+    "                              M(1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down.\n"                 \
     "                              This option does not affect BitTorrent downloads.")
 #define TEXT_MAX_OVERALL_DOWNLOAD_LIMIT                                 \
   _(" --max-overall-download-limit=SPEED Set max overall download speed in bytes/sec.\n" \
     "                              0 means unrestricted.\n"             \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              Decimal values are allowed. You can append K or\n" \
+    "                              M(1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down.\n"                 \
     "                              To limit the download speed per download, use\n" \
     "                              --max-download-limit option.")
 #define TEXT_MAX_DOWNLOAD_LIMIT                                         \
   _(" --max-download-limit=SPEED   Set max download speed per each download in\n" \
     "                              bytes/sec. 0 means unrestricted.\n"  \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              Decimal values are allowed. You can append K or\n" \
+    "                              M(1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down.\n"                 \
     "                              To limit the overall download speed, use\n" \
     "                              --max-overall-download-limit option.")
 #define TEXT_FILE_ALLOCATION                                            \
@@ -152,7 +158,9 @@
 #define TEXT_NO_FILE_ALLOCATION_LIMIT                                   \
   _(" --no-file-allocation-limit=SIZE No file allocation is made for files whose\n" \
     "                              size is smaller than SIZE.\n"        \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).")
+    "                              Decimal values are allowed. You can append K or\n" \
+    "                              M(1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down.")
 #define TEXT_ENABLE_DIRECT_IO                                          \
   _(" --enable-direct-io[=true|false] Enable directI/O, which lowers cpu usage while\n" \
     "                              allocating files.\n"                 \
@@ -304,13 +312,17 @@
 #define TEXT_MAX_OVERALL_UPLOAD_LIMIT                                   \
   _(" --max-overall-upload-limit=SPEED Set max overall upload speed in bytes/sec.\n" \
     "                              0 means unrestricted.\n"             \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              Decimal values are allowed. You can append K or\n" \
+    "                              M(1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down.\n"                 \
     "                              To limit the upload speed per torrent, use\n" \
     "                              --max-upload-limit option.")
 #define TEXT_MAX_UPLOAD_LIMIT                                           \
   _(" -u, --max-upload-limit=SPEED Set max upload speed per each torrent in\n" \
     "                              bytes/sec. 0 means unrestricted.\n"  \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              Decimal values are allowed. You can append K or\n" \
+    "                              M(1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down.\n"                 \
     "                              To limit the overall upload speed, use\n" \
     "                              --max-overall-upload-limit option.")
 #define TEXT_SEED_TIME                                                  \
@@ -368,7 +380,9 @@
     "                              download speed. Configuring this option with your\n" \
     "                              preferred download speed can increase your\n" \
     "                              download speed in some cases.\n"     \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).")
+    "                              Decimal values are allowed. You can append K or\n" \
+    "                              M(1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down.")
 #define TEXT_BT_MAX_OPEN_FILES                                          \
   _(" --bt-max-open-files=NUM      Specify maximum number of files to open in\n" \
     "                              multi-file BitTorrent/Metalink downloads\n" \
@@ -645,8 +659,9 @@
     "                              head=SIZE is specified, pieces in the range of\n" \
     "                              first SIZE bytes of each file get higher priority.\n" \
     "                              tail=SIZE means the range of last SIZE bytes of\n" \
-    "                              each file. SIZE can include K or M(1K = 1024, 1M =\n" \
-    "                              1024K). If SIZE is omitted, SIZE=1M is used.")
+    "                              each file. Decimal SIZE values can include K or\n" \
+    "                              M(1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down. If SIZE is omitted, SIZE=1M is used.")
 #define TEXT_INTERFACE                                                  \
   _(" --interface=INTERFACE        Bind sockets to given interface. You can specify\n" \
     "                              interface name, IP address and hostname.")
@@ -764,7 +779,9 @@
     "                              using 2 sources(if --split >= 2, of course).\n" \
     "                              If SIZE is 15M, since 2*15M > 20MiB, aria2 does\n" \
     "                              not split file and download it using 1 source.\n" \
-    "                              You can append K or M(1K = 1024, 1M = 1024K).")
+    "                              Decimal values are allowed. You can append K or\n" \
+    "                              M(1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down.")
 #define TEXT_CONDITIONAL_GET                    \
   _(" --conditional-get[=true|false] Download file only when the local file is older\n" \
     "                              than remote file. Currently, this function has\n" \
@@ -842,7 +859,9 @@
 #define TEXT_RPC_MAX_REQUEST_SIZE                                   \
   _(" --rpc-max-request-size=SIZE  Set max size of JSON-RPC/XML-RPC request. If aria2\n" \
     "                              detects the request is more than SIZE bytes, it\n" \
-    "                              drops connection.")
+    "                              drops connection. Decimal values are allowed.\n" \
+    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              Fractional bytes are rounded down.")
 #define TEXT_RPC_USER                               \
   _(" --rpc-user=USER              Set JSON-RPC/XML-RPC user. This option will be\n" \
     "                              deprecated in the future release. Migrate to\n" \
@@ -1015,7 +1034,9 @@
     "                              If hash checking is involved and the data are\n" \
     "                              cached in memory, we don't need to read them\n" \
     "                              from the disk.\n"                    \
-    "                              SIZE can include K or M(1K = 1024, 1M = 1024K).")
+    "                              Decimal SIZE values can include K or M\n" \
+    "                              (1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down.")
 #define TEXT_GID                                \
   _(" --gid=GID                    Set GID manually. aria2 identifies each\n" \
     "                              download by the ID called GID. The GID must be\n" \
@@ -1106,7 +1127,10 @@
     "                              Set the maximum socket receive buffer in bytes.\n" \
     "                              Specifying 0 will disable this option. This value\n" \
     "                              will be set to socket file descriptor using\n" \
-    "                              SO_RCVBUF socket option with setsockopt() call.")
+    "                              SO_RCVBUF socket option with setsockopt() call.\n" \
+    "                              Decimal values are allowed. You can append K or\n" \
+    "                              M(1K = 1024, 1M = 1024K). Fractional bytes are\n" \
+    "                              rounded down.")
 #define TEXT_BT_ENABLE_HOOK_AFTER_HASH_CHECK                            \
   _(" --bt-enable-hook-after-hash-check[=true|false] Allow hook command invocation\n" \
     "                              after hash check (see -V option) in BitTorrent\n" \
@@ -1122,7 +1146,9 @@
     "                              contains 5 files, then file size is the total\n" \
     "                              size of those files. If file size is strictly\n" \
     "                              greater than the size specified in this option,\n" \
-    "                              mmap will be disabled.")
+    "                              mmap will be disabled. Decimal values are allowed.\n" \
+    "                              You can append K or M(1K = 1024, 1M = 1024K).\n" \
+    "                              Fractional bytes are rounded down.")
 #define TEXT_STDERR \
   _(" --stderr[=true|false]        Redirect all console output that would be\n" \
     "                              otherwise printed in stdout to stderr.")

@@ -192,6 +192,12 @@ void UtilTest2::testGetRealSize()
   CPPUNIT_ASSERT_EQUAL((int64_t)1_k, util::getRealSize("1K"));
   CPPUNIT_ASSERT_EQUAL((int64_t)4_g, util::getRealSize("4096m"));
   CPPUNIT_ASSERT_EQUAL((int64_t)1_k, util::getRealSize("1k"));
+  CPPUNIT_ASSERT_EQUAL((int64_t)1572864, util::getRealSize("1.5M"));
+  CPPUNIT_ASSERT_EQUAL((int64_t)512, util::getRealSize("0.5K"));
+  CPPUNIT_ASSERT_EQUAL((int64_t)1, util::getRealSize("1.9"));
+  CPPUNIT_ASSERT_EQUAL((int64_t)1364, util::getRealSize("1.333K"));
+  CPPUNIT_ASSERT_EQUAL((int64_t)0,
+                       util::getRealSize("0.0000000000000000000000001M"));
   try {
     util::getRealSize("");
     CPPUNIT_FAIL("exception must be thrown.");
@@ -208,6 +214,20 @@ void UtilTest2::testGetRealSize()
   }
   try {
     util::getRealSize("-1");
+    CPPUNIT_FAIL("exception must be thrown.");
+  }
+  catch (Exception& e) {
+    std::cerr << e.stackTrace();
+  }
+  try {
+    util::getRealSize("1.2.3K");
+    CPPUNIT_FAIL("exception must be thrown.");
+  }
+  catch (Exception& e) {
+    std::cerr << e.stackTrace();
+  }
+  try {
+    util::getRealSize("1K2");
     CPPUNIT_FAIL("exception must be thrown.");
   }
   catch (Exception& e) {

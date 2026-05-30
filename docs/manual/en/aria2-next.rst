@@ -183,7 +183,8 @@ HTTP/FTP/SFTP Options
   Close connection if download speed is lower than or equal to this
   value(bytes per sec).
   ``0`` means aria2 does not have a lowest speed limit.
-  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).
+  Decimal values are allowed. You can append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K). Fractional bytes are rounded down.
   This option does not affect BitTorrent downloads.
   Default: ``0``
 
@@ -216,7 +217,8 @@ HTTP/FTP/SFTP Options
   split file into 2 range [0-10MiB) and [10MiB-20MiB) and download it
   using 2 sources(if :option:`--split <-s>` >= 2, of course).  If SIZE is 15M,
   since 2*15M > 20MiB, aria2 does not split file and download it using
-  1 source.  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).
+  1 source. Decimal values are allowed. You can append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K). Fractional bytes are rounded down.
   Possible Values: ``1M`` -``1024M`` Default: ``20M``
 
 
@@ -807,8 +809,9 @@ BitTorrent Specific Options
   by comma. These keywords can take one parameter, SIZE. For example,
   if ``head=<SIZE>`` is specified, pieces in the range of first SIZE bytes
   of each file get higher priority.  ``tail=<SIZE>`` means the range of
-  last SIZE bytes of each file. SIZE can include ``K`` or ``M`` (1K = 1024,
-  1M = 1024K). If SIZE is omitted, SIZE=1M is used.
+  last SIZE bytes of each file. Decimal SIZE values can include ``K`` or
+  ``M`` (1K = 1024, 1M = 1024K). Fractional bytes are rounded down. If
+  SIZE is omitted, SIZE=1M is used.
 
 .. option:: --bt-remove-unselected-file [true|false]
 
@@ -833,7 +836,8 @@ BitTorrent Specific Options
   aria2 temporarily increases the number of peers to try for more
   download speed. Configuring this option with your preferred download
   speed can increase your download speed in some cases.
-  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).
+  Decimal values are allowed. You can append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K). Fractional bytes are rounded down.
   Default: ``50K``
 
 .. option:: --bt-save-metadata [true|false]
@@ -976,7 +980,8 @@ BitTorrent Specific Options
 
   Set max overall upload speed in bytes/sec.
   ``0`` means unrestricted.
-  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).
+  Decimal values are allowed. You can append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K). Fractional bytes are rounded down.
   To limit the upload speed per torrent, use :option:`--max-upload-limit <-u>` option.
   Default: ``0``
 
@@ -984,7 +989,8 @@ BitTorrent Specific Options
 
   Set max upload speed per each torrent in bytes/sec.
   ``0`` means unrestricted.
-  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).
+  Decimal values are allowed. You can append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K). Fractional bytes are rounded down.
   To limit the overall upload speed, use :option:`--max-overall-upload-limit` option.
   Default: ``0``
 
@@ -1152,7 +1158,9 @@ RPC Options
 .. option:: --rpc-max-request-size=<SIZE>
 
   Set max size of JSON-RPC/XML-RPC request. If aria2 detects the request is
-  more than SIZE bytes, it drops connection. Default: ``2M``
+  more than SIZE bytes, it drops connection. Decimal values are allowed.
+  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K). Fractional bytes
+  are rounded down. Default: ``2M``
 
 .. option:: --rpc-passwd=<PASSWD>
 
@@ -1324,8 +1332,9 @@ Advanced Options
   cache is reduce the disk I/O because the data are written in larger
   unit and it is reordered by the offset of the file.  If hash
   checking is involved and the data are cached in memory, we don't
-  need to read them from the disk.  SIZE can include ``K`` or ``M``
-  (1K = 1024, 1M = 1024K). Default: ``16M``
+  need to read them from the disk. Decimal SIZE values can include ``K`` or
+  ``M`` (1K = 1024, 1M = 1024K). Fractional bytes are rounded down.
+  Default: ``16M``
 
 .. option:: --download-result=<OPT>
 
@@ -1499,7 +1508,9 @@ Advanced Options
   sum of all files contained in one download. For example, if a
   download contains 5 files, then file size is the total size of those
   files. If file size is strictly greater than the size specified in
-  this option, mmap will be disabled.
+  this option, mmap will be disabled. Decimal values are allowed. You can
+  append ``K`` or ``M`` (1K = 1024, 1M = 1024K). Fractional bytes are
+  rounded down.
   Default: ``9223372036854775807``
 
 .. option:: --max-resume-failure-tries=<N>
@@ -1629,16 +1640,18 @@ Advanced Options
 .. option:: --max-overall-download-limit=<SPEED>
 
   Set max overall download speed in bytes/sec.  ``0`` means
-  unrestricted.  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).  To
-  limit the download speed per download, use :option:`--max-download-limit`
-  option.  Default: ``0``
+  unrestricted. Decimal values are allowed. You can append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K). Fractional bytes are rounded down. To limit the
+  download speed per download, use :option:`--max-download-limit` option.
+  Default: ``0``
 
 .. option:: --max-download-limit=<SPEED>
 
   Set max download speed per each download in bytes/sec. ``0`` means
-  unrestricted.  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).  To
-  limit the overall download speed, use :option:`--max-overall-download-limit`
-  option.  Default: ``0``
+  unrestricted. Decimal values are allowed. You can append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K). Fractional bytes are rounded down. To limit the
+  overall download speed, use :option:`--max-overall-download-limit` option.
+  Default: ``0``
 
 .. option:: --no-conf [true|false]
 
@@ -1647,7 +1660,8 @@ Advanced Options
 .. option:: --no-file-allocation-limit=<SIZE>
 
   No file allocation is made for files whose size is smaller than SIZE.
-  You can append ``K`` or ``M`` (1K = 1024, 1M = 1024K).
+  Decimal values are allowed. You can append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K). Fractional bytes are rounded down.
   Default: ``5M``
 
 .. option:: -P, --parameterized-uri [true|false]
@@ -1721,8 +1735,9 @@ Advanced Options
 
   Set the maximum socket receive buffer in bytes.  Specifying ``0``
   will disable this option. This value will be set to socket file
-  descriptor using ``SO_RCVBUF`` socket option with ``setsockopt()``
-  call.  Default: ``0``
+  descriptor using ``SO_RCVBUF`` socket option with ``setsockopt()`` call.
+  Decimal values are allowed. You can append ``K`` or ``M``
+  (1K = 1024, 1M = 1024K). Fractional bytes are rounded down. Default: ``0``
 
 .. option:: --stop=<SEC>
 

@@ -310,6 +310,77 @@ bool inPercentEncodeMini(const unsigned char c)
          c != '"' && c != '<' && c != '>';
 }
 
+int64_t parseDecimalSize(const std::string& value, int64_t mult,
+                         const std::string& original)
+{
+  if (value.empty()) {
+    throw DL_ABORT_EX(
+        fmt("Bad or negative value detected: %s", original.c_str()));
+  }
+
+  int64_t whole = 0;
+  std::string fraction;
+  bool seenDigit = false;
+  bool seenDot = false;
+  bool seenFractionDigit = false;
+
+  for (char ch : value) {
+    if (ch == '.') {
+      if (seenDot) {
+        throw DL_ABORT_EX(
+            fmt("Bad or negative value detected: %s", original.c_str()));
+      }
+      seenDot = true;
+      continue;
+    }
+
+    if (!isDigit(ch)) {
+      throw DL_ABORT_EX(
+          fmt("Bad or negative value detected: %s", original.c_str()));
+    }
+
+    seenDigit = true;
+    int digit = ch - '0';
+    if (!seenDot) {
+      if (whole > (INT64_MAX - digit) / 10) {
+        throw DL_ABORT_EX(
+            fmt(MSG_STRING_INTEGER_CONVERSION_FAILURE, "overflow/underflow"));
+      }
+      whole = whole * 10 + digit;
+    }
+    else {
+      fraction.push_back(ch);
+      seenFractionDigit = true;
+    }
+  }
+
+  if (!seenDigit || (seenDot && !seenFractionDigit)) {
+    throw DL_ABORT_EX(
+        fmt("Bad or negative value detected: %s", original.c_str()));
+  }
+
+  if (whole > INT64_MAX / mult) {
+    throw DL_ABORT_EX(
+        fmt(MSG_STRING_INTEGER_CONVERSION_FAILURE, "overflow/underflow"));
+  }
+
+  int64_t result = whole * mult;
+  if (!fraction.empty()) {
+    int64_t fractionResult = 0;
+    for (auto i = fraction.rbegin(); i != fraction.rend(); ++i) {
+      int64_t product = (*i - '0') * mult + fractionResult;
+      fractionResult = product / 10;
+    }
+    if (INT64_MAX - result < fractionResult) {
+      throw DL_ABORT_EX(
+          fmt(MSG_STRING_INTEGER_CONVERSION_FAILURE, "overflow/underflow"));
+    }
+    result += fractionResult;
+  }
+
+  return result;
+}
+
 } // namespace
 
 bool isUtf8(const std::string& str)
@@ -1846,11 +1917,15 @@ int64_t getRealSize(const std::string& sizeWithUnit)
 {
   std::string::size_type p = sizeWithUnit.find_first_of("KMkm");
   std::string size;
-  int32_t mult = 1;
+  int64_t mult = 1;
   if (p == std::string::npos) {
     size = sizeWithUnit;
   }
   else {
+    if (p + 1 != sizeWithUnit.size()) {
+      throw DL_ABORT_EX(
+          fmt("Bad or negative value detected: %s", sizeWithUnit.c_str()));
+    }
     switch (sizeWithUnit[p]) {
     case 'K':
     case 'k':
@@ -1863,16 +1938,7 @@ int64_t getRealSize(const std::string& sizeWithUnit)
     }
     size.assign(sizeWithUnit.begin(), sizeWithUnit.begin() + p);
   }
-  int64_t v;
-  if (!parseLLIntNoThrow(v, size) || v < 0) {
-    throw DL_ABORT_EX(
-        fmt("Bad or negative value detected: %s", sizeWithUnit.c_str()));
-  }
-  if (INT64_MAX / mult < v) {
-    throw DL_ABORT_EX(
-        fmt(MSG_STRING_INTEGER_CONVERSION_FAILURE, "overflow/underflow"));
-  }
-  return v * mult;
+  return parseDecimalSize(size, mult, sizeWithUnit);
 }
 
 std::string abbrevSize(int64_t size)
