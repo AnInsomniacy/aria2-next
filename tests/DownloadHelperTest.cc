@@ -92,6 +92,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kPeerTransferRemovesCompletedRequestedRanges);
   CPPUNIT_TEST(testEd2kPeerTransferExpiresStalledRequests);
   CPPUNIT_TEST(testEd2kPeerTransferReclaimsStalledEndgameRange);
+  CPPUNIT_TEST(testEd2kPeerTransferActivelyReclaimsStalledRange);
   CPPUNIT_TEST(testEd2kPeerTransferIgnoresDuplicateData);
   CPPUNIT_TEST(testEd2kPeerTransferAcceptsParallelPieceBlocks);
   CPPUNIT_TEST(testEd2kPeerTransferCancelsOwnerAfterParallelHashFailure);
@@ -166,6 +167,7 @@ public:
   void testEd2kPeerTransferRemovesCompletedRequestedRanges();
   void testEd2kPeerTransferExpiresStalledRequests();
   void testEd2kPeerTransferReclaimsStalledEndgameRange();
+  void testEd2kPeerTransferActivelyReclaimsStalledRange();
   void testEd2kPeerTransferIgnoresDuplicateData();
   void testEd2kPeerTransferAcceptsParallelPieceBlocks();
   void testEd2kPeerTransferCancelsOwnerAfterParallelHashFailure();
@@ -1781,6 +1783,52 @@ void DownloadHelperTest::testEd2kPeerTransferReclaimsStalledEndgameRange()
                                               110));
   CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.requestedPartRanges.size());
   CPPUNIT_ASSERT_EQUAL((int64_t)0, attrs.requestedPartRanges[0].begin);
+}
+
+void DownloadHelperTest::testEd2kPeerTransferActivelyReclaimsStalledRange()
+{
+  Ed2kAttribute attrs;
+  attrs.link.size = static_cast<int64_t>(ed2k::PIECE_LENGTH) * 2;
+
+  ed2k::Endpoint slowPeer;
+  slowPeer.host = "203.0.113.10";
+  slowPeer.port = 4662;
+  ed2k::Endpoint fastPeer;
+  fastPeer.host = "203.0.113.11";
+  fastPeer.port = 4662;
+
+  addEd2kPeer(&attrs, slowPeer, ed2k::PEER_SOURCE_SERVER);
+  addEd2kPeer(&attrs, fastPeer, ed2k::PEER_SOURCE_SERVER);
+
+  ed2k::PartRange range;
+  range.begin = 0;
+  range.end = Piece::BLOCK_LENGTH;
+  CPPUNIT_ASSERT(updateEd2kPeerRequestedParts(
+      &attrs, slowPeer, std::vector<ed2k::PartRange>{range}, 100));
+
+  auto slowState = getEd2kPeerState(&attrs, slowPeer);
+  auto fastState = getEd2kPeerState(&attrs, fastPeer);
+  CPPUNIT_ASSERT(slowState);
+  CPPUNIT_ASSERT(fastState);
+  slowState->accepted = true;
+  fastState->accepted = true;
+  fastState->partStatus.push_back(true);
+  fastState->partStatus.push_back(false);
+
+  ed2k::PartRange reclaimed;
+  CPPUNIT_ASSERT(!activelyReclaimEd2kStalledRequestedRange(
+      &attrs, fastPeer, fastState->partStatus, 159, reclaimed));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, slowState->requestedParts.size());
+
+  CPPUNIT_ASSERT(activelyReclaimEd2kStalledRequestedRange(
+      &attrs, fastPeer, fastState->partStatus, 160, reclaimed));
+  CPPUNIT_ASSERT_EQUAL((int64_t)0, reclaimed.begin);
+  CPPUNIT_ASSERT_EQUAL(static_cast<int64_t>(Piece::BLOCK_LENGTH),
+                       reclaimed.end);
+  CPPUNIT_ASSERT(slowState->requestedParts.empty());
+  CPPUNIT_ASSERT(slowState->cancelTransferSent);
+  CPPUNIT_ASSERT(!slowState->dead);
+  CPPUNIT_ASSERT_EQUAL((size_t)0, attrs.requestedPartRanges.size());
 }
 
 void DownloadHelperTest::testEd2kPeerTransferIgnoresDuplicateData()

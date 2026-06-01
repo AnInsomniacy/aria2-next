@@ -7,6 +7,7 @@
 #include "DefaultPieceStorage.h"
 #include "Segment.h"
 #include "Option.h"
+#include "Piece.h"
 #include "PieceSelector.h"
 #include "FileEntry.h"
 #include "PeerStat.h"
@@ -21,6 +22,7 @@ class SegmentManTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testGetSegment_sameFileEntry);
   CPPUNIT_TEST(testRegisterPeerStat);
   CPPUNIT_TEST(testCancelAllSegments);
+  CPPUNIT_TEST(testCancelPartialSegmentResumesAtMissingBlock);
   CPPUNIT_TEST(testGetPeerStat);
   CPPUNIT_TEST(testGetCleanSegmentIfOwnerIsIdle);
   CPPUNIT_TEST_SUITE_END();
@@ -47,6 +49,7 @@ public:
   void testGetSegment_sameFileEntry();
   void testRegisterPeerStat();
   void testCancelAllSegments();
+  void testCancelPartialSegmentResumesAtMissingBlock();
   void testGetPeerStat();
   void testGetCleanSegmentIfOwnerIsIdle();
 };
@@ -168,6 +171,20 @@ void SegmentManTest::testCancelAllSegments()
   segmentMan_->cancelAllSegments();
   CPPUNIT_ASSERT(segmentMan_->getSegmentWithIndex(3, 0));
   CPPUNIT_ASSERT(segmentMan_->getSegmentWithIndex(4, 1));
+}
+
+void SegmentManTest::testCancelPartialSegmentResumesAtMissingBlock()
+{
+  auto segment = segmentMan_->getSegmentWithIndex(1, 0);
+  CPPUNIT_ASSERT(segment);
+  segment->updateWrittenLength(Piece::BLOCK_LENGTH * 2);
+
+  segmentMan_->cancelSegment(1);
+
+  auto resumed = segmentMan_->getSegmentWithIndex(2, 0);
+  CPPUNIT_ASSERT(resumed);
+  CPPUNIT_ASSERT_EQUAL(static_cast<int64_t>(Piece::BLOCK_LENGTH * 2),
+                       resumed->getWrittenLength());
 }
 
 void SegmentManTest::testGetPeerStat()

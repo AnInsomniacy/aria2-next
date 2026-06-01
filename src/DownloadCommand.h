@@ -39,6 +39,8 @@
 
 #include <unistd.h>
 
+#include "TimerA2.h"
+
 namespace aria2 {
 
 class PeerStat;
@@ -60,6 +62,18 @@ private:
   bool pieceHashValidationEnabled_;
 
   bool sinkFilterOnly_;
+
+  uint64_t lastTailReclaimSessionDownloadLength_;
+
+  Timer tailReclaimLastProgress_;
+
+  bool shouldReclaimTailSegment() const;
+
+  bool isTailReclaimCheckReady() const;
+
+  bool fillTailReclaimState(class HttpTailReclaimState& state) const;
+
+  void updateTailReclaimProgress();
 
   void validatePieceHash(const std::shared_ptr<Segment>& segment,
                          const std::string& expectedPieceHash,

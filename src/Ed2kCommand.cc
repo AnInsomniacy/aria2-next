@@ -239,6 +239,7 @@ Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
       incoming_(false),
       serverRequestSent_(false),
       closeAfterOutbox_(false),
+      tailReclaimTimer_(Timer::zero()),
       use64BitOffsets_(requestGroup->getDownloadContext()->getTotalLength() >
                        std::numeric_limits<uint32_t>::max()),
       localPeerInfo_(ed2k::createLocalEmulePeerInfo()),
@@ -282,6 +283,7 @@ Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
       aichFileHashRequested_(false),
       serverRequestSent_(false),
       closeAfterOutbox_(false),
+      tailReclaimTimer_(Timer::zero()),
       use64BitOffsets_(requestGroup->getDownloadContext()->getTotalLength() >
                        std::numeric_limits<uint32_t>::max()),
       incoming_(true),
@@ -955,6 +957,55 @@ void Ed2kCommand::queuePeerPartRequest()
                                : ed2k::OP_REQUESTPARTS,
               ed2k::createRequestPartsPayload(attrs->link.hash, ranges,
                                               use64BitOffsets_));
+}
+
+bool Ed2kCommand::queueActivePeerPartReclaim()
+{
+  if (mode_ != Mode::PEER || incoming_ || !peerAccepted_ ||
+      getRequestGroup()->downloadFinished() || !outbox_.empty()) {
+    return false;
+  }
+  if (tailReclaimTimer_.difference(global::wallclock()) < 10_s) {
+    return false;
+  }
+  tailReclaimTimer_ = global::wallclock();
+
+  const auto attrs = getEd2kAttrs(getDownloadContext());
+  auto state = getEd2kPeerState(attrs, endpoint_);
+  if (!state || !state->accepted || state->dead || state->cancelled ||
+      state->noFile || state->outOfParts || state->remoteQueueFull ||
+      state->udpReaskPending || state->requestedParts.size() >= 3) {
+    return false;
+  }
+
+  ed2k::PartRange reclaimed;
+  if (!activelyReclaimEd2kStalledRequestedRange(
+          attrs, endpoint_, state->partStatus, nowSeconds(), reclaimed) ||
+      !blockRangeAvailable(state->requestedParts, reclaimed)) {
+    return false;
+  }
+
+  std::vector<ed2k::PartRange> ranges;
+  ranges.push_back(reclaimed);
+  if (state->requestedParts.empty()) {
+    getSegmentMan()->getSegmentWithIndex(
+        getCuid(), static_cast<size_t>(reclaimed.begin /
+                                      getDownloadContext()->getPieceLength()));
+  }
+  auto requested = state->requestedParts;
+  requested.push_back(reclaimed);
+  updateEd2kPeerRequestedParts(attrs, endpoint_, requested, nowSeconds());
+  queuePacket(ed2k::PROTO_EDONKEY,
+              use64BitOffsets_ ? ed2k::OP_REQUESTPARTS_I64
+                               : ed2k::OP_REQUESTPARTS,
+              ed2k::createRequestPartsPayload(attrs->link.hash, ranges,
+                                              use64BitOffsets_));
+  A2_LOG_DEBUG(fmt("CUID#%" PRId64
+                   " - Actively reclaimed stalled ED2K part request begin=%"
+                   PRId64 " end=%" PRId64 ".",
+                   getCuid(), reclaimed.begin, reclaimed.end));
+  state_ = State::WRITE;
+  return true;
 }
 
 void Ed2kCommand::queueCancelTransfer()
@@ -1934,6 +1985,9 @@ bool Ed2kCommand::executeInternal()
       if (expireStalledTransfer()) {
         break;
       }
+      if (queueActivePeerPartReclaim()) {
+        break;
+      }
       if (!readHeader()) {
         return false;
       }
@@ -1943,6 +1997,9 @@ bool Ed2kCommand::executeInternal()
         break;
       }
       if (expireStalledTransfer()) {
+        break;
+      }
+      if (queueActivePeerPartReclaim()) {
         break;
       }
       if (!readBody()) {
@@ -1959,6 +2016,25 @@ bool Ed2kCommand::executeInternal()
       state_ = State::WRITE;
     }
   }
+}
+
+bool Ed2kCommand::noCheck() const
+{
+  if (mode_ != Mode::PEER || incoming_ || !peerAccepted_ ||
+      (state_ != State::READ_HEADER && state_ != State::READ_BODY)) {
+    return false;
+  }
+  if (tailReclaimTimer_.difference(global::wallclock()) < 10_s) {
+    return false;
+  }
+  const auto attrs = getEd2kAttrs(getDownloadContext());
+  const auto state = getEd2kPeerState(attrs, endpoint_);
+  return state && state->accepted && !state->dead && !state->cancelled &&
+         !state->noFile && !state->outOfParts && !state->remoteQueueFull &&
+         !state->udpReaskPending && state->requestedParts.size() < 3 &&
+         canReclaimEd2kStalledRequestedRange(
+             attrs, endpoint_, state->partStatus, nowSeconds(),
+             ed2k::ACTIVE_ENDGAME_RECLAIM_STALL_SECONDS);
 }
 
 } // namespace aria2

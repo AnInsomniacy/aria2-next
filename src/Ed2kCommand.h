@@ -18,6 +18,7 @@
 #include "ed2k_link.h"
 #include "ed2k_packet.h"
 #include "ed2k_peer.h"
+#include "TimerA2.h"
 
 #include <array>
 #include <memory>
@@ -75,6 +76,7 @@ private:
   bool incoming_;
   bool serverRequestSent_;
   bool closeAfterOutbox_;
+  Timer tailReclaimTimer_;
   std::deque<uint32_t> pendingCallbackClientIds_;
   ed2k::EmulePeerInfo localPeerInfo_;
   ed2k::EmulePeerInfo remotePeerInfo_;
@@ -136,6 +138,7 @@ private:
   void queueSourceExchangeAnswer(uint8_t version);
   void queuePeerStartUpload();
   void queuePeerPartRequest();
+  bool queueActivePeerPartReclaim();
   void queueCancelTransfer();
   bool sendPendingCancelTransfer();
   bool expireStalledTransfer();
@@ -148,6 +151,7 @@ private:
 
 protected:
   virtual bool executeInternal() CXX11_OVERRIDE;
+  virtual bool noCheck() const CXX11_OVERRIDE;
 
 public:
   Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup, DownloadEngine* e,

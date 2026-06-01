@@ -816,6 +816,60 @@ bool reclaimEd2kStalledRequestedRange(
   return false;
 }
 
+bool canReclaimEd2kStalledRequestedRange(
+    Ed2kAttribute* attrs, const ed2k::Endpoint& requester,
+    const std::vector<bool>& requesterPartStatus, int64_t now,
+    int64_t staleSeconds)
+{
+  if (!attrs || requester.host.empty() || requester.port == 0 ||
+      staleSeconds <= 0) {
+    return false;
+  }
+  const auto requesterState = getEd2kPeerState(attrs, requester);
+  for (const auto& state : attrs->peerStates) {
+    if (sameEndpoint(state.endpoint, requester) ||
+        state.requestedParts.empty() || state.cancelTransferSent) {
+      continue;
+    }
+    const auto lastProgress =
+        state.lastTransferProgressTime != 0 ? state.lastTransferProgressTime
+                                            : state.lastPartRequestTime;
+    if (lastProgress == 0 || now - lastProgress < staleSeconds) {
+      continue;
+    }
+    for (const auto& range : state.requestedParts) {
+      const auto pieceIndex =
+          static_cast<size_t>(range.begin / ed2k::PIECE_LENGTH);
+      if (!requesterPartStatus.empty() &&
+          (pieceIndex >= requesterPartStatus.size() ||
+           !requesterPartStatus[pieceIndex])) {
+        continue;
+      }
+      if (requesterState &&
+          std::any_of(requesterState->requestedParts.begin(),
+                      requesterState->requestedParts.end(),
+                      [&](const ed2k::PartRange& existing) {
+                        return existing.begin < range.end &&
+                               range.begin < existing.end;
+                      })) {
+        continue;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+bool activelyReclaimEd2kStalledRequestedRange(
+    Ed2kAttribute* attrs, const ed2k::Endpoint& requester,
+    const std::vector<bool>& requesterPartStatus, int64_t now,
+    ed2k::PartRange& reclaimed)
+{
+  return reclaimEd2kStalledRequestedRange(
+      attrs, requester, requesterPartStatus, now,
+      ed2k::ACTIVE_ENDGAME_RECLAIM_STALL_SECONDS, reclaimed);
+}
+
 bool expireEd2kStalledPeerTransfer(Ed2kAttribute* attrs,
                                    SegmentMan* segmentMan,
                                    const ed2k::Endpoint& peer,

@@ -65,6 +65,7 @@
 #include "Piece.h"
 #include "WrDiskCacheEntry.h"
 #include "DownloadFailureException.h"
+#include "HttpTailReclaimPolicy.h"
 #include "MessageDigest.h"
 #include "message_digest_helper.h"
 #ifdef ENABLE_BITTORRENT
@@ -82,7 +83,8 @@ DownloadCommand::DownloadCommand(
                       socketRecvBuffer),
       startupIdleTime_(10),
       lowestDownloadSpeedLimit_(0),
-      pieceHashValidationEnabled_(false)
+      pieceHashValidationEnabled_(false),
+      lastTailReclaimSessionDownloadLength_(0)
 {
   {
     if (getOption()->getAsBool(PREF_REALTIME_CHUNK_CHECKSUM)) {
@@ -143,6 +145,12 @@ bool DownloadCommand::executeInternal()
   }
   setReadCheckSocket(getSocket());
 
+  if (shouldReclaimTailSegment()) {
+    A2_LOG_INFO(fmt("CUID#%" PRId64 " - Reclaiming stalled HTTP tail segment.",
+                    getCuid()));
+    return prepareForRetry(0);
+  }
+
   const std::shared_ptr<DiskAdaptor>& diskAdaptor =
       getPieceStorage()->getDiskAdaptor();
   std::shared_ptr<Segment> segment = getSegments().front();
@@ -196,6 +204,7 @@ bool DownloadCommand::executeInternal()
     getSocketRecvBuffer()->drain(bufSize);
     peerStat_->updateDownload(bufSize);
     getDownloadContext()->updateDownload(bufSize);
+    updateTailReclaimProgress();
   }
   bool segmentPartComplete = false;
   // Note that GrowSegment::complete() always returns false.
@@ -297,6 +306,54 @@ bool DownloadCommand::executeInternal()
 bool DownloadCommand::shouldEnableWriteCheck()
 {
   return getSocket()->wantWrite();
+}
+
+bool DownloadCommand::shouldReclaimTailSegment() const
+{
+  HttpTailReclaimState state;
+  return fillTailReclaimState(state) && shouldReclaimHttpTailSegment(state);
+}
+
+bool DownloadCommand::isTailReclaimCheckReady() const
+{
+  HttpTailReclaimState state;
+  return fillTailReclaimState(state) && isHttpTailBlocked(state);
+}
+
+bool DownloadCommand::fillTailReclaimState(HttpTailReclaimState& state) const
+{
+  const auto& segments = getSegments();
+  if (segments.empty() || !getRequest()) {
+    return false;
+  }
+
+  const auto totalLength = getRequestGroup()->getTotalLength();
+  if (totalLength <= 0) {
+    return false;
+  }
+
+  state.protocol = getRequest()->getProtocol();
+  state.p2pInvolved = getRequestGroup()->p2pInvolved();
+  state.totalLength = totalLength;
+  state.pendingLength = getRequestGroup()->getPendingLength();
+  state.hasMissingUnusedPiece = getPieceStorage()->hasMissingUnusedPiece();
+  state.numConcurrentCommand = getRequestGroup()->getNumConcurrentCommand();
+  state.numStreamCommand = getRequestGroup()->getNumStreamCommand();
+  state.currentSessionDownloadLength = peerStat_->getSessionDownloadLength();
+  state.lastSessionDownloadLength = lastTailReclaimSessionDownloadLength_;
+  state.noProgressTime = std::chrono::duration_cast<std::chrono::seconds>(
+      tailReclaimLastProgress_.difference(global::wallclock()));
+  state.stallTime = startupIdleTime_;
+  return true;
+}
+
+void DownloadCommand::updateTailReclaimProgress()
+{
+  const auto sessionDownloadLength = peerStat_->getSessionDownloadLength();
+  if (sessionDownloadLength > lastTailReclaimSessionDownloadLength_) {
+    lastTailReclaimSessionDownloadLength_ = sessionDownloadLength;
+    tailReclaimLastProgress_ = global::wallclock();
+  }
 }
 
 void DownloadCommand::checkLowestDownloadSpeed() const
@@ -421,6 +478,9 @@ void DownloadCommand::installStreamFilter(
 
 // We need to override noCheck() to return true in order to measure
 // download speed to check lowest speed.
-bool DownloadCommand::noCheck() const { return lowestDownloadSpeedLimit_ > 0; }
+bool DownloadCommand::noCheck() const
+{
+  return lowestDownloadSpeedLimit_ > 0 || isTailReclaimCheckReady();
+}
 
 } // namespace aria2

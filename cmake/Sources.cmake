@@ -269,6 +269,8 @@ set(ARIA2_SOURCES_BASE
   src/HttpRequestCommand.cc
   src/HttpRequestCommand.h
   src/HttpRequestConnectChain.h
+  src/HttpTailReclaimPolicy.cc
+  src/HttpTailReclaimPolicy.h
   src/HttpResponse.cc
   src/HttpResponse.h
   src/HttpResponseCommand.cc

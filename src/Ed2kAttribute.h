@@ -134,6 +134,14 @@ bool reclaimEd2kStalledRequestedRange(
     Ed2kAttribute* attrs, const ed2k::Endpoint& requester,
     const std::vector<bool>& requesterPartStatus, int64_t now,
     int64_t staleSeconds, ed2k::PartRange& reclaimed);
+bool canReclaimEd2kStalledRequestedRange(
+    Ed2kAttribute* attrs, const ed2k::Endpoint& requester,
+    const std::vector<bool>& requesterPartStatus, int64_t now,
+    int64_t staleSeconds);
+bool activelyReclaimEd2kStalledRequestedRange(
+    Ed2kAttribute* attrs, const ed2k::Endpoint& requester,
+    const std::vector<bool>& requesterPartStatus, int64_t now,
+    ed2k::PartRange& reclaimed);
 bool expireEd2kStalledPeerTransfer(Ed2kAttribute* attrs,
                                    SegmentMan* segmentMan,
                                    const ed2k::Endpoint& peer,
