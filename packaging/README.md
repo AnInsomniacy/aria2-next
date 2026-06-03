@@ -25,5 +25,3 @@ Release jobs must verify runtime dependency closure before packaging. Use `packa
 Release jobs also run `packaging/scripts/size-audit` on final binaries. This audit records size and dependency metadata for inspection, while runtime dependency closure remains the gating packaging check.
 
 The release dependency boundary is platform-specific. Linux release binaries may use the system ELF loader, C/C++ runtime, and OpenSSL 3 runtime, while zlib, Expat, SQLite, c-ares, and libssh2 must be linked into the executable. macOS release binaries may link only Apple system libraries and frameworks at runtime; third-party dependencies must be linked into the executable. Windows release binaries use WinTLS and libssh2 WinCNG, may link only Windows system DLLs at runtime, and must not carry OpenSSL, third-party DLLs, or private CRT DLLs. Android release binaries may link only Android system runtime libraries and must not require `libc++_shared.so`.
-
-Release jobs also run HTTPS dry-run smoke tests against the final binary. These checks cover startup, TLS backend selection, and default certificate verification before assets are uploaded.

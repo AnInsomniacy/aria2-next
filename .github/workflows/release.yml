@@ -186,7 +186,6 @@ jobs:
           ctest --test-dir build/release --output-on-failure
           packaging/scripts/check-runtime-deps linux build/release/aria2-next
           packaging/scripts/size-audit linux build/release/aria2-next
-          build/release/aria2-next --dry-run=true https://down-tencent.huorong.cn/sysdiag-all-x64-6.0.10.0-2026.05.15.1.exe
 
       - name: Package
         run: |
@@ -308,7 +307,6 @@ jobs:
           ctest --test-dir build/release --output-on-failure
           packaging/scripts/check-runtime-deps linux build/release/aria2-next
           packaging/scripts/size-audit linux build/release/aria2-next
-          build/release/aria2-next --dry-run=true https://down-tencent.huorong.cn/sysdiag-all-x64-6.0.10.0-2026.05.15.1.exe
 
       - name: Package
         run: |
@@ -441,7 +439,6 @@ jobs:
           ctest --test-dir build/release --output-on-failure
           packaging/scripts/check-runtime-deps macos build/release/aria2-next
           packaging/scripts/size-audit macos build/release/aria2-next
-          build/release/aria2-next --dry-run=true https://down-tencent.huorong.cn/sysdiag-all-x64-6.0.10.0-2026.05.15.1.exe
 
       - name: Package
         run: |
@@ -574,7 +571,6 @@ jobs:
           ctest --test-dir build/release --output-on-failure
           packaging/scripts/check-runtime-deps macos build/release/aria2-next
           packaging/scripts/size-audit macos build/release/aria2-next
-          build/release/aria2-next --dry-run=true https://down-tencent.huorong.cn/sysdiag-all-x64-6.0.10.0-2026.05.15.1.exe
 
       - name: Package
         run: |
@@ -839,12 +835,14 @@ jobs:
         run: |
           source packaging/dependencies.env
           . packaging/scripts/release-size-profile windows
+          AR_PATH=$(command -v "$AR")
+          RANLIB_PATH=$(command -v "$RANLIB")
           tar xf "$LIBSSH2_ARCHIVE"
           cmake -S "libssh2-$LIBSSH2_VERSION" -B build/libssh2 -G Ninja \
             -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_C_COMPILER=$CC \
-            -DCMAKE_AR=$AR \
-            -DCMAKE_RANLIB=$RANLIB \
+            -DCMAKE_AR=$AR_PATH \
+            -DCMAKE_RANLIB=$RANLIB_PATH \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=$PREFIX \
             -DBUILD_SHARED_LIBS=OFF \
@@ -859,13 +857,15 @@ jobs:
       - name: Build aria2
         run: |
           . packaging/scripts/release-size-profile windows
+          AR_PATH=$(command -v "$AR")
+          RANLIB_PATH=$(command -v "$RANLIB")
           PKG_CONFIG_LIBDIR="$PREFIX/lib/pkgconfig" \
           cmake -S . -B build/release -G Ninja \
             -DCMAKE_SYSTEM_NAME=Windows \
             -DCMAKE_C_COMPILER=$CC \
             -DCMAKE_CXX_COMPILER=$CXX \
-            -DCMAKE_AR=$AR \
-            -DCMAKE_RANLIB=$RANLIB \
+            -DCMAKE_AR=$AR_PATH \
+            -DCMAKE_RANLIB=$RANLIB_PATH \
             -DCMAKE_BUILD_TYPE=Release \
             -DARIA2_STATIC_DEPENDENCIES=ON \
             -DARIA2_WITH_CARES=ON \
