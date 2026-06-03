@@ -59,8 +59,6 @@ public:
 
   virtual bool addSystemTrustedCACerts() CXX11_OVERRIDE;
 
-  virtual bool addDefaultCABundle() CXX11_OVERRIDE;
-
   // certfile can contain multiple certificates.
   virtual bool addTrustedCACertFile(const std::string& certfile) CXX11_OVERRIDE;
 

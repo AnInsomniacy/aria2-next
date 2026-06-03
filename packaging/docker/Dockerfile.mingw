@@ -31,7 +31,6 @@ RUN . packaging/dependencies.env && \
     curl_fetch "$SQLITE_URL" "$SQLITE_ARCHIVE" "$SQLITE_SHA256" && \
     curl_fetch "$ZLIB_URL" "$ZLIB_ARCHIVE" "$ZLIB_SHA256" && \
     curl_fetch "$CARES_URL" "$CARES_ARCHIVE" "$CARES_SHA256" && \
-    curl_fetch "$OPENSSL_URL" "$OPENSSL_ARCHIVE" "$OPENSSL_SHA256" && \
     curl_fetch "$LIBSSH2_URL" "$LIBSSH2_ARCHIVE" "$LIBSSH2_SHA256"
 
 RUN . packaging/dependencies.env && \
@@ -85,29 +84,21 @@ RUN . packaging/dependencies.env && \
 
 RUN . packaging/dependencies.env && \
     . packaging/scripts/release-size-profile windows && \
-    tar xf "$OPENSSL_ARCHIVE" && \
-    cd "openssl-$OPENSSL_VERSION" && \
-    ./Configure mingw64 no-shared no-module no-tests \
-      --cross-compile-prefix="$HOST-" \
-      --prefix="$PREFIX" --libdir=lib \
-      $RELEASE_CFLAGS && \
-    make -j"$(nproc)" && \
-    make install_sw
-
-RUN . packaging/dependencies.env && \
-    . packaging/scripts/release-size-profile windows && \
     tar xf "$LIBSSH2_ARCHIVE" && \
-    cd "libssh2-$LIBSSH2_VERSION" && \
-    CPPFLAGS="-I$PREFIX/include $RELEASE_CPPFLAGS" CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
-    ./configure \
-      --disable-shared --enable-static \
-      --disable-examples-build \
-      --prefix="$PREFIX" --host="$HOST" \
-      --build="$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)" \
-      --with-crypto=openssl --with-libssl-prefix="$PREFIX" \
-      PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig" \
-      LIBS="-lws2_32 -lcrypt32" && \
-    make -j"$(nproc)" install
+    cmake -S "libssh2-$LIBSSH2_VERSION" -B build/libssh2 -G Ninja \
+      -DCMAKE_SYSTEM_NAME=Windows \
+      -DCMAKE_C_COMPILER="$HOST-gcc" \
+      -DCMAKE_RC_COMPILER="$HOST-windres" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX="$PREFIX" \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DBUILD_STATIC_LIBS=ON \
+      -DBUILD_EXAMPLES=OFF \
+      -DBUILD_TESTING=OFF \
+      -DCRYPTO_BACKEND=WinCNG \
+      -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
+      -DCMAKE_EXE_LINKER_FLAGS="$RELEASE_LDFLAGS" && \
+    cmake --build build/libssh2 --target install -j"$(nproc)"
 
 COPY . /aria2
 WORKDIR /aria2
@@ -120,7 +111,7 @@ RUN . packaging/scripts/release-size-profile windows && \
       -DCMAKE_CXX_COMPILER="$HOST-g++" \
       -DCMAKE_RC_COMPILER="$HOST-windres" \
       -DCMAKE_BUILD_TYPE=Release \
-      -DARIA2_ENABLE_STATIC=ON \
+      -DARIA2_STATIC_DEPENDENCIES=ON \
       -DARIA2_WITH_CARES=ON \
       -DARIA2_WITH_GNUTLS=OFF \
       -DARIA2_WITH_OPENSSL=OFF \
@@ -141,5 +132,5 @@ RUN . packaging/scripts/release-size-profile windows && \
       -DPKG_CONFIG_EXECUTABLE=/usr/bin/pkg-config && \
     cmake --build build/release -j"$(nproc)" && \
     "$HOST-strip" build/release/aria2-next.exe && \
-    packaging/scripts/check-runtime-deps windows-x86_64 build/release/aria2-next.exe && \
+    OBJDUMP="$HOST-objdump" packaging/scripts/check-runtime-deps windows-x86_64 build/release/aria2-next.exe && \
     OBJDUMP="$HOST-objdump" SIZE="$HOST-size" packaging/scripts/size-audit windows-x86_64 build/release/aria2-next.exe

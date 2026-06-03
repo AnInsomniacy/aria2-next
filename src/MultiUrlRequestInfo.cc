@@ -265,9 +265,7 @@ int MultiUrlRequestInfo::prepare()
       }
     }
     else if (option_->getAsBool(PREF_CHECK_CERTIFICATE)) {
-      const bool systemTrusted = clTlsContext->addSystemTrustedCACerts();
-      const bool defaultBundle = clTlsContext->addDefaultCABundle();
-      if (!systemTrusted && !defaultBundle) {
+      if (!clTlsContext->addSystemTrustedCACerts()) {
         A2_LOG_INFO(MSG_WARN_NO_CA_CERT);
       }
     }

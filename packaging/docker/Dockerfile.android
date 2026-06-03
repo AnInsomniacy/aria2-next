@@ -118,7 +118,7 @@ RUN . packaging/scripts/release-size-profile android && \
       -DCMAKE_ANDROID_STL_TYPE=c++_static \
       -DCMAKE_SYSTEM_VERSION="$API" \
       -DCMAKE_BUILD_TYPE=Release \
-      -DARIA2_ENABLE_STATIC=ON \
+      -DARIA2_STATIC_DEPENDENCIES=ON \
       -DARIA2_WITH_WINTLS=OFF \
       -DARIA2_WITH_GNUTLS=OFF \
       -DARIA2_WITH_OPENSSL=ON \

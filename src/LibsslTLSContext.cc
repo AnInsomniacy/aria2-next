@@ -271,15 +271,6 @@ bool OpenSSLTLSContext::addSystemTrustedCACerts()
   }
 }
 
-bool OpenSSLTLSContext::addDefaultCABundle()
-{
-#ifdef CA_BUNDLE
-  return addTrustedCACertFile(CA_BUNDLE);
-#else  // !CA_BUNDLE
-  return false;
-#endif // !CA_BUNDLE
-}
-
 bool OpenSSLTLSContext::addTrustedCACertFile(const std::string& certfile)
 {
   if (SSL_CTX_load_verify_locations(sslCtx_, certfile.c_str(), nullptr) != 1) {

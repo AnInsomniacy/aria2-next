@@ -3,9 +3,6 @@
 /* Define build-type */
 #cmakedefine BUILD "@BUILD@"
 
-/* Define to choose default CA bundle. */
-#cmakedefine CA_BUNDLE "@CA_BUNDLE@"
-
 /* Define `override` keyword if the compiler supports it */
 #cmakedefine CXX11_OVERRIDE @CXX11_OVERRIDE@
 

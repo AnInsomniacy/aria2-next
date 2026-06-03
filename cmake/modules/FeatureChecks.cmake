@@ -17,22 +17,6 @@ set(SELECT_TYPE_ARG1 int)
 set(SELECT_TYPE_ARG234 "(fd_set *)")
 set(SELECT_TYPE_ARG5 "(struct timeval *)")
 
-if(NOT ARIA2_CA_BUNDLE AND NOT WIN32)
-  foreach(aria2_ca_bundle_candidate
-      /etc/ssl/certs/ca-certificates.crt
-      /etc/pki/tls/certs/ca-bundle.crt
-      /etc/ssl/cert.pem)
-    if(EXISTS "${aria2_ca_bundle_candidate}")
-      set(ARIA2_CA_BUNDLE "${aria2_ca_bundle_candidate}" CACHE FILEPATH
-          "CA bundle fallback path for OpenSSL and GnuTLS builds" FORCE)
-      break()
-    endif()
-  endforeach()
-endif()
-
-if(ARIA2_CA_BUNDLE)
-  set(CA_BUNDLE "${ARIA2_CA_BUNDLE}")
-endif()
 if(ARIA2_DEFAULT_DISK_CACHE)
   set(DEFAULT_DISK_CACHE "${ARIA2_DEFAULT_DISK_CACHE}")
 endif()
@@ -323,8 +307,8 @@ if(ARIA2_WITH_LIBUV AND LIBUV_FOUND)
   set(HAVE_LIBUV 1)
 endif()
 
-aria2_pkg_check(LIBGNUTLS "gnutls>=${ARIA2_MIN_GNUTLS_VERSION}")
-aria2_pkg_check(OPENSSL "openssl>=${ARIA2_MIN_OPENSSL_VERSION}")
+aria2_pkg_check_dynamic(LIBGNUTLS "gnutls>=${ARIA2_MIN_GNUTLS_VERSION}")
+aria2_pkg_check_dynamic(OPENSSL "openssl>=${ARIA2_MIN_OPENSSL_VERSION}")
 aria2_pkg_check(LIBNETTLE "nettle>=${ARIA2_MIN_LIBNETTLE_VERSION}")
 aria2_pkg_check(LIBGCRYPT "libgcrypt>=${ARIA2_MIN_LIBGCRYPT_VERSION}")
 

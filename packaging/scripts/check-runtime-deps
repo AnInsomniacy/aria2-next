@@ -27,12 +27,13 @@ fail_unexpected() {
 }
 
 check_windows() {
-  command -v objdump >/dev/null 2>&1 || {
-    echo "Runtime dependency check failed: objdump is required for Windows binaries" >&2
+  objdump=${OBJDUMP:-objdump}
+  command -v "$objdump" >/dev/null 2>&1 || {
+    echo "Runtime dependency check failed: $objdump is required for Windows binaries" >&2
     exit 1
   }
 
-  objdump -p "$binary" |
+  "$objdump" -p "$binary" |
     awk '/^[[:space:]]*DLL Name:/ {
       sub(/^[[:space:]]*DLL Name:[[:space:]]*/, "")
       print
@@ -42,7 +43,7 @@ check_windows() {
   while IFS= read -r dep; do
     dep_lc=$(printf '%s\n' "$dep" | tr '[:upper:]' '[:lower:]')
     case "$dep_lc" in
-      api-ms-win-crt-private-*.dll)
+      api-ms-win-crt-private-*.dll|libcrypto*.dll|libssl*.dll|openssl*.dll)
         fail_unexpected "$dep"
         ;;
       api-ms-win-*.dll|advapi32.dll|bcrypt.dll|cfgmgr32.dll|crypt32.dll|dnsapi.dll|gdi32.dll|iphlpapi.dll|kernel32.dll|msvcrt.dll|normaliz.dll|ntdll.dll|ole32.dll|oleaut32.dll|psapi.dll|rpcrt4.dll|secur32.dll|shell32.dll|shlwapi.dll|ucrtbase.dll|user32.dll|version.dll|winmm.dll|ws2_32.dll|wsock32.dll)
@@ -79,14 +80,33 @@ check_elf() {
     sort -fu > "$tmp"
 
   if [ "$platform" = linux ]; then
-    if [ -s "$tmp" ]; then
-      dep=$(sed -n '1p' "$tmp")
-      fail_unexpected "$dep"
+    if "$reader" -d "$binary" | awk '/\(RPATH\)|\(RUNPATH\)/ { found = 1 } END { exit found ? 0 : 1 }'; then
+      fail_unexpected "ELF rpath/runpath"
     fi
 
-    if "$reader" -l "$binary" | grep -q 'Requesting program interpreter'; then
-      fail_unexpected "ELF interpreter"
-    fi
+    while IFS= read -r dep; do
+      case "$dep" in
+        libc.so.6|libcrypto.so.3|libdl.so.2|libgcc_s.so.1|libm.so.6|libpthread.so.0|librt.so.1|libssl.so.3|libstdc++.so.6)
+          ;;
+        *)
+          fail_unexpected "$dep"
+          ;;
+      esac
+    done < "$tmp"
+
+    interpreter=$("$reader" -l "$binary" |
+      awk '/Requesting program interpreter:/ {
+        sub(/^.*Requesting program interpreter: /, "")
+        sub(/\].*$/, "")
+        print
+      }')
+    case "$interpreter" in
+      ""|/lib64/ld-linux-x86-64.so.2|/lib/ld-linux-aarch64.so.1|/lib/ld-linux-aarch64_be.so.1)
+        ;;
+      *)
+        fail_unexpected "ELF interpreter $interpreter"
+        ;;
+    esac
 
     return
   fi

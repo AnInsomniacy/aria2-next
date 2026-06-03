@@ -133,7 +133,7 @@ Verified:
 - `build/no-cares` passed configure, build, and CTest with c-ares disabled; `aria2c --version` no longer reported Async DNS or c-ares.
 - `build/appletls` passed configure, build, and CTest with AppleTLS selected on macOS.
 - `build/openssl` passed configure, build, and CTest with AppleTLS disabled and OpenSSL selected; `aria2c --version` reported OpenSSL instead of AppleTLS.
-- `build/static` passed configure, build, and CTest with `ARIA2_ENABLE_STATIC=ON`.
+- `build/static` passed configure, build, and CTest with `ARIA2_STATIC_DEPENDENCIES=ON`.
 
 Remaining:
 

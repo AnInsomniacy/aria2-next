@@ -405,8 +405,8 @@ HTTP Specific Options
     has ``gnutls_certificate_set_x509_system_trust()`` function and
     the library is properly configured to locate the system-wide CA
     certificates store, aria2 will automatically load those
-    certificates at the startup. If that system lookup fails, a CA bundle
-    configured at build time is used as the backend fallback.
+    certificates at the startup. If the backend cannot locate usable system
+    trust, provide a PEM CA file explicitly with this option.
 
   .. note::
 

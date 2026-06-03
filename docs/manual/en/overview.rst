@@ -219,8 +219,8 @@ On Fedora you need the following packages: gcc, gcc-c++, kernel-devel,
 libgcrypt-devel, libxml2-devel, openssl-devel, cppunit
 
 Source builds require CMake, Ninja, pkg-config, a C++11 compiler, and the
-development packages for the features you want to enable. Modern maintained
-builds require OpenSSL 3.5 LTS or newer when the OpenSSL backend is selected.
+development packages for the features you want to enable. Maintained OpenSSL
+builds require OpenSSL 3.0 or newer when the OpenSSL backend is selected.
 Install the documentation toolchain if you want to build the manual and man
 page::
 
@@ -238,9 +238,9 @@ A plain CMake invocation is also supported::
     $ cmake --build build/default
     $ ctest --test-dir build/default --output-on-failure
 
-To request a static release-style build, use::
+To request static dependency metadata from pkg-config, use::
 
-    $ cmake -S . -B build/static -G Ninja -DARIA2_ENABLE_STATIC=ON
+    $ cmake -S . -B build/static -G Ninja -DARIA2_STATIC_DEPENDENCIES=ON
     $ cmake --build build/static
 
 The executable is located at ``build/default/aria2-next`` when using the default
@@ -253,9 +253,8 @@ Since 1.1.0, aria2 checks the certificate of HTTPS servers by default. If you
 build with OpenSSL or a recent GnuTLS version that has
 ``gnutls_certificate_set_x509_system_trust()``, and the library is properly
 configured to locate the system-wide CA certificate store, aria2 loads those
-certificates at startup. If that system lookup fails, aria2 uses a detected CA
-bundle path as the backend fallback. Set
-``-DARIA2_CA_BUNDLE=/path/to/ca-bundle`` to choose that fallback explicitly.
+certificates at startup. If the backend cannot locate usable system trust,
+provide a PEM CA file explicitly with ``--ca-certificate``.
 
 Using WinTLS automatically uses the system certificate store, so an explicit CA
 bundle is not necessary for that backend.
@@ -482,7 +481,7 @@ The libaria2 is a C++ library that offers aria2 functionality to the
 client code. Currently, libaria2 is not built by default. To enable
 libaria2, use ``-DARIA2_ENABLE_LIBARIA2=ON`` CMake option.  By default,
 only the shared library is built. To build a static library, use
-``-DARIA2_ENABLE_STATIC=ON`` CMake option as well. See libaria2
+``-DARIA2_STATIC_DEPENDENCIES=ON`` CMake option as well. See libaria2
 documentation to know how to use API.
 
 References
