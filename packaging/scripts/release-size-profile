@@ -22,7 +22,7 @@ case "$platform" in
     ;;
   windows)
     export RELEASE_CFLAGS="$section_flags"
-    export RELEASE_LDFLAGS="-L${PREFIX:-/usr/local}/lib -Wl,--gc-sections"
+    export RELEASE_LDFLAGS="-L${PREFIX:-/usr/local}/lib -Wl,--gc-sections -static -static-libgcc -static-libstdc++"
     ;;
   android)
     export RELEASE_CFLAGS="$section_flags"
