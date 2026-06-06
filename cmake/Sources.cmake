@@ -603,8 +603,6 @@ set(ARIA2_SOURCES_HAVE_LIBGNUTLS
 )
 
 set(ARIA2_SOURCES_HAVE_LIBGCRYPT
-  src/LibgcryptARC4Encryptor.cc
-  src/LibgcryptARC4Encryptor.h
   src/LibgcryptDHKeyExchange.cc
   src/LibgcryptDHKeyExchange.h
 )
@@ -613,10 +611,7 @@ set(ARIA2_SOURCES_HAVE_LIBGCRYPT__USE_LIBGCRYPT_MD
   src/LibgcryptMessageDigestImpl.cc
 )
 
-set(ARIA2_SOURCES_HAVE_LIBNETTLE
-  src/LibnettleARC4Encryptor.cc
-  src/LibnettleARC4Encryptor.h
-)
+set(ARIA2_SOURCES_HAVE_LIBNETTLE)
 
 set(ARIA2_SOURCES_HAVE_LIBNETTLE__USE_LIBNETTLE_MD
   src/LibnettleMessageDigestImpl.cc
@@ -630,8 +625,6 @@ set(ARIA2_SOURCES_HAVE_LIBGMP
 )
 
 set(ARIA2_SOURCES_HAVE_OPENSSL
-  src/LibsslARC4Encryptor.cc
-  src/LibsslARC4Encryptor.h
   src/LibsslDHKeyExchange.cc
   src/LibsslDHKeyExchange.h
 )
@@ -1011,7 +1004,7 @@ set(ARIA2_SOURCES_ENABLE_BITTORRENT__USE_INTERNAL_BIGNUM
   src/InternalDHKeyExchange.h
 )
 
-set(ARIA2_SOURCES_ENABLE_BITTORRENT__USE_INTERNAL_ARC4
+set(ARIA2_SOURCES_USE_INTERNAL_ARC4
   src/InternalARC4Encryptor.cc
   src/InternalARC4Encryptor.h
 )

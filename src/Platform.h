@@ -37,20 +37,11 @@
 
 #include "common.h"
 
-#ifdef HAVE_OPENSSL
-#  include <openssl/provider.h>
-#endif   // HAVE_OPENSSL
-
 namespace aria2 {
 
 class Platform {
 private:
   static bool initialized_;
-
-#ifdef HAVE_OPENSSL
-  static OSSL_PROVIDER* legacy_provider_;
-  static OSSL_PROVIDER* default_provider_;
-#endif   // HAVE_OPENSSL
 
 public:
   Platform();

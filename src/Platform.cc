@@ -89,11 +89,6 @@ void gnutls_log_callback(int level, const char* str)
 
 bool Platform::initialized_ = false;
 
-#ifdef HAVE_OPENSSL
-OSSL_PROVIDER* Platform::legacy_provider_ = nullptr;
-OSSL_PROVIDER* Platform::default_provider_ = nullptr;
-#endif // HAVE_OPENSSL
-
 Platform::Platform() { setUp(); }
 
 Platform::~Platform() { tearDown(); }
@@ -107,18 +102,6 @@ bool Platform::setUp()
 #ifdef HAVE_LIBGMP
   global::initGmp();
 #endif // HAVE_LIBGMP
-#ifdef HAVE_OPENSSL
-  // RC4 is in the legacy provider.
-  legacy_provider_ = OSSL_PROVIDER_load(nullptr, "legacy");
-  if (!legacy_provider_) {
-    throw DL_ABORT_EX("OSSL_PROVIDER_load 'legacy' failed.");
-  }
-
-  default_provider_ = OSSL_PROVIDER_load(nullptr, "default");
-  if (!default_provider_) {
-    throw DL_ABORT_EX("OSSL_PROVIDER_load 'default' failed.");
-  }
-#endif   // HAVE_OPENSSL
 #ifdef HAVE_LIBGCRYPT
   if (!gcry_check_version("1.2.4")) {
     throw DL_ABORT_EX("gcry_check_version() failed.");
@@ -184,18 +167,6 @@ bool Platform::tearDown()
   SocketCore::setClientTLSContext(nullptr);
   SocketCore::setServerTLSContext(nullptr);
 #endif // ENABLE_SSL
-
-#ifdef HAVE_OPENSSL
-  if (default_provider_) {
-    OSSL_PROVIDER_unload(default_provider_);
-    default_provider_ = nullptr;
-  }
-
-  if (legacy_provider_) {
-    OSSL_PROVIDER_unload(legacy_provider_);
-    legacy_provider_ = nullptr;
-  }
-#endif   // HAVE_OPENSSL
 
 #ifdef HAVE_LIBGNUTLS
   gnutls_global_deinit();
