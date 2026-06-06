@@ -9,23 +9,38 @@ if [ -z "$platform" ]; then
 fi
 
 section_flags="-Os -ffunction-sections -fdata-sections"
+debug_flags=
+
+case "${ARIA2_BUILD_PROFILE:-release}" in
+  release)
+    ;;
+  debug)
+    debug_flags="-g3 -fno-omit-frame-pointer"
+    ;;
+  *)
+    echo "Unknown ARIA2_BUILD_PROFILE: $ARIA2_BUILD_PROFILE" >&2
+    exit 2
+    ;;
+esac
+
+profile_flags="$section_flags${debug_flags:+ $debug_flags}"
 
 case "$platform" in
   linux)
-    export RELEASE_CFLAGS="$section_flags"
-    export RELEASE_LDFLAGS="-Wl,--gc-sections"
+    export RELEASE_CFLAGS="$profile_flags"
+    export RELEASE_LDFLAGS="-Wl,--gc-sections${debug_flags:+ -rdynamic}"
     ;;
   macos)
     : "${MACOSX_VERSION_MIN:=11.0}"
-    export RELEASE_CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN $section_flags"
+    export RELEASE_CFLAGS="-mmacosx-version-min=$MACOSX_VERSION_MIN $profile_flags"
     export RELEASE_LDFLAGS="-L${PREFIX:-/usr/local}/lib -Wl,-dead_strip"
     ;;
   windows)
-    export RELEASE_CFLAGS="$section_flags"
+    export RELEASE_CFLAGS="$profile_flags"
     export RELEASE_LDFLAGS="-L${PREFIX:-/usr/local}/lib -Wl,--gc-sections -static -static-libgcc -static-libstdc++"
     ;;
   android)
-    export RELEASE_CFLAGS="$section_flags"
+    export RELEASE_CFLAGS="$profile_flags"
     export RELEASE_LDFLAGS="-Wl,--gc-sections"
     ;;
   *)
