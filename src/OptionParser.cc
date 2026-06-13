@@ -234,7 +234,10 @@ void OptionParser::parseArg(std::ostream& out,
   std::copy(argv + optind, argv + argc, std::back_inserter(nonopts));
 }
 
-void OptionParser::parse(Option& option, std::istream& is) const
+namespace {
+template <typename FindHandler>
+void parseStreamOption(Option& option, std::istream& is,
+                       FindHandler findHandler)
 {
   std::string line;
   while (getline(is, line)) {
@@ -246,7 +249,7 @@ void OptionParser::parse(Option& option, std::istream& is) const
       continue;
     }
     PrefPtr pref = option::k2p(std::string(nv.first.first, nv.first.second));
-    const OptionHandler* handler = find(pref);
+    const OptionHandler* handler = findHandler(pref);
     if (handler) {
       handler->parse(option, std::string(nv.second.first, nv.second.second));
     }
@@ -254,6 +257,20 @@ void OptionParser::parse(Option& option, std::istream& is) const
       A2_LOG_WARN(fmt("Unknown option: %s", line.c_str()));
     }
   }
+}
+} // namespace
+
+void OptionParser::parse(Option& option, std::istream& is) const
+{
+  parseStreamOption(option, is,
+                    [this](PrefPtr pref) { return find(pref); });
+}
+
+void OptionParser::parseInternal(Option& option, std::istream& is) const
+{
+  parseStreamOption(option, is, [this](PrefPtr pref) {
+    return findByIdInternal(pref->i);
+  });
 }
 
 void OptionParser::parse(Option& option, const KeyVals& options) const
@@ -352,6 +369,14 @@ const OptionHandler* OptionParser::findById(size_t id) const
   else {
     return h;
   }
+}
+
+const OptionHandler* OptionParser::findByIdInternal(size_t id) const
+{
+  if (id >= handlers_.size()) {
+    return handlers_[0];
+  }
+  return handlers_[id];
 }
 
 const OptionHandler* OptionParser::findByShortName(char shortName) const

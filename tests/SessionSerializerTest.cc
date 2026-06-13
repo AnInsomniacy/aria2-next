@@ -9,6 +9,7 @@
 #include "RequestGroupMan.h"
 #include "array_fun.h"
 #include "download_helper.h"
+#include "UriListParser.h"
 #include "DefaultPieceStorage.h"
 #include "prefs.h"
 #include "Option.h"
@@ -29,6 +30,7 @@ class SessionSerializerTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testSave);
   CPPUNIT_TEST(testSaveErrorDownload);
   CPPUNIT_TEST(testSaveEd2kDownload);
+  CPPUNIT_TEST(testLoadSavedEd2kState);
   CPPUNIT_TEST(testSaveActiveEd2kSharing);
   CPPUNIT_TEST(testSaveEd2kPeerCredits);
   CPPUNIT_TEST_SUITE_END();
@@ -37,6 +39,7 @@ public:
   void testSave();
   void testSaveErrorDownload();
   void testSaveEd2kDownload();
+  void testLoadSavedEd2kState();
   void testSaveActiveEd2kSharing();
   void testSaveEd2kPeerCredits();
 };
@@ -277,6 +280,30 @@ void SessionSerializerTest::testSaveEd2kDownload()
   CPPUNIT_ASSERT_EQUAL(std::string(" dir=/tmp"), line);
   std::getline(in, line);
   CPPUNIT_ASSERT(!in);
+}
+
+void SessionSerializerTest::testLoadSavedEd2kState()
+{
+  const std::string filename =
+      A2_TEST_OUT_DIR "/aria2_SessionSerializerTest_testLoadSavedEd2kState";
+  {
+    std::ofstream out(filename.c_str(), std::ios::binary);
+    out << "ed2k://|file|aria2%20next.bin|1|"
+           "0102030405060708090a0b0c0d0e0f10|/\n"
+        << " ed2k-client-hash=1112131415161718191a1b1c1d1e1f20\n"
+        << " ed2k-server-state=41324544324b535256040000000b0034352e38372e34312e3136761809006564326b2d727573740b00746573742073657276657200000000000000000000000000a806000020cb0a0050c300003f420f0040420f00fb1700006e05000084187618a868c39e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000\n";
+  }
+
+  UriListParser parser(filename);
+  std::vector<std::string> uris;
+  Option option;
+  parser.parseNext(uris, option);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, uris.size());
+  CPPUNIT_ASSERT_EQUAL(
+      std::string("1112131415161718191a1b1c1d1e1f20"),
+      option.get(PREF_ED2K_CLIENT_HASH));
+  CPPUNIT_ASSERT(option.defined(PREF_ED2K_SERVER_STATE));
 }
 
 void SessionSerializerTest::testSaveActiveEd2kSharing()

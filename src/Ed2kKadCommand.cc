@@ -18,6 +18,7 @@
 #include <memory>
 
 #include "DlAbortEx.h"
+#include "DlRetryEx.h"
 #include "DownloadContext.h"
 #include "DownloadEngine.h"
 #include "Ed2kAttribute.h"
@@ -703,7 +704,14 @@ void Ed2kKadCommand::receivePackets()
   std::array<unsigned char, 64_k> data;
   while (true) {
     Endpoint sender;
-    auto length = socket_->readDataFrom(data.data(), data.size(), sender);
+    ssize_t length = 0;
+    try {
+      length = socket_->readDataFrom(data.data(), data.size(), sender);
+    }
+    catch (DlRetryEx& e) {
+      A2_LOG_INFO_EX("ED2K Kad UDP receive failed.", e);
+      break;
+    }
     if (length <= 0) {
       break;
     }

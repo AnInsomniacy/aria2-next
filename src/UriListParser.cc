@@ -94,7 +94,7 @@ void UriListParser::parseNext(std::vector<std::string>& uris, Option& op)
           break;
         }
       }
-      optparser->parse(op, ss);
+      optparser->parseInternal(op, ss);
       return;
     }
     line_ = fp_->getLine();

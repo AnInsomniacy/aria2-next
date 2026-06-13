@@ -29,6 +29,7 @@ class OptionParserTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testP2PSharingOptionsAreNotBtOnly);
   CPPUNIT_TEST(testParseArg);
   CPPUNIT_TEST(testParse);
+  CPPUNIT_TEST(testParseInternal);
   CPPUNIT_TEST(testParseKeyVals);
   CPPUNIT_TEST_SUITE_END();
 
@@ -79,6 +80,7 @@ public:
   void testP2PSharingOptionsAreNotBtOnly();
   void testParseArg();
   void testParse();
+  void testParseInternal();
   void testParseKeyVals();
 };
 
@@ -228,6 +230,16 @@ void OptionParserTest::testParse()
   oparser_->parse(option, in);
   CPPUNIT_ASSERT_EQUAL(std::string("Hello"), option.get(PREF_TIMEOUT));
   CPPUNIT_ASSERT_EQUAL(std::string("World"), option.get(PREF_DIR));
+}
+
+void OptionParserTest::testParseInternal()
+{
+  Option option;
+  std::istringstream in("daemon=true\n"
+                        "timeout=Hello\n");
+  oparser_->parseInternal(option, in);
+  CPPUNIT_ASSERT_EQUAL(std::string("true"), option.get(PREF_DAEMON));
+  CPPUNIT_ASSERT_EQUAL(std::string("Hello"), option.get(PREF_TIMEOUT));
 }
 
 void OptionParserTest::testParseKeyVals()

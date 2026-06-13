@@ -70,6 +70,8 @@ public:
 
   void parse(Option& option, std::istream& ios) const;
 
+  void parseInternal(Option& option, std::istream& ios) const;
+
   void parse(Option& option, const KeyVals& options) const;
 
   void parseDefaultValues(Option& option) const;
@@ -93,6 +95,8 @@ public:
 
   // Hidden options are not returned.
   const OptionHandler* findById(size_t id) const;
+
+  const OptionHandler* findByIdInternal(size_t id) const;
 
   // Hidden options are not returned.
   const OptionHandler* findByShortName(char shortName) const;
