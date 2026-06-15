@@ -117,7 +117,7 @@ Linux, macOS, and Android downloads are executable files. If your browser clears
 Container images are published to GitHub Container Registry for Linux x86_64 and Linux ARM64:
 
 ```bash
-docker run --rm ghcr.io/aninsomniacy/aria2-next:v<version> --version
+docker run --rm ghcr.io/aninsomniacy/aria2-next:latest --version
 ```
 
 Release binaries verify HTTPS certificates by default. Windows releases use WinTLS and the Windows trust store. Linux OpenSSL builds use the system OpenSSL 3 runtime so certificate discovery follows the host distribution. macOS OpenSSL and GnuTLS builds use their backend's system trust loading. Explicit CA files remain available through `--ca-certificate`.
