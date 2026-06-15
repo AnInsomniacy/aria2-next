@@ -207,7 +207,10 @@ std::string ed2kObfuscationKey(const std::string& userHash,
 {
   std::string keyData = userHash;
   keyData.push_back(static_cast<char>(magicValue));
-  keyData += ed2k::packUInt32(randomKeyPart);
+  keyData.push_back(static_cast<char>(randomKeyPart >> 24));
+  keyData.push_back(static_cast<char>(randomKeyPart >> 16));
+  keyData.push_back(static_cast<char>(randomKeyPart >> 8));
+  keyData.push_back(static_cast<char>(randomKeyPart));
   std::array<unsigned char, 16> digest;
   auto md5 = MessageDigest::create("md5");
   message_digest::digest(digest.data(), digest.size(), md5.get(),
@@ -1044,9 +1047,10 @@ void Ed2kCommand::queuePeerPartRequest()
   auto requested = outstanding;
   requested.insert(requested.end(), ranges.begin(), ranges.end());
   updateEd2kPeerRequestedParts(attrs, endpoint_, requested, nowSeconds());
-  queuePacket(ed2k::PROTO_EDONKEY,
-              use64BitOffsets_ ? ed2k::OP_REQUESTPARTS_I64
-                               : ed2k::OP_REQUESTPARTS,
+  const auto protocol =
+      use64BitOffsets_ ? ed2k::PROTO_EMULE : ed2k::PROTO_EDONKEY;
+  queuePacket(protocol, use64BitOffsets_ ? ed2k::OP_REQUESTPARTS_I64
+                                         : ed2k::OP_REQUESTPARTS,
               ed2k::createRequestPartsPayload(attrs->link.hash, ranges,
                                               use64BitOffsets_));
 }
@@ -1087,9 +1091,10 @@ bool Ed2kCommand::queueActivePeerPartReclaim()
   auto requested = state->requestedParts;
   requested.push_back(reclaimed);
   updateEd2kPeerRequestedParts(attrs, endpoint_, requested, nowSeconds());
-  queuePacket(ed2k::PROTO_EDONKEY,
-              use64BitOffsets_ ? ed2k::OP_REQUESTPARTS_I64
-                               : ed2k::OP_REQUESTPARTS,
+  const auto protocol =
+      use64BitOffsets_ ? ed2k::PROTO_EMULE : ed2k::PROTO_EDONKEY;
+  queuePacket(protocol, use64BitOffsets_ ? ed2k::OP_REQUESTPARTS_I64
+                                         : ed2k::OP_REQUESTPARTS,
               ed2k::createRequestPartsPayload(attrs->link.hash, ranges,
                                               use64BitOffsets_));
   A2_LOG_DEBUG(fmt("CUID#%" PRId64

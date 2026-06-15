@@ -86,6 +86,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kKadCommandQueuesDuePeerReask);
   CPPUNIT_TEST(testEd2kKadCommandQueuesKadCallback);
   CPPUNIT_TEST(testEd2kKadCommandQueuesDirectCallback);
+  CPPUNIT_TEST(testEd2kKadCommandUsesRuntimeTcpPortForDirectCallback);
   CPPUNIT_TEST(testEd2kKadCommandQueueFullForUnknownUploadReask);
   CPPUNIT_TEST(testEd2kKadCommandAckForUploadingPeerReask);
   CPPUNIT_TEST(testEd2kSourcePolicyAppliesActiveCap);
@@ -164,6 +165,7 @@ public:
   void testEd2kKadCommandQueuesDuePeerReask();
   void testEd2kKadCommandQueuesKadCallback();
   void testEd2kKadCommandQueuesDirectCallback();
+  void testEd2kKadCommandUsesRuntimeTcpPortForDirectCallback();
   void testEd2kKadCommandQueueFullForUnknownUploadReask();
   void testEd2kKadCommandAckForUploadingPeerReask();
   void testEd2kSourcePolicyAppliesActiveCap();
@@ -1532,6 +1534,47 @@ void DownloadHelperTest::testEd2kKadCommandQueuesDirectCallback()
   CPPUNIT_ASSERT_EQUAL((int64_t)200, state->lastCallbackTime);
   CPPUNIT_ASSERT_EQUAL((int64_t)245, state->callbackDeadline);
   CPPUNIT_ASSERT_EQUAL((size_t)0, command.testQueueDueKadCallbacks(210));
+}
+
+void DownloadHelperTest::testEd2kKadCommandUsesRuntimeTcpPortForDirectCallback()
+{
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_ED2K_SERVER, "203.0.113.10:4661");
+  option_->put(PREF_ED2K_LISTEN_PORT, "0");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_TRUE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+  ed2k::KadSourceEndpoint source;
+  source.endpoint.host = "203.0.113.44";
+  source.endpoint.port = 4662;
+  source.endpoint.userHash = std::string(ed2k::HASH_LENGTH, '\x44');
+  source.endpoint.cryptOptions = ed2k::SOURCE_CRYPT_SUPPORT;
+  source.udpPort = 4672;
+  source.sourceType = 6;
+  addEd2kKadSourcePeer(attrs, source, ed2k::PEER_SOURCE_KAD);
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setEd2kTcpPort(50265);
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  Ed2kKadCommand command(1, group.get(), &engine);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueueDueKadCallbacks(200));
+  const auto& item = command.testQueuedPacketAt(0);
+  ed2k::DirectCallbackRequest request;
+  CPPUNIT_ASSERT(ed2k::parseDirectCallbackRequestPayload(
+      request, item.second.substr(2)));
+  CPPUNIT_ASSERT_EQUAL((uint16_t)50265, request.tcpPort);
 }
 
 void DownloadHelperTest::testEd2kKadCommandQueueFullForUnknownUploadReask()

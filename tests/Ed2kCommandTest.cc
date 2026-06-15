@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 
+#include "ARC4Encryptor.h"
 #include "DownloadContext.h"
 #include "DownloadEngine.h"
 #include "Ed2kAttribute.h"
@@ -19,6 +20,7 @@
 #include "TimeSeedCriteria.h"
 #include "FileEntry.h"
 #include "File.h"
+#include "MessageDigest.h"
 #include "Option.h"
 #include "RequestGroup.h"
 #include "RequestGroupMan.h"
@@ -32,6 +34,7 @@
 #include "ed2k_packet.h"
 #include "ed2k_peer.h"
 #include "ed2k_server.h"
+#include "message_digest_helper.h"
 #include "prefs.h"
 #include "util.h"
 
@@ -39,6 +42,8 @@ namespace aria2 {
 
 namespace {
 constexpr int MAX_ENGINE_TICKS = 200;
+constexpr uint8_t ED2K_OBFUSCATION_MAGIC_REQUESTER = 34;
+constexpr uint32_t ED2K_OBFUSCATION_SYNC = 0x835e6fc4;
 
 std::shared_ptr<Option> createOption()
 {
@@ -253,6 +258,37 @@ ReceivedDatagram readKadDatagramWithOpcode(SocketCore& socket,
   return ReceivedDatagram();
 }
 
+std::string packUInt32BE(uint32_t value)
+{
+  std::string out(4, '\0');
+  out[0] = static_cast<char>(value >> 24);
+  out[1] = static_cast<char>(value >> 16);
+  out[2] = static_cast<char>(value >> 8);
+  out[3] = static_cast<char>(value);
+  return out;
+}
+
+std::string createAMuleTcpObfuscationKey(const std::string& userHash,
+                                         uint8_t magicValue,
+                                         uint32_t randomKeyPart)
+{
+  std::string keyData = userHash;
+  keyData.push_back(static_cast<char>(magicValue));
+  keyData += packUInt32BE(randomKeyPart);
+  std::array<unsigned char, 16> digest;
+  auto md5 = MessageDigest::create("md5");
+  message_digest::digest(digest.data(), digest.size(), md5.get(),
+                         keyData.data(), keyData.size());
+  return std::string(reinterpret_cast<const char*>(digest.data()),
+                     digest.size());
+}
+
+void discardTcpObfuscationPrefix(ARC4Encryptor& rc4)
+{
+  std::array<unsigned char, 1_k> garbage;
+  rc4.encrypt(garbage.size(), garbage.data(), garbage.data());
+}
+
 ed2k::KadContact createKadContact(const std::string& id, uint16_t udpPort)
 {
   ed2k::KadContact contact;
@@ -274,7 +310,9 @@ class Ed2kCommandTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testPeerHandlesBuddyCallback);
   CPPUNIT_TEST(testIncomingPeerMultipacketRequestGetsAnswer);
   CPPUNIT_TEST(testCryptPeerStartsWithObfuscatedHandshake);
+  CPPUNIT_TEST(testCryptPeerHandshakeMatchesAMuleKeys);
   CPPUNIT_TEST(testCryptSupportOnlyPeerUsesPlainHandshake);
+  CPPUNIT_TEST(testLargePeerPartRequestUsesEmuleProtocol);
   CPPUNIT_TEST(testPeerCommandFinishesGroupAfterLastPart);
   CPPUNIT_TEST(testFinishedEd2kGroupEntersSeedOnly);
   CPPUNIT_TEST(testCompleteLocalEd2kFileStartsAsSeed);
@@ -298,7 +336,9 @@ public:
   void testPeerHandlesBuddyCallback();
   void testIncomingPeerMultipacketRequestGetsAnswer();
   void testCryptPeerStartsWithObfuscatedHandshake();
+  void testCryptPeerHandshakeMatchesAMuleKeys();
   void testCryptSupportOnlyPeerUsesPlainHandshake();
+  void testLargePeerPartRequestUsesEmuleProtocol();
   void testPeerCommandFinishesGroupAfterLastPart();
   void testFinishedEd2kGroupEntersSeedOnly();
   void testCompleteLocalEd2kFileStartsAsSeed();
@@ -838,6 +878,64 @@ void Ed2kCommandTest::testCryptPeerStartsWithObfuscatedHandshake()
   engine.requestHalt();
 }
 
+void Ed2kCommandTest::testCryptPeerHandshakeMatchesAMuleKeys()
+{
+  auto option = createOption();
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option.get());
+  auto dctx = createEd2kContext();
+  auto group = createRequestGroup(option, dctx);
+  engine.setRequestGroupMan(
+      make_unique<RequestGroupMan>(
+          std::vector<std::shared_ptr<RequestGroup>>{group}, 5,
+          option.get()));
+  engine.getRequestGroupMan()->addRequestGroup(group);
+  group->setRequestGroupMan(engine.getRequestGroupMan().get());
+
+  SocketCore listenSocket;
+  listenSocket.bind(0);
+  listenSocket.beginListen();
+  listenSocket.setBlockingMode();
+  auto peerAddr = listenSocket.getAddrInfo();
+
+  const auto userHash = std::string(ed2k::HASH_LENGTH, '\x22');
+  ed2k::Endpoint peer;
+  peer.host = "127.0.0.1";
+  peer.port = peerAddr.port;
+  peer.userHash = userHash;
+  peer.cryptOptions = ed2k::SOURCE_CRYPT_SUPPORT |
+                      ed2k::SOURCE_CRYPT_REQUEST |
+                      ed2k::SOURCE_CRYPT_HAS_USER_HASH;
+  addEd2kPeer(getEd2kAttrs(dctx), peer, ed2k::PEER_SOURCE_INLINE);
+
+  engine.addCommand(make_unique<Ed2kCommand>(engine.newCUID(), group.get(),
+                                             &engine, peer, false));
+
+  runEngineTicks(engine, 1);
+  auto peerSocket = acceptPeer(listenSocket, engine);
+  runEngineTicks(engine, 1);
+
+  std::array<char, 11> request;
+  readFromSocket(peerSocket, engine, request.data(), request.size());
+  const auto randomKeyPart = ed2k::readUInt32(request.data() + 1);
+  ARC4Encryptor decryptor;
+  auto key = createAMuleTcpObfuscationKey(
+      userHash, ED2K_OBFUSCATION_MAGIC_REQUESTER, randomKeyPart);
+  decryptor.init(reinterpret_cast<const unsigned char*>(key.data()),
+                 key.size());
+  discardTcpObfuscationPrefix(decryptor);
+  decryptor.encrypt(request.size() - 5,
+                    reinterpret_cast<unsigned char*>(request.data() + 5),
+                    reinterpret_cast<const unsigned char*>(request.data() + 5));
+
+  CPPUNIT_ASSERT_EQUAL(ED2K_OBFUSCATION_SYNC,
+                       ed2k::readUInt32(request.data() + 5));
+  CPPUNIT_ASSERT_EQUAL((uint8_t)0, static_cast<uint8_t>(request[9]));
+  CPPUNIT_ASSERT_EQUAL((uint8_t)0, static_cast<uint8_t>(request[10]));
+
+  engine.requestHalt();
+}
+
 void Ed2kCommandTest::testCryptSupportOnlyPeerUsesPlainHandshake()
 {
   auto option = createOption();
@@ -876,6 +974,85 @@ void Ed2kCommandTest::testCryptSupportOnlyPeerUsesPlainHandshake()
   auto hello = readPacket(peerSocket, engine);
   CPPUNIT_ASSERT_EQUAL(ed2k::PROTO_EDONKEY, packetHeaderOf(hello).protocol);
   CPPUNIT_ASSERT_EQUAL(ed2k::OP_HELLO, packetHeaderOf(hello).opcode);
+
+  engine.requestHalt();
+}
+
+void Ed2kCommandTest::testLargePeerPartRequestUsesEmuleProtocol()
+{
+  auto option = createOption();
+  auto dctx = std::make_shared<DownloadContext>(
+      ed2k::PIECE_LENGTH, 0x100000001LL,
+      A2_TEST_OUT_DIR "/ed2k-large-command-test.bin");
+  auto attrs = make_unique<Ed2kAttribute>();
+  attrs->link.type = ed2k::LinkType::FILE;
+  attrs->link.name = "ed2k-large-command-test.bin";
+  attrs->link.size = dctx->getTotalLength();
+  attrs->link.hash = std::string(ed2k::HASH_LENGTH, '\x33');
+  attrs->clientHash = normalizeEd2kClientHash(std::string(ed2k::HASH_LENGTH,
+                                                          '\x42'));
+  attrs->pieceHashes.push_back(attrs->link.hash);
+  dctx->setPieceLength(ed2k::PIECE_LENGTH);
+  dctx->setAttribute(CTX_ATTR_ED2K, std::move(attrs));
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option.get());
+  auto group = createRequestGroup(option, dctx);
+  engine.setRequestGroupMan(
+      make_unique<RequestGroupMan>(
+          std::vector<std::shared_ptr<RequestGroup>>{group}, 5,
+          option.get()));
+  engine.getRequestGroupMan()->addRequestGroup(group);
+  group->setRequestGroupMan(engine.getRequestGroupMan().get());
+  group->initPieceStorage();
+
+  SocketCore listenSocket;
+  listenSocket.bind(0);
+  listenSocket.beginListen();
+  listenSocket.setBlockingMode();
+  auto peerAddr = listenSocket.getAddrInfo();
+
+  ed2k::Endpoint peer;
+  peer.host = "127.0.0.1";
+  peer.port = peerAddr.port;
+  addEd2kPeer(getEd2kAttrs(dctx), peer, ed2k::PEER_SOURCE_INLINE);
+  engine.addCommand(make_unique<Ed2kCommand>(engine.newCUID(), group.get(),
+                                             &engine, peer, false));
+
+  runEngineTicks(engine, 1);
+  auto peerSocket = acceptPeer(listenSocket, engine);
+  runEngineTicks(engine, 1);
+
+  readPacket(peerSocket, engine);
+  auto remoteInfo = ed2k::createLocalEmulePeerInfo();
+  peerSocket->writeData(ed2k::createPacket(
+      ed2k::PROTO_EDONKEY, ed2k::OP_HELLOANSWER,
+      ed2k::createPeerHelloPayload(
+          std::string(ed2k::HASH_LENGTH, '\x22'), 0x04030201,
+          peerAddr.port, ed2k::Endpoint(), "test-peer", remoteInfo, false)));
+  runEngineTicks(engine, 1);
+
+  readPacket(peerSocket, engine);
+  auto answer = getEd2kAttrs(dctx)->link.hash;
+  answer.push_back(static_cast<char>(ed2k::OP_FILESTATUS));
+  answer += ed2k::packUInt16(0);
+  peerSocket->writeData(ed2k::createPacket(ed2k::PROTO_EMULE,
+                                           ed2k::OP_MULTIPACKETANSWER,
+                                           answer));
+  runEngineTicks(engine, 1);
+
+  auto startUpload = readPacket(peerSocket, engine);
+  CPPUNIT_ASSERT_EQUAL(ed2k::OP_STARTUPLOADREQ,
+                       packetHeaderOf(startUpload).opcode);
+  peerSocket->writeData(ed2k::createPacket(ed2k::PROTO_EDONKEY,
+                                           ed2k::OP_ACCEPTUPLOADREQ,
+                                           std::string()));
+  runEngineTicks(engine, 1);
+
+  auto partRequest = readPacket(peerSocket, engine);
+  CPPUNIT_ASSERT_EQUAL(ed2k::PROTO_EMULE, packetHeaderOf(partRequest).protocol);
+  CPPUNIT_ASSERT_EQUAL(ed2k::OP_REQUESTPARTS_I64,
+                       packetHeaderOf(partRequest).opcode);
 
   engine.requestHalt();
 }

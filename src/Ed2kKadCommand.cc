@@ -100,6 +100,10 @@ uint32_t createChallenge()
 
 uint16_t localEd2kTcpPort(const DownloadEngine* e)
 {
+  const auto port = e->getEd2kTcpPort();
+  if (port != 0) {
+    return port;
+  }
   const auto configured = e->getOption()->getAsInt(PREF_ED2K_LISTEN_PORT);
   if (configured > 0 &&
       configured <= static_cast<int>(std::numeric_limits<uint16_t>::max())) {
@@ -143,6 +147,20 @@ bool publishableAddress(const std::string& host)
 bool directKadTcpSourceType(uint8_t sourceType)
 {
   return sourceType == 0 || sourceType == 1 || sourceType == 4;
+}
+
+const char* kadSourceRoute(uint8_t sourceType)
+{
+  if (directKadTcpSourceType(sourceType)) {
+    return "tcp";
+  }
+  if (sourceType == 6) {
+    return "direct-callback";
+  }
+  if (sourceType == 3 || sourceType == 5) {
+    return "buddy-callback";
+  }
+  return "unsupported";
 }
 
 uint8_t localDirectCallbackOptions()
@@ -1088,12 +1106,11 @@ void Ed2kKadCommand::handlePacket(
         const bool added =
             addEd2kKadSourcePeer(attrs, source, ed2k::PEER_SOURCE_KAD);
         A2_LOG_DEBUG(fmt("ED2K Kad source type=%u host=%s tcp=%u udp=%u "
-                         "crypt=%u usable=%s added=%s.",
+                         "crypt=%u route=%s added=%s.",
                          source.sourceType, source.endpoint.host.c_str(),
                          source.endpoint.port, source.udpPort,
                          source.endpoint.cryptOptions,
-                         directKadTcpSourceType(source.sourceType) ? "yes"
-                                                                   : "no",
+                         kadSourceRoute(source.sourceType),
                          added ? "yes" : "no"));
       }
       schedulePendingEd2kPeers(requestGroup_, e_);
