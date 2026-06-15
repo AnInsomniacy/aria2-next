@@ -540,6 +540,55 @@ bool parseKadCallbackRequestPayload(KadCallbackRequest& request,
   return true;
 }
 
+std::string createDirectCallbackRequestPayload(uint16_t tcpPort,
+                                               const std::string& userHash,
+                                               uint8_t connectOptions)
+{
+  validateHashLength(userHash);
+  std::string payload = packUInt16(tcpPort);
+  payload += userHash;
+  payload.push_back(static_cast<char>(connectOptions));
+  return payload;
+}
+
+bool parseDirectCallbackRequestPayload(DirectCallbackRequest& request,
+                                       const std::string& payload)
+{
+  if (payload.size() != HASH_LENGTH + 3) {
+    return false;
+  }
+  size_t offset = 0;
+  request.tcpPort = readUInt16(readBytes(payload, offset, 2).data());
+  request.userHash = readBytes(payload, offset, HASH_LENGTH);
+  request.connectOptions = readByte(payload, offset);
+  return true;
+}
+
+std::string createBuddyCallbackPayload(const std::string& buddyId,
+                                       const std::string& fileId,
+                                       const Endpoint& endpoint)
+{
+  validateHashLength(buddyId);
+  validateHashLength(fileId);
+  return buddyId + fileId + packUInt32(ipv4ToEndpointValue(endpoint.host)) +
+         packUInt16(endpoint.port);
+}
+
+bool parseBuddyCallbackPayload(BuddyCallback& callback,
+                               const std::string& payload)
+{
+  if (payload.size() != HASH_LENGTH * 2 + 6) {
+    return false;
+  }
+  size_t offset = 0;
+  callback.buddyId = readBytes(payload, offset, HASH_LENGTH);
+  callback.fileId = readBytes(payload, offset, HASH_LENGTH);
+  callback.endpoint.host =
+      ipv4FromEndpoint(readUInt32(readBytes(payload, offset, 4).data()));
+  callback.endpoint.port = readUInt16(readBytes(payload, offset, 2).data());
+  return callback.endpoint.port != 0;
+}
+
 std::string createKadObfuscatedDatagram(const std::string& datagram,
                                         const KadObfuscationKey& key,
                                         uint16_t randomKeyPart,

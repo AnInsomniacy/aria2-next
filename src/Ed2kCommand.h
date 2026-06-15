@@ -68,6 +68,7 @@ private:
   size_t bodyRead_;
   bool peerFileStatusReceived_;
   bool peerFileRequestSent_;
+  bool peerFileStatusRequested_;
   bool peerAccepted_;
   bool sourceExchangeRequested_;
   bool aichFileHashRequested_;
@@ -132,6 +133,7 @@ private:
   void queuePeerFileRequest();
   void queuePeerFileStatusRequest();
   void queuePeerHashSetRequest();
+  void queuePeerPostFileStatusRequests();
   void queueAichFileHashRequest();
   void queueAichRecoveryRequest(size_t pieceIndex);
   void queueSourceExchangeRequest();

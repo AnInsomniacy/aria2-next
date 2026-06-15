@@ -87,6 +87,18 @@ struct KadCallbackRequest {
   uint16_t tcpPort = 0;
 };
 
+struct DirectCallbackRequest {
+  uint16_t tcpPort = 0;
+  std::string userHash;
+  uint8_t connectOptions = 0;
+};
+
+struct BuddyCallback {
+  std::string buddyId;
+  std::string fileId;
+  Endpoint endpoint;
+};
+
 struct KadObfuscatedDatagram {
   std::string datagram;
   uint32_t receiverVerifyKey = 0;
@@ -142,6 +154,16 @@ std::string createKadCallbackRequestPayload(const std::string& buddyId,
                                             uint16_t tcpPort);
 bool parseKadCallbackRequestPayload(KadCallbackRequest& request,
                                     const std::string& payload);
+std::string createDirectCallbackRequestPayload(uint16_t tcpPort,
+                                               const std::string& userHash,
+                                               uint8_t connectOptions);
+bool parseDirectCallbackRequestPayload(DirectCallbackRequest& request,
+                                       const std::string& payload);
+std::string createBuddyCallbackPayload(const std::string& buddyId,
+                                       const std::string& fileId,
+                                       const Endpoint& endpoint);
+bool parseBuddyCallbackPayload(BuddyCallback& callback,
+                               const std::string& payload);
 std::string createKadObfuscatedDatagram(const std::string& datagram,
                                         const std::string& targetId,
                                         uint16_t randomKeyPart,

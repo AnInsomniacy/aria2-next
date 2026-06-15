@@ -85,6 +85,7 @@ class DownloadHelperTest : public CppUnit::TestFixture {
   CPPUNIT_TEST(testEd2kPeerUdpReaskDueSelection);
   CPPUNIT_TEST(testEd2kKadCommandQueuesDuePeerReask);
   CPPUNIT_TEST(testEd2kKadCommandQueuesKadCallback);
+  CPPUNIT_TEST(testEd2kKadCommandQueuesDirectCallback);
   CPPUNIT_TEST(testEd2kKadCommandQueueFullForUnknownUploadReask);
   CPPUNIT_TEST(testEd2kKadCommandAckForUploadingPeerReask);
   CPPUNIT_TEST(testEd2kSourcePolicyAppliesActiveCap);
@@ -162,6 +163,7 @@ public:
   void testEd2kPeerUdpReaskDueSelection();
   void testEd2kKadCommandQueuesDuePeerReask();
   void testEd2kKadCommandQueuesKadCallback();
+  void testEd2kKadCommandQueuesDirectCallback();
   void testEd2kKadCommandQueueFullForUnknownUploadReask();
   void testEd2kKadCommandAckForUploadingPeerReask();
   void testEd2kSourcePolicyAppliesActiveCap();
@@ -848,6 +850,26 @@ void DownloadHelperTest::testEd2kKadSourcePeerMergePreservesUdpMetadata()
   CPPUNIT_ASSERT_EQUAL(
       ed2k::ed2kHashToKadId(std::string(ed2k::HASH_LENGTH, '\x55')),
       callbackState->callbackBuddyId);
+
+  source.endpoint.host = "203.0.113.46";
+  source.sourceType = 6;
+  source.udpPort = 4692;
+  source.buddyIp = 0;
+  source.buddyPort = 0;
+  source.buddyHash.clear();
+  source.buddyId.clear();
+  CPPUNIT_ASSERT(!addEd2kKadSourcePeer(&attrs, source,
+                                       ed2k::PEER_SOURCE_KAD));
+  auto directCallbackState = getEd2kPeerState(&attrs, source.endpoint);
+  CPPUNIT_ASSERT(directCallbackState);
+  CPPUNIT_ASSERT(directCallbackState->lowId);
+  CPPUNIT_ASSERT(directCallbackState->callbackRequested);
+  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::REQUESTED,
+                       directCallbackState->lowIdCallbackState);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4692, directCallbackState->udpPort);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)4, directCallbackState->udpVersion);
+  CPPUNIT_ASSERT_EQUAL(ed2k::CallbackKind::DIRECT,
+                       directCallbackState->callbackKind);
 }
 
 void DownloadHelperTest::testEd2kServerSourceMergeSkipsUnsupportedSources()
@@ -1051,6 +1073,30 @@ void DownloadHelperTest::testEd2kLowIdCallbackStateTransitions()
   CPPUNIT_ASSERT(markEd2kCallbackCompleted(&attrs, callbackPeer));
   CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::COMPLETED,
                        state->lowIdCallbackState);
+
+  Ed2kAttribute directAttrs;
+  ed2k::KadSourceEndpoint direct;
+  direct.endpoint.host = "203.0.113.44";
+  direct.endpoint.port = 4662;
+  direct.endpoint.userHash = std::string(ed2k::HASH_LENGTH, '\x44');
+  direct.udpPort = 4672;
+  direct.sourceType = 6;
+  CPPUNIT_ASSERT(!addEd2kKadSourcePeer(&directAttrs, direct,
+                                       ed2k::PEER_SOURCE_KAD));
+  auto directState = getEd2kPeerState(&directAttrs, direct.endpoint);
+  CPPUNIT_ASSERT(directState);
+  ed2k::Endpoint directPeer = direct.endpoint;
+  directPeer.cryptOptions = ed2k::SOURCE_CRYPT_SUPPORT;
+  CPPUNIT_ASSERT(markEd2kDirectCallbackAccepted(&directAttrs, directPeer,
+                                                130));
+  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::ACCEPTED,
+                       directState->lowIdCallbackState);
+  CPPUNIT_ASSERT(!directState->lowId);
+  CPPUNIT_ASSERT(!directState->callbackRequested);
+  CPPUNIT_ASSERT_EQUAL(ed2k::CallbackKind::NONE,
+                       directState->callbackKind);
+  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::USEFUL,
+                       ed2k::classifyPeerLifecycle(*directState, 131));
 
   Ed2kAttribute failAttrs;
   CPPUNIT_ASSERT(!addEd2kFoundSource(&failAttrs, source,
@@ -1427,6 +1473,62 @@ void DownloadHelperTest::testEd2kKadCommandQueuesKadCallback()
   CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->link.hash),
                        request.fileId);
   CPPUNIT_ASSERT_EQUAL((uint16_t)4662, request.tcpPort);
+  CPPUNIT_ASSERT_EQUAL((int64_t)200, state->lastCallbackTime);
+  CPPUNIT_ASSERT_EQUAL((int64_t)245, state->callbackDeadline);
+  CPPUNIT_ASSERT_EQUAL((size_t)0, command.testQueueDueKadCallbacks(210));
+}
+
+void DownloadHelperTest::testEd2kKadCommandQueuesDirectCallback()
+{
+  std::vector<std::string> uris{
+      "ed2k://|file|aria2%20next.bin|9728001|"
+      "0123456789abcdef0123456789abcdef|/"};
+  option_->put(PREF_DIR, "/tmp");
+  option_->put(PREF_ED2K_SERVER, "203.0.113.10:4661");
+  option_->put(PREF_ED2K_LISTEN_PORT, "4662");
+  option_->put(PREF_MAX_DOWNLOAD_LIMIT, "0");
+  option_->put(PREF_MAX_UPLOAD_LIMIT, "0");
+  option_->put(PREF_FILE_ALLOCATION, V_NONE);
+  option_->put(PREF_DRY_RUN, A2_V_TRUE);
+
+  std::vector<std::shared_ptr<RequestGroup>> result;
+  createRequestGroupForUri(result, option_, uris);
+  auto group = result[0];
+  auto attrs = getEd2kAttrs(group->getDownloadContext());
+  ed2k::KadSourceEndpoint source;
+  source.endpoint.host = "203.0.113.44";
+  source.endpoint.port = 4662;
+  source.endpoint.userHash = std::string(ed2k::HASH_LENGTH, '\x44');
+  source.endpoint.cryptOptions = ed2k::SOURCE_CRYPT_SUPPORT;
+  source.udpPort = 4672;
+  source.sourceType = 6;
+  addEd2kKadSourcePeer(attrs, source, ed2k::PEER_SOURCE_KAD);
+  auto state = getEd2kPeerState(attrs, source.endpoint);
+
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option_.get());
+  engine.setRequestGroupMan(make_unique<RequestGroupMan>(
+      std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
+  Ed2kKadCommand command(1, group.get(), &engine);
+
+  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueueDueKadCallbacks(200));
+  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueuedPacketCount());
+  const auto& item = command.testQueuedPacketAt(0);
+  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.44"), item.first.host);
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, item.first.port);
+  ed2k::PacketHeader header;
+  CPPUNIT_ASSERT(ed2k::readDatagramHeader(header, item.second.data(),
+                                          item.second.size()));
+  CPPUNIT_ASSERT_EQUAL(ed2k::PROTO_EMULE, header.protocol);
+  CPPUNIT_ASSERT_EQUAL(ed2k::OP_DIRECTCALLBACKREQ, header.opcode);
+  ed2k::DirectCallbackRequest request;
+  CPPUNIT_ASSERT(ed2k::parseDirectCallbackRequestPayload(
+      request, item.second.substr(2)));
+  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, request.tcpPort);
+  CPPUNIT_ASSERT_EQUAL(attrs->clientHash, request.userHash);
+  CPPUNIT_ASSERT_EQUAL((uint8_t)(ed2k::SOURCE_CRYPT_SUPPORT |
+                                ed2k::SOURCE_CRYPT_REQUEST),
+                       request.connectOptions);
   CPPUNIT_ASSERT_EQUAL((int64_t)200, state->lastCallbackTime);
   CPPUNIT_ASSERT_EQUAL((int64_t)245, state->callbackDeadline);
   CPPUNIT_ASSERT_EQUAL((size_t)0, command.testQueueDueKadCallbacks(210));

@@ -12,6 +12,8 @@
 /* copyright --> */
 #include "Ed2kSharedResponder.h"
 
+#include <algorithm>
+#include <limits>
 #include <vector>
 
 #include "Ed2kShareIndex.h"
@@ -130,6 +132,90 @@ bool SharedResponder::queueAichFileHashAnswer(const std::string& fileHash)
   queuePacket(PROTO_EMULE, OP_AICHFILEHASHANS,
               createAichFileHashAnswerPayload(fileHash,
                                               file->aichRootHash()));
+  return true;
+}
+
+bool SharedResponder::queueMultipacketAnswer(const std::string& requestPayload,
+                                             bool extendedMultipacket,
+                                             uint8_t extendedRequestsVersion,
+                                             uint8_t sourceExchangeVersion)
+{
+  const size_t fixedSize = HASH_LENGTH + (extendedMultipacket ? 8 : 0);
+  if (requestPayload.size() < fixedSize) {
+    return false;
+  }
+  size_t offset = 0;
+  auto fileHash = readBytes(requestPayload, offset, HASH_LENGTH);
+  auto file = findFile(fileHash);
+  if (extendedMultipacket && offset + 8 <= requestPayload.size()) {
+    const auto requestedSize =
+        static_cast<int64_t>(readUInt64(readBytes(requestPayload, offset, 8).data()));
+    if (file && requestedSize != file->size()) {
+      queueNoFile(fileHash);
+      return false;
+    }
+  }
+  if (!file) {
+    queueNoFile(fileHash);
+    return false;
+  }
+  std::string answer = fileHash;
+  while (offset < requestPayload.size()) {
+    const auto opcode = readByte(requestPayload, offset);
+    switch (opcode) {
+    case OP_REQUESTFILENAME:
+      if (extendedRequestsVersion > 0) {
+        std::vector<bool> ignored;
+        if (!parsePartStatusPayload(ignored, requestPayload, offset)) {
+          return false;
+        }
+      }
+      if (extendedRequestsVersion > 1) {
+        if (offset + 2 > requestPayload.size()) {
+          return false;
+        }
+        offset += 2;
+      }
+      answer.push_back(static_cast<char>(OP_REQFILENAMEANSWER));
+      {
+        auto nameAnswer = createSharedFileNameAnswerPayload(*file);
+        answer.append(nameAnswer, HASH_LENGTH, nameAnswer.size() - HASH_LENGTH);
+      }
+      break;
+    case OP_SETREQFILEID:
+      answer.push_back(static_cast<char>(OP_FILESTATUS));
+      {
+        auto statusAnswer = createSharedFileStatusPayload(*file);
+        answer.append(statusAnswer, HASH_LENGTH,
+                      statusAnswer.size() - HASH_LENGTH);
+      }
+      break;
+    case OP_AICHFILEHASHREQ:
+      if (!file->aichRootHash().empty()) {
+        answer.push_back(static_cast<char>(OP_AICHFILEHASHANS));
+        answer += file->aichRootHash();
+      }
+      break;
+    case OP_REQUESTSOURCES:
+      queueSourceExchangeAnswer(fileHash,
+                                std::max<uint8_t>(1, sourceExchangeVersion));
+      break;
+    case OP_REQUESTSOURCES2: {
+      if (offset + 3 > requestPayload.size()) {
+        return false;
+      }
+      const auto version = readByte(requestPayload, offset);
+      offset += 2;
+      queueSourceExchangeAnswer(fileHash, version);
+      break;
+    }
+    default:
+      return false;
+    }
+  }
+  if (answer.size() > HASH_LENGTH) {
+    queuePacket(PROTO_EMULE, OP_MULTIPACKETANSWER, answer);
+  }
   return true;
 }
 

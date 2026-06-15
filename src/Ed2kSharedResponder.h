@@ -53,6 +53,10 @@ public:
   bool queueHashSetAnswer(const std::string& fileHash);
   bool queueSourceExchangeAnswer(const std::string& fileHash, uint8_t version);
   bool queueAichFileHashAnswer(const std::string& fileHash);
+  bool queueMultipacketAnswer(const std::string& requestPayload,
+                              bool extendedMultipacket,
+                              uint8_t extendedRequestsVersion,
+                              uint8_t sourceExchangeVersion);
   bool queueAichAnswer(const std::string& fileHash,
                        const std::string& requestPayload);
   bool requestUploadSlot(const std::string& fileHash, int64_t now);

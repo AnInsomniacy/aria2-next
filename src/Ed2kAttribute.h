@@ -105,6 +105,9 @@ bool markEd2kCallbackRequestSent(Ed2kAttribute* attrs, uint32_t clientId,
                                  int64_t now, int64_t timeoutSeconds);
 bool markEd2kCallbackAccepted(Ed2kAttribute* attrs, uint32_t clientId,
                               const ed2k::Endpoint& peer, int64_t now);
+bool markEd2kDirectCallbackAccepted(Ed2kAttribute* attrs,
+                                    const ed2k::Endpoint& peer,
+                                    int64_t now);
 bool markEd2kCallbackCompleted(Ed2kAttribute* attrs,
                                const ed2k::Endpoint& peer);
 bool markEd2kCallbackFailed(Ed2kAttribute* attrs, uint32_t clientId);

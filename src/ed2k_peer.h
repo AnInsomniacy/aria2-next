@@ -66,6 +66,7 @@ struct EmuleMiscOptions {
 };
 
 struct EmuleMiscOptions2 {
+  uint8_t kadVersion = 0;
   bool supportsLargeFiles = false;
   bool supportsExtendedMultipacket = false;
   bool supportsSourceExchange2 = false;
@@ -91,6 +92,16 @@ struct UdpReaskAck {
   uint16_t rank = 0;
 };
 
+struct MultipacketAnswer {
+  bool hasFileName = false;
+  std::string fileName;
+  bool hasFileStatus = false;
+  std::vector<bool> partStatus;
+  bool completeSource = false;
+  bool hasAichRootHash = false;
+  std::string aichRootHash;
+};
+
 enum class LowIdCallbackState {
   NONE,
   REQUESTED,
@@ -99,6 +110,12 @@ enum class LowIdCallbackState {
   TIMED_OUT,
   IMPOSSIBLE,
   COMPLETED
+};
+
+enum class CallbackKind {
+  NONE,
+  BUDDY,
+  DIRECT
 };
 
 struct PeerState {
@@ -110,6 +127,7 @@ struct PeerState {
   bool lowId = false;
   Endpoint callbackBuddy;
   std::string callbackBuddyId;
+  CallbackKind callbackKind = CallbackKind::NONE;
   bool callbackRequested = false;
   bool callbackImpossible = false;
   LowIdCallbackState lowIdCallbackState = LowIdCallbackState::NONE;
@@ -139,9 +157,15 @@ struct PeerState {
 
 std::string createFileStatusPayload(const std::string& fileHash,
                                     const std::vector<bool>& bitfield);
+bool parsePartStatusPayload(std::vector<bool>& bitfield,
+                            const std::string& payload, size_t& offset);
 bool parseFileStatusPayload(std::vector<bool>& bitfield,
                             const std::string& payload,
                             const std::string& expectedFileHash);
+bool parseFileStatusPayload(std::vector<bool>& bitfield,
+                            const std::string& payload,
+                            const std::string& expectedFileHash,
+                            size_t expectedPartCount);
 std::string createHashSetAnswerPayload(
     const std::string& fileHash, const std::vector<std::string>& pieceHashes);
 bool parseHashSetAnswerPayload(std::vector<std::string>& pieceHashes,
@@ -157,6 +181,13 @@ SourceExchangeRequest createRequestSourcesPayload(const std::string& fileHash,
 std::string createRequestSources2Payload(const std::string& fileHash);
 bool parseRequestSources2Payload(uint8_t& version, const std::string& payload,
                                  const std::string& expectedFileHash);
+std::string createMultipacketFileRequestPayload(
+    const std::string& fileHash, int64_t fileSize,
+    const std::vector<bool>& localPartStatus,
+    const EmulePeerInfo& peerInfo, bool extendedMultipacket);
+bool parseMultipacketAnswerPayload(MultipacketAnswer& answer,
+                                   const std::string& payload,
+                                   const std::string& expectedFileHash);
 std::string createAnswerSourcesPayload(
     const std::string& fileHash, uint8_t version,
     const std::vector<SourceExchangeEntry>& entries);

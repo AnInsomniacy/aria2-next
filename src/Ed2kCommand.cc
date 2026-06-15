@@ -168,6 +168,16 @@ bool isFileRequestPayloadForHash(const std::string& payload,
          payload.compare(0, ed2k::HASH_LENGTH, expectedHash) == 0;
 }
 
+std::vector<bool> createLocalPartStatus(const DownloadContext* dctx,
+                                        PieceStorage* pieceStorage)
+{
+  std::vector<bool> status(dctx->getNumPieces(), false);
+  for (size_t index = 0; index < status.size(); ++index) {
+    status[index] = pieceStorage && pieceStorage->hasPiece(index);
+  }
+  return status;
+}
+
 int64_t nowSeconds()
 {
   return std::chrono::duration_cast<std::chrono::seconds>(
@@ -234,6 +244,7 @@ Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
       bodyRead_(0),
       peerFileStatusReceived_(false),
       peerFileRequestSent_(false),
+      peerFileStatusRequested_(false),
       peerAccepted_(false),
       sourceExchangeRequested_(false),
       aichFileHashRequested_(false),
@@ -279,6 +290,7 @@ Ed2kCommand::Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup,
       bodyRead_(0),
       peerFileStatusReceived_(false),
       peerFileRequestSent_(false),
+      peerFileStatusRequested_(false),
       peerAccepted_(false),
       sourceExchangeRequested_(false),
       aichFileHashRequested_(false),
@@ -336,9 +348,12 @@ bool Ed2kCommand::shouldObfuscatePeerConnection() const
       endpoint_.userHash.size() != ed2k::HASH_LENGTH) {
     return false;
   }
-  return (endpoint_.cryptOptions &
-          (ed2k::SOURCE_CRYPT_SUPPORT | ed2k::SOURCE_CRYPT_REQUEST |
-           ed2k::SOURCE_CRYPT_REQUIRE)) != 0;
+  const bool peerSupports =
+      (endpoint_.cryptOptions & ed2k::SOURCE_CRYPT_SUPPORT) != 0;
+  const bool peerWants =
+      (endpoint_.cryptOptions &
+       (ed2k::SOURCE_CRYPT_REQUEST | ed2k::SOURCE_CRYPT_REQUIRE)) != 0;
+  return peerSupports && peerWants;
 }
 
 void Ed2kCommand::initPeerObfuscation()
@@ -763,20 +778,58 @@ void Ed2kCommand::queueEmuleInfo(bool answer)
 
 void Ed2kCommand::queuePeerFileRequest()
 {
+  if (getRequestGroup()->downloadFinished()) {
+    return;
+  }
   if (peerFileRequestSent_) {
     return;
   }
   peerFileRequestSent_ = true;
   auto attrs = getEd2kAttrs(getDownloadContext());
+  const auto localPartStatus =
+      createLocalPartStatus(getDownloadContext().get(), getPieceStorage().get());
+
+  if (remotePeerInfo_.miscOptions.multiPacket) {
+    const bool extendedMultipacket =
+        remotePeerInfo_.miscOptions2.supportsExtendedMultipacket;
+    queuePacket(ed2k::PROTO_EMULE,
+                extendedMultipacket ? ed2k::OP_MULTIPACKET_EXT
+                                    : ed2k::OP_MULTIPACKET,
+                ed2k::createMultipacketFileRequestPayload(
+                    attrs->link.hash, getDownloadContext()->getTotalLength(),
+                    localPartStatus, remotePeerInfo_, extendedMultipacket));
+    if (localPartStatus.size() > 1) {
+      peerFileStatusRequested_ = true;
+    }
+    if (remotePeerInfo_.miscOptions2.supportsSourceExchange2 ||
+        remotePeerInfo_.miscOptions.sourceExchange1Version > 1) {
+      sourceExchangeRequested_ = true;
+    }
+    if (remotePeerInfo_.miscOptions.aichVersion > 0 &&
+        attrs->aichRootHash.empty()) {
+      aichFileHashRequested_ = true;
+    }
+    return;
+  }
+
   queuePacket(ed2k::PROTO_EDONKEY, ed2k::OP_REQUESTFILENAME,
               createPeerFileRequestPayload(
                   getDownloadContext().get(), getPieceStorage().get(),
-                  attrs->link.hash, localPeerInfo_.miscOptions
+                  attrs->link.hash, remotePeerInfo_.miscOptions
                                         .extendedRequestsVersion));
+  if (localPartStatus.size() > 1) {
+    queuePeerFileStatusRequest();
+  }
+  queueSourceExchangeRequest();
+  queueAichFileHashRequest();
 }
 
 void Ed2kCommand::queuePeerFileStatusRequest()
 {
+  if (peerFileStatusRequested_) {
+    return;
+  }
+  peerFileStatusRequested_ = true;
   queuePacket(ed2k::PROTO_EDONKEY, ed2k::OP_SETREQFILEID,
               getEd2kAttrs(getDownloadContext())->link.hash);
 }
@@ -785,6 +838,18 @@ void Ed2kCommand::queuePeerHashSetRequest()
 {
   queuePacket(ed2k::PROTO_EDONKEY, ed2k::OP_HASHSETREQUEST,
               getEd2kAttrs(getDownloadContext())->link.hash);
+}
+
+void Ed2kCommand::queuePeerPostFileStatusRequests()
+{
+  auto attrs = getEd2kAttrs(getDownloadContext());
+  if (ed2k::hashSetPartCount(getDownloadContext()->getTotalLength()) > 0 &&
+      attrs->pieceHashes.empty()) {
+    queuePeerHashSetRequest();
+  }
+  else {
+    queuePeerStartUpload();
+  }
 }
 
 void Ed2kCommand::queueAichFileHashRequest()
@@ -1138,6 +1203,7 @@ bool Ed2kCommand::updatePeerEndpointFromHello(bool helloPacket)
     newState->dead = false;
     newState->endpoint.userHash = userHash;
   }
+  markEd2kDirectCallbackAccepted(attrs, endpoint_, nowSeconds());
   oldState = findState(oldEndpoint);
   if (oldState && oldState != newState) {
     oldState->connecting = false;
@@ -1542,7 +1608,6 @@ void Ed2kCommand::handlePeerPacket()
         throw DL_RETRY_EX("Bad eMule info answer.");
       }
       updatePeerUdpMetadata(attrs, endpoint_, remotePeerInfo_);
-      queueAichFileHashRequest();
       if (!outbox_.empty()) {
         state_ = State::WRITE;
       }
@@ -1624,6 +1689,42 @@ void Ed2kCommand::handlePeerPacket()
       }
       break;
     }
+    case ed2k::OP_MULTIPACKETANSWER: {
+      ed2k::MultipacketAnswer answer;
+      if (!ed2k::parseMultipacketAnswerPayload(answer, body_,
+                                               attrs->link.hash)) {
+        throw DL_RETRY_EX("Bad ED2K multipacket answer.");
+      }
+      if (answer.hasFileStatus) {
+        if (answer.completeSource) {
+          answer.partStatus.assign(getDownloadContext()->getNumPieces(), true);
+        }
+        updateEd2kPeerPartStatus(attrs, endpoint_, answer.partStatus);
+        peerFileStatusReceived_ = true;
+      }
+      if (answer.hasAichRootHash && attrs->aichRootHash.empty()) {
+        attrs->aichRootHash = answer.aichRootHash;
+      }
+      if (answer.hasFileStatus) {
+        queuePeerPostFileStatusRequests();
+        state_ = State::WRITE;
+      }
+      else if (answer.hasFileName &&
+               getDownloadContext()->getTotalLength() <= ed2k::PIECE_LENGTH) {
+        queuePeerPostFileStatusRequests();
+        state_ = State::WRITE;
+      }
+      break;
+    }
+    case ed2k::OP_MULTIPACKET:
+    case ed2k::OP_MULTIPACKET_EXT:
+      if (createSharedResponder().queueMultipacketAnswer(
+              body_, currentHeader_.opcode == ed2k::OP_MULTIPACKET_EXT,
+              remotePeerInfo_.miscOptions.extendedRequestsVersion,
+              remotePeerInfo_.miscOptions.sourceExchange1Version)) {
+        state_ = State::WRITE;
+      }
+      break;
     case ed2k::OP_AICHANSWER: {
       ed2k::AichAnswer answer;
       if (!ed2k::parseAichAnswerPayload(answer, body_, attrs->link.hash)) {
@@ -1654,6 +1755,22 @@ void Ed2kCommand::handlePeerPacket()
       }
       break;
     }
+    case ed2k::OP_CALLBACK: {
+      ed2k::BuddyCallback callback;
+      if (!ed2k::parseBuddyCallbackPayload(callback, body_) ||
+          callback.buddyId != ed2k::ed2kHashToKadId(attrs->clientHash) ||
+          callback.fileId != ed2k::ed2kHashToKadId(attrs->link.hash)) {
+        break;
+      }
+      addEd2kPeer(attrs, callback.endpoint, ed2k::PEER_SOURCE_KAD);
+      auto e = getDownloadEngine();
+      e->addCommand(make_unique<Ed2kCommand>(e->newCUID(), getRequestGroup(),
+                                             e, callback.endpoint, false));
+      A2_LOG_DEBUG(fmt("Accepted ED2K buddy callback for %s:%u.",
+                       callback.endpoint.host.c_str(),
+                       callback.endpoint.port));
+      break;
+    }
     case ed2k::OP_AICHREQUEST:
       if (body_.size() >= ed2k::HASH_LENGTH) {
         createSharedResponder().queueAichAnswer(
@@ -1676,7 +1793,6 @@ void Ed2kCommand::handlePeerPacket()
     ed2k::parsePeerHelloPayload(remotePeerInfo_, body_, true);
     updatePeerUdpMetadata(attrs, endpoint_, remotePeerInfo_);
     queuePeerHelloAnswer();
-    queueEmuleInfo(true);
     queuePeerFileRequest();
     state_ = State::WRITE;
     break;
@@ -1686,7 +1802,6 @@ void Ed2kCommand::handlePeerPacket()
     }
     ed2k::parsePeerHelloPayload(remotePeerInfo_, body_, false);
     updatePeerUdpMetadata(attrs, endpoint_, remotePeerInfo_);
-    queueEmuleInfo(false);
     queuePeerFileRequest();
     state_ = State::WRITE;
     break;
@@ -1695,7 +1810,7 @@ void Ed2kCommand::handlePeerPacket()
         body_.substr(0, ed2k::HASH_LENGTH) != attrs->link.hash) {
       throw DL_RETRY_EX("ED2K file answer hash mismatch.");
     }
-    if (!peerFileStatusReceived_ &&
+    if (!peerFileStatusRequested_ && !peerFileStatusReceived_ &&
         getDownloadContext()->getTotalLength() > ed2k::PIECE_LENGTH) {
       queuePeerFileStatusRequest();
       state_ = State::WRITE;
@@ -1729,19 +1844,13 @@ void Ed2kCommand::handlePeerPacket()
     break;
   case ed2k::OP_FILESTATUS: {
     std::vector<bool> bitfield;
-    if (!ed2k::parseFileStatusPayload(bitfield, body_, attrs->link.hash)) {
+    if (!ed2k::parseFileStatusPayload(bitfield, body_, attrs->link.hash,
+                                      getDownloadContext()->getNumPieces())) {
       throw DL_RETRY_EX("ED2K file status hash mismatch.");
     }
     updateEd2kPeerPartStatus(attrs, endpoint_, bitfield);
     peerFileStatusReceived_ = true;
-    if (ed2k::hashSetPartCount(getDownloadContext()->getTotalLength()) > 0 &&
-        attrs->pieceHashes.empty()) {
-      queuePeerHashSetRequest();
-    }
-    else {
-      queueSourceExchangeRequest();
-      queuePeerStartUpload();
-    }
+    queuePeerPostFileStatusRequests();
     state_ = State::WRITE;
     break;
   }
@@ -1756,7 +1865,6 @@ void Ed2kCommand::handlePeerPacket()
                                         error_code::CHECKSUM_ERROR);
     }
     attrs->pieceHashes = std::move(pieceHashes);
-    queueSourceExchangeRequest();
     queuePeerStartUpload();
     state_ = State::WRITE;
     break;

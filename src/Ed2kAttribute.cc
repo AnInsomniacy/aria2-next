@@ -228,11 +228,13 @@ bool addEd2kKadSourcePeer(Ed2kAttribute* attrs,
   }
   if (source.sourceType != 0 && source.sourceType != 1 &&
       source.sourceType != 4 && source.sourceType != 3 &&
-      source.sourceType != 5) {
+      source.sourceType != 5 && source.sourceType != 6) {
     return false;
   }
-  const bool callbackOnly =
+  const bool buddyCallback =
       source.sourceType == 3 || source.sourceType == 5;
+  const bool directCallback = source.sourceType == 6;
+  const bool callbackOnly = buddyCallback || directCallback;
   const uint32_t lowIdClientId = callbackOnly
                                      ? ed2k::ipv4ToEndpointValue(
                                            source.endpoint.host)
@@ -255,11 +257,19 @@ bool addEd2kKadSourcePeer(Ed2kAttribute* attrs,
       state->callbackImpossible = false;
       state->lowIdCallbackState = ed2k::LowIdCallbackState::REQUESTED;
       state->callbackDeadline = 0;
-      state->callbackBuddy.host = ed2k::ipv4FromEndpoint(source.buddyIp);
-      state->callbackBuddy.port = source.buddyPort;
-      state->callbackBuddyId =
-          source.buddyId.empty() ? ed2k::ed2kHashToKadId(source.buddyHash)
-                                 : source.buddyId;
+      state->callbackKind = directCallback ? ed2k::CallbackKind::DIRECT
+                                           : ed2k::CallbackKind::BUDDY;
+      if (buddyCallback) {
+        state->callbackBuddy.host = ed2k::ipv4FromEndpoint(source.buddyIp);
+        state->callbackBuddy.port = source.buddyPort;
+        state->callbackBuddyId =
+            source.buddyId.empty() ? ed2k::ed2kHashToKadId(source.buddyHash)
+                                   : source.buddyId;
+      }
+      else {
+        state->callbackBuddy = ed2k::Endpoint();
+        state->callbackBuddyId.clear();
+      }
     }
   }
   return added;
@@ -292,6 +302,7 @@ bool addEd2kFoundSource(Ed2kAttribute* attrs, const ed2k::FoundSource& source,
     state->callbackRequested = true;
     state->callbackImpossible = false;
     state->lowIdCallbackState = ed2k::LowIdCallbackState::REQUESTED;
+    state->callbackKind = ed2k::CallbackKind::BUDDY;
     state->lastCallbackTime = 0;
     state->callbackDeadline = 0;
   }
@@ -517,6 +528,7 @@ bool markEd2kCallbackAccepted(Ed2kAttribute* attrs, uint32_t clientId,
   state->lowId = false;
   state->callbackRequested = false;
   state->callbackImpossible = false;
+  state->callbackKind = ed2k::CallbackKind::NONE;
   state->lowIdCallbackState = ed2k::LowIdCallbackState::ACCEPTED;
   state->lastCallbackTime = now;
   state->callbackDeadline = 0;
@@ -535,6 +547,7 @@ bool markEd2kCallbackAccepted(Ed2kAttribute* attrs, uint32_t clientId,
     }
     existing.callbackRequested = false;
     existing.callbackImpossible = false;
+    existing.callbackKind = ed2k::CallbackKind::NONE;
     existing.lowIdCallbackState = ed2k::LowIdCallbackState::ACCEPTED;
     existing.lastCallbackTime = now;
     existing.callbackDeadline = 0;
@@ -544,6 +557,46 @@ bool markEd2kCallbackAccepted(Ed2kAttribute* attrs, uint32_t clientId,
     releaseEd2kRequestedRanges(attrs, existing.requestedParts);
     existing.requestedParts.clear();
   }
+  return true;
+}
+
+bool markEd2kDirectCallbackAccepted(Ed2kAttribute* attrs,
+                                    const ed2k::Endpoint& peer,
+                                    int64_t now)
+{
+  if (!attrs || peer.host.empty() || peer.port == 0 ||
+      peer.userHash.size() != ed2k::HASH_LENGTH) {
+    return false;
+  }
+  auto i = std::find_if(attrs->peerStates.begin(), attrs->peerStates.end(),
+                        [&](const ed2k::PeerState& state) {
+                          return state.callbackKind ==
+                                     ed2k::CallbackKind::DIRECT &&
+                                 state.endpoint.host == peer.host &&
+                                 state.endpoint.port == peer.port &&
+                                 state.endpoint.userHash == peer.userHash;
+                        });
+  if (i == attrs->peerStates.end()) {
+    return false;
+  }
+  i->lowId = false;
+  i->callbackRequested = false;
+  i->callbackImpossible = false;
+  i->callbackKind = ed2k::CallbackKind::NONE;
+  i->lowIdCallbackState = ed2k::LowIdCallbackState::ACCEPTED;
+  i->lastCallbackTime = now;
+  i->callbackDeadline = 0;
+  i->connecting = false;
+  i->accepted = false;
+  i->queued = false;
+  i->dead = false;
+  i->cancelled = false;
+  i->noFile = false;
+  if (peer.cryptOptions != 0 && i->endpoint.cryptOptions == 0) {
+    i->endpoint.cryptOptions = peer.cryptOptions;
+  }
+  releaseEd2kRequestedRanges(attrs, i->requestedParts);
+  i->requestedParts.clear();
   return true;
 }
 
@@ -557,6 +610,7 @@ bool markEd2kCallbackCompleted(Ed2kAttribute* attrs,
   state->lowIdCallbackState = ed2k::LowIdCallbackState::COMPLETED;
   state->callbackRequested = false;
   state->callbackImpossible = false;
+  state->callbackKind = ed2k::CallbackKind::NONE;
   state->callbackDeadline = 0;
   return true;
 }
@@ -581,6 +635,7 @@ bool markEd2kCallbackFailed(Ed2kAttribute* attrs, uint32_t clientId,
   }
   i->callbackRequested = false;
   i->callbackImpossible = true;
+  i->callbackKind = ed2k::CallbackKind::NONE;
   i->lowIdCallbackState = ed2k::LowIdCallbackState::FAILED;
   i->lastCallbackTime = now;
   i->callbackDeadline = 0;
@@ -618,6 +673,7 @@ size_t expireEd2kCallbackWaits(Ed2kAttribute* attrs, int64_t now)
     }
     state.callbackRequested = false;
     state.callbackImpossible = true;
+    state.callbackKind = ed2k::CallbackKind::NONE;
     state.lowIdCallbackState = deadlineExpired
                                    ? ed2k::LowIdCallbackState::TIMED_OUT
                                    : ed2k::LowIdCallbackState::IMPOSSIBLE;

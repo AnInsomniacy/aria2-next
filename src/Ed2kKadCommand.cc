@@ -22,6 +22,7 @@
 #include "DownloadContext.h"
 #include "DownloadEngine.h"
 #include "Ed2kAttribute.h"
+#include "Ed2kCommand.h"
 #include "Ed2kShareIndex.h"
 #include "Ed2kUploadQueue.h"
 #include "LogFactory.h"
@@ -142,6 +143,11 @@ bool publishableAddress(const std::string& host)
 bool directKadTcpSourceType(uint8_t sourceType)
 {
   return sourceType == 0 || sourceType == 1 || sourceType == 4;
+}
+
+uint8_t localDirectCallbackOptions()
+{
+  return ed2k::SOURCE_CRYPT_SUPPORT | ed2k::SOURCE_CRYPT_REQUEST;
 }
 
 } // namespace
@@ -649,8 +655,32 @@ size_t Ed2kKadCommand::queueDueKadCallbacks(int64_t now)
   for (auto& state : attrs->peerStates) {
     if (!state.lowId || !state.callbackRequested ||
         state.lowIdCallbackState != ed2k::LowIdCallbackState::REQUESTED ||
-        state.lastCallbackTime != 0 || state.callbackBuddy.host.empty() ||
-        state.callbackBuddy.port == 0 ||
+        state.lastCallbackTime != 0) {
+      continue;
+    }
+    if (state.callbackKind == ed2k::CallbackKind::DIRECT) {
+      if (state.endpoint.host.empty() || state.udpPort == 0 ||
+          state.endpoint.userHash.size() != ed2k::HASH_LENGTH) {
+        continue;
+      }
+      ed2k::Endpoint endpoint;
+      endpoint.host = state.endpoint.host;
+      endpoint.port = state.udpPort;
+      queueEmuleUdpPacket(endpoint, ed2k::OP_DIRECTCALLBACKREQ,
+                          ed2k::createDirectCallbackRequestPayload(
+                              tcpPort, attrs->clientHash,
+                              localDirectCallbackOptions()));
+      state.lastCallbackTime = now;
+      state.callbackDeadline = now + CALLBACK_TIMEOUT;
+      ++queued;
+      A2_LOG_DEBUG(fmt("Queued ED2K direct UDP callback request to %s:%u "
+                       "for source TCP port %u.",
+                       endpoint.host.c_str(), endpoint.port,
+                       state.endpoint.port));
+      continue;
+    }
+    if (state.callbackKind != ed2k::CallbackKind::BUDDY ||
+        state.callbackBuddy.host.empty() || state.callbackBuddy.port == 0 ||
         state.callbackBuddyId.size() != ed2k::HASH_LENGTH) {
       continue;
     }
@@ -818,6 +848,26 @@ void Ed2kKadCommand::handleEd2kUdpPacket(const ed2k::Endpoint& endpoint,
     }
     queueEmuleUdpPacket(endpoint, ed2k::OP_REASKACK,
                         ed2k::createUdpReaskAckPayload(rank));
+    return;
+  }
+  if (opcode == ed2k::OP_DIRECTCALLBACKREQ) {
+    ed2k::DirectCallbackRequest request;
+    if (!ed2k::parseDirectCallbackRequestPayload(request, payload) ||
+        request.tcpPort == 0 || request.userHash.empty()) {
+      return;
+    }
+    ed2k::Endpoint peer;
+    peer.host = endpoint.host;
+    peer.port = request.tcpPort;
+    peer.userHash = request.userHash;
+    peer.cryptOptions = request.connectOptions;
+    auto attrs = getEd2kAttrs(requestGroup_->getDownloadContext());
+    addEd2kPeer(attrs, peer, ed2k::PEER_SOURCE_INCOMING);
+    e_->addCommand(make_unique<Ed2kCommand>(e_->newCUID(), requestGroup_, e_,
+                                            peer, false));
+    A2_LOG_DEBUG(fmt("Accepted ED2K direct UDP callback request from %s:%u "
+                     "tcp=%u.",
+                     endpoint.host.c_str(), endpoint.port, request.tcpPort));
     return;
   }
   if (opcode == ed2k::OP_GLOBFOUNDSOURCES) {

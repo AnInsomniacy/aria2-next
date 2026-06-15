@@ -13,6 +13,7 @@
 #include "ed2k_peer.h"
 
 #include <limits>
+#include <utility>
 
 #include "DlAbortEx.h"
 #include "ed2k_constants.h"
@@ -34,10 +35,14 @@ constexpr uint8_t ET_COMMENTS = 0x24;
 constexpr uint8_t ET_EXTENDEDREQUEST = 0x25;
 constexpr uint8_t ET_COMPATIBLECLIENT = 0x26;
 constexpr uint8_t ET_FEATURES = 0x27;
+constexpr uint8_t ET_MOD_VERSION = 0x55;
+constexpr uint8_t CT_EMULECOMPAT_OPTIONS = 0xef;
+constexpr uint8_t CT_EMULE_UDPPORTS = 0xf9;
 constexpr uint8_t CT_EMULE_MISCOPTIONS1 = 0xfa;
 constexpr uint8_t CT_EMULE_VERSION = 0xfb;
 constexpr uint8_t CT_EMULE_MISCOPTIONS2 = 0xfe;
 constexpr uint8_t SO_AMULE = 0x03;
+constexpr uint8_t KADEMLIA_VERSION = 0x08;
 constexpr uint32_t ARIA2_NEXT_EMULE_VERSION = (3u << 17);
 
 void validateHashLength(const std::string& hash)
@@ -75,7 +80,8 @@ EmuleMiscOptions parseEmuleMiscOptions(uint32_t value)
 
 uint32_t emuleMiscOptions2Value(const EmuleMiscOptions2& options)
 {
-  return (static_cast<uint32_t>(options.supportsLargeFiles) << 4) |
+  return (options.kadVersion & 0x0fu) |
+         (static_cast<uint32_t>(options.supportsLargeFiles) << 4) |
          (static_cast<uint32_t>(options.supportsExtendedMultipacket) << 5) |
          (static_cast<uint32_t>(options.supportsSourceExchange2) << 10);
 }
@@ -83,10 +89,52 @@ uint32_t emuleMiscOptions2Value(const EmuleMiscOptions2& options)
 EmuleMiscOptions2 parseEmuleMiscOptions2(uint32_t value)
 {
   EmuleMiscOptions2 options;
+  options.kadVersion = value & 0x0f;
   options.supportsLargeFiles = (value >> 4) & 0x01;
   options.supportsExtendedMultipacket = (value >> 5) & 0x01;
   options.supportsSourceExchange2 = (value >> 10) & 0x01;
   return options;
+}
+
+void appendPartStatus(std::string& payload,
+                      const std::vector<bool>& bitfield)
+{
+  if (bitfield.size() > std::numeric_limits<uint16_t>::max()) {
+    throw DL_ABORT_EX("ED2K file status bitfield is too large.");
+  }
+  payload += packUInt16(static_cast<uint16_t>(bitfield.size()));
+  payload.append((bitfield.size() + 7) / 8, '\0');
+  const auto dataOffset = payload.size() - (bitfield.size() + 7) / 8;
+  for (size_t i = 0; i < bitfield.size(); ++i) {
+    if (bitfield[i]) {
+      payload[dataOffset + i / 8] |= static_cast<char>(1u << (i & 7));
+    }
+  }
+}
+
+bool readPartStatus(std::vector<bool>& bitfield, const std::string& payload,
+                    size_t& offset)
+{
+  if (offset + 2 > payload.size()) {
+    return false;
+  }
+  auto bitCount = readUInt16(readBytes(payload, offset, 2).data());
+  auto byteCount = (bitCount + 7) / 8;
+  if (offset + byteCount > payload.size()) {
+    return false;
+  }
+  auto raw = readBytes(payload, offset, byteCount);
+  bitfield.assign(bitCount, false);
+  for (size_t i = 0; i < bitCount; ++i) {
+    bitfield[i] = raw[i / 8] & static_cast<char>(1u << (i & 7));
+  }
+  return true;
+}
+
+std::string readUInt16String(const std::string& payload, size_t& offset)
+{
+  const auto length = readUInt16(readBytes(payload, offset, 2).data());
+  return readBytes(payload, offset, length);
 }
 
 } // namespace
@@ -95,17 +143,8 @@ std::string createFileStatusPayload(const std::string& fileHash,
                                     const std::vector<bool>& bitfield)
 {
   validateHashLength(fileHash);
-  if (bitfield.size() > std::numeric_limits<uint16_t>::max()) {
-    throw DL_ABORT_EX("ED2K file status bitfield is too large.");
-  }
   std::string payload = fileHash;
-  payload += packUInt16(static_cast<uint16_t>(bitfield.size()));
-  payload.append((bitfield.size() + 7) / 8, '\0');
-  for (size_t i = 0; i < bitfield.size(); ++i) {
-    if (bitfield[i]) {
-      payload[HASH_LENGTH + 2 + i / 8] |= static_cast<char>(1u << (i & 7));
-    }
-  }
+  appendPartStatus(payload, bitfield);
   return payload;
 }
 
@@ -119,14 +158,27 @@ bool parseFileStatusPayload(std::vector<bool>& bitfield,
   if (hash != expectedFileHash) {
     return false;
   }
-  auto bitCount = readUInt16(readBytes(payload, offset, 2).data());
-  auto byteCount = (bitCount + 7) / 8;
-  auto raw = readBytes(payload, offset, byteCount);
-  bitfield.assign(bitCount, false);
-  for (size_t i = 0; i < bitCount; ++i) {
-    bitfield[i] = raw[i / 8] & static_cast<char>(1u << (i & 7));
+  return readPartStatus(bitfield, payload, offset) && offset == payload.size();
+}
+
+bool parseFileStatusPayload(std::vector<bool>& bitfield,
+                            const std::string& payload,
+                            const std::string& expectedFileHash,
+                            size_t expectedPartCount)
+{
+  if (!parseFileStatusPayload(bitfield, payload, expectedFileHash)) {
+    return false;
   }
-  return true;
+  if (bitfield.empty() && expectedPartCount > 0) {
+    bitfield.assign(expectedPartCount, true);
+  }
+  return bitfield.empty() || bitfield.size() == expectedPartCount;
+}
+
+bool parsePartStatusPayload(std::vector<bool>& bitfield,
+                            const std::string& payload, size_t& offset)
+{
+  return readPartStatus(bitfield, payload, offset);
 }
 
 std::string createHashSetAnswerPayload(
@@ -262,6 +314,87 @@ bool parseRequestSources2Payload(uint8_t& version, const std::string& payload,
     return false;
   }
   version = parsedVersion;
+  return true;
+}
+
+std::string createMultipacketFileRequestPayload(
+    const std::string& fileHash, int64_t fileSize,
+    const std::vector<bool>& localPartStatus,
+    const EmulePeerInfo& peerInfo, bool extendedMultipacket)
+{
+  validateHashLength(fileHash);
+  if (fileSize < 0) {
+    throw DL_ABORT_EX("Bad ED2K multipacket file size.");
+  }
+  std::string payload = fileHash;
+  if (extendedMultipacket) {
+    payload += packUInt64(static_cast<uint64_t>(fileSize));
+  }
+
+  payload.push_back(static_cast<char>(OP_REQUESTFILENAME));
+  if (peerInfo.miscOptions.extendedRequestsVersion > 0) {
+    appendPartStatus(payload, localPartStatus);
+  }
+  if (peerInfo.miscOptions.extendedRequestsVersion > 1) {
+    payload += packUInt16(0);
+  }
+  if (localPartStatus.size() > 1) {
+    payload.push_back(static_cast<char>(OP_SETREQFILEID));
+  }
+  if (peerInfo.miscOptions2.supportsSourceExchange2) {
+    payload.push_back(static_cast<char>(OP_REQUESTSOURCES2));
+    payload.push_back(static_cast<char>(SOURCE_EXCHANGE2_VERSION));
+    payload += packUInt16(0);
+  }
+  else if (peerInfo.miscOptions.sourceExchange1Version > 1) {
+    payload.push_back(static_cast<char>(OP_REQUESTSOURCES));
+  }
+  if (peerInfo.miscOptions.aichVersion > 0) {
+    payload.push_back(static_cast<char>(OP_AICHFILEHASHREQ));
+  }
+  return payload;
+}
+
+bool parseMultipacketAnswerPayload(MultipacketAnswer& answer,
+                                   const std::string& payload,
+                                   const std::string& expectedFileHash)
+{
+  validateHashLength(expectedFileHash);
+  if (payload.size() < HASH_LENGTH ||
+      payload.compare(0, HASH_LENGTH, expectedFileHash) != 0) {
+    return false;
+  }
+
+  MultipacketAnswer parsed;
+  size_t offset = HASH_LENGTH;
+  while (offset < payload.size()) {
+    const auto opcode = readByte(payload, offset);
+    switch (opcode) {
+    case OP_REQFILENAMEANSWER:
+      parsed.fileName = readUInt16String(payload, offset);
+      parsed.hasFileName = true;
+      break;
+    case OP_FILESTATUS:
+      if (!readPartStatus(parsed.partStatus, payload, offset)) {
+        return false;
+      }
+      if (parsed.partStatus.empty()) {
+        parsed.completeSource = true;
+      }
+      parsed.hasFileStatus = true;
+      break;
+    case OP_AICHFILEHASHANS:
+      if (offset + 20 > payload.size()) {
+        return false;
+      }
+      parsed.aichRootHash = readBytes(payload, offset, 20);
+      parsed.hasAichRootHash = true;
+      break;
+    default:
+      return false;
+    }
+  }
+  answer = std::move(parsed);
   return true;
 }
 
@@ -422,7 +555,7 @@ std::string createEmuleInfoPayload(const EmulePeerInfo& info)
   std::string payload;
   payload.push_back(static_cast<char>(info.version));
   payload.push_back(static_cast<char>(info.protocolVersion));
-  payload += packUInt32(8);
+  payload += packUInt32(9);
   payload += createUInt32Tag(ET_COMPRESSION,
                              info.miscOptions.dataCompressionVersion);
   payload += createUInt32Tag(ET_UDPPORT, info.udpPort);
@@ -435,6 +568,7 @@ std::string createEmuleInfoPayload(const EmulePeerInfo& info)
   payload += createUInt32Tag(ET_COMPATIBLECLIENT, SO_AMULE);
   payload += createUInt32Tag(ET_FEATURES,
                              info.miscOptions.secureIdentVersion & 0x03u);
+  payload += createStringTag(ET_MOD_VERSION, "aria2-next");
   return payload;
 }
 
@@ -495,7 +629,10 @@ EmulePeerInfo createLocalEmulePeerInfo()
   info.miscOptions.dataCompressionVersion = 1;
   info.miscOptions.sourceExchange1Version = 3;
   info.miscOptions.extendedRequestsVersion = 2;
+  info.miscOptions.multiPacket = true;
+  info.miscOptions2.kadVersion = KADEMLIA_VERSION;
   info.miscOptions2.supportsLargeFiles = true;
+  info.miscOptions2.supportsExtendedMultipacket = true;
   info.miscOptions2.supportsSourceExchange2 = true;
   return info;
 }
@@ -519,7 +656,9 @@ std::string createPeerHelloPayload(const std::string& clientHash,
   payload += packUInt32(7);
   payload += createStringTag(0x01, clientName);
   payload += createUInt32Tag(0x11, 0x3c);
-  payload += createUInt32Tag(0xf9, 0);
+  payload += createUInt32Tag(
+      CT_EMULE_UDPPORTS,
+      (static_cast<uint32_t>(info.udpPort) << 16) | info.udpPort);
   payload += createUInt32Tag(CT_EMULE_VERSION,
                              (static_cast<uint32_t>(SO_AMULE) << 24) |
                                  ARIA2_NEXT_EMULE_VERSION);
@@ -527,7 +666,7 @@ std::string createPeerHelloPayload(const std::string& clientHash,
                              emuleMiscOptionsValue(info.miscOptions));
   payload += createUInt32Tag(CT_EMULE_MISCOPTIONS2,
                              emuleMiscOptions2Value(info.miscOptions2));
-  payload += createUInt32Tag(0xef, 0);
+  payload += createUInt32Tag(CT_EMULECOMPAT_OPTIONS, 1);
   if (server.host.empty() || server.port == 0) {
     payload += std::string(6, '\0');
   }
@@ -566,6 +705,9 @@ bool parsePeerHelloPayload(EmulePeerInfo& info, const std::string& payload,
     }
     else if (tag.id == CT_EMULE_MISCOPTIONS2) {
       info.miscOptions2 = parseEmuleMiscOptions2(tag.intValue);
+    }
+    else if (tag.id == CT_EMULE_UDPPORTS) {
+      info.udpPort = static_cast<uint16_t>(tag.intValue & 0xffffu);
     }
     else if (tag.id == ET_UDPPORT) {
       info.udpPort = static_cast<uint16_t>(tag.intValue & 0xffffu);
