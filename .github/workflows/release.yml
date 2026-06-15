@@ -1039,7 +1039,7 @@ jobs:
             echo "ANDROID_NDK_LATEST_HOME is not available on this runner" >&2
             exit 1
           fi
-          version_major=$(sed -n 's/^Pkg\\.Revision *= *\\([0-9][0-9]*\\).*/\1/p' "$NDK_HOME/source.properties" | head -n 1)
+          version_major=$(awk -F'= *' '/^Pkg\.Revision/ { split($2, parts, "."); print parts[1]; exit }' "$NDK_HOME/source.properties")
           if [ "$version_major" != "$ANDROID_NDK_VERSION" ]; then
             echo "Unexpected Android NDK major version: $version_major, expected $ANDROID_NDK_VERSION" >&2
             exit 1
