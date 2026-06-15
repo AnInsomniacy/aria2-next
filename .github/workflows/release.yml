@@ -1163,7 +1163,7 @@ jobs:
             -DARIA2_RELEASE_SIZE_OPTIMIZED=ON \
             -DCMAKE_C_FLAGS="$RELEASE_CFLAGS" \
             -DCMAKE_CXX_FLAGS="$RELEASE_CXXFLAGS" \
-            -DCMAKE_EXE_LINKER_FLAGS="$RELEASE_LDFLAGS" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$PREFIX/lib $RELEASE_LDFLAGS" \
             -DCMAKE_PREFIX_PATH="$PREFIX"
           cmake --build build/release -j$(nproc)
           if [ "$STRIP_BINARY" = true ]; then
