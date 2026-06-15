@@ -1044,33 +1044,23 @@ jobs:
             echo "Unexpected Android NDK major version: $version_major, expected $ANDROID_NDK_VERSION" >&2
             exit 1
           fi
+          toolchain="$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+          PATH="$toolchain/bin:$PATH"
+          command -v "aarch64-linux-android${API}-clang"
+          command -v "aarch64-linux-android${API}-clang++"
+          command -v llvm-ar
+          command -v llvm-ranlib
+          command -v llvm-strip
           {
             echo "NDK=$NDK_HOME"
-            echo "TOOLCHAIN=$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64"
+            echo "TOOLCHAIN=$toolchain"
+            echo "AR=llvm-ar"
+            echo "CC=${HOST}${API}-clang"
+            echo "CXX=${HOST}${API}-clang++"
+            echo "RANLIB=llvm-ranlib"
+            echo "STRIP=llvm-strip"
           } >> "$GITHUB_ENV"
-
-      - name: Prepare Android compiler wrappers
-        run: |
-          wrapper_dir="$RUNNER_TEMP/android-toolchain-wrappers"
-          mkdir -p "$wrapper_dir"
-          cat > "$wrapper_dir/${HOST}${API}-clang" <<EOF
-          #!/bin/sh
-          exec "$TOOLCHAIN/bin/clang" --target=${HOST}${API} "\$@"
-          EOF
-          cat > "$wrapper_dir/${HOST}${API}-clang++" <<EOF
-          #!/bin/sh
-          exec "$TOOLCHAIN/bin/clang++" --target=${HOST}${API} "\$@"
-          EOF
-          chmod 755 "$wrapper_dir/${HOST}${API}-clang" "$wrapper_dir/${HOST}${API}-clang++"
-          {
-            echo "ANDROID_WRAPPER_DIR=$wrapper_dir"
-            echo "AR=$TOOLCHAIN/bin/llvm-ar"
-            echo "CC=$wrapper_dir/${HOST}${API}-clang"
-            echo "CXX=$wrapper_dir/${HOST}${API}-clang++"
-            echo "RANLIB=$TOOLCHAIN/bin/llvm-ranlib"
-            echo "STRIP=$TOOLCHAIN/bin/llvm-strip"
-          } >> "$GITHUB_ENV"
-          echo "$wrapper_dir" >> "$GITHUB_PATH"
+          echo "$toolchain/bin" >> "$GITHUB_PATH"
 
       - name: Download dependency sources
         run: |
