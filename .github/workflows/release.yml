@@ -1069,8 +1069,9 @@ jobs:
           source packaging/dependencies.env
           . packaging/scripts/release-size-profile android
           tar xf "$OPENSSL_ARCHIVE" && cd "openssl-$OPENSSL_VERSION"
-          ANDROID_NDK_HOME="$NDK" PATH="$TOOLCHAIN/bin:$PATH" \
-          ./Configure no-shared no-module no-tests --prefix="$PREFIX" android-arm64 $RELEASE_CFLAGS
+          ANDROID_NDK_HOME="$NDK" ANDROID_NDK_ROOT="$NDK" PATH="$TOOLCHAIN/bin:$PATH" \
+          ./Configure no-shared no-module no-tests --prefix="$PREFIX" android-arm64 \
+            -D__ANDROID_API__=$API $RELEASE_CFLAGS
           make -j$(nproc)
           make install_sw
 
