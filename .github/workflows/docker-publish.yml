@@ -75,6 +75,8 @@ jobs:
           version="${{ needs.resolve.outputs.version }}"
           mkdir -p "docker-context/linux-${{ matrix.target_arch }}"
           cp packaging/docker/Dockerfile docker-context/Dockerfile
+          cp packaging/docker/aria2.conf docker-context/aria2.conf
+          cp packaging/docker/entrypoint.sh docker-context/entrypoint.sh
           cp "release-assets/aria2-next-${version}-linux-${{ matrix.asset_arch }}" \
             "docker-context/linux-${{ matrix.target_arch }}/aria2-next"
           chmod 755 "docker-context/linux-${{ matrix.target_arch }}/aria2-next"

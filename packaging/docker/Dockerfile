@@ -20,10 +20,23 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 COPY "linux-${TARGETARCH}/aria2-next" /usr/local/bin/aria2-next
+COPY aria2.conf /usr/share/aria2-next/aria2.conf
+COPY entrypoint.sh /usr/local/bin/aria2-next-entrypoint
 
-RUN chmod 755 /usr/local/bin/aria2-next
+RUN set -eux; \
+    groupadd --system --gid 10001 aria2next; \
+    useradd --system --uid 10001 --gid aria2next --home-dir /var/lib/aria2-next --shell /usr/sbin/nologin aria2next; \
+    mkdir -p /downloads /config /var/lib/aria2-next /usr/share/aria2-next; \
+    touch /var/lib/aria2-next/session.txt; \
+    chown -R aria2next:aria2next /downloads /config /var/lib/aria2-next; \
+    chmod 755 /usr/local/bin/aria2-next; \
+    chmod 755 /usr/local/bin/aria2-next-entrypoint; \
+    chmod 644 /usr/share/aria2-next/aria2.conf
 RUN /usr/local/bin/aria2-next --version >/dev/null
 
 WORKDIR /downloads
+VOLUME ["/downloads", "/config", "/var/lib/aria2-next"]
 EXPOSE 6800
-ENTRYPOINT ["aria2-next"]
+USER aria2next
+ENTRYPOINT ["aria2-next-entrypoint"]
+CMD ["--conf-path=/config/aria2.conf"]

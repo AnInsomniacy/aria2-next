@@ -20,7 +20,7 @@ Official release builds use `packaging/scripts/release-size-profile` to apply si
 
 GitHub Release assets are bare executable binaries named `aria2-next-<version>-<platform>-<architecture>`, plus a SHA-256 checksum file. Source code and license material are provided by the GitHub release tag source archives.
 
-Container images are published by the manual Docker workflow to GitHub Container Registry as `ghcr.io/aninsomniacy/aria2-next:v<version>` and `ghcr.io/aninsomniacy/aria2-next:latest`. The image is assembled from the latest GitHub Release Linux x86_64 and Linux ARM64 binaries instead of rebuilding aria2-next inside Docker.
+Container images are published by the manual Docker workflow to GitHub Container Registry as `ghcr.io/aninsomniacy/aria2-next:v<version>` and `ghcr.io/aninsomniacy/aria2-next:latest`. The image is assembled from the latest GitHub Release Linux x86_64 and Linux ARM64 binaries instead of rebuilding aria2-next inside Docker. The runtime image includes CA certificates, a non-root service user, persistent download/config/state directories, and a conservative default RPC configuration seeded into `/config/aria2.conf` on first start.
 
 Release jobs must verify runtime dependency closure before packaging. Use `packaging/scripts/check-runtime-deps` on the final stripped binary so unintended compiler runtimes and third-party shared libraries cannot leak into release artifacts.
 

@@ -1,0 +1,21 @@
+services:
+  aria2-next:
+    image: ghcr.io/aninsomniacy/aria2-next:latest
+    container_name: aria2-next
+    restart: unless-stopped
+    ports:
+      - "6800:6800"
+    volumes:
+      - ./downloads:/downloads
+      - ./config:/config
+      - ./state:/var/lib/aria2-next
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 512m
+    cpus: 2
