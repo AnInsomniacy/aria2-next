@@ -1,0 +1,127 @@
+name: Bug Report
+description: Report a reproducible aria2-next engine bug
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues before creating a new one.
+        Reproduce the issue on the latest aria2-next release when possible.
+        Motrix Next desktop UI issues belong in https://github.com/AnInsomniacy/motrix-next.
+        Browser extension issues belong in https://github.com/AnInsomniacy/motrix-next-extension.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the bug and its impact.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Aria2 Next Version
+      description: Run `aria2-next --version` and paste the version line.
+      placeholder: "aria2-next version 2.4.9"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows x86_64
+        - Windows ARM64
+        - macOS Apple Silicon
+        - macOS Intel
+        - Linux x86_64
+        - Linux ARM64
+        - Android ARM64
+        - Docker linux/amd64
+        - Docker linux/arm64
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: install-source
+    attributes:
+      label: Install Source
+      description: Official release binary, Docker image, Motrix sidecar, source build, distribution package, or other source.
+      placeholder: "Official release binary"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: Protocol
+      options:
+        - HTTP / HTTPS
+        - BitTorrent / Magnet
+        - ED2K
+        - Metalink
+        - FTP / SFTP
+        - RPC
+        - Docker
+        - Build / Packaging
+        - Other / Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include the exact command, RPC request, config options, or minimal steps needed to reproduce the issue.
+      placeholder: |
+        Command:
+        aria2-next --log-level=debug ...
+
+        Config/options:
+        ...
+
+        Steps:
+        1. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Logs / Diagnostics
+      description: Attach debug logs, crash reports, dependency output, screenshots, or resource monitor evidence. Redact secrets before uploading.
+      render: text
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: validations
+    attributes:
+      label: Validations
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I reproduced this on the latest aria2-next release when possible.
+          required: true
+        - label: This is an aria2-next engine issue, not a Motrix Next desktop UI or browser extension issue.
+          required: true

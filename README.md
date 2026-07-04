@@ -85,6 +85,8 @@ ctest --preset default
 build/default/aria2-next --version
 ```
 
+Contribution guidelines are available in [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md).
+
 Plain Ninja builds are also supported:
 
 ```bash

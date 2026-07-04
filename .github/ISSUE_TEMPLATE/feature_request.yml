@@ -1,0 +1,72 @@
+name: Feature Request
+description: Suggest an aria2-next engine improvement
+title: "[feat]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please search existing issues before submitting a request.
+        Motrix Next desktop UI requests belong in https://github.com/AnInsomniacy/motrix-next.
+        Browser extension requests belong in https://github.com/AnInsomniacy/motrix-next-extension.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user, integrator, protocol, build, or packaging problem should this solve?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the behavior or workflow you want.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected Surface
+      options:
+        - CLI
+        - Configuration
+        - RPC
+        - HTTP / HTTPS
+        - BitTorrent / Magnet
+        - ED2K
+        - Metalink
+        - FTP / SFTP
+        - libaria2
+        - Build / Packaging
+        - Docker
+        - Documentation
+        - Other / Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Mention existing options, workarounds, or tools you compared.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Add logs, examples, protocol references, screenshots, or links to comparable behavior.
+
+  - type: checkboxes
+    id: validations
+    attributes:
+      label: Validations
+      options:
+        - label: I searched existing issues and did not find this request.
+          required: true
+        - label: This request belongs to aria2-next, not Motrix Next desktop UI or the browser extension.
+          required: true
+        - label: I understand large features need maintainer agreement before implementation.
+          required: true
