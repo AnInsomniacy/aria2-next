@@ -649,6 +649,8 @@ jobs:
       CMAKE_BUILD_TYPE: ${{ needs.resolve-release.outputs.cmake_build_type }}
       HOST: x86_64-w64-mingw32
       PREFIX: /usr/local/x86_64-w64-mingw32
+      CC: x86_64-w64-mingw32-gcc-posix
+      CXX: x86_64-w64-mingw32-g++-posix
       STRIP_BINARY: ${{ needs.resolve-release.outputs.strip_binary }}
       WINDOWS_DEBUG_MAP_FLAGS: ${{ needs.resolve-release.outputs.windows_debug_map_flags }}
     steps:
@@ -686,7 +688,8 @@ jobs:
           ./configure \
             --disable-shared --enable-static \
             --prefix=$PREFIX --host=$HOST \
-            --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+            --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE) \
+            CC="$CC" CXX="$CXX"
           sudo make -j$(nproc) install
 
       - name: Build sqlite3
@@ -698,7 +701,8 @@ jobs:
           ./configure \
             --disable-shared --enable-static \
             --prefix=$PREFIX --host=$HOST \
-            --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+            --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE) \
+            CC="$CC"
           sudo make -j$(nproc) install
 
       - name: Build zlib
@@ -706,7 +710,7 @@ jobs:
           source packaging/dependencies.env
           . packaging/scripts/release-size-profile windows
           tar xf "$ZLIB_ARCHIVE" && cd "zlib-$ZLIB_VERSION"
-          CC=$HOST-gcc AR=$HOST-ar LD=$HOST-ld \
+          CC=$CC AR=$HOST-ar LD=$HOST-ld \
           RANLIB=$HOST-ranlib STRIP=$HOST-strip \
           CFLAGS="$RELEASE_CFLAGS" LDFLAGS="$RELEASE_LDFLAGS" \
           ./configure \
@@ -727,7 +731,8 @@ jobs:
             --prefix=$PREFIX --host=$HOST \
             --build=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE) \
             LIBS="-lws2_32" \
-            ac_cv_func_if_indextoname=no
+            ac_cv_func_if_indextoname=no \
+            CC="$CC"
           sudo make -j$(nproc) install
 
       - name: Build libssh2
@@ -737,7 +742,7 @@ jobs:
           tar xf "$LIBSSH2_ARCHIVE"
           cmake -S "libssh2-$LIBSSH2_VERSION" -B build/libssh2 -G Ninja \
             -DCMAKE_SYSTEM_NAME=Windows \
-            -DCMAKE_C_COMPILER=$HOST-gcc \
+            -DCMAKE_C_COMPILER=$CC \
             -DCMAKE_RC_COMPILER=$HOST-windres \
             -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
             -DCMAKE_INSTALL_PREFIX=$PREFIX \
@@ -756,8 +761,8 @@ jobs:
           PKG_CONFIG_LIBDIR="$PREFIX/lib/pkgconfig" \
           cmake -S . -B build/release -G Ninja \
             -DCMAKE_SYSTEM_NAME=Windows \
-            -DCMAKE_C_COMPILER=$HOST-gcc \
-            -DCMAKE_CXX_COMPILER=$HOST-g++ \
+            -DCMAKE_C_COMPILER=$CC \
+            -DCMAKE_CXX_COMPILER=$CXX \
             -DCMAKE_RC_COMPILER=$HOST-windres \
             -DCMAKE_BUILD_TYPE="$CMAKE_BUILD_TYPE" \
             -DARIA2_STATIC_DEPENDENCIES=ON \

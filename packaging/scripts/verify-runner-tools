@@ -18,7 +18,7 @@ case "$profile" in
     tools="cmake ninja pkg-config make curl tar clang strip otool"
     ;;
   windows-x86_64)
-    tools="cmake ninja pkg-config make curl tar x86_64-w64-mingw32-gcc x86_64-w64-mingw32-g++ x86_64-w64-mingw32-windres x86_64-w64-mingw32-strip x86_64-w64-mingw32-objdump"
+    tools="cmake ninja pkg-config make curl tar x86_64-w64-mingw32-gcc-posix x86_64-w64-mingw32-g++-posix x86_64-w64-mingw32-windres x86_64-w64-mingw32-strip x86_64-w64-mingw32-objdump"
     ;;
   windows-arm64)
     tools="cmake ninja pkg-config make curl tar aarch64-w64-mingw32-clang aarch64-w64-mingw32-clang++ aarch64-w64-mingw32-ar aarch64-w64-mingw32-ranlib aarch64-w64-mingw32-strip aarch64-w64-mingw32-objdump"
