@@ -2176,8 +2176,9 @@ FMT_CONSTEXPR auto write(OutputIt out, basic_string_view<Char> s,
     return is_debug ? write_escaped_string(it, s) : copy<char>(s, it);
   }
 
-  size_t display_width_limit =
-      specs.precision < 0 ? SIZE_MAX : to_unsigned(specs.precision);
+  size_t display_width_limit = specs.precision < 0
+                                   ? max_value<size_t>()
+                                   : to_unsigned(specs.precision);
   size_t display_width =
       !is_debug || specs.precision == 0 ? 0 : 1;  // Account for opening '"'.
   size_t size = !is_debug || specs.precision == 0 ? 0 : 1;

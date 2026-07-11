@@ -17,3 +17,5 @@ Future work may add system wslay support so distributions can link against a sys
 `third_party/spdlog` contains the build-required subset of spdlog 1.17.0. aria2-next uses the official header-only mode with the bundled fmt implementation so local, cross-platform, Android, libaria2, and release builds use one reproducible logging stack without configure-time network access or runtime shared-library dependencies.
 
 The bundled copy keeps public headers, license material, and the upstream README. Library sources, CMake packaging, examples, benchmarks, tests, CI configuration, and package-manager metadata are not retained because the header-only integration does not build or maintain them.
+
+The bundled fmt `format.h` uses its native `max_value<size_t>()` helper instead of the non-portable `SIZE_MAX` macro so GCC-based MinGW and llvm-mingw builds compile consistently.
