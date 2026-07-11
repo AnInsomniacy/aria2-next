@@ -132,12 +132,15 @@ bool RotatingLogFile::rotate()
   }
 
   File active(path_);
-  if (active.exists() && active.size() > 0 &&
-      !active.renameTo(rotatedPath(1))) {
-    return false;
-  }
-  if (active.exists() && !active.remove()) {
-    return false;
+  if (active.exists()) {
+    if (active.size() > 0) {
+      if (!active.renameTo(rotatedPath(1))) {
+        return false;
+      }
+    }
+    else if (!active.remove()) {
+      return false;
+    }
   }
   return openActive(BufferedFile::APPEND);
 }
