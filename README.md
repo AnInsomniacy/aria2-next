@@ -95,7 +95,7 @@ cmake --build build/default
 ctest --test-dir build/default --output-on-failure
 ```
 
-Common options include `ARIA2_ENABLE_BITTORRENT`, `ARIA2_ENABLE_METALINK`, `ARIA2_ENABLE_WEBSOCKET`, `ARIA2_ENABLE_LIBARIA2`, `ARIA2_STATIC_DEPENDENCIES`, `ARIA2_RELEASE_SIZE_OPTIMIZED`, `ARIA2_RELEASE_LTO`, `ARIA2_WITH_WINTLS`, `ARIA2_WITH_OPENSSL`, `ARIA2_WITH_GNUTLS`, `ARIA2_WITH_LIBXML2`, `ARIA2_WITH_EXPAT`, `ARIA2_WITH_CARES`, `ARIA2_WITH_SQLITE3`, and `ARIA2_WITH_LIBSSH2`.
+Common options include `ARIA2_ENABLE_BITTORRENT`, `ARIA2_ENABLE_METALINK`, `ARIA2_ENABLE_WEBSOCKET`, `ARIA2_ENABLE_LIBARIA2`, `ARIA2_STATIC_DEPENDENCIES`, `ARIA2_RELEASE_SIZE_OPTIMIZED`, `ARIA2_RELEASE_LTO`, `ARIA2_WITH_WINTLS`, `ARIA2_WITH_OPENSSL`, `ARIA2_WITH_EXPAT`, `ARIA2_WITH_CARES`, `ARIA2_WITH_SQLITE3`, and `ARIA2_WITH_LIBSSH2`.
 
 Async DNS builds require c-ares 1.34.5 or newer.
 
@@ -138,7 +138,7 @@ docker run -d --name aria2-next \
 
 The container runs as a non-root user. On first start it creates `/config/aria2.conf` from the bundled default configuration. That default enables JSON-RPC inside the container, stores downloads in `/downloads`, and keeps session state in `/var/lib/aria2-next`. Add `--rpc-secret=<token>` before exposing RPC beyond a trusted local network.
 
-Release binaries verify HTTPS certificates by default. Windows releases use WinTLS and the Windows trust store. Linux OpenSSL builds use the system OpenSSL 3 runtime so certificate discovery follows the host distribution. macOS OpenSSL and GnuTLS builds use their backend's system trust loading. Explicit CA files remain available through `--ca-certificate`.
+Release binaries verify HTTPS certificates by default. Windows releases use WinTLS and the Windows trust store. Linux, macOS, and Android builds use OpenSSL 3 with system trust loading so certificate discovery follows the host runtime. Explicit CA files remain available through `--ca-certificate`.
 
 ## Maintenance Audit
 

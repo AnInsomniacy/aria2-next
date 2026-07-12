@@ -45,10 +45,6 @@
 #  include <Security/SecRandom.h>
 #endif // __APPLE__
 
-#ifdef HAVE_LIBGNUTLS
-#  include <gnutls/crypto.h>
-#endif // HAVE_LIBGNUTLS
-
 #ifdef HAVE_OPENSSL
 #  include <openssl/rand.h>
 #endif // HAVE_OPENSSL
@@ -112,12 +108,6 @@ void SimpleRandomizer::getRandomBytes(unsigned char* buf, size_t len)
     assert(rv == errSecSuccess);
     abort();
   }
-#elif defined(HAVE_LIBGNUTLS)
-  auto rv = gnutls_rnd(GNUTLS_RND_RANDOM, buf, len);
-  if (rv != 0) {
-    assert(0 == rv);
-    abort();
-  }
 #elif defined(HAVE_OPENSSL)
   auto rv = RAND_bytes(buf, len);
   if (rv != 1) {
@@ -151,7 +141,7 @@ void SimpleRandomizer::getRandomBytes(unsigned char* buf, size_t len)
     assert(0);
     abort();
   }
-#endif // !__MINGW32__ && !__APPLE__ && !HAVE_OPENSSL && !HAVE_LIBGNUTLS
+#endif // !__MINGW32__ && !__APPLE__ && !HAVE_OPENSSL
 }
 
 } // namespace aria2

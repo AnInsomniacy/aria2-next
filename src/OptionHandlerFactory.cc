@@ -374,10 +374,6 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
                                                  V_EPOLL,
 #elif defined(HAVE_KQUEUE)
                                                  V_KQUEUE,
-#elif defined(HAVE_PORT_ASSOCIATE)
-                                                 V_PORT,
-#elif defined(HAVE_LIBUV)
-                                                 V_LIBUV,
 #elif defined(HAVE_POLL)
                                                  V_POLL,
 #else  // defined(HAVE_EPOLL)
@@ -390,12 +386,6 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
 #ifdef HAVE_KQUEUE
                                                      V_KQUEUE,
 #endif // HAVE_KQUEUE
-#ifdef HAVE_PORT_ASSOCIATE
-                                                     V_PORT,
-#endif // HAVE_PORT_ASSOCIATE
-#ifdef HAVE_LIBUV
-                                                     V_LIBUV,
-#endif // HAVE_LIBUV
 #ifdef HAVE_POLL
                                                      V_POLL,
 #endif // HAVE_POLL

@@ -1388,11 +1388,11 @@ Advanced Options
 .. option:: --event-poll=<POLL>
 
   Specify the method for polling events.  The possible values are
-  ``epoll``, ``kqueue``, ``port``, ``poll`` and ``select``.  For each ``epoll``,
-  ``kqueue``, ``port`` and ``poll``, it is available if system supports it.
+  ``epoll``, ``kqueue``, ``poll`` and ``select``.  For each ``epoll``,
+  ``kqueue`` and ``poll``, it is available if system supports it.
   ``epoll`` is available on recent Linux. ``kqueue`` is available on
-  various \*BSD systems including Mac OS X. ``port`` is available on Open
-  Solaris. The default value may vary depending on the system you use.
+  various \*BSD systems including macOS. The default value may vary
+  depending on the system you use.
 
 .. option:: --file-allocation=<METHOD>
 

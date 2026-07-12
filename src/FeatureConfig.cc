@@ -42,27 +42,15 @@
 #ifdef HAVE_ZLIB
 #  include <zlib.h>
 #endif // HAVE_ZLIB
-#ifdef HAVE_LIBXML2
-#  include <libxml/xmlversion.h>
-#endif // HAVE_LIBXML2
 #ifdef HAVE_LIBEXPAT
 #  include <expat.h>
 #endif // HAVE_LIBEXPAT
 #ifdef HAVE_SQLITE3
 #  include <sqlite3.h>
 #endif // HAVE_SQLITE3
-#ifdef HAVE_LIBGNUTLS
-#  include <gnutls/gnutls.h>
-#endif // HAVE_LIBGNUTLS
 #ifdef HAVE_OPENSSL
 #  include <openssl/opensslv.h>
 #endif // HAVE_OPENSSL
-#ifdef HAVE_LIBGMP
-#  include <gmp.h>
-#endif // HAVE_LIBGMP
-#ifdef HAVE_LIBGCRYPT
-#  include <gcrypt.h>
-#endif // HAVE_LIBGCRYPT
 #ifdef HAVE_LIBCARES
 #  include <ares.h>
 #endif // HAVE_LIBCARES
@@ -202,9 +190,6 @@ std::string usedLibs()
 #ifdef HAVE_ZLIB
   res += "zlib/" ZLIB_VERSION " ";
 #endif // HAVE_ZLIB
-#ifdef HAVE_LIBXML2
-  res += "libxml2/" LIBXML_DOTTED_VERSION " ";
-#endif // HAVE_LIBXML2
 #ifdef HAVE_LIBEXPAT
   res += fmt("expat/%d.%d.%d ", XML_MAJOR_VERSION, XML_MINOR_VERSION,
              XML_MICRO_VERSION);
@@ -215,23 +200,9 @@ std::string usedLibs()
 #ifdef HAVE_WINTLS
   res += "WinTLS ";
 #endif // HAVE_WINTLS
-#ifdef HAVE_LIBGNUTLS
-  res += "GnuTLS/" GNUTLS_VERSION " ";
-#endif // HAVE_LIBGNUTLS
 #ifdef HAVE_OPENSSL
   res += "OpenSSL/" OPENSSL_VERSION_STR " ";
 #endif // HAVE_OPENSSL
-#ifdef HAVE_LIBNETTLE
-  // No library version in header files.
-  res += "nettle ";
-#endif // HAVE_LIBNETTLE
-#ifdef HAVE_LIBGMP
-  res += fmt("GMP/%d.%d.%d ", __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR,
-             __GNU_MP_VERSION_PATCHLEVEL);
-#endif // HAVE_LIBGMP
-#ifdef HAVE_LIBGCRYPT
-  res += "libgcrypt/" GCRYPT_VERSION " ";
-#endif // HAVE_LIBGCRYPT
 #ifdef HAVE_LIBCARES
   res += "c-ares/" ARES_VERSION_STR " ";
 #endif // HAVE_LIBCARES

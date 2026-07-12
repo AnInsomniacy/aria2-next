@@ -38,10 +38,6 @@
 #include "common.h"
 #ifdef USE_INTERNAL_BIGNUM
 #  include "InternalDHKeyExchange.h"
-#elif HAVE_LIBGMP
-#  include "LibgmpDHKeyExchange.h"
-#elif HAVE_LIBGCRYPT
-#  include "LibgcryptDHKeyExchange.h"
 #elif HAVE_OPENSSL
 #  include "LibsslDHKeyExchange.h"
 #endif // HAVE_OPENSSL

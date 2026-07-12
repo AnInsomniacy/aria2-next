@@ -140,13 +140,6 @@
 /* Define to 1 if you have the 'gettimeofday' function. */
 #cmakedefine HAVE_GETTIMEOFDAY @HAVE_GETTIMEOFDAY@
 
-/* Define to 1 if you have a GMP with sec functions. */
-#cmakedefine HAVE_GMP_SEC @HAVE_GMP_SEC@
-
-/* Define to 1 if you have the 'gnutls_certificate_set_x509_system_trust'
-   function. */
-#cmakedefine HAVE_GNUTLS_CERTIFICATE_SET_X509_SYSTEM_TRUST @HAVE_GNUTLS_CERTIFICATE_SET_X509_SYSTEM_TRUST@
-
 /* Define to 1 if you have the 'gzbuffer' function. */
 #cmakedefine HAVE_GZBUFFER @HAVE_GZBUFFER@
 
@@ -180,29 +173,8 @@
 /* Define to 1 if you have libexpat. */
 #cmakedefine HAVE_LIBEXPAT @HAVE_LIBEXPAT@
 
-/* Define to 1 if you have libgcrypt. */
-#cmakedefine HAVE_LIBGCRYPT @HAVE_LIBGCRYPT@
-
-/* Define to 1 if you have libgmp. */
-#cmakedefine HAVE_LIBGMP @HAVE_LIBGMP@
-
-/* Define to 1 if you have libgnutls. */
-#cmakedefine HAVE_LIBGNUTLS @HAVE_LIBGNUTLS@
-
-/* Define to 1 if you have libnettle. */
-#cmakedefine HAVE_LIBNETTLE @HAVE_LIBNETTLE@
-
-/* Define to 1 if nettle_hash_digest_func omits the digest length argument. */
-#cmakedefine HAVE_NETTLE_HASH_DIGEST_WITHOUT_LENGTH @HAVE_NETTLE_HASH_DIGEST_WITHOUT_LENGTH@
-
 /* Define to 1 if you have libssh2. */
 #cmakedefine HAVE_LIBSSH2 @HAVE_LIBSSH2@
-
-/* Define to 1 if you have libuv. */
-#cmakedefine HAVE_LIBUV @HAVE_LIBUV@
-
-/* Define to 1 if you have libxml2. */
-#cmakedefine HAVE_LIBXML2 @HAVE_LIBXML2@
 
 /* Define to 1 if you have the <limits.h> header file. */
 #cmakedefine HAVE_LIMITS_H @HAVE_LIMITS_H@
@@ -267,12 +239,6 @@
 
 /* Define to 1 if you have the <poll.h> header file. */
 #cmakedefine HAVE_POLL_H @HAVE_POLL_H@
-
-/* Define to 1 if you have the 'port_associate' function. */
-#cmakedefine HAVE_PORT_ASSOCIATE @HAVE_PORT_ASSOCIATE@
-
-/* Define to 1 if you have the <port.h> header file. */
-#cmakedefine HAVE_PORT_H @HAVE_PORT_H@
 
 /* Define to 1 if you have the 'posix_fadvise' function. */
 #cmakedefine HAVE_POSIX_FADVISE @HAVE_POSIX_FADVISE@
@@ -509,9 +475,6 @@
 /* Define to 1 if you have the '__argz_stringify' function. */
 #cmakedefine HAVE___ARGZ_STRINGIFY @HAVE___ARGZ_STRINGIFY@
 
-/* Define to 1 if you have the '__gmpz_powm_sec' function. */
-#cmakedefine HAVE___GMPZ_POWM_SEC @HAVE___GMPZ_POWM_SEC@
-
 /* Define build-type */
 #cmakedefine HOST "@HOST@"
 
@@ -575,9 +538,6 @@
 /* Define to 1 if your <sys/time.h> declares 'struct tm'. */
 #cmakedefine TM_IN_SYS_TIME @TM_IN_SYS_TIME@
 
-/* Define to 1 if using gnutls system wide crypto policy . */
-#cmakedefine USE_GNUTLS_SYSTEM_CRYPTO_POLICY @USE_GNUTLS_SYSTEM_CRYPTO_POLICY@
-
 /* Define to 1 if internal ARC4 support is enabled. */
 #cmakedefine USE_INTERNAL_ARC4 @USE_INTERNAL_ARC4@
 
@@ -586,12 +546,6 @@
 
 /* What message digest implementation to use */
 #cmakedefine USE_INTERNAL_MD @USE_INTERNAL_MD@
-
-/* What message digest implementation to use */
-#cmakedefine USE_LIBGCRYPT_MD @USE_LIBGCRYPT_MD@
-
-/* What message digest implementation to use */
-#cmakedefine USE_LIBNETTLE_MD @USE_LIBNETTLE_MD@
 
 /* What message digest implementation to use */
 #cmakedefine USE_OPENSSL_MD @USE_OPENSSL_MD@

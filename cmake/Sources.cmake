@@ -548,17 +548,12 @@ set(ARIA2_SOURCES_NOT_ENABLE_WEBSOCKET
   src/NullWebSocketSessionMan.h
 )
 
-set(ARIA2_SOURCES_HAVE_SOME_XMLLIB
+set(ARIA2_SOURCES_XML
   src/ParserStateMachine.h
   src/XmlAttr.cc
   src/XmlAttr.h
   src/XmlParser.cc
   src/XmlParser.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBXML2
-  src/Xml2XmlParser.cc
-  src/Xml2XmlParser.h
 )
 
 set(ARIA2_SOURCES_HAVE_LIBEXPAT
@@ -602,35 +597,6 @@ set(ARIA2_SOURCES_USE_INTERNAL_MD
   src/InternalMessageDigestImpl.cc
   src/crypto_hash.cc
   src/crypto_hash.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBGNUTLS
-  src/LibgnutlsTLSContext.cc
-  src/LibgnutlsTLSContext.h
-  src/LibgnutlsTLSSession.cc
-  src/LibgnutlsTLSSession.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBGCRYPT
-  src/LibgcryptDHKeyExchange.cc
-  src/LibgcryptDHKeyExchange.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBGCRYPT__USE_LIBGCRYPT_MD
-  src/LibgcryptMessageDigestImpl.cc
-)
-
-set(ARIA2_SOURCES_HAVE_LIBNETTLE)
-
-set(ARIA2_SOURCES_HAVE_LIBNETTLE__USE_LIBNETTLE_MD
-  src/LibnettleMessageDigestImpl.cc
-)
-
-set(ARIA2_SOURCES_HAVE_LIBGMP
-  src/a2gmp.cc
-  src/a2gmp.h
-  src/LibgmpDHKeyExchange.cc
-  src/LibgmpDHKeyExchange.h
 )
 
 set(ARIA2_SOURCES_HAVE_OPENSSL
@@ -1088,19 +1054,9 @@ set(ARIA2_SOURCES_HAVE_POLL
   src/PollEventPoll.h
 )
 
-set(ARIA2_SOURCES_HAVE_PORT_ASSOCIATE
-  src/PortEventPoll.cc
-  src/PortEventPoll.h
-)
-
 set(ARIA2_SOURCES_HAVE_KQUEUE
   src/KqueueEventPoll.cc
   src/KqueueEventPoll.h
-)
-
-set(ARIA2_SOURCES_HAVE_LIBUV
-  src/LibuvEventPoll.cc
-  src/LibuvEventPoll.h
 )
 
 set(ARIA2_SOURCES_ENABLE_LIBARIA2

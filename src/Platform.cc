@@ -43,12 +43,6 @@
 #  include <openssl/err.h>
 #  include <openssl/ssl.h>
 #endif // HAVE_OPENSSL
-#ifdef HAVE_LIBGCRYPT
-#  include <gcrypt.h>
-#endif // HAVE_LIBGCRYPT
-#ifdef HAVE_LIBGNUTLS
-#  include <gnutls/gnutls.h>
-#endif // HAVE_LIBGNUTLS
 
 #ifdef ENABLE_ASYNC_DNS
 #  include <ares.h>
@@ -65,27 +59,11 @@
 #include "console.h"
 #include "OptionParser.h"
 #include "prefs.h"
-#ifdef HAVE_LIBGMP
-#  include "a2gmp.h"
-#endif // HAVE_LIBGMP
 #include "Log.h"
 #include "util.h"
 #include "SocketCore.h"
 
 namespace aria2 {
-
-#ifdef HAVE_LIBGNUTLS
-namespace {
-void gnutls_log_callback(int level, const char* str)
-{
-  using namespace aria2;
-  // GnuTLS adds a newline. Drop it.
-  std::string msg(str);
-  msg.resize(msg.size() - 1);
-  A2_LOG_TRACE(fmt("GnuTLS: <%d> %s", level, msg.c_str()));
-}
-} // namespace
-#endif // HAVE_LIBGNUTLS
 
 bool Platform::initialized_ = false;
 
@@ -99,28 +77,6 @@ bool Platform::setUp()
     return false;
   }
   initialized_ = true;
-#ifdef HAVE_LIBGMP
-  global::initGmp();
-#endif // HAVE_LIBGMP
-#ifdef HAVE_LIBGCRYPT
-  if (!gcry_check_version("1.2.4")) {
-    throw DL_ABORT_EX("gcry_check_version() failed.");
-  }
-  gcry_control(GCRYCTL_DISABLE_SECMEM, 0);
-  gcry_control(GCRYCTL_INITIALIZATION_FINISHED, 0);
-#endif // HAVE_LIBGCRYPT
-#ifdef HAVE_LIBGNUTLS
-  {
-    int r = gnutls_global_init();
-    if (r != GNUTLS_E_SUCCESS) {
-      throw DL_ABORT_EX(
-          fmt("gnutls_global_init() failed, cause:%s", gnutls_strerror(r)));
-    }
-
-    gnutls_global_set_log_function(gnutls_log_callback);
-    gnutls_global_set_log_level(0);
-  }
-#endif // HAVE_LIBGNUTLS
 
 #ifdef CARES_HAVE_ARES_LIBRARY_INIT
   int aresErrorCode;
@@ -167,10 +123,6 @@ bool Platform::tearDown()
   SocketCore::setClientTLSContext(nullptr);
   SocketCore::setServerTLSContext(nullptr);
 #endif // ENABLE_SSL
-
-#ifdef HAVE_LIBGNUTLS
-  gnutls_global_deinit();
-#endif // HAVE_LIBGNUTLS
 
 #ifdef CARES_HAVE_ARES_LIBRARY_CLEANUP
   ares_library_cleanup();

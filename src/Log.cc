@@ -29,10 +29,6 @@
 #include "File.h"
 #include "util.h"
 
-#ifdef HAVE_LIBGNUTLS
-#  include <gnutls/gnutls.h>
-#endif // HAVE_LIBGNUTLS
-
 namespace aria2 {
 namespace logging {
 
@@ -240,17 +236,6 @@ std::shared_ptr<spdlog::logger> logger()
   return value;
 }
 
-void configureDependentLibraries(const Settings& settings)
-{
-#ifdef HAVE_LIBGNUTLS
-  const bool traceEnabled =
-      (!settings.file.empty() && settings.fileLevel == spdlog::level::trace) ||
-      (settings.consoleOutput &&
-       settings.consoleLevel == spdlog::level::trace);
-  gnutls_global_set_log_level(traceEnabled ? 6 : 0);
-#endif // HAVE_LIBGNUTLS
-}
-
 } // namespace
 
 Settings getSettings()
@@ -278,7 +263,6 @@ void configure(const Settings& settings)
 
   auto previous = std::atomic_exchange(&currentLogger, replacement);
   currentSettings = settings;
-  configureDependentLibraries(settings);
   if (previous) {
     previous->flush();
   }
