@@ -79,7 +79,6 @@
 #include "Request.h"
 #include "FileAllocationIterator.h"
 #include "fmt.h"
-#include "A2STR.h"
 #include "URISelector.h"
 #include "InorderURISelector.h"
 #include "PieceSelector.h"

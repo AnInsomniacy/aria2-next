@@ -35,7 +35,6 @@
 
 #include "LpdMessageDispatcher.h"
 #include "SocketCore.h"
-#include "A2STR.h"
 #include "util.h"
 #include "Log.h"
 #include "BtConstants.h"

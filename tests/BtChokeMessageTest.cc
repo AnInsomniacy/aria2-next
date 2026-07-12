@@ -48,12 +48,12 @@ public:
     {
     }
 
-    virtual void doChokedAction() CXX11_OVERRIDE
+    virtual void doChokedAction() override
     {
       doChokedActionCalled = true;
     }
 
-    virtual void doChokingAction() CXX11_OVERRIDE
+    virtual void doChokingAction() override
     {
       doChokingActionCalled = true;
     }
@@ -66,7 +66,7 @@ public:
   public:
     MockBtRequestFactory2() : doChokedActionCalled{false} {}
 
-    virtual void doChokedAction() CXX11_OVERRIDE
+    virtual void doChokedAction() override
     {
       doChokedActionCalled = true;
     }

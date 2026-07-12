@@ -55,18 +55,18 @@ public:
   XmlRpcRequestParserStateMachine();
   virtual ~XmlRpcRequestParserStateMachine();
 
-  virtual bool needsCharactersBuffering() const CXX11_OVERRIDE;
-  virtual bool finished() const CXX11_OVERRIDE;
+  virtual bool needsCharactersBuffering() const override;
+  virtual bool finished() const override;
 
   virtual void beginElement(const char* localname, const char* prefix,
                             const char* nsUri,
-                            const std::vector<XmlAttr>& attrs) CXX11_OVERRIDE;
+                            const std::vector<XmlAttr>& attrs) override;
 
   virtual void endElement(const char* localname, const char* prefix,
                           const char* nsUri,
-                          std::string characters) CXX11_OVERRIDE;
+                          std::string characters) override;
 
-  virtual void reset() CXX11_OVERRIDE;
+  virtual void reset() override;
 
   void setMethodName(std::string methodName);
   const std::string& getMethodName() const;

@@ -47,7 +47,7 @@ public:
     setStatus(Command::STATUS_ONESHOT_REALTIME);
   }
 
-  bool execute() CXX11_OVERRIDE
+  bool execute() override
   {
     if (!requestGroup_->downloadFinished() && !requestGroup_->isHaltRequested()) {
       schedulePendingEd2kPeers(requestGroup_, e_);

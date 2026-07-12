@@ -156,7 +156,7 @@ private:
   std::deque<std::string> cwdDirs_;
 
 protected:
-  virtual bool executeInternal() CXX11_OVERRIDE;
+  virtual bool executeInternal() override;
 
 public:
   FtpNegotiationCommand(cuid_t cuid, const std::shared_ptr<Request>& req,

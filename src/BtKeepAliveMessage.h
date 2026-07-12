@@ -50,11 +50,11 @@ public:
 
   static const char NAME[];
 
-  virtual void doReceivedAction() CXX11_OVERRIDE {}
+  virtual void doReceivedAction() override {}
 
-  virtual std::vector<unsigned char> createMessage() CXX11_OVERRIDE;
+  virtual std::vector<unsigned char> createMessage() override;
 
-  virtual std::string toString() const CXX11_OVERRIDE { return NAME; }
+  virtual std::string toString() const override { return NAME; }
 };
 
 } // namespace aria2

@@ -44,8 +44,8 @@ public:
   EvictSocketPoolCommand(cuid_t cuid, DownloadEngine* e,
                          std::chrono::seconds interval);
   virtual ~EvictSocketPoolCommand();
-  virtual void preProcess() CXX11_OVERRIDE;
-  virtual void process() CXX11_OVERRIDE;
+  virtual void preProcess() override;
+  virtual void process() override;
 };
 
 } // namespace aria2

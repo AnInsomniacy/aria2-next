@@ -44,7 +44,6 @@
 #include "prefs.h"
 #include "Option.h"
 #include "util.h"
-#include "A2STR.h"
 #include "fmt.h"
 
 namespace aria2 {

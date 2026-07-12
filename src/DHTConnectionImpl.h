@@ -79,11 +79,11 @@ public:
 
   virtual ssize_t receiveMessage(unsigned char* data, size_t len,
                                  std::string& host,
-                                 uint16_t& port) CXX11_OVERRIDE;
+                                 uint16_t& port) override;
 
   virtual ssize_t sendMessage(const unsigned char* data, size_t len,
                               const std::string& host,
-                              uint16_t port) CXX11_OVERRIDE;
+                              uint16_t port) override;
 
   const std::shared_ptr<SocketCore>& getSocket() const { return socket_; }
 };

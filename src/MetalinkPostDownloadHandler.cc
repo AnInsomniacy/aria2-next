@@ -63,9 +63,10 @@ MetalinkPostDownloadHandler::MetalinkPostDownloadHandler()
 namespace {
 const std::string& getBaseUri(RequestGroup* requestGroup)
 {
+  static const std::string empty;
   auto& dctx = requestGroup->getDownloadContext();
   if (dctx->getFileEntries().empty()) {
-    return A2STR::NIL;
+    return empty;
   }
   else {
     // TODO Check download result for each URI
@@ -74,7 +75,7 @@ const std::string& getBaseUri(RequestGroup* requestGroup)
     if (spentUris.empty()) {
       auto& remainingUris = entry->getRemainingUris();
       if (remainingUris.empty()) {
-        return A2STR::NIL;
+        return empty;
       }
       else {
         return remainingUris.front();

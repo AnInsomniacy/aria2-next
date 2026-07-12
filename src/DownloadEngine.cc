@@ -54,7 +54,6 @@
 #include "DlAbortEx.h"
 #include "ServerStatMan.h"
 #include "CookieStorage.h"
-#include "A2STR.h"
 #include "AuthConfigFactory.h"
 #include "AuthConfig.h"
 #include "Request.h"
@@ -348,7 +347,7 @@ std::string createSockPoolKeyForHostname(const std::string& ipaddr,
                                          uint16_t port,
                                          const std::string& hostname)
 {
-  return createSockPoolKey(ipaddr, port, hostname, A2STR::NIL, 0);
+  return createSockPoolKey(ipaddr, port, hostname, "", 0);
 }
 } // namespace
 
@@ -372,7 +371,7 @@ void DownloadEngine::poolSocket(const std::string& ipaddr, uint16_t port,
                                 std::chrono::seconds timeout)
 {
   SocketPoolEntry e(sock, std::move(timeout));
-  poolSocket(createSockPoolKey(ipaddr, port, A2STR::NIL, proxyhost, proxyport),
+  poolSocket(createSockPoolKey(ipaddr, port, "", proxyhost, proxyport),
              e);
 }
 
@@ -436,7 +435,7 @@ void DownloadEngine::poolSocket(const std::shared_ptr<Request>& request,
 
   Endpoint peerInfo;
   if (getPeerInfo(peerInfo, socket)) {
-    poolSocket(peerInfo.addr, peerInfo.port, username, A2STR::NIL, 0, socket,
+    poolSocket(peerInfo.addr, peerInfo.port, username, "", 0, socket,
                options, std::move(timeout));
   }
 }
@@ -466,7 +465,7 @@ DownloadEngine::popPooledSocket(const std::string& ipaddr, uint16_t port,
 {
   std::shared_ptr<SocketCore> s;
   auto i = findSocketPoolEntry(
-      createSockPoolKey(ipaddr, port, A2STR::NIL, proxyhost, proxyport));
+      createSockPoolKey(ipaddr, port, "", proxyhost, proxyport));
   if (i != socketPool_.end()) {
     s = (*i).second.getSocket();
     socketPool_.erase(i);
@@ -510,7 +509,7 @@ DownloadEngine::popPooledSocket(const std::vector<std::string>& ipaddrs,
 {
   std::shared_ptr<SocketCore> s;
   for (const auto& ipaddr : ipaddrs) {
-    s = popPooledSocket(ipaddr, port, A2STR::NIL, 0);
+    s = popPooledSocket(ipaddr, port, "", 0);
     if (s) {
       break;
     }
@@ -539,7 +538,7 @@ DownloadEngine::popPooledSocket(std::string& options,
 {
   std::shared_ptr<SocketCore> s;
   for (const auto& ipaddr : ipaddrs) {
-    s = popPooledSocket(options, ipaddr, port, username, A2STR::NIL, 0);
+    s = popPooledSocket(options, ipaddr, port, username, "", 0);
     if (s) {
       break;
     }

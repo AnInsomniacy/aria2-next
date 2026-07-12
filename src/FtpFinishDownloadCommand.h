@@ -46,9 +46,9 @@ private:
   std::shared_ptr<FtpConnection> ftpConnection_;
 
 protected:
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 
-  virtual bool executeInternal() CXX11_OVERRIDE;
+  virtual bool executeInternal() override;
 
 public:
   FtpFinishDownloadCommand(cuid_t cuid, const std::shared_ptr<Request>& req,

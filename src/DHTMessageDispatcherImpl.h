@@ -60,16 +60,16 @@ public:
   addMessageToQueue(std::unique_ptr<DHTMessage> message,
                     std::chrono::seconds timeout,
                     std::unique_ptr<DHTMessageCallback> callback =
-                        std::unique_ptr<DHTMessageCallback>{}) CXX11_OVERRIDE;
+                        std::unique_ptr<DHTMessageCallback>{}) override;
 
   virtual void
   addMessageToQueue(std::unique_ptr<DHTMessage> message,
                     std::unique_ptr<DHTMessageCallback> callback =
-                        std::unique_ptr<DHTMessageCallback>{}) CXX11_OVERRIDE;
+                        std::unique_ptr<DHTMessageCallback>{}) override;
 
-  virtual void sendMessages() CXX11_OVERRIDE;
+  virtual void sendMessages() override;
 
-  virtual size_t countMessageInQueue() const CXX11_OVERRIDE;
+  virtual size_t countMessageInQueue() const override;
 
   void setTimeout(std::chrono::seconds timeout)
   {

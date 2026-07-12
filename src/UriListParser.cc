@@ -41,7 +41,6 @@
 #include "Option.h"
 #include "OptionHandlerFactory.h"
 #include "OptionHandler.h"
-#include "A2STR.h"
 #include "BufferedFile.h"
 #include "OptionParser.h"
 

@@ -38,7 +38,6 @@
 #include <algorithm>
 
 #include "BitfieldMan.h"
-#include "A2STR.h"
 #include "BtMessageDispatcher.h"
 #include "wallclock.h"
 #include "a2functional.h"

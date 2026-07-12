@@ -125,18 +125,18 @@ void extractUrlList(TorrentAttribute* torrent, std::vector<std::string>& uris,
     {
     }
 
-    virtual void visit(const String& v) CXX11_OVERRIDE
+    virtual void visit(const String& v) override
     {
       std::string utf8Uri = util::encodeNonUtf8(v.s());
       uris_.push_back(utf8Uri);
       torrent_->urlList.push_back(utf8Uri);
     }
 
-    virtual void visit(const Integer& v) CXX11_OVERRIDE {}
-    virtual void visit(const Bool& v) CXX11_OVERRIDE {}
-    virtual void visit(const Null& v) CXX11_OVERRIDE {}
+    virtual void visit(const Integer& v) override {}
+    virtual void visit(const Bool& v) override {}
+    virtual void visit(const Null& v) override {}
 
-    virtual void visit(const List& v) CXX11_OVERRIDE
+    virtual void visit(const List& v) override
     {
       for (auto& elem : v) {
         const String* uri = downcast<String>(elem);
@@ -147,7 +147,7 @@ void extractUrlList(TorrentAttribute* torrent, std::vector<std::string>& uris,
         }
       }
     }
-    virtual void visit(const Dict& v) CXX11_OVERRIDE {}
+    virtual void visit(const Dict& v) override {}
   };
 
   if (v) {
@@ -1011,7 +1011,7 @@ std::string torrent2Magnet(const TorrentAttribute* attrs)
     uri += util::toUpper(util::toHex(attrs->infoHash));
   }
   else {
-    return A2STR::NIL;
+    return "";
   }
   if (!attrs->name.empty()) {
     uri += "&dn=";

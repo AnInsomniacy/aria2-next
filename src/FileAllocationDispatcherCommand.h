@@ -50,7 +50,7 @@ public:
 
 protected:
   virtual std::unique_ptr<Command>
-  createCommand(FileAllocationEntry* entry) CXX11_OVERRIDE;
+  createCommand(FileAllocationEntry* entry) override;
 };
 
 } // namespace aria2

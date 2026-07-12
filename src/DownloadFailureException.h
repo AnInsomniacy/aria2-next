@@ -44,7 +44,7 @@ namespace aria2 {
  */
 class DownloadFailureException : public RecoverableException {
 protected:
-  virtual std::shared_ptr<Exception> copy() const CXX11_OVERRIDE;
+  virtual std::shared_ptr<Exception> copy() const override;
 
 public:
   DownloadFailureException(const char* file, int line, const std::string& msg);

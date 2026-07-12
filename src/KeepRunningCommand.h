@@ -47,7 +47,7 @@ class KeepRunningCommand : public Command {
 public:
   KeepRunningCommand(cuid_t cuid, DownloadEngine* e);
   virtual ~KeepRunningCommand();
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 
 private:
   DownloadEngine* e_;

@@ -52,7 +52,7 @@ public:
 
   virtual ~ContentTypeRequestGroupCriteria();
 
-  virtual bool match(const RequestGroup* requestGroup) const CXX11_OVERRIDE;
+  virtual bool match(const RequestGroup* requestGroup) const override;
 };
 
 } // namespace aria2

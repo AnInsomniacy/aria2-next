@@ -40,7 +40,6 @@
 #include "DlAbortEx.h"
 #include "util.h"
 #include "fmt.h"
-#include "A2STR.h"
 #include "cookie_helper.h"
 #ifndef HAVE_SQLITE3_OPEN_V2
 #  include "File.h"
@@ -89,7 +88,7 @@ std::string toString(const char* str)
     return str;
   }
   else {
-    return A2STR::NIL;
+    return "";
   }
 }
 } // namespace

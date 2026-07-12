@@ -193,7 +193,7 @@ void setVersion(DHTMessage* msg, const Dict* dict)
     msg->setVersion(v->s());
   }
   else {
-    msg->setVersion(A2STR::NIL);
+    msg->setVersion("");
   }
 }
 } // namespace

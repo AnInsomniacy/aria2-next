@@ -40,7 +40,7 @@ namespace aria2 {
 
 class FatalException : public Exception {
 protected:
-  virtual std::shared_ptr<Exception> copy() const CXX11_OVERRIDE;
+  virtual std::shared_ptr<Exception> copy() const override;
 
 public:
   FatalException(const char* file, int line, const std::string& msg);

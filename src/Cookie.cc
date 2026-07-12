@@ -36,7 +36,6 @@
 
 #include <sstream>
 
-#include "A2STR.h"
 #include "a2functional.h"
 #include "cookie_helper.h"
 

@@ -106,21 +106,21 @@ public:
 
   virtual ~EpollEventPoll();
 
-  virtual void poll(const struct timeval& tv) CXX11_OVERRIDE;
+  virtual void poll(const struct timeval& tv) override;
 
   virtual bool addEvents(sock_t socket, Command* command,
-                         EventPoll::EventType events) CXX11_OVERRIDE;
+                         EventPoll::EventType events) override;
 
   virtual bool deleteEvents(sock_t socket, Command* command,
-                            EventPoll::EventType events) CXX11_OVERRIDE;
+                            EventPoll::EventType events) override;
 #ifdef ENABLE_ASYNC_DNS
 
   virtual bool
   addNameResolver(const std::shared_ptr<AsyncNameResolver>& resolver,
-                  Command* command) CXX11_OVERRIDE;
+                  Command* command) override;
   virtual bool
   deleteNameResolver(const std::shared_ptr<AsyncNameResolver>& resolver,
-                     Command* command) CXX11_OVERRIDE;
+                     Command* command) override;
 #endif // ENABLE_ASYNC_DNS
 
   static const int IEV_READ = EPOLLIN;

@@ -40,7 +40,6 @@
 #include <vector>
 #include <memory>
 
-#include "A2STR.h"
 
 namespace aria2 {
 
@@ -61,12 +60,12 @@ public:
   void generate(std::vector<std::shared_ptr<RequestGroup>>& groups,
                 const std::string& metalinkFile,
                 const std::shared_ptr<Option>& option,
-                const std::string& baseUri = A2STR::NIL);
+                const std::string& baseUri = "");
 
   void generate(std::vector<std::shared_ptr<RequestGroup>>& groups,
                 const std::shared_ptr<BinaryStream>& binaryStream,
                 const std::shared_ptr<Option>& option,
-                const std::string& baseUri = A2STR::NIL);
+                const std::string& baseUri = "");
 };
 
 } // namespace aria2

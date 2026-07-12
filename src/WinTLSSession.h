@@ -135,34 +135,34 @@ public:
   // Initializes SSL/TLS session. The |sockfd| is the underlying
   // transport socket. This function returns TLS_ERR_OK if it
   // succeeds, or TLS_ERR_ERROR.
-  virtual int init(sock_t sockfd) CXX11_OVERRIDE;
+  virtual int init(sock_t sockfd) override;
 
   // Sets |hostname| for TLS SNI extension. This is only meaningful for
   // client side session. This function returns TLS_ERR_OK if it
   // succeeds, or TLS_ERR_ERROR.
-  virtual int setSNIHostname(const std::string& hostname) CXX11_OVERRIDE;
+  virtual int setSNIHostname(const std::string& hostname) override;
 
   // Closes the SSL/TLS session. Don't close underlying transport
   // socket. This function returns TLS_ERR_OK if it succeeds, or
   // TLS_ERR_ERROR.
-  virtual int closeConnection() CXX11_OVERRIDE;
+  virtual int closeConnection() override;
 
   // Returns TLS_WANT_READ if SSL/TLS session needs more data from
   // remote endpoint to proceed, or TLS_WANT_WRITE if SSL/TLS session
   // needs to write more data to proceed. If SSL/TLS session needs
   // neither read nor write data at the moment, return value is
   // undefined.
-  virtual int checkDirection() CXX11_OVERRIDE;
+  virtual int checkDirection() override;
 
   // Sends |data| with length |len|. This function returns the number
   // of bytes sent if it succeeds, or TLS_ERR_WOULDBLOCK if the
   // underlying transport blocks, or TLS_ERR_ERROR.
-  virtual ssize_t writeData(const void* data, size_t len) CXX11_OVERRIDE;
+  virtual ssize_t writeData(const void* data, size_t len) override;
 
   // Receives data into |data| with length |len|. This function returns
   // the number of bytes received if it succeeds, or TLS_ERR_WOULDBLOCK
   // if the underlying transport blocks, or TLS_ERR_ERROR.
-  virtual ssize_t readData(void* data, size_t len) CXX11_OVERRIDE;
+  virtual ssize_t readData(void* data, size_t len) override;
 
   // Performs client side handshake. The |hostname| is the hostname of
   // the remote endpoint and is used to verify its certificate. This
@@ -171,17 +171,17 @@ public:
   // When returning TLS_ERR_ERROR, provide certificate validation error
   // in |handshakeErr|.
   virtual int tlsConnect(const std::string& hostname, TLSVersion& version,
-                         std::string& handshakeErr) CXX11_OVERRIDE;
+                         std::string& handshakeErr) override;
 
   // Performs server side handshake. This function returns TLS_ERR_OK
   // if it succeeds, or TLS_ERR_WOULDBLOCK if the underlying transport
   // blocks, or TLS_ERR_ERROR.
-  virtual int tlsAccept(TLSVersion& version) CXX11_OVERRIDE;
+  virtual int tlsAccept(TLSVersion& version) override;
 
   // Returns last error string
-  virtual std::string getLastErrorString() CXX11_OVERRIDE;
+  virtual std::string getLastErrorString() override;
 
-  virtual size_t getRecvBufferedLength() CXX11_OVERRIDE;
+  virtual size_t getRecvBufferedLength() override;
 
 private:
   // Obtains TLS record size limits.  This function returns 0 if it

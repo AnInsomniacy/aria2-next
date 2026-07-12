@@ -47,7 +47,7 @@ private:
   std::shared_ptr<HttpConnection> httpConnection_;
 
 protected:
-  virtual bool executeInternal() CXX11_OVERRIDE;
+  virtual bool executeInternal() override;
 
   const std::shared_ptr<HttpConnection>& getHttpConnection() const
   {

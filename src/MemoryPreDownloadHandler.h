@@ -43,7 +43,7 @@ namespace aria2 {
 template <class DiskWriterFactoryType>
 class MemoryPreDownloadHandler : public PreDownloadHandler {
 public:
-  virtual void execute(RequestGroup* requestGroup) const CXX11_OVERRIDE
+  virtual void execute(RequestGroup* requestGroup) const override
   {
     auto dwf = std::make_shared<DiskWriterFactoryType>();
     requestGroup->setDiskWriterFactory(dwf);

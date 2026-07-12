@@ -39,7 +39,7 @@ public:
     virtual std::unique_ptr<DHTAnnouncePeerReplyMessage>
     createAnnouncePeerReplyMessage(const std::shared_ptr<DHTNode>& remoteNode,
                                    const std::string& transactionID)
-        CXX11_OVERRIDE
+        override
     {
       return make_unique<DHTAnnouncePeerReplyMessage>(localNode_, remoteNode,
                                                       transactionID);

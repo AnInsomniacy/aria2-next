@@ -53,9 +53,9 @@ public:
   virtual ~MessageDigestBase() { EVP_MD_CTX_free(ctx_); }
 
   static size_t length() { return EVP_MD_size(init_fn()); }
-  virtual size_t getDigestLength() const CXX11_OVERRIDE { return len_; }
-  virtual void reset() CXX11_OVERRIDE { EVP_DigestInit_ex(ctx_, md_, nullptr); }
-  virtual void update(const void* data, size_t length) CXX11_OVERRIDE
+  virtual size_t getDigestLength() const override { return len_; }
+  virtual void reset() override { EVP_DigestInit_ex(ctx_, md_, nullptr); }
+  virtual void update(const void* data, size_t length) override
   {
     auto bytes = reinterpret_cast<const char*>(data);
     while (length) {
@@ -65,7 +65,7 @@ public:
       bytes += l;
     }
   }
-  virtual void digest(unsigned char* md) CXX11_OVERRIDE
+  virtual void digest(unsigned char* md) override
   {
     unsigned int len;
     EVP_DigestFinal_ex(ctx_, md, &len);

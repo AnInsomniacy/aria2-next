@@ -65,9 +65,9 @@ public:
 
   size_t getIndex() const { return index_; }
 
-  virtual std::vector<unsigned char> createMessage() CXX11_OVERRIDE;
+  virtual std::vector<unsigned char> createMessage() override;
 
-  virtual std::string toString() const CXX11_OVERRIDE;
+  virtual std::string toString() const override;
 };
 
 } // namespace aria2

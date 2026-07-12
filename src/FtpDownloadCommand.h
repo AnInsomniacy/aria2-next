@@ -48,8 +48,8 @@ private:
   std::shared_ptr<SocketCore> ctrlSocket_;
 
 protected:
-  virtual bool prepareForNextSegment() CXX11_OVERRIDE;
-  virtual int64_t getRequestEndOffset() const CXX11_OVERRIDE;
+  virtual bool prepareForNextSegment() override;
+  virtual int64_t getRequestEndOffset() const override;
 
 public:
   FtpDownloadCommand(cuid_t cuid, const std::shared_ptr<Request>& req,

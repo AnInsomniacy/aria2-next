@@ -48,7 +48,7 @@ public:
   virtual void beginElement(MetalinkParserStateMachine* psm,
                             const char* localname, const char* prefix,
                             const char* nsUri,
-                            const std::vector<XmlAttr>& attrs) CXX11_OVERRIDE;
+                            const std::vector<XmlAttr>& attrs) override;
 };
 
 class InitialMetalinkParserState : public MetalinkParserState {
@@ -56,7 +56,7 @@ public:
   virtual void beginElement(MetalinkParserStateMachine* psm,
                             const char* localname, const char* prefix,
                             const char* nsUri,
-                            const std::vector<XmlAttr>& attrs) CXX11_OVERRIDE;
+                            const std::vector<XmlAttr>& attrs) override;
 };
 
 } // namespace aria2

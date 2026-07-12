@@ -25,9 +25,9 @@ public:
 
   virtual ~MockDHTTask() {}
 
-  virtual void startup() CXX11_OVERRIDE {}
+  virtual void startup() override {}
 
-  virtual bool finished() CXX11_OVERRIDE { return finished_; }
+  virtual bool finished() override { return finished_; }
 
   void setTargetID(const unsigned char* targetID)
   {

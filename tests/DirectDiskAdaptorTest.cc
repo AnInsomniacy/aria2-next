@@ -60,42 +60,42 @@ void DirectDiskAdaptorTest::testCutTrailingGarbage()
 namespace {
 class SparseRecordingDiskWriter : public DiskWriter {
 public:
-  virtual void initAndOpenFile(int64_t totalLength = 0) CXX11_OVERRIDE
+  virtual void initAndOpenFile(int64_t totalLength = 0) override
   {
     ++initAndOpenFileCount;
   }
 
-  virtual void openFile(int64_t totalLength = 0) CXX11_OVERRIDE
+  virtual void openFile(int64_t totalLength = 0) override
   {
     ++openFileCount;
   }
 
-  virtual void closeFile() CXX11_OVERRIDE {}
+  virtual void closeFile() override {}
 
-  virtual void openExistingFile(int64_t totalLength = 0) CXX11_OVERRIDE
+  virtual void openExistingFile(int64_t totalLength = 0) override
   {
     ++openExistingFileCount;
   }
 
   virtual void writeData(const unsigned char* data, size_t len,
-                         int64_t offset) CXX11_OVERRIDE
+                         int64_t offset) override
   {
   }
 
   virtual ssize_t readData(unsigned char* data, size_t len,
-                           int64_t offset) CXX11_OVERRIDE
+                           int64_t offset) override
   {
     return 0;
   }
 
-  virtual void truncate(int64_t length) CXX11_OVERRIDE
+  virtual void truncate(int64_t length) override
   {
     ++truncateCount;
   }
 
-  virtual void enableSparse() CXX11_OVERRIDE { ++enableSparseCount; }
+  virtual void enableSparse() override { ++enableSparseCount; }
 
-  virtual int64_t size() CXX11_OVERRIDE { return 0; }
+  virtual int64_t size() override { return 0; }
 
   size_t initAndOpenFileCount = 0;
   size_t openFileCount = 0;
@@ -179,25 +179,25 @@ void DirectDiskAdaptorTest::testWriteCache()
 namespace {
 class RecordingDiskWriter : public DiskWriter {
 public:
-  virtual void initAndOpenFile(int64_t totalLength = 0) CXX11_OVERRIDE {}
-  virtual void openFile(int64_t totalLength = 0) CXX11_OVERRIDE {}
-  virtual void closeFile() CXX11_OVERRIDE {}
-  virtual void openExistingFile(int64_t totalLength = 0) CXX11_OVERRIDE {}
+  virtual void initAndOpenFile(int64_t totalLength = 0) override {}
+  virtual void openFile(int64_t totalLength = 0) override {}
+  virtual void closeFile() override {}
+  virtual void openExistingFile(int64_t totalLength = 0) override {}
 
   virtual void writeData(const unsigned char* data, size_t len,
-                         int64_t offset) CXX11_OVERRIDE
+                         int64_t offset) override
   {
     writes.emplace_back(offset,
                         std::string(reinterpret_cast<const char*>(data), len));
   }
 
   virtual ssize_t readData(unsigned char* data, size_t len,
-                           int64_t offset) CXX11_OVERRIDE
+                           int64_t offset) override
   {
     return 0;
   }
 
-  virtual int64_t size() CXX11_OVERRIDE { return 0; }
+  virtual int64_t size() override { return 0; }
 
   std::vector<std::pair<int64_t, std::string>> writes;
 };

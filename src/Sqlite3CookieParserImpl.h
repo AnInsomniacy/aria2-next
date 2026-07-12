@@ -45,7 +45,7 @@ public:
   virtual ~Sqlite3MozCookieParser();
 
 protected:
-  virtual const char* getQuery() const CXX11_OVERRIDE;
+  virtual const char* getQuery() const override;
 };
 
 class Sqlite3ChromiumCookieParser : public Sqlite3CookieParser {
@@ -54,7 +54,7 @@ public:
   virtual ~Sqlite3ChromiumCookieParser();
 
 protected:
-  virtual const char* getQuery() const CXX11_OVERRIDE;
+  virtual const char* getQuery() const override;
 };
 
 } // namespace aria2

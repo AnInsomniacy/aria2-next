@@ -48,8 +48,8 @@ private:
   std::unique_ptr<PeerConnection> peerConnection_;
 
 protected:
-  virtual bool executeInternal() CXX11_OVERRIDE;
-  virtual bool exitBeforeExecute() CXX11_OVERRIDE;
+  virtual bool executeInternal() override;
+  virtual bool exitBeforeExecute() override;
 
 public:
   PeerReceiveHandshakeCommand(

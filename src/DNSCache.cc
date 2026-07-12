@@ -33,7 +33,6 @@
  */
 /* copyright --> */
 #include "DNSCache.h"
-#include "A2STR.h"
 
 namespace aria2 {
 
@@ -121,7 +120,8 @@ const std::string& DNSCache::CacheEntry::getGoodAddr() const
       return (elem).addr_;
     }
   }
-  return A2STR::NIL;
+  static const std::string empty;
+  return empty;
 }
 
 void DNSCache::CacheEntry::markBad(const std::string& addr)
@@ -166,7 +166,8 @@ const std::string& DNSCache::find(const std::string& hostname,
   auto target = std::make_shared<CacheEntry>(hostname, port);
   auto i = entries_.find(target);
   if (i == entries_.end()) {
-    return A2STR::NIL;
+    static const std::string empty;
+    return empty;
   }
   else {
     return (*i)->getGoodAddr();

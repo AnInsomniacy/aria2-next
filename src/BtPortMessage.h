@@ -69,11 +69,11 @@ public:
   static std::unique_ptr<BtPortMessage> create(const unsigned char* data,
                                                size_t dataLength);
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
-  virtual std::vector<unsigned char> createMessage() CXX11_OVERRIDE;
+  virtual std::vector<unsigned char> createMessage() override;
 
-  virtual std::string toString() const CXX11_OVERRIDE;
+  virtual std::string toString() const override;
 
   void setLocalNode(DHTNode* localNode);
 

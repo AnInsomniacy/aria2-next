@@ -118,58 +118,58 @@ public:
   MultiDiskAdaptor();
   ~MultiDiskAdaptor();
 
-  virtual void initAndOpenFile() CXX11_OVERRIDE;
+  virtual void initAndOpenFile() override;
 
-  virtual void openFile() CXX11_OVERRIDE;
+  virtual void openFile() override;
 
-  virtual void openExistingFile() CXX11_OVERRIDE;
+  virtual void openExistingFile() override;
 
-  virtual void closeFile() CXX11_OVERRIDE;
+  virtual void closeFile() override;
 
   virtual void writeData(const unsigned char* data, size_t len,
-                         int64_t offset) CXX11_OVERRIDE;
+                         int64_t offset) override;
 
   virtual ssize_t readData(unsigned char* data, size_t len,
-                           int64_t offset) CXX11_OVERRIDE;
+                           int64_t offset) override;
 
   virtual ssize_t readDataDropCache(unsigned char* data, size_t len,
-                                    int64_t offset) CXX11_OVERRIDE;
+                                    int64_t offset) override;
 
-  virtual void writeCache(const WrDiskCacheEntry* entry) CXX11_OVERRIDE;
+  virtual void writeCache(const WrDiskCacheEntry* entry) override;
 
-  virtual void flushOSBuffers() CXX11_OVERRIDE;
+  virtual void flushOSBuffers() override;
 
-  virtual bool fileExists() CXX11_OVERRIDE;
+  virtual bool fileExists() override;
 
-  virtual int64_t size() CXX11_OVERRIDE;
+  virtual int64_t size() override;
 
   virtual std::unique_ptr<FileAllocationIterator>
-  fileAllocationIterator() CXX11_OVERRIDE;
+  fileAllocationIterator() override;
 
-  virtual void enableReadOnly() CXX11_OVERRIDE;
+  virtual void enableReadOnly() override;
 
-  virtual void disableReadOnly() CXX11_OVERRIDE;
+  virtual void disableReadOnly() override;
 
-  virtual bool isReadOnlyEnabled() const CXX11_OVERRIDE { return readOnly_; }
+  virtual bool isReadOnlyEnabled() const override { return readOnly_; }
 
   // Enables mmap feature. This method must be called after files are
   // opened.
-  virtual void enableMmap() CXX11_OVERRIDE;
+  virtual void enableMmap() override;
 
   void setPieceLength(int32_t pieceLength) { pieceLength_ = pieceLength; }
 
   int32_t getPieceLength() const { return pieceLength_; }
 
-  virtual void cutTrailingGarbage() CXX11_OVERRIDE;
+  virtual void cutTrailingGarbage() override;
 
-  virtual size_t utime(const Time& actime, const Time& modtime) CXX11_OVERRIDE;
+  virtual size_t utime(const Time& actime, const Time& modtime) override;
 
   const DiskWriterEntries& getDiskWriterEntries() const
   {
     return diskWriterEntries_;
   }
 
-  virtual size_t tryCloseFile(size_t numClose) CXX11_OVERRIDE;
+  virtual size_t tryCloseFile(size_t numClose) override;
 };
 
 } // namespace aria2

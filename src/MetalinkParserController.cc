@@ -42,7 +42,6 @@
 #include "MetalinkMetaurl.h"
 #include "FileEntry.h"
 #include "a2functional.h"
-#include "A2STR.h"
 #include "uri.h"
 #include "Signature.h"
 #include "util.h"

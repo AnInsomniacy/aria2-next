@@ -35,7 +35,6 @@
 #include "HttpHeader.h"
 #include "Range.h"
 #include "util.h"
-#include "A2STR.h"
 #include "DownloadFailureException.h"
 #include "array_fun.h"
 
@@ -59,7 +58,8 @@ const std::string& HttpHeader::find(int hdKey) const
 {
   auto itr = table_.find(hdKey);
   if (itr == table_.end()) {
-    return A2STR::NIL;
+    static const std::string empty;
+    return empty;
   }
   else {
     return (*itr).second;

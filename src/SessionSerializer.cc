@@ -42,7 +42,6 @@
 #include "RequestGroupMan.h"
 #include "a2functional.h"
 #include "File.h"
-#include "A2STR.h"
 #include "download_helper.h"
 #include "Option.h"
 #include "DownloadResult.h"

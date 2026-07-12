@@ -283,7 +283,7 @@ void extractPeer(const ValueBase* peerData, int family, OutputIterator dest)
 
     virtual ~PeerListValueBaseVisitor() = default;
 
-    virtual void visit(const String& peerData) CXX11_OVERRIDE
+    virtual void visit(const String& peerData) override
     {
       int unit = family_ == AF_INET ? 6 : 18;
       size_t length = peerData.s().size();
@@ -301,11 +301,11 @@ void extractPeer(const ValueBase* peerData, int family, OutputIterator dest)
       }
     }
 
-    virtual void visit(const Integer& v) CXX11_OVERRIDE {}
-    virtual void visit(const Bool& v) CXX11_OVERRIDE {}
-    virtual void visit(const Null& v) CXX11_OVERRIDE {}
+    virtual void visit(const Integer& v) override {}
+    virtual void visit(const Bool& v) override {}
+    virtual void visit(const Null& v) override {}
 
-    virtual void visit(const List& peerData) CXX11_OVERRIDE
+    virtual void visit(const List& peerData) override
     {
       for (auto& elem : peerData) {
         const Dict* peerDict = downcast<Dict>(elem);
@@ -324,7 +324,7 @@ void extractPeer(const ValueBase* peerData, int family, OutputIterator dest)
       }
     }
 
-    virtual void visit(const Dict& v) CXX11_OVERRIDE {}
+    virtual void visit(const Dict& v) override {}
   };
   if (peerData) {
     PeerListValueBaseVisitor visitor(dest, family);

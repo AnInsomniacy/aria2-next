@@ -39,7 +39,6 @@
 
 #include "ServerStatMan.h"
 #include "ServerStat.h"
-#include "A2STR.h"
 #include "FileEntry.h"
 #include "Log.h"
 #include "a2algo.h"
@@ -67,7 +66,7 @@ std::string FeedbackURISelector::select(
     }
   }
   if (fileEntry->getRemainingUris().empty()) {
-    return A2STR::NIL;
+    return "";
   }
   // Select URI with usedHosts first. If no URI is selected, then do
   // it again without usedHosts.
@@ -155,7 +154,7 @@ std::string FeedbackURISelector::selectFaster(
   }
   if (fastCands.empty()) {
     if (normCands.empty()) {
-      return A2STR::NIL;
+      return "";
     }
     else {
       A2_LOG_TRACE("Selected from normCands");

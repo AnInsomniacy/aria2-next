@@ -3,9 +3,6 @@
 /* Define build-type */
 #cmakedefine BUILD "@BUILD@"
 
-/* Define `override` keyword if the compiler supports it */
-#cmakedefine CXX11_OVERRIDE @CXX11_OVERRIDE@
-
 /* Define to 1 if using 'alloca.c'. */
 #cmakedefine C_ALLOCA @C_ALLOCA@
 
@@ -67,9 +64,6 @@
 /* Define to 1 if you have the Mac OS X function CFPreferencesCopyAppValue in
    the CoreFoundation framework. */
 #cmakedefine HAVE_CFPREFERENCESCOPYAPPVALUE @HAVE_CFPREFERENCESCOPYAPPVALUE@
-
-/* define if the compiler supports basic C++11 syntax */
-#cmakedefine HAVE_CXX11 @HAVE_CXX11@
 
 /* Define to 1 if you have the 'daemon' function. */
 #cmakedefine HAVE_DAEMON @HAVE_DAEMON@
@@ -509,23 +503,6 @@
 
 /* Use security.h in WIN32 mode */
 #cmakedefine SECURITY_WIN32 @SECURITY_WIN32@
-
-/* Define to the type of arg 1 for 'select'. */
-#cmakedefine SELECT_TYPE_ARG1 @SELECT_TYPE_ARG1@
-
-/* Define to the type of args 2, 3 and 4 for 'select'. */
-#cmakedefine SELECT_TYPE_ARG234 @SELECT_TYPE_ARG234@
-
-/* Define to the type of arg 5 for 'select'. */
-#cmakedefine SELECT_TYPE_ARG5 @SELECT_TYPE_ARG5@
-
-/* If using the C implementation of alloca, define if you know the
-   direction of stack growth for your system; otherwise it will be
-   automatically deduced at runtime.
-	STACK_DIRECTION > 0 => grows toward higher addresses
-	STACK_DIRECTION < 0 => grows toward lower addresses
-	STACK_DIRECTION = 0 => direction of growth unknown */
-#cmakedefine STACK_DIRECTION @STACK_DIRECTION@
 
 /* Define to 1 if all of the C89 standard headers exist (not just the ones
    required in a freestanding environment). This macro is provided for

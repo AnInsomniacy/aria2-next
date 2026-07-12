@@ -39,7 +39,6 @@
 #include "util.h"
 #include "message.h"
 #include "DlAbortEx.h"
-#include "A2STR.h"
 
 namespace aria2 {
 

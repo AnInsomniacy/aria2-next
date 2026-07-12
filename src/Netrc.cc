@@ -40,7 +40,6 @@
 
 #include "DlAbortEx.h"
 #include "fmt.h"
-#include "A2STR.h"
 #include "util.h"
 #include "BufferedFile.h"
 #include "array_fun.h"

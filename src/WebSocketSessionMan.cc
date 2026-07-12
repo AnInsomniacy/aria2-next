@@ -125,7 +125,8 @@ const std::string& getMethodName(DownloadEvent event)
     // Not reachable
     assert(0);
     // For suppress compiler warning
-    return A2STR::NIL;
+    static const std::string empty;
+    return empty;
   }
 }
 } // namespace

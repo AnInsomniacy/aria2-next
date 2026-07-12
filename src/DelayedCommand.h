@@ -46,7 +46,7 @@ private:
   bool noWait_;
 
 public:
-  virtual void process() CXX11_OVERRIDE
+  virtual void process() override
   {
     auto e = getDownloadEngine();
     e->addCommand(std::move(command_));

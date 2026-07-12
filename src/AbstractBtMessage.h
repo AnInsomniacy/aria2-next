@@ -90,11 +90,11 @@ public:
 
   virtual ~AbstractBtMessage();
 
-  virtual bool isInvalidate() CXX11_OVERRIDE { return invalidate_; }
+  virtual bool isInvalidate() override { return invalidate_; }
 
   void setInvalidate(bool invalidate) { invalidate_ = invalidate; }
 
-  virtual bool isUploading() CXX11_OVERRIDE { return uploading_; }
+  virtual bool isUploading() override { return uploading_; }
 
   void setUploading(bool uploading) { uploading_ = uploading; }
 
@@ -106,23 +106,23 @@ public:
 
   void setPeer(const std::shared_ptr<Peer>& peer);
 
-  virtual void doReceivedAction() CXX11_OVERRIDE {}
+  virtual void doReceivedAction() override {}
 
-  virtual void validate() CXX11_OVERRIDE;
+  virtual void validate() override;
 
-  virtual void onQueued() CXX11_OVERRIDE {}
+  virtual void onQueued() override {}
 
   virtual void onAbortOutstandingRequestEvent(
-      const BtAbortOutstandingRequestEvent& event) CXX11_OVERRIDE
+      const BtAbortOutstandingRequestEvent& event) override
   {
   }
 
   virtual void onCancelSendingPieceEvent(const BtCancelSendingPieceEvent& event)
-      CXX11_OVERRIDE
+      override
   {
   }
 
-  virtual void onChokingEvent(const BtChokingEvent& event) CXX11_OVERRIDE {}
+  virtual void onChokingEvent(const BtChokingEvent& event) override {}
 
   void setBtMessageValidator(std::unique_ptr<BtMessageValidator> validator);
 

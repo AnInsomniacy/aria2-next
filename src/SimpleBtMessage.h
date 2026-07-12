@@ -47,7 +47,7 @@ class SimpleBtMessage : public AbstractBtMessage {
 public:
   SimpleBtMessage(uint8_t id, const char* name);
 
-  virtual void send() CXX11_OVERRIDE;
+  virtual void send() override;
 
   virtual std::vector<unsigned char> createMessage() = 0;
 

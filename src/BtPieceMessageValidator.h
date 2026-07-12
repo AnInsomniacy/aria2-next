@@ -53,7 +53,7 @@ public:
 
   ~BtPieceMessageValidator();
 
-  virtual void validate() CXX11_OVERRIDE;
+  virtual void validate() override;
 };
 
 } // namespace aria2

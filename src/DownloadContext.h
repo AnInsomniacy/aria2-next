@@ -43,7 +43,6 @@
 #include <memory>
 
 #include "TimerA2.h"
-#include "A2STR.h"
 #include "ValueBase.h"
 #include "SegList.h"
 #include "ContextAttribute.h"
@@ -95,7 +94,7 @@ public:
   // Convenient constructor that creates single file download.  path
   // should be escaped with util::escapePath(...).
   DownloadContext(int32_t pieceLength, int64_t totalLength,
-                  std::string path = A2STR::NIL);
+                  std::string path = "");
 
   ~DownloadContext();
 

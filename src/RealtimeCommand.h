@@ -58,7 +58,7 @@ public:
 
   virtual ~RealtimeCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 
   virtual bool executeInternal() = 0;
 

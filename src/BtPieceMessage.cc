@@ -181,7 +181,7 @@ struct PieceSendUpdate : public ProgressUpdate {
       : dctx(dctx), peer(std::move(peer)), headerLength(headerLength)
   {
   }
-  virtual void update(size_t length, bool complete) CXX11_OVERRIDE
+  virtual void update(size_t length, bool complete) override
   {
     if (headerLength > 0) {
       size_t m = std::min(headerLength, length);

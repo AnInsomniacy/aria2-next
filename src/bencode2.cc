@@ -82,22 +82,22 @@ std::string encode(const ValueBase* vlb)
     std::ostringstream out_;
 
   public:
-    virtual void visit(const String& string) CXX11_OVERRIDE
+    virtual void visit(const String& string) override
     {
       const std::string& s = string.s();
       out_ << s.size() << ":";
       out_.write(s.data(), s.size());
     }
 
-    virtual void visit(const Integer& integer) CXX11_OVERRIDE
+    virtual void visit(const Integer& integer) override
     {
       out_ << "i" << integer.i() << "e";
     }
 
-    virtual void visit(const Bool& v) CXX11_OVERRIDE {}
-    virtual void visit(const Null& v) CXX11_OVERRIDE {}
+    virtual void visit(const Bool& v) override {}
+    virtual void visit(const Null& v) override {}
 
-    virtual void visit(const List& list) CXX11_OVERRIDE
+    virtual void visit(const List& list) override
     {
       out_ << "l";
       for (const auto& e : list) {
@@ -106,7 +106,7 @@ std::string encode(const ValueBase* vlb)
       out_ << "e";
     }
 
-    virtual void visit(const Dict& dict) CXX11_OVERRIDE
+    virtual void visit(const Dict& dict) override
     {
       out_ << "d";
       for (const auto& e : dict) {

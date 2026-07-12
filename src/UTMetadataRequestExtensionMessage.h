@@ -59,11 +59,11 @@ private:
 public:
   UTMetadataRequestExtensionMessage(uint8_t extensionMessageID);
 
-  virtual std::string getPayload() CXX11_OVERRIDE;
+  virtual std::string getPayload() override;
 
-  virtual std::string toString() const CXX11_OVERRIDE;
+  virtual std::string toString() const override;
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
   void setDownloadContext(DownloadContext* dctx);
 

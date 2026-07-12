@@ -68,7 +68,7 @@ public:
   /**
    * Returns random number in [0, to).
    */
-  virtual long int getRandomNumber(long int to) CXX11_OVERRIDE;
+  virtual long int getRandomNumber(long int to) override;
 
   void getRandomBytes(unsigned char* buf, size_t len);
 

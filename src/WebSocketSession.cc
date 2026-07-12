@@ -221,7 +221,7 @@ WebSocketSession::WebSocketSession(const std::shared_ptr<SocketCore>& socket,
     : socket_(socket),
       e_(e),
       ignorePayload_(false),
-      authorized_(e->validateToken(A2STR::NIL)),
+      authorized_(e->validateToken("")),
       receivedLength_(0),
       command_(nullptr)
 {
@@ -278,7 +278,7 @@ public:
       : Command(cuid), session_{std::move(session)}, msg_{msg}
   {
   }
-  virtual bool execute() CXX11_OVERRIDE
+  virtual bool execute() override
   {
     session_->addTextMessage(msg_, false);
     return true;

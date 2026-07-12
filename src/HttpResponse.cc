@@ -45,7 +45,6 @@
 #include "DlAbortEx.h"
 #include "DlRetryEx.h"
 #include "fmt.h"
-#include "A2STR.h"
 #include "CookieStorage.h"
 #include "AuthConfigFactory.h"
 #include "AuthConfig.h"
@@ -251,7 +250,7 @@ int64_t HttpResponse::getEntityLength() const
 std::string HttpResponse::getContentType() const
 {
   if (!httpHeader_) {
-    return A2STR::NIL;
+    return "";
   }
 
   const auto& ctype = httpHeader_->find(HttpHeader::CONTENT_TYPE);

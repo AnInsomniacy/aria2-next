@@ -39,7 +39,6 @@
 
 #include "util.h"
 #include "BitfieldMan.h"
-#include "A2STR.h"
 #include "util.h"
 #include "a2functional.h"
 #include "WrDiskCache.h"
@@ -216,7 +215,7 @@ bool Piece::isHashCalculated() const { return mdctx_ && nextBegin_ == length_; }
 std::string Piece::getDigest()
 {
   if (!mdctx_) {
-    return A2STR::NIL;
+    return "";
   }
   else {
     std::string hash = mdctx_->digest();

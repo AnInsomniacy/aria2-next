@@ -6,8 +6,6 @@ set(ARIA2_SOURCES_BASE
   src/a2io.h
   src/a2iterator.h
   src/a2netcompat.h
-  src/A2STR.cc
-  src/A2STR.h
   src/a2time.h
   src/AbstractAuthResolver.cc
   src/AbstractAuthResolver.h

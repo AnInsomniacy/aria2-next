@@ -57,7 +57,6 @@
 #include "TimeA2.h"
 #include "a2functional.h"
 #include "Log.h"
-#include "A2STR.h"
 #ifdef ENABLE_SSL
 #  include "TLSContext.h"
 #  include "TLSSession.h"
@@ -904,7 +903,7 @@ void SocketCore::readData(void* data, size_t& len)
 
 bool SocketCore::tlsAccept()
 {
-  return tlsHandshake(svTlsContext_.get(), A2STR::NIL);
+  return tlsHandshake(svTlsContext_.get(), "");
 }
 
 bool SocketCore::tlsConnect(const std::string& hostname)

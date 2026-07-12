@@ -54,39 +54,39 @@ public:
 
   virtual ~PiecedSegment();
 
-  virtual bool complete() const CXX11_OVERRIDE;
+  virtual bool complete() const override;
 
-  virtual size_t getIndex() const CXX11_OVERRIDE;
+  virtual size_t getIndex() const override;
 
-  virtual int64_t getPosition() const CXX11_OVERRIDE;
+  virtual int64_t getPosition() const override;
 
-  virtual int64_t getPositionToWrite() const CXX11_OVERRIDE;
+  virtual int64_t getPositionToWrite() const override;
 
-  virtual int64_t getLength() const CXX11_OVERRIDE;
+  virtual int64_t getLength() const override;
 
-  virtual int64_t getSegmentLength() const CXX11_OVERRIDE
+  virtual int64_t getSegmentLength() const override
   {
     return pieceLength_;
   }
 
-  virtual int64_t getWrittenLength() const CXX11_OVERRIDE
+  virtual int64_t getWrittenLength() const override
   {
     return writtenLength_;
   }
 
-  virtual void updateWrittenLength(int64_t bytes) CXX11_OVERRIDE;
+  virtual void updateWrittenLength(int64_t bytes) override;
 
   // `begin' is a offset inside this segment.
   virtual bool updateHash(int64_t begin, const unsigned char* data,
-                          size_t dataLength) CXX11_OVERRIDE;
+                          size_t dataLength) override;
 
-  virtual bool isHashCalculated() const CXX11_OVERRIDE;
+  virtual bool isHashCalculated() const override;
 
-  virtual std::string getDigest() CXX11_OVERRIDE;
+  virtual std::string getDigest() override;
 
-  virtual void clear(WrDiskCache* diskCache) CXX11_OVERRIDE;
+  virtual void clear(WrDiskCache* diskCache) override;
 
-  virtual std::shared_ptr<Piece> getPiece() const CXX11_OVERRIDE;
+  virtual std::shared_ptr<Piece> getPiece() const override;
 };
 
 } // namespace aria2

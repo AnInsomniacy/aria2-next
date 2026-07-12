@@ -56,8 +56,8 @@ public:
   const std::shared_ptr<Request>& getProxyRequest() const;
 
 protected:
-  virtual bool executeInternal() CXX11_OVERRIDE;
-  virtual bool noCheck() const CXX11_OVERRIDE;
+  virtual bool executeInternal() override;
+  virtual bool noCheck() const override;
 
 private:
   std::shared_ptr<Request> proxyRequest_;

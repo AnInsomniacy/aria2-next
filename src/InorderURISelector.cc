@@ -33,7 +33,6 @@
  */
 /* copyright --> */
 #include "InorderURISelector.h"
-#include "A2STR.h"
 #include "FileEntry.h"
 
 namespace aria2 {
@@ -48,7 +47,7 @@ std::string InorderURISelector::select(
 {
   std::deque<std::string>& uris = fileEntry->getRemainingUris();
   if (uris.empty()) {
-    return A2STR::NIL;
+    return "";
   }
   else {
     std::string nextURI = uris.front();

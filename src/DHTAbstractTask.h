@@ -70,7 +70,7 @@ protected:
 public:
   DHTAbstractTask();
 
-  virtual bool finished() CXX11_OVERRIDE;
+  virtual bool finished() override;
 
   DHTRoutingTable* getRoutingTable() const { return routingTable_; }
 

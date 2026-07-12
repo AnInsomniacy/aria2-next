@@ -45,19 +45,19 @@ private:
   unsigned char targetNodeID_[DHT_ID_LENGTH];
 
 protected:
-  virtual std::string toStringOptional() const CXX11_OVERRIDE;
+  virtual std::string toStringOptional() const override;
 
 public:
   DHTFindNodeMessage(const std::shared_ptr<DHTNode>& localNode,
                      const std::shared_ptr<DHTNode>& remoteNode,
                      const unsigned char* targetNodeID,
-                     const std::string& transactionID = A2STR::NIL);
+                     const std::string& transactionID = "");
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
-  virtual std::unique_ptr<Dict> getArgument() CXX11_OVERRIDE;
+  virtual std::unique_ptr<Dict> getArgument() override;
 
-  virtual const std::string& getMessageType() const CXX11_OVERRIDE;
+  virtual const std::string& getMessageType() const override;
 
   const unsigned char* getTargetNodeID() const { return targetNodeID_; }
 

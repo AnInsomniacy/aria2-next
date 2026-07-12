@@ -50,7 +50,6 @@
 #include "MetalinkResource.h"
 #include "MetalinkMetaurl.h"
 #include "FileEntry.h"
-#include "A2STR.h"
 #include "a2functional.h"
 #include "download_helper.h"
 #include "fmt.h"

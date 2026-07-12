@@ -41,7 +41,6 @@
 #include <vector>
 #include <memory>
 
-#include "A2STR.h"
 #include "ValueBase.h"
 
 namespace aria2 {
@@ -75,7 +74,7 @@ public:
 
   virtual std::unique_ptr<DHTPingMessage>
   createPingMessage(const std::shared_ptr<DHTNode>& remoteNode,
-                    const std::string& transactionID = A2STR::NIL) = 0;
+                    const std::string& transactionID = "") = 0;
 
   virtual std::unique_ptr<DHTPingReplyMessage>
   createPingReplyMessage(const std::shared_ptr<DHTNode>& remoteNode,
@@ -85,7 +84,7 @@ public:
   virtual std::unique_ptr<DHTFindNodeMessage>
   createFindNodeMessage(const std::shared_ptr<DHTNode>& remoteNode,
                         const unsigned char* targetNodeID,
-                        const std::string& transactionID = A2STR::NIL) = 0;
+                        const std::string& transactionID = "") = 0;
 
   virtual std::unique_ptr<DHTFindNodeReplyMessage> createFindNodeReplyMessage(
       const std::shared_ptr<DHTNode>& remoteNode,
@@ -95,7 +94,7 @@ public:
   virtual std::unique_ptr<DHTGetPeersMessage>
   createGetPeersMessage(const std::shared_ptr<DHTNode>& remoteNode,
                         const unsigned char* infoHash,
-                        const std::string& transactionID = A2STR::NIL) = 0;
+                        const std::string& transactionID = "") = 0;
 
   virtual std::unique_ptr<DHTGetPeersReplyMessage> createGetPeersReplyMessage(
       const std::shared_ptr<DHTNode>& remoteNode,
@@ -107,7 +106,7 @@ public:
   createAnnouncePeerMessage(const std::shared_ptr<DHTNode>& remoteNode,
                             const unsigned char* infoHash, uint16_t tcpPort,
                             const std::string& token,
-                            const std::string& transactionID = A2STR::NIL) = 0;
+                            const std::string& transactionID = "") = 0;
 
   virtual std::unique_ptr<DHTAnnouncePeerReplyMessage>
   createAnnouncePeerReplyMessage(const std::shared_ptr<DHTNode>& remoteNode,

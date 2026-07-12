@@ -50,9 +50,9 @@ public:
   static std::unique_ptr<BtAllowedFastMessage> create(const unsigned char* data,
                                                       size_t dataLength);
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
-  virtual std::unique_ptr<ProgressUpdate> getProgressUpdate() CXX11_OVERRIDE;
+  virtual std::unique_ptr<ProgressUpdate> getProgressUpdate() override;
 };
 
 } // namespace aria2

@@ -47,10 +47,10 @@ namespace aria2 {
 class Adler32MessageDigestImpl : public MessageDigestImpl {
 public:
   Adler32MessageDigestImpl();
-  virtual size_t getDigestLength() const CXX11_OVERRIDE;
-  virtual void reset() CXX11_OVERRIDE;
-  virtual void update(const void* data, size_t length) CXX11_OVERRIDE;
-  virtual void digest(unsigned char* md) CXX11_OVERRIDE;
+  virtual size_t getDigestLength() const override;
+  virtual void reset() override;
+  virtual void update(const void* data, size_t length) override;
+  virtual void digest(unsigned char* md) override;
   static size_t length();
 
 private:

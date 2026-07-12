@@ -56,7 +56,7 @@ private:
   std::vector<std::shared_ptr<Peer>> values_;
 
 protected:
-  virtual std::string toStringOptional() const CXX11_OVERRIDE;
+  virtual std::string toStringOptional() const override;
 
 public:
   DHTGetPeersReplyMessage(int family, const std::shared_ptr<DHTNode>& localNode,
@@ -64,13 +64,13 @@ public:
                           const std::string& token,
                           const std::string& transactionID);
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
-  virtual std::unique_ptr<Dict> getResponse() CXX11_OVERRIDE;
+  virtual std::unique_ptr<Dict> getResponse() override;
 
-  virtual const std::string& getMessageType() const CXX11_OVERRIDE;
+  virtual const std::string& getMessageType() const override;
 
-  virtual void accept(DHTMessageCallback* callback) CXX11_OVERRIDE;
+  virtual void accept(DHTMessageCallback* callback) override;
 
   const std::vector<std::shared_ptr<DHTNode>>& getClosestKNodes() const
   {

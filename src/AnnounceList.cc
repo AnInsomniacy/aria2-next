@@ -36,7 +36,6 @@
 
 #include <algorithm>
 
-#include "A2STR.h"
 #include "SimpleRandomizer.h"
 #include "a2algo.h"
 
@@ -100,7 +99,7 @@ std::string AnnounceList::getAnnounce() const
     return *currentTracker_;
   }
   else {
-    return A2STR::NIL;
+    return "";
   }
 }
 

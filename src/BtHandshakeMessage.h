@@ -77,11 +77,11 @@ public:
 
   const static char NAME[];
 
-  virtual void doReceivedAction() CXX11_OVERRIDE{};
+  virtual void doReceivedAction() override{};
 
-  virtual std::vector<unsigned char> createMessage() CXX11_OVERRIDE;
+  virtual std::vector<unsigned char> createMessage() override;
 
-  virtual std::string toString() const CXX11_OVERRIDE;
+  virtual std::string toString() const override;
 
   bool isFastExtensionSupported() const;
 

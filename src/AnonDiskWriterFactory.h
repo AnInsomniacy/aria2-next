@@ -49,7 +49,7 @@ public:
   virtual ~AnonDiskWriterFactory() = default;
 
   virtual std::unique_ptr<DiskWriter>
-  newDiskWriter(const std::string& filename) CXX11_OVERRIDE
+  newDiskWriter(const std::string& filename) override
   {
     return make_unique<DiskWriterType>();
   }

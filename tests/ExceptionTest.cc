@@ -5,7 +5,6 @@
 
 #include "DownloadFailureException.h"
 #include "util.h"
-#include "A2STR.h"
 
 namespace aria2 {
 

@@ -78,7 +78,7 @@ public:
 
   virtual ~DHTGetPeersCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 
   void setTaskQueue(DHTTaskQueue* taskQueue);
 

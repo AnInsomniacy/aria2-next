@@ -34,7 +34,7 @@ public:
   Ed2kKadCommand(cuid_t cuid, RequestGroup* requestGroup, DownloadEngine* e);
   virtual ~Ed2kKadCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
   uint16_t getLocalUdpPort() const;
   bool waitLocalUdpReadable(time_t timeout) const;
 #ifdef A2_TEST_DIR

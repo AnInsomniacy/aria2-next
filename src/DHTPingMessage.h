@@ -36,7 +36,6 @@
 #define D_DHT_PING_MESSAGE_H
 
 #include "DHTQueryMessage.h"
-#include "A2STR.h"
 
 namespace aria2 {
 
@@ -44,13 +43,13 @@ class DHTPingMessage : public DHTQueryMessage {
 public:
   DHTPingMessage(const std::shared_ptr<DHTNode>& localNode,
                  const std::shared_ptr<DHTNode>& remoteNode,
-                 const std::string& transactionID = A2STR::NIL);
+                 const std::string& transactionID = "");
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
-  virtual std::unique_ptr<Dict> getArgument() CXX11_OVERRIDE;
+  virtual std::unique_ptr<Dict> getArgument() override;
 
-  virtual const std::string& getMessageType() const CXX11_OVERRIDE;
+  virtual const std::string& getMessageType() const override;
 
   static const std::string PING;
 };

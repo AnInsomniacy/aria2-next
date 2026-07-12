@@ -116,7 +116,7 @@ public:
     return make_unique<String>(first, last);
   }
 
-  virtual void accept(ValueBaseVisitor& visitor) const CXX11_OVERRIDE;
+  virtual void accept(ValueBaseVisitor& visitor) const override;
 
 private:
   ValueType str_;
@@ -139,7 +139,7 @@ public:
 
   static std::unique_ptr<Integer> g(ValueType integer);
 
-  virtual void accept(ValueBaseVisitor& visitor) const CXX11_OVERRIDE;
+  virtual void accept(ValueBaseVisitor& visitor) const override;
 
 private:
   ValueType integer_;
@@ -151,7 +151,7 @@ public:
   static std::unique_ptr<Bool> gFalse();
   Bool(bool val);
   bool val() const;
-  virtual void accept(ValueBaseVisitor& visitor) const CXX11_OVERRIDE;
+  virtual void accept(ValueBaseVisitor& visitor) const override;
 
 private:
   // Don't allow copying
@@ -164,7 +164,7 @@ class Null : public ValueBase {
 public:
   static std::unique_ptr<Null> g();
   Null();
-  virtual void accept(ValueBaseVisitor& visitor) const CXX11_OVERRIDE;
+  virtual void accept(ValueBaseVisitor& visitor) const override;
 
 private:
   // Don't allow copying
@@ -238,7 +238,7 @@ public:
 
   static std::unique_ptr<List> g();
 
-  virtual void accept(ValueBaseVisitor& visitor) const CXX11_OVERRIDE;
+  virtual void accept(ValueBaseVisitor& visitor) const override;
 
 private:
   ValueType list_;
@@ -306,7 +306,7 @@ public:
 
   static std::unique_ptr<Dict> g();
 
-  virtual void accept(ValueBaseVisitor& visitor) const CXX11_OVERRIDE;
+  virtual void accept(ValueBaseVisitor& visitor) const override;
 
 private:
   ValueType dict_;
@@ -315,12 +315,12 @@ private:
 class EmptyDowncastValueBaseVisitor : public ValueBaseVisitor {
 public:
   EmptyDowncastValueBaseVisitor() {}
-  virtual void visit(const String& v) CXX11_OVERRIDE {}
-  virtual void visit(const Integer& v) CXX11_OVERRIDE {}
-  virtual void visit(const Bool& v) CXX11_OVERRIDE {}
-  virtual void visit(const Null& v) CXX11_OVERRIDE {}
-  virtual void visit(const List& v) CXX11_OVERRIDE {}
-  virtual void visit(const Dict& v) CXX11_OVERRIDE {}
+  virtual void visit(const String& v) override {}
+  virtual void visit(const Integer& v) override {}
+  virtual void visit(const Bool& v) override {}
+  virtual void visit(const Null& v) override {}
+  virtual void visit(const List& v) override {}
+  virtual void visit(const Dict& v) override {}
 };
 
 template <typename T>

@@ -88,39 +88,39 @@ public:
   virtual ~DefaultPeerStorage();
 
   // TODO We need addAndCheckoutPeer for incoming peers
-  virtual bool addPeer(const std::shared_ptr<Peer>& peer) CXX11_OVERRIDE;
+  virtual bool addPeer(const std::shared_ptr<Peer>& peer) override;
 
-  virtual size_t countAllPeer() const CXX11_OVERRIDE;
+  virtual size_t countAllPeer() const override;
 
   std::shared_ptr<Peer> getPeer(const std::string& ipaddr, uint16_t port) const;
 
   virtual void
-  addPeer(const std::vector<std::shared_ptr<Peer>>& peers) CXX11_OVERRIDE;
+  addPeer(const std::vector<std::shared_ptr<Peer>>& peers) override;
 
   std::shared_ptr<Peer> addAndCheckoutPeer(const std::shared_ptr<Peer>& peer,
-                                           cuid_t cuid) CXX11_OVERRIDE;
+                                           cuid_t cuid) override;
 
   const std::deque<std::shared_ptr<Peer>>& getUnusedPeers();
 
-  virtual const PeerSet& getUsedPeers() CXX11_OVERRIDE;
+  virtual const PeerSet& getUsedPeers() override;
 
   virtual const std::deque<std::shared_ptr<Peer>>&
-  getDroppedPeers() CXX11_OVERRIDE;
+  getDroppedPeers() override;
 
-  virtual bool isPeerAvailable() CXX11_OVERRIDE;
+  virtual bool isPeerAvailable() override;
 
   virtual bool
-  isTemporarilyRejectedPeer(const std::string& ipaddr) CXX11_OVERRIDE;
+  isTemporarilyRejectedPeer(const std::string& ipaddr) override;
 
-  virtual void rejectPeerTemporarily(const std::string& ipaddr) CXX11_OVERRIDE;
+  virtual void rejectPeerTemporarily(const std::string& ipaddr) override;
 
-  virtual std::shared_ptr<Peer> checkoutPeer(cuid_t cuid) CXX11_OVERRIDE;
+  virtual std::shared_ptr<Peer> checkoutPeer(cuid_t cuid) override;
 
-  virtual void returnPeer(const std::shared_ptr<Peer>& peer) CXX11_OVERRIDE;
+  virtual void returnPeer(const std::shared_ptr<Peer>& peer) override;
 
-  virtual bool chokeRoundIntervalElapsed() CXX11_OVERRIDE;
+  virtual bool chokeRoundIntervalElapsed() override;
 
-  virtual void executeChoke() CXX11_OVERRIDE;
+  virtual void executeChoke() override;
 
   void deleteUnusedPeer(size_t delSize);
 

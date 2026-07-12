@@ -73,7 +73,6 @@
 #include "DefaultDiskWriter.h"
 #include "FatalException.h"
 #include "FileEntry.h"
-#include "A2STR.h"
 #include "array_fun.h"
 #include "bitfield.h"
 #include "DownloadHandlerConstants.h"
@@ -1843,7 +1842,7 @@ std::string getHomeDir()
     return pw->pw_dir;
   }
 #  endif // HAVE_PWD_H
-  return A2STR::NIL;
+  return "";
 }
 
 #else  // __MINGW32__
@@ -1867,7 +1866,7 @@ std::string getHomeDir()
       return toForwardSlash(wCharToUtf8(homeDir));
     }
   }
-  return A2STR::NIL;
+  return "";
 }
 #endif // __MINGW32__
 
@@ -2457,7 +2456,7 @@ std::string encodeNonUtf8(const std::string& s)
 std::string makeString(const char* str)
 {
   if (!str) {
-    return A2STR::NIL;
+    return "";
   }
   return str;
 }

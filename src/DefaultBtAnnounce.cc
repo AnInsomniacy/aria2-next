@@ -46,7 +46,6 @@
 #include "Peer.h"
 #include "Option.h"
 #include "fmt.h"
-#include "A2STR.h"
 #include "bencode2.h"
 #include "bittorrent_helper.h"
 #include "wallclock.h"
@@ -147,7 +146,7 @@ bool DefaultBtAnnounce::adjustAnnounceList()
 std::string DefaultBtAnnounce::getAnnounceUrl()
 {
   if (!adjustAnnounceList()) {
-    return A2STR::NIL;
+    return "";
   }
   int numWant = 50;
   if (!btRuntime_->lessThanMinPeers() || btRuntime_->isHalt()) {

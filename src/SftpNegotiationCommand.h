@@ -74,7 +74,7 @@ private:
   std::string digest_;
 
 protected:
-  virtual bool executeInternal() CXX11_OVERRIDE;
+  virtual bool executeInternal() override;
 
 public:
   SftpNegotiationCommand(cuid_t cuid, const std::shared_ptr<Request>& req,

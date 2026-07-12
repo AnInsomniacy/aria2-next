@@ -47,7 +47,7 @@ public:
 
   static const char NAME[];
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
   static std::unique_ptr<BtChokeMessage> create(const unsigned char* data,
                                                 size_t dataLength);

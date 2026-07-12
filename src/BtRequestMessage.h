@@ -57,12 +57,12 @@ public:
   static std::unique_ptr<BtRequestMessage> create(const unsigned char* data,
                                                   size_t dataLength);
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
-  virtual void onQueued() CXX11_OVERRIDE;
+  virtual void onQueued() override;
 
   virtual void onAbortOutstandingRequestEvent(
-      const BtAbortOutstandingRequestEvent& event) CXX11_OVERRIDE;
+      const BtAbortOutstandingRequestEvent& event) override;
 };
 
 } // namespace aria2

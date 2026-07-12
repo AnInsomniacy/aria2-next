@@ -46,32 +46,32 @@ private:
 public:
   NullSinkStreamFilter() : bytesProcessed_(0) {}
 
-  virtual void init() CXX11_OVERRIDE {}
+  virtual void init() override {}
 
   virtual ssize_t transform(const std::shared_ptr<BinaryStream>& out,
                             const std::shared_ptr<Segment>& segment,
                             const unsigned char* inbuf,
-                            size_t inlen) CXX11_OVERRIDE
+                            size_t inlen) override
   {
     bytesProcessed_ = inlen;
     return bytesProcessed_;
   }
 
-  virtual bool finished() CXX11_OVERRIDE { return true; }
+  virtual bool finished() override { return true; }
 
-  virtual void release() CXX11_OVERRIDE {}
+  virtual void release() override {}
 
-  virtual const std::string& getName() const CXX11_OVERRIDE { return NAME; }
+  virtual const std::string& getName() const override { return NAME; }
 
   static const std::string NAME;
 
-  virtual size_t getBytesProcessed() const CXX11_OVERRIDE
+  virtual size_t getBytesProcessed() const override
   {
     return bytesProcessed_;
   }
 
   virtual bool
-  installDelegate(const std::unique_ptr<StreamFilter> filter) CXX11_OVERRIDE
+  installDelegate(const std::unique_ptr<StreamFilter> filter) override
   {
     return false;
   }

@@ -73,18 +73,18 @@ public:
 
   virtual ~DefaultBtProgressInfoFile();
 
-  virtual std::string getFilename() CXX11_OVERRIDE { return filename_; }
+  virtual std::string getFilename() override { return filename_; }
 
-  virtual bool exists() CXX11_OVERRIDE;
+  virtual bool exists() override;
 
-  virtual void save() CXX11_OVERRIDE;
+  virtual void save() override;
 
-  virtual void load() CXX11_OVERRIDE;
+  virtual void load() override;
 
-  virtual void removeFile() CXX11_OVERRIDE;
+  virtual void removeFile() override;
 
   // re-set filename using current dctx_.
-  virtual void updateFilename() CXX11_OVERRIDE;
+  virtual void updateFilename() override;
 
 #ifdef ENABLE_BITTORRENT
   // for torrents

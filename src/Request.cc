@@ -39,7 +39,6 @@
 
 #include "util.h"
 #include "fmt.h"
-#include "A2STR.h"
 #include "uri.h"
 #include "PeerStat.h"
 #include "wallclock.h"
@@ -92,7 +91,7 @@ bool Request::setUri(const std::string& uri)
 bool Request::resetUri()
 {
   supportsPersistentConnection_ = true;
-  setConnectedAddrInfo(A2STR::NIL, A2STR::NIL, 0);
+  setConnectedAddrInfo("", "", 0);
   return parseUri(uri_);
 }
 

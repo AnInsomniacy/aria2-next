@@ -81,7 +81,7 @@ private:
                      const Checksum& checksum);
 
 protected:
-  bool executeInternal() CXX11_OVERRIDE;
+  bool executeInternal() override;
 
   bool shouldInflateContentEncoding(HttpResponse* httpResponse);
 

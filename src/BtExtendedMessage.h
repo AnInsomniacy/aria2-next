@@ -59,13 +59,13 @@ public:
   create(ExtensionMessageFactory* factory, const std::shared_ptr<Peer>& peer,
          const unsigned char* data, size_t dataLength);
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
-  virtual std::vector<unsigned char> createMessage() CXX11_OVERRIDE;
+  virtual std::vector<unsigned char> createMessage() override;
 
-  virtual bool sendPredicate() const CXX11_OVERRIDE;
+  virtual bool sendPredicate() const override;
 
-  virtual std::string toString() const CXX11_OVERRIDE;
+  virtual std::string toString() const override;
 
   const std::unique_ptr<ExtensionMessage>& getExtensionMessage() const;
 };

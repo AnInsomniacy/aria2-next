@@ -56,9 +56,9 @@ protected:
 public:
   ZeroBtMessage(uint8_t id, const char* name);
 
-  virtual std::vector<unsigned char> createMessage() CXX11_OVERRIDE;
+  virtual std::vector<unsigned char> createMessage() override;
 
-  virtual std::string toString() const CXX11_OVERRIDE;
+  virtual std::string toString() const override;
 };
 
 } // namespace aria2

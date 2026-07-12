@@ -64,7 +64,7 @@ public:
 
   virtual ~DHTInteractionCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 
   void setReadCheckSocket(const std::shared_ptr<SocketCore>& socket);
 

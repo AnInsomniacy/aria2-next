@@ -48,9 +48,9 @@ public:
 
   virtual bool select(size_t& index, size_t minSplitSize,
                       const unsigned char* ignoreBitfield,
-                      size_t length) CXX11_OVERRIDE;
+                      size_t length) override;
 
-  virtual void onBitfieldInit() CXX11_OVERRIDE;
+  virtual void onBitfieldInit() override;
 
 private:
   BitfieldMan* bitfieldMan_;

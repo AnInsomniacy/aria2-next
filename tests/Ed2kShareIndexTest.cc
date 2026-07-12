@@ -51,31 +51,31 @@ public:
   {
   }
 
-  const std::string& hash() const CXX11_OVERRIDE { return hash_; }
-  const std::string& aichRootHash() const CXX11_OVERRIDE
+  const std::string& hash() const override { return hash_; }
+  const std::string& aichRootHash() const override
   {
     static const std::string empty;
     return empty;
   }
-  const std::vector<std::string>& pieceHashes() const CXX11_OVERRIDE
+  const std::vector<std::string>& pieceHashes() const override
   {
     static const std::vector<std::string> empty;
     return empty;
   }
-  const std::string& name() const CXX11_OVERRIDE { return name_; }
-  int64_t size() const CXX11_OVERRIDE { return size_; }
-  bool complete() const CXX11_OVERRIDE { return true; }
-  std::vector<bool> bitfield() const CXX11_OVERRIDE
+  const std::string& name() const override { return name_; }
+  int64_t size() const override { return size_; }
+  bool complete() const override { return true; }
+  std::vector<bool> bitfield() const override
   {
     return std::vector<bool>(1, true);
   }
   bool readRange(std::string& data, int64_t begin,
-                 int64_t end) const CXX11_OVERRIDE
+                 int64_t end) const override
   {
     data.assign(static_cast<size_t>(end - begin), '\0');
     return true;
   }
-  void recordUpload(size_t bytes) CXX11_OVERRIDE {}
+  void recordUpload(size_t bytes) override {}
 };
 
 std::shared_ptr<DownloadContext> createEd2kContext(const std::string& path,

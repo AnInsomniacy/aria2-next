@@ -53,47 +53,47 @@ public:
 
   virtual ~AbstractSingleDiskAdaptor();
 
-  virtual void initAndOpenFile() CXX11_OVERRIDE;
+  virtual void initAndOpenFile() override;
 
-  virtual void openFile() CXX11_OVERRIDE;
+  virtual void openFile() override;
 
-  virtual void closeFile() CXX11_OVERRIDE;
+  virtual void closeFile() override;
 
-  virtual void openExistingFile() CXX11_OVERRIDE;
+  virtual void openExistingFile() override;
 
   virtual void writeData(const unsigned char* data, size_t len,
-                         int64_t offset) CXX11_OVERRIDE;
+                         int64_t offset) override;
 
   virtual ssize_t readData(unsigned char* data, size_t len,
-                           int64_t offset) CXX11_OVERRIDE;
+                           int64_t offset) override;
 
   virtual ssize_t readDataDropCache(unsigned char* data, size_t len,
-                                    int64_t offset) CXX11_OVERRIDE;
+                                    int64_t offset) override;
 
-  virtual void writeCache(const WrDiskCacheEntry* entry) CXX11_OVERRIDE;
+  virtual void writeCache(const WrDiskCacheEntry* entry) override;
 
-  virtual void flushOSBuffers() CXX11_OVERRIDE;
+  virtual void flushOSBuffers() override;
 
-  virtual bool fileExists() CXX11_OVERRIDE;
+  virtual bool fileExists() override;
 
-  virtual int64_t size() CXX11_OVERRIDE;
+  virtual int64_t size() override;
 
-  virtual void truncate(int64_t length) CXX11_OVERRIDE;
+  virtual void truncate(int64_t length) override;
 
   virtual std::unique_ptr<FileAllocationIterator>
-  fileAllocationIterator() CXX11_OVERRIDE;
+  fileAllocationIterator() override;
 
   // Make sure that DiskWriter is set before calling this function.
-  virtual void enableReadOnly() CXX11_OVERRIDE;
+  virtual void enableReadOnly() override;
 
   // Make sure that DiskWriter is set before calling this function.
-  virtual void disableReadOnly() CXX11_OVERRIDE;
+  virtual void disableReadOnly() override;
 
-  virtual bool isReadOnlyEnabled() const CXX11_OVERRIDE { return readOnly_; }
+  virtual bool isReadOnlyEnabled() const override { return readOnly_; }
 
-  virtual void enableMmap() CXX11_OVERRIDE;
+  virtual void enableMmap() override;
 
-  virtual void cutTrailingGarbage() CXX11_OVERRIDE;
+  virtual void cutTrailingGarbage() override;
 
   virtual const std::string& getFilePath() = 0;
 

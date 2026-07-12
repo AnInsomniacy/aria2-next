@@ -51,35 +51,35 @@ public:
 
   virtual ~MockBtMessage() {}
 
-  virtual bool isInvalidate() CXX11_OVERRIDE { return invalidate; }
+  virtual bool isInvalidate() override { return invalidate; }
 
   void setInvalidate(bool flag) { this->invalidate = flag; }
 
-  virtual bool isUploading() CXX11_OVERRIDE { return uploading; }
+  virtual bool isUploading() override { return uploading; }
 
   void setUploading(bool flag) { this->uploading = flag; }
 
-  virtual void doReceivedAction() CXX11_OVERRIDE {}
+  virtual void doReceivedAction() override {}
 
-  virtual void send() CXX11_OVERRIDE {}
+  virtual void send() override {}
 
-  virtual void validate() CXX11_OVERRIDE {}
+  virtual void validate() override {}
 
   virtual void onAbortOutstandingRequestEvent(
-      const BtAbortOutstandingRequestEvent& event) CXX11_OVERRIDE
+      const BtAbortOutstandingRequestEvent& event) override
   {
   }
 
   virtual void onCancelSendingPieceEvent(const BtCancelSendingPieceEvent& event)
-      CXX11_OVERRIDE
+      override
   {
   }
 
-  virtual void onChokingEvent(const BtChokingEvent& event) CXX11_OVERRIDE {}
+  virtual void onChokingEvent(const BtChokingEvent& event) override {}
 
-  virtual void onQueued() CXX11_OVERRIDE {}
+  virtual void onQueued() override {}
 
-  virtual std::string toString() const CXX11_OVERRIDE
+  virtual std::string toString() const override
   {
     return "MockBtMessage";
   }

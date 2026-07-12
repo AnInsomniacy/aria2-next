@@ -46,7 +46,6 @@
 #include <cstdio>
 
 #include "util.h"
-#include "A2STR.h"
 #include "array_fun.h"
 #include "Log.h"
 #include "fmt.h"
@@ -270,7 +269,7 @@ std::string File::getDirname() const
       name_.find_last_of(getPathSeparators());
   if (lastSlashIndex == std::string::npos) {
     if (name_.empty()) {
-      return A2STR::NIL;
+      return "";
     }
     else {
       return ".";

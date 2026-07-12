@@ -53,9 +53,9 @@ public:
 
   virtual ~DHTPeerAnnounceCommand();
 
-  virtual void preProcess() CXX11_OVERRIDE;
+  virtual void preProcess() override;
 
-  virtual void process() CXX11_OVERRIDE;
+  virtual void process() override;
 
   void setPeerAnnounceStorage(DHTPeerAnnounceStorage* storage);
 };

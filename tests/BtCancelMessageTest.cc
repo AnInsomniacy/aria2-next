@@ -40,7 +40,7 @@ public:
     MockBtMessageDispatcher2() : index(0), begin(0), length(0) {}
 
     virtual void doCancelSendingPieceAction(size_t index, int32_t begin,
-                                            int32_t length) CXX11_OVERRIDE
+                                            int32_t length) override
     {
       this->index = index;
       this->begin = begin;

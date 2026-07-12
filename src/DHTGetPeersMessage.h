@@ -40,7 +40,6 @@
 #include <vector>
 
 #include "DHTConstants.h"
-#include "A2STR.h"
 
 namespace aria2 {
 
@@ -64,19 +63,19 @@ private:
   void addLocalPeer(std::vector<std::shared_ptr<Peer>>& peers);
 
 protected:
-  virtual std::string toStringOptional() const CXX11_OVERRIDE;
+  virtual std::string toStringOptional() const override;
 
 public:
   DHTGetPeersMessage(const std::shared_ptr<DHTNode>& localNode,
                      const std::shared_ptr<DHTNode>& remoteNode,
                      const unsigned char* infoHash,
-                     const std::string& transactionID = A2STR::NIL);
+                     const std::string& transactionID = "");
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
-  virtual std::unique_ptr<Dict> getArgument() CXX11_OVERRIDE;
+  virtual std::unique_ptr<Dict> getArgument() override;
 
-  virtual const std::string& getMessageType() const CXX11_OVERRIDE;
+  virtual const std::string& getMessageType() const override;
 
   const unsigned char* getInfoHash() const { return infoHash_; }
 

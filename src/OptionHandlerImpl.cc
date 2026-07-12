@@ -50,7 +50,6 @@
 #include "prefs.h"
 #include "Option.h"
 #include "fmt.h"
-#include "A2STR.h"
 #include "Request.h"
 #include "a2functional.h"
 #include "message.h"

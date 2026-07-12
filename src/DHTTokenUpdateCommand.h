@@ -53,9 +53,9 @@ public:
 
   virtual ~DHTTokenUpdateCommand();
 
-  virtual void preProcess() CXX11_OVERRIDE;
+  virtual void preProcess() override;
 
-  virtual void process() CXX11_OVERRIDE;
+  virtual void process() override;
 
   void setTokenTracker(DHTTokenTracker* tokenTracker);
 };

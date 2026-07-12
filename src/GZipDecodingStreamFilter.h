@@ -58,20 +58,20 @@ public:
 
   virtual ~GZipDecodingStreamFilter();
 
-  virtual void init() CXX11_OVERRIDE;
+  virtual void init() override;
 
   virtual ssize_t transform(const std::shared_ptr<BinaryStream>& out,
                             const std::shared_ptr<Segment>& segment,
                             const unsigned char* inbuf,
-                            size_t inlen) CXX11_OVERRIDE;
+                            size_t inlen) override;
 
-  virtual bool finished() CXX11_OVERRIDE;
+  virtual bool finished() override;
 
-  virtual void release() CXX11_OVERRIDE;
+  virtual void release() override;
 
-  virtual const std::string& getName() const CXX11_OVERRIDE;
+  virtual const std::string& getName() const override;
 
-  virtual size_t getBytesProcessed() const CXX11_OVERRIDE
+  virtual size_t getBytesProcessed() const override
   {
     return bytesProcessed_;
   }

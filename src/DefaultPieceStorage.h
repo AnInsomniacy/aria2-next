@@ -129,38 +129,38 @@ public:
 #ifdef ENABLE_BITTORRENT
 
   virtual bool
-  hasMissingPiece(const std::shared_ptr<Peer>& peer) CXX11_OVERRIDE;
+  hasMissingPiece(const std::shared_ptr<Peer>& peer) override;
 
   virtual void getMissingPiece(std::vector<std::shared_ptr<Piece>>& pieces,
                                size_t minMissingBlocks,
                                const std::shared_ptr<Peer>& peer,
-                               cuid_t cuid) CXX11_OVERRIDE;
+                               cuid_t cuid) override;
 
   virtual void getMissingPiece(std::vector<std::shared_ptr<Piece>>& pieces,
                                size_t minMissingBlocks,
                                const std::shared_ptr<Peer>& peer,
                                const std::vector<size_t>& excludedIndexes,
-                               cuid_t cuid) CXX11_OVERRIDE;
+                               cuid_t cuid) override;
 
   virtual void getMissingFastPiece(std::vector<std::shared_ptr<Piece>>& pieces,
                                    size_t minMissingBlocks,
                                    const std::shared_ptr<Peer>& peer,
-                                   cuid_t cuid) CXX11_OVERRIDE;
+                                   cuid_t cuid) override;
 
   virtual void getMissingFastPiece(std::vector<std::shared_ptr<Piece>>& pieces,
                                    size_t minMissingBlocks,
                                    const std::shared_ptr<Peer>& peer,
                                    const std::vector<size_t>& excludedIndexes,
-                                   cuid_t cuid) CXX11_OVERRIDE;
+                                   cuid_t cuid) override;
 
   virtual std::shared_ptr<Piece>
   getMissingPiece(const std::shared_ptr<Peer>& peer,
-                  cuid_t cuid) CXX11_OVERRIDE;
+                  cuid_t cuid) override;
 
   virtual std::shared_ptr<Piece>
   getMissingPiece(const std::shared_ptr<Peer>& peer,
                   const std::vector<size_t>& excludedIndexes,
-                  cuid_t cuid) CXX11_OVERRIDE;
+                  cuid_t cuid) override;
 
   std::shared_ptr<Piece> getMissingFastPiece(const std::shared_ptr<Peer>& peer,
                                              cuid_t cuid);
@@ -171,111 +171,111 @@ public:
 
 #endif // ENABLE_BITTORRENT
 
-  virtual bool hasMissingUnusedPiece() CXX11_OVERRIDE;
+  virtual bool hasMissingUnusedPiece() override;
 
   virtual std::shared_ptr<Piece>
   getMissingPiece(size_t minSplitSize, const unsigned char* ignoreBitfield,
-                  size_t length, cuid_t cuid) CXX11_OVERRIDE;
+                  size_t length, cuid_t cuid) override;
 
   virtual std::shared_ptr<Piece> getMissingPiece(size_t index,
-                                                 cuid_t cuid) CXX11_OVERRIDE;
+                                                 cuid_t cuid) override;
 
-  virtual std::shared_ptr<Piece> getPiece(size_t index) CXX11_OVERRIDE;
+  virtual std::shared_ptr<Piece> getPiece(size_t index) override;
 
   virtual void
-  completePiece(const std::shared_ptr<Piece>& piece) CXX11_OVERRIDE;
+  completePiece(const std::shared_ptr<Piece>& piece) override;
 
   virtual void cancelPiece(const std::shared_ptr<Piece>& piece,
-                           cuid_t cuid) CXX11_OVERRIDE;
+                           cuid_t cuid) override;
 
-  virtual bool hasPiece(size_t index) CXX11_OVERRIDE;
+  virtual bool hasPiece(size_t index) override;
 
-  virtual bool isPieceUsed(size_t index) CXX11_OVERRIDE;
+  virtual bool isPieceUsed(size_t index) override;
 
-  virtual int64_t getTotalLength() CXX11_OVERRIDE;
+  virtual int64_t getTotalLength() override;
 
-  virtual int64_t getFilteredTotalLength() CXX11_OVERRIDE;
+  virtual int64_t getFilteredTotalLength() override;
 
-  virtual int64_t getCompletedLength() CXX11_OVERRIDE;
+  virtual int64_t getCompletedLength() override;
 
-  virtual int64_t getFilteredCompletedLength() CXX11_OVERRIDE;
+  virtual int64_t getFilteredCompletedLength() override;
 
-  virtual void initStorage() CXX11_OVERRIDE;
+  virtual void initStorage() override;
 
-  virtual void setupFileFilter() CXX11_OVERRIDE;
+  virtual void setupFileFilter() override;
 
-  virtual void clearFileFilter() CXX11_OVERRIDE;
+  virtual void clearFileFilter() override;
 
-  virtual bool downloadFinished() CXX11_OVERRIDE;
+  virtual bool downloadFinished() override;
 
-  virtual bool allDownloadFinished() CXX11_OVERRIDE;
+  virtual bool allDownloadFinished() override;
 
   virtual void setBitfield(const unsigned char* bitfield,
-                           size_t bitfieldLength) CXX11_OVERRIDE;
+                           size_t bitfieldLength) override;
 
-  virtual size_t getBitfieldLength() CXX11_OVERRIDE;
+  virtual size_t getBitfieldLength() override;
 
-  virtual const unsigned char* getBitfield() CXX11_OVERRIDE;
+  virtual const unsigned char* getBitfield() override;
 
-  virtual void setEndGamePieceNum(size_t num) CXX11_OVERRIDE
+  virtual void setEndGamePieceNum(size_t num) override
   {
     endGamePieceNum_ = num;
   }
 
   size_t getEndGamePieceNum() const { return endGamePieceNum_; }
 
-  virtual bool isSelectiveDownloadingMode() CXX11_OVERRIDE;
+  virtual bool isSelectiveDownloadingMode() override;
 
-  virtual bool isEndGame() CXX11_OVERRIDE { return endGame_; }
+  virtual bool isEndGame() override { return endGame_; }
 
-  virtual void enterEndGame() CXX11_OVERRIDE { endGame_ = true; }
+  virtual void enterEndGame() override { endGame_ = true; }
 
-  virtual std::shared_ptr<DiskAdaptor> getDiskAdaptor() CXX11_OVERRIDE;
+  virtual std::shared_ptr<DiskAdaptor> getDiskAdaptor() override;
 
-  virtual WrDiskCache* getWrDiskCache() CXX11_OVERRIDE;
+  virtual WrDiskCache* getWrDiskCache() override;
 
-  virtual void flushWrDiskCacheEntry(bool releaseEntries) CXX11_OVERRIDE;
+  virtual void flushWrDiskCacheEntry(bool releaseEntries) override;
 
-  virtual int32_t getPieceLength(size_t index) CXX11_OVERRIDE;
+  virtual int32_t getPieceLength(size_t index) override;
 
   virtual void advertisePiece(cuid_t cuid, size_t index,
-                              Timer registeredTime) CXX11_OVERRIDE;
+                              Timer registeredTime) override;
 
   virtual uint64_t
   getAdvertisedPieceIndexes(std::vector<size_t>& indexes, cuid_t myCuid,
-                            uint64_t lastHaveIndex) CXX11_OVERRIDE;
+                            uint64_t lastHaveIndex) override;
 
-  virtual void removeAdvertisedPiece(const Timer& expiry) CXX11_OVERRIDE;
+  virtual void removeAdvertisedPiece(const Timer& expiry) override;
 
-  virtual void markAllPiecesDone() CXX11_OVERRIDE;
+  virtual void markAllPiecesDone() override;
 
-  virtual void markPiecesDone(int64_t length) CXX11_OVERRIDE;
+  virtual void markPiecesDone(int64_t length) override;
 
-  virtual void markPieceMissing(size_t index) CXX11_OVERRIDE;
+  virtual void markPieceMissing(size_t index) override;
 
   virtual void addInFlightPiece(
-      const std::vector<std::shared_ptr<Piece>>& pieces) CXX11_OVERRIDE;
+      const std::vector<std::shared_ptr<Piece>>& pieces) override;
 
-  virtual size_t countInFlightPiece() CXX11_OVERRIDE;
+  virtual size_t countInFlightPiece() override;
 
   virtual void
-  getInFlightPieces(std::vector<std::shared_ptr<Piece>>& pieces) CXX11_OVERRIDE;
+  getInFlightPieces(std::vector<std::shared_ptr<Piece>>& pieces) override;
 
-  virtual void addPieceStats(size_t index) CXX11_OVERRIDE;
+  virtual void addPieceStats(size_t index) override;
 
   virtual void addPieceStats(const unsigned char* bitfield,
-                             size_t bitfieldLength) CXX11_OVERRIDE;
+                             size_t bitfieldLength) override;
 
   virtual void subtractPieceStats(const unsigned char* bitfield,
-                                  size_t bitfieldLength) CXX11_OVERRIDE;
+                                  size_t bitfieldLength) override;
 
   virtual void
   updatePieceStats(const unsigned char* newBitfield, size_t newBitfieldLength,
-                   const unsigned char* oldBitfield) CXX11_OVERRIDE;
+                   const unsigned char* oldBitfield) override;
 
-  virtual size_t getNextUsedIndex(size_t index) CXX11_OVERRIDE;
+  virtual size_t getNextUsedIndex(size_t index) override;
 
-  virtual void onDownloadIncomplete() CXX11_OVERRIDE;
+  virtual void onDownloadIncomplete() override;
 
   /**
    * This method is made private for test purpose only.

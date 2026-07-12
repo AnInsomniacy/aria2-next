@@ -193,7 +193,8 @@ const std::string& AsyncNameResolverMan::getLastError() const
       return asyncNameResolver_[i]->getError();
     }
   }
-  return A2STR::NIL;
+  static const std::string empty;
+  return empty;
 }
 
 int AsyncNameResolverMan::getLastErrorCode() const

@@ -5,7 +5,6 @@
 
 #include "Exception.h"
 #include "SocketCore.h"
-#include "A2STR.h"
 
 namespace aria2 {
 
@@ -30,11 +29,11 @@ void DHTConnectionImplTest::testWriteAndReadData()
   try {
     DHTConnectionImpl con1(AF_INET);
     uint16_t con1port = 0;
-    CPPUNIT_ASSERT(con1.bind(con1port, A2STR::NIL));
+    CPPUNIT_ASSERT(con1.bind(con1port, ""));
 
     DHTConnectionImpl con2(AF_INET);
     uint16_t con2port = 0;
-    CPPUNIT_ASSERT(con2.bind(con2port, A2STR::NIL));
+    CPPUNIT_ASSERT(con2.bind(con2port, ""));
 
     std::string message1 = "hello world.";
     // hostname should be "localhost", not 127.0.0.1. Test failed on Mac OSX10.5

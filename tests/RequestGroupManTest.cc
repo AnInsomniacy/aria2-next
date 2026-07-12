@@ -43,7 +43,7 @@ public:
 
   ~ActiveDownloadCommand() { requestGroup_->decreaseNumCommand(); }
 
-  bool execute() CXX11_OVERRIDE
+  bool execute() override
   {
     return requestGroup_->isHaltRequested();
   }

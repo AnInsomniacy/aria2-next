@@ -36,7 +36,6 @@
 
 #include <cstring>
 
-#include "A2STR.h"
 #include "Log.h"
 #include "SocketCore.h"
 #include "util.h"

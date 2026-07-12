@@ -54,20 +54,20 @@ public:
 
   // private key `keyfile' must be decrypted.
   virtual bool addCredentialFile(const std::string& certfile,
-                                 const std::string& keyfile) CXX11_OVERRIDE;
+                                 const std::string& keyfile) override;
   bool addP12CredentialFile(const std::string& p12file);
 
-  virtual bool addSystemTrustedCACerts() CXX11_OVERRIDE;
+  virtual bool addSystemTrustedCACerts() override;
 
   // certfile can contain multiple certificates.
-  virtual bool addTrustedCACertFile(const std::string& certfile) CXX11_OVERRIDE;
+  virtual bool addTrustedCACertFile(const std::string& certfile) override;
 
-  virtual bool good() const CXX11_OVERRIDE;
+  virtual bool good() const override;
 
-  virtual TLSSessionSide getSide() const CXX11_OVERRIDE { return side_; }
+  virtual TLSSessionSide getSide() const override { return side_; }
 
-  virtual bool getVerifyPeer() const CXX11_OVERRIDE { return verifyPeer_; }
-  virtual void setVerifyPeer(bool verify) CXX11_OVERRIDE
+  virtual bool getVerifyPeer() const override { return verifyPeer_; }
+  virtual void setVerifyPeer(bool verify) override
   {
     verifyPeer_ = verify;
   }

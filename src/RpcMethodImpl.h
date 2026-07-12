@@ -130,7 +130,7 @@ void toStringList(OutputIterator out, const List* src)
 class AddUriRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.addUri"; }
@@ -139,7 +139,7 @@ public:
 class Ed2kSearchRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.ed2kSearch"; }
@@ -148,7 +148,7 @@ public:
 class GetEd2kSearchResultsRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.getEd2kSearchResults"; }
@@ -157,7 +157,7 @@ public:
 class RemoveRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.remove"; }
@@ -166,7 +166,7 @@ public:
 class ForceRemoveRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.forceRemove"; }
@@ -175,7 +175,7 @@ public:
 class PauseRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.pause"; }
@@ -184,7 +184,7 @@ public:
 class ForcePauseRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.forcePause"; }
@@ -193,7 +193,7 @@ public:
 class PauseAllRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.pauseAll"; }
@@ -202,7 +202,7 @@ public:
 class ForcePauseAllRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.forcePauseAll"; }
@@ -211,7 +211,7 @@ public:
 class UnpauseRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.unpause"; }
@@ -220,7 +220,7 @@ public:
 class UnpauseAllRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.unpauseAll"; }
@@ -230,7 +230,7 @@ public:
 class AddTorrentRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.addTorrent"; }
@@ -241,7 +241,7 @@ public:
 class AddMetalinkRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.addMetalink"; }
@@ -251,7 +251,7 @@ public:
 class PurgeDownloadResultRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.purgeDownloadResult"; }
@@ -260,7 +260,7 @@ public:
 class RemoveDownloadResultRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.removeDownloadResult"; }
@@ -269,7 +269,7 @@ public:
 class GetUrisRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.getUris"; }
@@ -278,7 +278,7 @@ public:
 class GetFilesRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.getFiles"; }
@@ -288,7 +288,7 @@ public:
 class GetPeersRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.getPeers"; }
@@ -298,7 +298,7 @@ public:
 class GetServersRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.getServers"; }
@@ -307,7 +307,7 @@ public:
 class TellStatusRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.tellStatus"; }
@@ -316,7 +316,7 @@ public:
 class TellActiveRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.tellActive"; }
@@ -365,7 +365,7 @@ protected:
   typedef IndexedList<a2_gid_t, std::shared_ptr<T>> ItemListType;
 
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE
+                                             DownloadEngine* e) override
   {
     const Integer* offsetParam = checkRequiredParam<Integer>(req, 0);
     const Integer* numParam = checkRequiredInteger(req, 1, IntegerGE(0));
@@ -400,12 +400,12 @@ protected:
 class TellWaitingRpcMethod : public AbstractPaginationRpcMethod<RequestGroup> {
 protected:
   virtual const RequestGroupList&
-  getItems(DownloadEngine* e) const CXX11_OVERRIDE;
+  getItems(DownloadEngine* e) const override;
 
   virtual void
   createEntry(Dict* entryDict, const std::shared_ptr<RequestGroup>& item,
               DownloadEngine* e,
-              const std::vector<std::string>& keys) const CXX11_OVERRIDE;
+              const std::vector<std::string>& keys) const override;
 
 public:
   static const char* getMethodName() { return "aria2.tellWaiting"; }
@@ -415,12 +415,12 @@ class TellStoppedRpcMethod
     : public AbstractPaginationRpcMethod<DownloadResult> {
 protected:
   virtual const DownloadResultList&
-  getItems(DownloadEngine* e) const CXX11_OVERRIDE;
+  getItems(DownloadEngine* e) const override;
 
   virtual void
   createEntry(Dict* entryDict, const std::shared_ptr<DownloadResult>& item,
               DownloadEngine* e,
-              const std::vector<std::string>& keys) const CXX11_OVERRIDE;
+              const std::vector<std::string>& keys) const override;
 
 public:
   static const char* getMethodName() { return "aria2.tellStopped"; }
@@ -429,7 +429,7 @@ public:
 class ChangeOptionRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.changeOption"; }
@@ -438,7 +438,7 @@ public:
 class ChangeGlobalOptionRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.changeGlobalOption"; }
@@ -447,7 +447,7 @@ public:
 class GetVersionRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.getVersion"; }
@@ -456,7 +456,7 @@ public:
 class GetOptionRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.getOption"; }
@@ -465,7 +465,7 @@ public:
 class GetGlobalOptionRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.getGlobalOption"; }
@@ -474,7 +474,7 @@ public:
 class ChangePositionRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.changePosition"; }
@@ -483,7 +483,7 @@ public:
 class ChangeUriRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.changeUri"; }
@@ -492,7 +492,7 @@ public:
 class GetSessionInfoRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.getSessionInfo"; }
@@ -501,7 +501,7 @@ public:
 class ShutdownRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.shutdown"; }
@@ -510,7 +510,7 @@ public:
 class GetGlobalStatRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.getGlobalStat"; }
@@ -519,7 +519,7 @@ public:
 class ForceShutdownRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.forceShutdown"; }
@@ -528,7 +528,7 @@ public:
 class SaveSessionRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
   static const char* getMethodName() { return "aria2.saveSession"; }
@@ -537,10 +537,10 @@ public:
 class SystemMulticallRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
-  virtual RpcResponse execute(RpcRequest req, DownloadEngine* e) CXX11_OVERRIDE;
+  virtual RpcResponse execute(RpcRequest req, DownloadEngine* e) override;
 
   static const char* getMethodName() { return "system.multicall"; }
 };
@@ -548,10 +548,10 @@ public:
 class SystemListMethodsRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
-  virtual RpcResponse execute(RpcRequest req, DownloadEngine* e) CXX11_OVERRIDE;
+  virtual RpcResponse execute(RpcRequest req, DownloadEngine* e) override;
 
   static const char* getMethodName() { return "system.listMethods"; }
 };
@@ -559,10 +559,10 @@ public:
 class SystemListNotificationsRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 
 public:
-  virtual RpcResponse execute(RpcRequest req, DownloadEngine* e) CXX11_OVERRIDE;
+  virtual RpcResponse execute(RpcRequest req, DownloadEngine* e) override;
 
   static const char* getMethodName() { return "system.listNotifications"; }
 };
@@ -570,7 +570,7 @@ public:
 class NoSuchMethodRpcMethod : public RpcMethod {
 protected:
   virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
-                                             DownloadEngine* e) CXX11_OVERRIDE;
+                                             DownloadEngine* e) override;
 };
 
 // Helper function to store data to entryDict from ds. This function

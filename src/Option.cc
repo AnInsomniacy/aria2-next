@@ -110,7 +110,8 @@ const std::string& Option::get(PrefPtr pref) const
     return parent_->get(pref);
   }
   else {
-    return A2STR::NIL;
+    static const std::string empty;
+    return empty;
   }
 }
 

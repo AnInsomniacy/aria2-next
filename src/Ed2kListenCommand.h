@@ -38,7 +38,7 @@ public:
   virtual ~Ed2kListenCommand();
 
   bool bindPort(uint16_t port);
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 };
 
 } // namespace aria2

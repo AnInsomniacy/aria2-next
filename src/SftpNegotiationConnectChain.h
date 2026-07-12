@@ -45,7 +45,7 @@ namespace aria2 {
 struct SftpNegotiationConnectChain : public ControlChain<ConnectCommand*> {
   SftpNegotiationConnectChain() {}
   virtual ~SftpNegotiationConnectChain() {}
-  virtual int run(ConnectCommand* t, DownloadEngine* e) CXX11_OVERRIDE
+  virtual int run(ConnectCommand* t, DownloadEngine* e) override
   {
     auto c = make_unique<SftpNegotiationCommand>(
         t->getCuid(), t->getRequest(), t->getFileEntry(), t->getRequestGroup(),

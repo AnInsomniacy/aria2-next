@@ -45,7 +45,6 @@
 #include "NsCookieParser.h"
 #include "File.h"
 #include "a2functional.h"
-#include "A2STR.h"
 #include "message.h"
 #include "cookie_helper.h"
 #include "BufferedFile.h"

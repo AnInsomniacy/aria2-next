@@ -37,7 +37,6 @@
 #include "OptionHandlerImpl.h"
 #include "array_fun.h"
 #include "usage_text.h"
-#include "A2STR.h"
 #include "util.h"
 #include "help_tags.h"
 #include "a2functional.h"
@@ -1287,7 +1286,7 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
   }
   {
     OptionHandler* op(new DefaultOptionHandler(
-        PREF_USER_AGENT, TEXT_USER_AGENT, "aria2-next/" PACKAGE_VERSION, A2STR::NIL,
+        PREF_USER_AGENT, TEXT_USER_AGENT, "aria2-next/" PACKAGE_VERSION, "",
         OptionHandler::REQ_ARG, 'U'));
     op->addTag(TAG_HTTP);
     op->setInitialOption(true);
@@ -2059,7 +2058,7 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
   // Version Option
   {
     OptionHandler* op(new DefaultOptionHandler(PREF_VERSION, TEXT_VERSION,
-                                               NO_DEFAULT_VALUE, A2STR::NIL,
+                                               NO_DEFAULT_VALUE, "",
                                                OptionHandler::NO_ARG, 'v'));
     op->addTag(TAG_BASIC);
     handlers.push_back(op);

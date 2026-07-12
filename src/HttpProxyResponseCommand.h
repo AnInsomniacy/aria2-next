@@ -50,7 +50,7 @@ public:
       const std::shared_ptr<SocketCore>& s);
   virtual ~HttpProxyResponseCommand();
 
-  virtual std::unique_ptr<Command> getNextCommand() CXX11_OVERRIDE;
+  virtual std::unique_ptr<Command> getNextCommand() override;
 };
 
 } // namespace aria2

@@ -62,7 +62,7 @@ public:
 
   virtual ~WebSocketInteractionCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 
   std::shared_ptr<WebSocketSession>& getSession() { return wsSession_; }
 

@@ -37,7 +37,6 @@
 #include "RequestGroup.h"
 #include "download_helper.h"
 #include "RecoverableException.h"
-#include "A2STR.h"
 #include "DownloadContext.h"
 #include "Log.h"
 #include "util.h"
@@ -56,7 +55,7 @@ namespace aria2 {
 namespace {
 class Criteria : public RequestGroupCriteria {
 public:
-  virtual bool match(const RequestGroup* requestGroup) const CXX11_OVERRIDE
+  virtual bool match(const RequestGroup* requestGroup) const override
   {
     auto& dctx = requestGroup->getDownloadContext();
     if (dctx->hasAttribute(CTX_ATTR_BT)) {
@@ -100,7 +99,7 @@ void UTMetadataPostDownloadHandler::getNextRequestGroups(
     // Don't adjust announce URI because it has been done when
     // RequestGroup is created with magnet URI.
     createRequestGroupForBitTorrent(newRgs, requestGroup->getOption(),
-                                    std::vector<std::string>(), A2STR::NIL,
+                                    std::vector<std::string>(), "",
                                     torrent, false);
     requestGroup->followedBy(newRgs.begin(), newRgs.end());
     for (auto& rg : newRgs) {

@@ -41,9 +41,9 @@ namespace aria2 {
 
 class SftpFinishDownloadCommand : public AbstractCommand {
 protected:
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 
-  virtual bool executeInternal() CXX11_OVERRIDE;
+  virtual bool executeInternal() override;
 
 public:
   SftpFinishDownloadCommand(cuid_t cuid, const std::shared_ptr<Request>& req,

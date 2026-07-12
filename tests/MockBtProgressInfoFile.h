@@ -13,19 +13,19 @@ public:
   MockBtProgressInfoFile() {}
   virtual ~MockBtProgressInfoFile() {}
 
-  virtual std::string getFilename() CXX11_OVERRIDE { return filename; }
+  virtual std::string getFilename() override { return filename; }
 
   void setFilename(const std::string& filename) { this->filename = filename; }
 
-  virtual bool exists() CXX11_OVERRIDE { return false; }
+  virtual bool exists() override { return false; }
 
-  virtual void save() CXX11_OVERRIDE {}
+  virtual void save() override {}
 
-  virtual void load() CXX11_OVERRIDE {}
+  virtual void load() override {}
 
-  virtual void removeFile() CXX11_OVERRIDE {}
+  virtual void removeFile() override {}
 
-  virtual void updateFilename() CXX11_OVERRIDE {}
+  virtual void updateFilename() override {}
 };
 
 } // namespace aria2

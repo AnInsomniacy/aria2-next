@@ -29,12 +29,12 @@ class GZipDecodingStreamFilterTest : public CppUnit::TestFixture {
   public:
     MockSegment2() : positionToWrite_(0) {}
 
-    virtual void updateWrittenLength(int64_t bytes) CXX11_OVERRIDE
+    virtual void updateWrittenLength(int64_t bytes) override
     {
       positionToWrite_ += bytes;
     }
 
-    virtual int64_t getPositionToWrite() const CXX11_OVERRIDE
+    virtual int64_t getPositionToWrite() const override
     {
       return positionToWrite_;
     }

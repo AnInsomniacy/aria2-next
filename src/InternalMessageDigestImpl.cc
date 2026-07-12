@@ -55,19 +55,19 @@ public:
     return ctx->length();
   }
 
-  virtual size_t getDigestLength() const CXX11_OVERRIDE
+  virtual size_t getDigestLength() const override
   {
     return ctx_->length();
   }
 
-  virtual void reset() CXX11_OVERRIDE { ctx_->reset(); }
+  virtual void reset() override { ctx_->reset(); }
 
-  virtual void update(const void* data, size_t length) CXX11_OVERRIDE
+  virtual void update(const void* data, size_t length) override
   {
     ctx_->update(data, length);
   }
 
-  virtual void digest(unsigned char* md) CXX11_OVERRIDE
+  virtual void digest(unsigned char* md) override
   {
     auto rv = ctx_->finalize();
     memcpy(md, rv.data(), rv.length());

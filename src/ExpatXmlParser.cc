@@ -39,7 +39,6 @@
 
 #include "a2io.h"
 #include "ParserStateMachine.h"
-#include "A2STR.h"
 #include "a2functional.h"
 #include "XmlAttr.h"
 
@@ -95,7 +94,7 @@ void mlStartElement(void* userData, const char* nsName, const char** attrs)
     delete[] a.nsUri;
   }
   if (sd->psm->needsCharactersBuffering()) {
-    sd->charactersStack.push_front(A2STR::NIL);
+    sd->charactersStack.push_front("");
   }
 }
 } // namespace

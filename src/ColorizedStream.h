@@ -93,7 +93,7 @@ public:
     elems.push_back(std::make_pair(eString, ""));
   }
 
-  traits_t::int_type overflow(traits_t::int_type c) CXX11_OVERRIDE
+  traits_t::int_type overflow(traits_t::int_type c) override
   {
     elems.back().second.push_back((char)c);
     return std::char_traits<char>::not_eof(c);

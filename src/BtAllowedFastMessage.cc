@@ -71,7 +71,7 @@ struct ThisProgressUpdate : public ProgressUpdate {
       : peer(std::move(peer)), index(index)
   {
   }
-  virtual void update(size_t length, bool complete) CXX11_OVERRIDE
+  virtual void update(size_t length, bool complete) override
   {
     if (complete) {
       peer->addAmAllowedIndex(index);

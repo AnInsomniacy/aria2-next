@@ -285,7 +285,8 @@ const std::string& DownloadContext::getPieceHash(size_t index) const
     return pieceHashes_[index];
   }
   else {
-    return A2STR::NIL;
+    static const std::string empty;
+    return empty;
   }
 }
 

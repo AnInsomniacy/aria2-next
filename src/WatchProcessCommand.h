@@ -46,9 +46,9 @@ public:
   WatchProcessCommand(cuid_t cuid, DownloadEngine* e, unsigned int pid,
                       bool forceHalt = false);
 
-  virtual void preProcess() CXX11_OVERRIDE;
+  virtual void preProcess() override;
 
-  virtual void process() CXX11_OVERRIDE;
+  virtual void process() override;
 
 private:
   unsigned int pid_;

@@ -57,7 +57,6 @@
 #include "fmt.h"
 #include "ServerStat.h"
 #include "RequestGroupMan.h"
-#include "A2STR.h"
 #include "util.h"
 #include "Log.h"
 #include "DownloadContext.h"
@@ -684,7 +683,7 @@ std::string getProxyUri(const std::string& protocol, const Option* option)
                              PREF_FTP_PROXY_PASSWD, option);
   }
 
-  return A2STR::NIL;
+  return "";
 }
 
 namespace {
@@ -821,7 +820,7 @@ std::string AbstractCommand::resolveHostname(std::vector<std::string>& addrs,
                              asyncNameResolverMan_->getLastError().c_str()),
                          error_code::NAME_RESOLVE_ERROR);
     case 0:
-      return A2STR::NIL;
+      return "";
 
     case 1:
       asyncNameResolverMan_->getResolvedAddress(addrs);

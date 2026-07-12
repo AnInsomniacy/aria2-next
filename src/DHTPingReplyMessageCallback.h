@@ -51,28 +51,28 @@ private:
 public:
   DHTPingReplyMessageCallback(Task* task) : task_(task) {}
 
-  virtual void visit(const DHTAnnouncePeerReplyMessage* message) CXX11_OVERRIDE
+  virtual void visit(const DHTAnnouncePeerReplyMessage* message) override
   {
     onTimeout(message->getRemoteNode());
   }
 
-  virtual void visit(const DHTFindNodeReplyMessage* message) CXX11_OVERRIDE
+  virtual void visit(const DHTFindNodeReplyMessage* message) override
   {
     onTimeout(message->getRemoteNode());
   }
 
-  virtual void visit(const DHTGetPeersReplyMessage* message) CXX11_OVERRIDE
+  virtual void visit(const DHTGetPeersReplyMessage* message) override
   {
     onTimeout(message->getRemoteNode());
   }
 
-  virtual void visit(const DHTPingReplyMessage* message) CXX11_OVERRIDE
+  virtual void visit(const DHTPingReplyMessage* message) override
   {
     task_->onReceived(message);
   }
 
   virtual void
-  onTimeout(const std::shared_ptr<DHTNode>& remoteNode) CXX11_OVERRIDE
+  onTimeout(const std::shared_ptr<DHTNode>& remoteNode) override
   {
     task_->onTimeout(remoteNode);
   }

@@ -62,7 +62,7 @@ public:
   size_t countNotificationRecipients() const;
   void addNotification(const std::string& method, const RequestGroup* group);
   virtual void onEvent(DownloadEvent event,
-                       const RequestGroup* group) CXX11_OVERRIDE;
+                       const RequestGroup* group) override;
 
 private:
   WebSocketSessions sessions_;

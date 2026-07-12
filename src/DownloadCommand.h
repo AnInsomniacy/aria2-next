@@ -84,9 +84,9 @@ private:
   void completeSegment(cuid_t cuid, const std::shared_ptr<Segment>& segment);
 
 protected:
-  virtual bool executeInternal() CXX11_OVERRIDE;
+  virtual bool executeInternal() override;
 
-  virtual bool noCheck() const CXX11_OVERRIDE;
+  virtual bool noCheck() const override;
 
   virtual bool prepareForNextSegment();
 

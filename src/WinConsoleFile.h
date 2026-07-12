@@ -48,10 +48,10 @@ public:
   WinConsoleFile(DWORD stdHandle);
   virtual ~WinConsoleFile() {}
 
-  virtual size_t write(const char* str) CXX11_OVERRIDE;
-  virtual int vprintf(const char* format, va_list va) CXX11_OVERRIDE;
-  virtual bool supportsColor() CXX11_OVERRIDE;
-  virtual int flush() CXX11_OVERRIDE { return 0; }
+  virtual size_t write(const char* str) override;
+  virtual int vprintf(const char* format, va_list va) override;
+  virtual bool supportsColor() override;
+  virtual int flush() override { return 0; }
 
 private:
   DWORD stdHandle_;

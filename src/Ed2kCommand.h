@@ -152,8 +152,8 @@ private:
   void handlePartData(int64_t begin, const std::string& data);
 
 protected:
-  virtual bool executeInternal() CXX11_OVERRIDE;
-  virtual bool noCheck() const CXX11_OVERRIDE;
+  virtual bool executeInternal() override;
+  virtual bool noCheck() const override;
 
 public:
   Ed2kCommand(cuid_t cuid, RequestGroup* requestGroup, DownloadEngine* e,
@@ -164,7 +164,7 @@ public:
               const std::shared_ptr<SocketCore>& socket);
   virtual ~Ed2kCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 };
 
 } // namespace aria2

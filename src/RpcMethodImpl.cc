@@ -1851,10 +1851,10 @@ void changeOption(const std::shared_ptr<RequestGroup>& group,
       if (!grOption->blank(PREF_OUT)) {
         fileEntry->setPath(
             util::applyDir(grOption->get(PREF_DIR), grOption->get(PREF_OUT)));
-        fileEntry->setSuffixPath(A2STR::NIL);
+        fileEntry->setSuffixPath("");
       }
       else if (fileEntry->getSuffixPath().empty()) {
-        fileEntry->setPath(A2STR::NIL);
+        fileEntry->setPath("");
       }
       else {
         fileEntry->setPath(util::applyDir(grOption->get(PREF_DIR),

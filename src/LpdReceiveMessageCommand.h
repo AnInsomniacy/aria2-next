@@ -56,7 +56,7 @@ public:
                            DownloadEngine* e);
   virtual ~LpdReceiveMessageCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 
   const std::shared_ptr<LpdMessageReceiver>& getLpdMessageReceiver() const
   {

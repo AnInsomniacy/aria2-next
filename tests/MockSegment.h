@@ -3,42 +3,41 @@
 
 #include "Segment.h"
 #include "Piece.h"
-#include "A2STR.h"
 
 namespace aria2 {
 
 class MockSegment : public Segment {
 public:
-  virtual bool complete() const CXX11_OVERRIDE { return false; }
+  virtual bool complete() const override { return false; }
 
-  virtual size_t getIndex() const CXX11_OVERRIDE { return 0; }
+  virtual size_t getIndex() const override { return 0; }
 
-  virtual int64_t getPosition() const CXX11_OVERRIDE { return 0; }
+  virtual int64_t getPosition() const override { return 0; }
 
-  virtual int64_t getPositionToWrite() const CXX11_OVERRIDE { return 0; }
+  virtual int64_t getPositionToWrite() const override { return 0; }
 
-  virtual int64_t getLength() const CXX11_OVERRIDE { return 0; }
+  virtual int64_t getLength() const override { return 0; }
 
-  virtual int64_t getSegmentLength() const CXX11_OVERRIDE { return 0; }
+  virtual int64_t getSegmentLength() const override { return 0; }
 
-  virtual int64_t getWrittenLength() const CXX11_OVERRIDE { return 0; }
+  virtual int64_t getWrittenLength() const override { return 0; }
 
-  virtual void updateWrittenLength(int64_t bytes) CXX11_OVERRIDE {}
+  virtual void updateWrittenLength(int64_t bytes) override {}
 
   // `begin' is a offset inside this segment.
   virtual bool updateHash(int64_t begin, const unsigned char* data,
-                          size_t dataLength) CXX11_OVERRIDE
+                          size_t dataLength) override
   {
     return false;
   }
 
-  virtual bool isHashCalculated() const CXX11_OVERRIDE { return false; }
+  virtual bool isHashCalculated() const override { return false; }
 
-  virtual std::string getDigest() CXX11_OVERRIDE { return A2STR::NIL; }
+  virtual std::string getDigest() override { return ""; }
 
-  virtual void clear(WrDiskCache* diskCache) CXX11_OVERRIDE {}
+  virtual void clear(WrDiskCache* diskCache) override {}
 
-  virtual std::shared_ptr<Piece> getPiece() const CXX11_OVERRIDE
+  virtual std::shared_ptr<Piece> getPiece() const override
   {
     return std::shared_ptr<Piece>(new Piece());
   }

@@ -81,7 +81,7 @@ std::string SizeFormatter::operator()(int64_t size) const
 namespace {
 class AbbrevSizeFormatter : public SizeFormatter {
 protected:
-  virtual std::string format(int64_t size) const CXX11_OVERRIDE
+  virtual std::string format(int64_t size) const override
   {
     return util::abbrevSize(size);
   }
@@ -91,7 +91,7 @@ protected:
 namespace {
 class PlainSizeFormatter : public SizeFormatter {
 protected:
-  virtual std::string format(int64_t size) const CXX11_OVERRIDE
+  virtual std::string format(int64_t size) const override
   {
     return util::itos(size);
   }

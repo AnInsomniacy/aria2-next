@@ -65,8 +65,8 @@ private:
   void createCommand();
 
 protected:
-  virtual bool executeInternal() CXX11_OVERRIDE;
-  virtual bool exitBeforeExecute() CXX11_OVERRIDE;
+  virtual bool executeInternal() override;
+  virtual bool exitBeforeExecute() override;
 
 public:
   ReceiverMSEHandshakeCommand(cuid_t cuid, const std::shared_ptr<Peer>& peer,

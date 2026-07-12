@@ -50,13 +50,13 @@ public:
                       const unsigned char* id,
                       const std::string& transactionID);
 
-  virtual void doReceivedAction() CXX11_OVERRIDE;
+  virtual void doReceivedAction() override;
 
-  virtual std::unique_ptr<Dict> getResponse() CXX11_OVERRIDE;
+  virtual std::unique_ptr<Dict> getResponse() override;
 
-  virtual const std::string& getMessageType() const CXX11_OVERRIDE;
+  virtual const std::string& getMessageType() const override;
 
-  virtual void accept(DHTMessageCallback* callback) CXX11_OVERRIDE;
+  virtual void accept(DHTMessageCallback* callback) override;
 
   const unsigned char* getRemoteID() { return id_; }
 

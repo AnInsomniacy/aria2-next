@@ -47,9 +47,9 @@ public:
 
   virtual ~PieceHashCheckIntegrityEntry();
 
-  virtual bool isValidationReady() CXX11_OVERRIDE;
+  virtual bool isValidationReady() override;
 
-  virtual void initValidator() CXX11_OVERRIDE;
+  virtual void initValidator() override;
 };
 
 } // namespace aria2

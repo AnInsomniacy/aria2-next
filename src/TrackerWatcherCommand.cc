@@ -53,7 +53,6 @@
 #include "Option.h"
 #include "DlAbortEx.h"
 #include "Log.h"
-#include "A2STR.h"
 #include "SocketCore.h"
 #include "Request.h"
 #include "AnnounceTier.h"

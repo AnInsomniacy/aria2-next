@@ -63,9 +63,9 @@ public:
   BtStopDownloadCommand(cuid_t cuid, RequestGroup* requestGroup,
                         DownloadEngine* e, std::chrono::seconds timeout);
 
-  virtual void preProcess() CXX11_OVERRIDE;
+  virtual void preProcess() override;
 
-  virtual void process() CXX11_OVERRIDE;
+  virtual void process() override;
 
   void setBtRuntime(const std::shared_ptr<BtRuntime>& btRuntime)
   {

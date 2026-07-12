@@ -70,53 +70,53 @@ public:
   virtual ~DefaultBtMessageDispatcher();
 
   virtual void
-  addMessageToQueue(std::unique_ptr<BtMessage> btMessage) CXX11_OVERRIDE;
+  addMessageToQueue(std::unique_ptr<BtMessage> btMessage) override;
 
-  virtual void sendMessages() CXX11_OVERRIDE;
+  virtual void sendMessages() override;
 
   // For unit tests without PeerConnection
   void sendMessagesInternal();
 
   virtual void doCancelSendingPieceAction(size_t index, int32_t begin,
-                                          int32_t length) CXX11_OVERRIDE;
+                                          int32_t length) override;
 
   virtual void doCancelSendingPieceAction(const std::shared_ptr<Piece>& piece)
-      CXX11_OVERRIDE;
+      override;
 
   virtual void doAbortOutstandingRequestAction(
-      const std::shared_ptr<Piece>& piece) CXX11_OVERRIDE;
+      const std::shared_ptr<Piece>& piece) override;
 
-  virtual void doChokedAction() CXX11_OVERRIDE;
+  virtual void doChokedAction() override;
 
-  virtual void doChokingAction() CXX11_OVERRIDE;
+  virtual void doChokingAction() override;
 
-  virtual void checkRequestSlotAndDoNecessaryThing() CXX11_OVERRIDE;
+  virtual void checkRequestSlotAndDoNecessaryThing() override;
 
-  virtual bool isSendingInProgress() CXX11_OVERRIDE;
+  virtual bool isSendingInProgress() override;
 
-  virtual size_t countMessageInQueue() CXX11_OVERRIDE
+  virtual size_t countMessageInQueue() override
   {
     return messageQueue_.size();
   }
 
-  virtual size_t countOutstandingRequest() CXX11_OVERRIDE
+  virtual size_t countOutstandingRequest() override
   {
     return requestSlots_.size();
   }
 
   virtual bool isOutstandingRequest(size_t index,
-                                    size_t blockIndex) CXX11_OVERRIDE;
+                                    size_t blockIndex) override;
 
   virtual const RequestSlot*
   getOutstandingRequest(size_t index, int32_t begin,
-                        int32_t length) CXX11_OVERRIDE;
+                        int32_t length) override;
 
-  virtual void removeOutstandingRequest(const RequestSlot* slot) CXX11_OVERRIDE;
+  virtual void removeOutstandingRequest(const RequestSlot* slot) override;
 
   virtual void addOutstandingRequest(std::unique_ptr<RequestSlot> requestSlot)
-      CXX11_OVERRIDE;
+      override;
 
-  virtual size_t countOutstandingUpload() CXX11_OVERRIDE;
+  virtual size_t countOutstandingUpload() override;
 
   const std::deque<std::unique_ptr<BtMessage>>& getMessageQueue() const
   {

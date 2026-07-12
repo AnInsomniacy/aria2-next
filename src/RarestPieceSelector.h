@@ -51,7 +51,7 @@ public:
   RarestPieceSelector(const std::shared_ptr<PieceStatMan>& pieceStatMan);
 
   virtual bool select(size_t& index, const unsigned char* bitfield,
-                      size_t nbits) const CXX11_OVERRIDE;
+                      size_t nbits) const override;
 };
 
 } // namespace aria2

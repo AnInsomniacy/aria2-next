@@ -69,7 +69,7 @@ public:
 
   virtual ~ActivePeerConnectionCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 
   void makeNewConnections(int num);
 

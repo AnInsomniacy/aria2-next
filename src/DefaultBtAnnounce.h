@@ -98,39 +98,39 @@ public:
 
   bool isCompletedAnnounceReady();
 
-  virtual bool isAnnounceReady() CXX11_OVERRIDE;
+  virtual bool isAnnounceReady() override;
 
-  virtual std::string getAnnounceUrl() CXX11_OVERRIDE;
+  virtual std::string getAnnounceUrl() override;
 
   virtual std::shared_ptr<UDPTrackerRequest>
   createUDPTrackerRequest(const std::string& remoteAddr, uint16_t remotePort,
-                          uint16_t localPort) CXX11_OVERRIDE;
+                          uint16_t localPort) override;
 
-  virtual void announceStart() CXX11_OVERRIDE;
+  virtual void announceStart() override;
 
-  virtual void announceSuccess() CXX11_OVERRIDE;
+  virtual void announceSuccess() override;
 
-  virtual void announceFailure() CXX11_OVERRIDE;
+  virtual void announceFailure() override;
 
-  virtual bool isAllAnnounceFailed() CXX11_OVERRIDE;
+  virtual bool isAllAnnounceFailed() override;
 
-  virtual void resetAnnounce() CXX11_OVERRIDE;
+  virtual void resetAnnounce() override;
 
   virtual void
   processAnnounceResponse(const unsigned char* trackerResponse,
-                          size_t trackerResponseLength) CXX11_OVERRIDE;
+                          size_t trackerResponseLength) override;
 
   virtual void processUDPTrackerResponse(
-      const std::shared_ptr<UDPTrackerRequest>& req) CXX11_OVERRIDE;
+      const std::shared_ptr<UDPTrackerRequest>& req) override;
 
-  virtual bool noMoreAnnounce() CXX11_OVERRIDE;
+  virtual bool noMoreAnnounce() override;
 
-  virtual void shuffleAnnounce() CXX11_OVERRIDE;
+  virtual void shuffleAnnounce() override;
 
   virtual void
-  overrideMinInterval(std::chrono::seconds interval) CXX11_OVERRIDE;
+  overrideMinInterval(std::chrono::seconds interval) override;
 
-  virtual void setTcpPort(uint16_t port) CXX11_OVERRIDE { tcpPort_ = port; }
+  virtual void setTcpPort(uint16_t port) override { tcpPort_ = port; }
 
   void setRandomizer(Randomizer* randomizer);
 

@@ -45,7 +45,6 @@
 #include "ServerStat.h"
 #include "RequestGroup.h"
 #include "Log.h"
-#include "A2STR.h"
 #include "prefs.h"
 #include "Option.h"
 #include "SimpleRandomizer.h"
@@ -88,7 +87,7 @@ std::string AdaptiveURISelector::select(
 
   std::string selected = selectOne(uris);
 
-  if (selected != A2STR::NIL) {
+  if (selected != "") {
     uris.erase(std::find(std::begin(uris), std::end(uris), selected));
   }
   return selected;
@@ -126,7 +125,7 @@ std::string AdaptiveURISelector::selectOne(const std::deque<std::string>& uris)
 {
 
   if (uris.empty()) {
-    return A2STR::NIL;
+    return "";
   }
   else {
     const size_t numPieces =
@@ -145,7 +144,7 @@ std::string AdaptiveURISelector::selectOne(const std::deque<std::string>& uris)
     /* At least, 3 mirrors must be tested */
     if (getNbTestedServers(uris) < 3) {
       std::string notTested = getFirstNotTestedUri(uris);
-      if (notTested != A2STR::NIL) {
+      if (notTested != "") {
         A2_LOG_TRACE(fmt("AdaptiveURISelector: choosing the first non tested"
                          " mirror: %s",
                          notTested.c_str()));
@@ -157,7 +156,7 @@ std::string AdaptiveURISelector::selectOne(const std::deque<std::string>& uris)
     if (!selectBest && nbConnections_ > 1 && nbServerToEvaluate_ > 0) {
       nbServerToEvaluate_--;
       std::string notTested = getFirstNotTestedUri(uris);
-      if (notTested != A2STR::NIL) {
+      if (notTested != "") {
         /* Here we return the first untested mirror */
         A2_LOG_TRACE(fmt("AdaptiveURISelector: choosing non tested mirror %s"
                          " for connection #%d",
@@ -167,7 +166,7 @@ std::string AdaptiveURISelector::selectOne(const std::deque<std::string>& uris)
       else {
         /* Here we return a mirror which need to be tested again */
         std::string toReTest = getFirstToTestUri(uris);
-        if (toReTest != A2STR::NIL) {
+        if (toReTest != "") {
           A2_LOG_TRACE(fmt("AdaptiveURISelector: choosing mirror %s which has"
                            " not been tested recently for connection #%d",
                            toReTest.c_str(), nbConnections_));
@@ -254,7 +253,7 @@ int AdaptiveURISelector::getMaxDownloadSpeed(
     const std::deque<std::string>& uris) const
 {
   std::string uri = getMaxDownloadSpeedUri(uris);
-  if (uri == A2STR::NIL)
+  if (uri == "")
     return 0;
   return getUriMaxSpeed(getServerStats(uri));
 }
@@ -263,7 +262,7 @@ std::string AdaptiveURISelector::getMaxDownloadSpeedUri(
     const std::deque<std::string>& uris) const
 {
   int max = -1;
-  std::string uri = A2STR::NIL;
+  std::string uri = "";
   for (auto& u : uris) {
     std::shared_ptr<ServerStat> ss = getServerStats(u);
     if (!ss)
@@ -315,7 +314,7 @@ std::string AdaptiveURISelector::getFirstNotTestedUri(
     if (!ss)
       return i;
   }
-  return A2STR::NIL;
+  return "";
 }
 
 std::string AdaptiveURISelector::getFirstToTestUri(
@@ -337,7 +336,7 @@ std::string AdaptiveURISelector::getFirstToTestUri(
       return u;
     }
   }
-  return A2STR::NIL;
+  return "";
 }
 
 std::shared_ptr<ServerStat>

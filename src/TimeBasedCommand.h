@@ -91,7 +91,7 @@ public:
 
   virtual ~TimeBasedCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 };
 
 } // namespace aria2

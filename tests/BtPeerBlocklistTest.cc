@@ -79,18 +79,18 @@ public:
   }
 
 private:
-  bool prepareForNextPeer(time_t wait) CXX11_OVERRIDE
+  bool prepareForNextPeer(time_t wait) override
   {
     retried = true;
     return true;
   }
-  bool exitBeforeExecute() CXX11_OVERRIDE { return false; }
-  bool executeInternal() CXX11_OVERRIDE
+  bool exitBeforeExecute() override { return false; }
+  bool executeInternal() override
   {
     executed = true;
     return true;
   }
-  bool onBlocked() CXX11_OVERRIDE
+  bool onBlocked() override
   {
     blocked = true;
     return true;

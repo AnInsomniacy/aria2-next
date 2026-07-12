@@ -15,7 +15,7 @@ public:
 
   virtual ~FixedNumberRandomizer() {}
 
-  virtual long int getRandomNumber(long int to) CXX11_OVERRIDE
+  virtual long int getRandomNumber(long int to) override
   {
     return fixedNumber;
   }

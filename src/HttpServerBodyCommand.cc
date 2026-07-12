@@ -126,7 +126,7 @@ void HttpServerBodyCommand::sendJsonRpcResponse(const rpc::RpcResponse& res,
     default:
       httpCode = 500;
     };
-    httpServer_->feedResponse(httpCode, A2STR::NIL, std::move(responseData),
+    httpServer_->feedResponse(httpCode, "", std::move(responseData),
                               getJsonRpcContentType(!callback.empty()));
   }
   addHttpServerResponseCommand(notauthorized);

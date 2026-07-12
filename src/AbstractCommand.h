@@ -234,7 +234,7 @@ public:
 
   virtual ~AbstractCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 };
 
 // Returns proxy URI for given protocol.  If no proxy URI is defined,

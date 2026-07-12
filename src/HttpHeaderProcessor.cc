@@ -41,7 +41,6 @@
 #include "util.h"
 #include "DlRetryEx.h"
 #include "DlAbortEx.h"
-#include "A2STR.h"
 #include "error_code.h"
 
 namespace aria2 {

@@ -33,7 +33,6 @@
  */
 /* copyright --> */
 #include "uri.h"
-#include "A2STR.h"
 #include "FeatureConfig.h"
 #include "util.h"
 
@@ -119,12 +118,12 @@ bool parse(UriStruct& result, const std::string& uri)
     }
     else {
       result.dir.assign(p + res.fields[USR_PATH].off, res.fields[USR_PATH].len);
-      result.file = A2STR::NIL;
+      result.file = "";
     }
   }
   else {
     result.dir = "/";
-    result.file = A2STR::NIL;
+    result.file = "";
   }
 
   if (res.field_set & (1 << USR_QUERY)) {
@@ -133,7 +132,7 @@ bool parse(UriStruct& result, const std::string& uri)
                         res.fields[USR_QUERY].len);
   }
   else {
-    result.query = A2STR::NIL;
+    result.query = "";
   }
 
   if (res.field_set & (1 << USR_USER)) {
@@ -143,7 +142,7 @@ bool parse(UriStruct& result, const std::string& uri)
         util::percentDecode(result.username.begin(), result.username.end());
   }
   else {
-    result.username = A2STR::NIL;
+    result.username = "";
   }
 
   if (res.field_set & (1 << USR_PASSWD)) {
@@ -155,7 +154,7 @@ bool parse(UriStruct& result, const std::string& uri)
   }
   else {
     result.hasPassword = false;
-    result.password = A2STR::NIL;
+    result.password = "";
   }
 
   result.ipv6LiteralAddress = res.flags & USF_IPV6ADDR;

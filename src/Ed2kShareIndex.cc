@@ -98,22 +98,22 @@ public:
     }
   }
 
-  const std::string& hash() const CXX11_OVERRIDE { return hash_; }
-  const std::string& aichRootHash() const CXX11_OVERRIDE
+  const std::string& hash() const override { return hash_; }
+  const std::string& aichRootHash() const override
   {
     return aichRootHash_;
   }
-  const std::vector<std::string>& pieceHashes() const CXX11_OVERRIDE
+  const std::vector<std::string>& pieceHashes() const override
   {
     return pieceHashes_;
   }
-  const std::string& name() const CXX11_OVERRIDE { return name_; }
-  int64_t size() const CXX11_OVERRIDE { return size_; }
-  bool complete() const CXX11_OVERRIDE
+  const std::string& name() const override { return name_; }
+  int64_t size() const override { return size_; }
+  bool complete() const override
   {
     return pieceStorage_ && pieceStorage_->downloadFinished();
   }
-  std::vector<bool> bitfield() const CXX11_OVERRIDE
+  std::vector<bool> bitfield() const override
   {
     std::vector<bool> bits;
     if (!pieceStorage_ || pieceLength_ <= 0 || size_ <= 0) {
@@ -126,11 +126,11 @@ public:
     return bits;
   }
   bool readRange(std::string& data, int64_t begin,
-                 int64_t end) const CXX11_OVERRIDE
+                 int64_t end) const override
   {
     return verifiedRange(begin, end) && readDiskRange(path_, data, begin, end);
   }
-  void recordUpload(size_t bytes) CXX11_OVERRIDE
+  void recordUpload(size_t bytes) override
   {
     if (!dctx_ || bytes == 0) {
       return;

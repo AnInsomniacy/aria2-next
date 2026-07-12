@@ -12,7 +12,6 @@
 #include "HttpHeader.h"
 #include "HttpRequest.h"
 #include "Exception.h"
-#include "A2STR.h"
 #include "DlRetryEx.h"
 #include "CookieStorage.h"
 #include "AuthConfigFactory.h"
@@ -308,7 +307,7 @@ void HttpResponseTest::testGetContentEncoding()
   HttpResponse httpResponse;
 
   httpResponse.setHttpHeader(make_unique<HttpHeader>());
-  CPPUNIT_ASSERT_EQUAL(A2STR::NIL, httpResponse.getContentEncoding());
+  CPPUNIT_ASSERT_EQUAL(std::string(), httpResponse.getContentEncoding());
 
   httpResponse.getHttpHeader()->put(HttpHeader::CONTENT_ENCODING, "gzip");
   CPPUNIT_ASSERT_EQUAL(std::string("gzip"), httpResponse.getContentEncoding());

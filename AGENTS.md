@@ -9,7 +9,7 @@ This file defines repository rules for AI coding agents. Human contributors shou
 
 | Area | Ownership |
 | --- | --- |
-| Core | C99 and C++11 aria2 command-line client and core implementation |
+| Core | C11 and C++17 aria2 command-line client and core implementation |
 | Build | CMake 3.25+ with Ninja as the default generator |
 | Tests | CTest plus the CppUnit test suite |
 | Packaging | Cross-platform release automation under `packaging/` and `.github/workflows/release.yml` |
@@ -183,7 +183,7 @@ Do not hide new test failures with `|| true`. Existing tolerated diagnostics mus
 
 ## Source Conventions
 
-Follow the existing C and C++ style. Keep C++ at the repository's C++11 baseline unless the project intentionally raises the baseline. Avoid drive-by rewrites and broad formatting churn.
+Follow the existing C and C++ style. Keep C++ at the repository's C++17 baseline unless the project intentionally raises the baseline. Avoid drive-by rewrites and broad formatting churn.
 
 Prefer accurate CMake detection and existing config-header patterns over scattered compatibility macros. Add helpers only when they remove real duplication or contain platform-specific behavior cleanly.
 

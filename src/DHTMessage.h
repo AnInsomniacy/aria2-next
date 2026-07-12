@@ -40,7 +40,6 @@
 #include <string>
 #include <memory>
 
-#include "A2STR.h"
 
 namespace aria2 {
 
@@ -61,7 +60,7 @@ private:
 public:
   DHTMessage(const std::shared_ptr<DHTNode>& localNode,
              const std::shared_ptr<DHTNode>& remoteNode,
-             const std::string& transactionID = A2STR::NIL);
+             const std::string& transactionID = "");
 
   virtual ~DHTMessage();
 

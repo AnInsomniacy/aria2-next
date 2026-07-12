@@ -42,13 +42,13 @@ namespace aria2 {
 class NullOutputFile : public OutputFile {
 public:
   virtual ~NullOutputFile() = default;
-  virtual size_t write(const char* str) CXX11_OVERRIDE { return 0; }
-  virtual int flush() CXX11_OVERRIDE { return 0; }
-  virtual int vprintf(const char* format, va_list va) CXX11_OVERRIDE
+  virtual size_t write(const char* str) override { return 0; }
+  virtual int flush() override { return 0; }
+  virtual int vprintf(const char* format, va_list va) override
   {
     return 0;
   }
-  virtual bool supportsColor() CXX11_OVERRIDE { return false; }
+  virtual bool supportsColor() override { return false; }
 };
 
 } // namespace aria2

@@ -61,7 +61,7 @@ public:
 
   virtual ~DHTPingTask();
 
-  virtual void startup() CXX11_OVERRIDE;
+  virtual void startup() override;
 
   void onReceived(const DHTPingReplyMessage* message);
 

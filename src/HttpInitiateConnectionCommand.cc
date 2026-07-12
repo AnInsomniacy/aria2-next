@@ -46,7 +46,6 @@
 #include "SocketCore.h"
 #include "message.h"
 #include "prefs.h"
-#include "A2STR.h"
 #include "util.h"
 #include "fmt.h"
 #include "SocketRecvBuffer.h"

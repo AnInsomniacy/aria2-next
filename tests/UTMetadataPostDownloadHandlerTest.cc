@@ -7,7 +7,6 @@
 #include "Option.h"
 #include "FileEntry.h"
 #include "bittorrent_helper.h"
-#include "A2STR.h"
 #include "ByteArrayDiskWriterFactory.h"
 #include "PieceStorage.h"
 #include "DiskAdaptor.h"

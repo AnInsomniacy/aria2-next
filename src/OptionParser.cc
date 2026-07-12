@@ -45,7 +45,6 @@
 #include "util.h"
 #include "OptionHandlerImpl.h"
 #include "Option.h"
-#include "A2STR.h"
 #include "a2functional.h"
 #include "array_fun.h"
 #include "OptionHandlerFactory.h"

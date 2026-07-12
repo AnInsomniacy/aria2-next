@@ -45,15 +45,15 @@ public:
 
   virtual ~BtCheckIntegrityEntry();
 
-  virtual bool shouldReportIncompleteAsError() const CXX11_OVERRIDE;
+  virtual bool shouldReportIncompleteAsError() const override;
 
   virtual void
   onDownloadFinished(std::vector<std::unique_ptr<Command>>& commands,
-                     DownloadEngine* e) CXX11_OVERRIDE;
+                     DownloadEngine* e) override;
 
   virtual void
   onDownloadIncomplete(std::vector<std::unique_ptr<Command>>& commands,
-                       DownloadEngine* e) CXX11_OVERRIDE;
+                       DownloadEngine* e) override;
 };
 
 } // namespace aria2

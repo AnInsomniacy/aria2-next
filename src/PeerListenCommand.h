@@ -57,7 +57,7 @@ public:
 
   virtual ~PeerListenCommand();
 
-  virtual bool execute() CXX11_OVERRIDE;
+  virtual bool execute() override;
 
   /**
    * Binds port. If successful, the bound port number is assigned to port and

@@ -49,7 +49,7 @@ public:
 
   virtual void
   prepareForNextAction(std::vector<std::unique_ptr<Command>>& commands,
-                       DownloadEngine* e) CXX11_OVERRIDE;
+                       DownloadEngine* e) override;
 };
 
 } // namespace aria2

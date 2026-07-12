@@ -36,7 +36,6 @@
 #define D_DHT_ABSTRACT_MESSAGE_H
 
 #include "DHTMessage.h"
-#include "A2STR.h"
 #include "ValueBase.h"
 
 namespace aria2 {
@@ -59,9 +58,9 @@ private:
 public:
   DHTAbstractMessage(const std::shared_ptr<DHTNode>& localNode,
                      const std::shared_ptr<DHTNode>& remoteNode,
-                     const std::string& transactionID = A2STR::NIL);
+                     const std::string& transactionID = "");
 
-  virtual bool send() CXX11_OVERRIDE;
+  virtual bool send() override;
 
   virtual const std::string& getType() const = 0;
 

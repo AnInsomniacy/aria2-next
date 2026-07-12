@@ -44,7 +44,7 @@ private:
   PrefPtr pref_;
 
 protected:
-  virtual std::shared_ptr<Exception> copy() const CXX11_OVERRIDE;
+  virtual std::shared_ptr<Exception> copy() const override;
 
 public:
   OptionHandlerException(const char* file, int line, PrefPtr pref);

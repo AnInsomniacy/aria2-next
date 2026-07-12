@@ -40,7 +40,7 @@ public:
     virtual std::unique_ptr<DHTFindNodeReplyMessage> createFindNodeReplyMessage(
         const std::shared_ptr<DHTNode>& remoteNode,
         std::vector<std::shared_ptr<DHTNode>> closestKNodes,
-        const std::string& transactionID) CXX11_OVERRIDE
+        const std::string& transactionID) override
     {
       auto m = make_unique<DHTFindNodeReplyMessage>(AF_INET, localNode_,
                                                     remoteNode, transactionID);
