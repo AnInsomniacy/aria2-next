@@ -41,13 +41,11 @@
 #include <cstring>
 #include <iostream>
 
-#ifdef __APPLE__
-#  include <Security/SecRandom.h>
-#endif // __APPLE__
-
 #ifdef HAVE_OPENSSL
 #  include <openssl/rand.h>
-#endif // HAVE_OPENSSL
+#elif !defined(__MINGW32__)
+#  include <sys/random.h>
+#endif
 
 #include "a2time.h"
 #include "a2functional.h"
@@ -102,12 +100,6 @@ void SimpleRandomizer::getRandomBytes(unsigned char* buf, size_t len)
     assert(r);
     abort();
   }
-#elif defined(__APPLE__)
-  auto rv = SecRandomCopyBytes(kSecRandomDefault, len, buf);
-  if (rv != errSecSuccess) {
-    assert(rv == errSecSuccess);
-    abort();
-  }
 #elif defined(HAVE_OPENSSL)
   auto rv = RAND_bytes(buf, len);
   if (rv != 1) {
@@ -115,33 +107,20 @@ void SimpleRandomizer::getRandomBytes(unsigned char* buf, size_t len)
     abort();
   }
 #else
+  // getentropy() caps each call at 256 bytes (GETENTROPY_MAX).
   constexpr static size_t blocklen = 256;
-  auto iter = len / blocklen;
   auto p = buf;
-
-  for (size_t i = 0; i < iter; ++i) {
-    auto rv = getentropy(p, blocklen);
-    if (rv != 0) {
+  while (len > 0) {
+    size_t n = len < blocklen ? len : blocklen;
+    if (getentropy(p, n) != 0) {
       std::cerr << "getentropy: " << strerror(errno) << std::endl;
       assert(0);
       abort();
     }
-
-    p += blocklen;
+    p += n;
+    len -= n;
   }
-
-  auto rem = len - iter * blocklen;
-  if (rem == 0) {
-    return;
-  }
-
-  auto rv = getentropy(p, rem);
-  if (rv != 0) {
-    std::cerr << "getentropy: " << strerror(errno) << std::endl;
-    assert(0);
-    abort();
-  }
-#endif // !__MINGW32__ && !__APPLE__ && !HAVE_OPENSSL
+#endif // !__MINGW32__ && !HAVE_OPENSSL
 }
 
 } // namespace aria2

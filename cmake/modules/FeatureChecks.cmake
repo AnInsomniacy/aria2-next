@@ -326,15 +326,14 @@ if(HAVE_OPENSSL)
 endif()
 
 # OpenSSL provides the message digests and bignum; WinTLS builds fall back to
-# the internal implementations. ARC4 is always internal (RC4 is a legacy
-# provider cipher and not reliably exposed by modern OpenSSL).
+# the internal implementations. RC4 is always the internal implementation and
+# is compiled unconditionally (see ARIA2_SOURCES_ARC4).
 if(HAVE_OPENSSL)
   set(USE_OPENSSL_MD 1)
 else()
   set(USE_INTERNAL_MD 1)
   set(USE_INTERNAL_BIGNUM 1)
 endif()
-set(USE_INTERNAL_ARC4 1)
 
 if(ARIA2_ENABLE_BITTORRENT)
   set(ENABLE_BITTORRENT 1)

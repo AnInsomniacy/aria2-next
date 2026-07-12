@@ -37,6 +37,25 @@
 
 #include "common.h"
 
-#include "InternalARC4Encryptor.h"
+namespace aria2 {
+
+// RC4 is only used for the BitTorrent MSE/PE obfuscation handshake, not for
+// data confidentiality. It is implemented directly because modern crypto
+// libraries (OpenSSL 3) relegate RC4 to a legacy provider that is not
+// reliably available.
+class ARC4Encryptor {
+private:
+  unsigned char state_[256];
+  unsigned i, j;
+
+public:
+  void init(const unsigned char* key, size_t keyLength);
+
+  // Encrypts data in in buffer to out buffer. in and out can be the
+  // same buffer.
+  void encrypt(size_t len, unsigned char* out, const unsigned char* in);
+};
+
+} // namespace aria2
 
 #endif // D_ARC4_ENCRYPTOR_H

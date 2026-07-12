@@ -33,7 +33,7 @@
  */
 /* copyright --> */
 
-#include "InternalARC4Encryptor.h"
+#include "ARC4Encryptor.h"
 
 namespace aria2 {
 

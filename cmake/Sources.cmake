@@ -659,7 +659,6 @@ set(ARIA2_SOURCES_ENABLE_BITTORRENT
   src/AnnounceList.cc
   src/AnnounceTier.cc
   src/AnnounceTier.h
-  src/ARC4Encryptor.h
   src/bencode2.cc
   src/bencode2.h
   src/BencodeDiskWriter.h
@@ -968,9 +967,9 @@ set(ARIA2_SOURCES_ENABLE_BITTORRENT__USE_INTERNAL_BIGNUM
   src/InternalDHKeyExchange.h
 )
 
-set(ARIA2_SOURCES_USE_INTERNAL_ARC4
-  src/InternalARC4Encryptor.cc
-  src/InternalARC4Encryptor.h
+set(ARIA2_SOURCES_ARC4
+  src/ARC4Encryptor.cc
+  src/ARC4Encryptor.h
 )
 
 set(ARIA2_SOURCES_ENABLE_METALINK
