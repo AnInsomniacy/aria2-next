@@ -240,7 +240,6 @@ set(ARIA2_SOURCES_BASE
   src/GroupId.h
   src/GrowSegment.cc
   src/GrowSegment.h
-  src/HashFuncEntry.h
   src/HaveEraseCommand.cc
   src/HaveEraseCommand.h
   src/help_tags.cc
@@ -1004,16 +1003,6 @@ set(ARIA2_SOURCES_ENABLE_METALINK
 set(ARIA2_SOURCES_NOT_HAVE_ASCTIME_R
   src/asctime_r.c
   src/asctime_r.h
-)
-
-set(ARIA2_SOURCES_NOT_HAVE_BASENAME
-  src/libgen.c
-  src/libgen.h
-)
-
-set(ARIA2_SOURCES_NOT_HAVE_GETADDRINFO
-  src/getaddrinfo.c
-  src/getaddrinfo.h
 )
 
 set(ARIA2_SOURCES_NOT_HAVE_GAI_STRERROR
