@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "Peer.h"
@@ -11,16 +11,8 @@
 
 namespace aria2 {
 
-class BtRejectMessageTest : public CppUnit::TestFixture {
+class BtRejectMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtRejectMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST(testDoReceivedActionNoMatch);
-  CPPUNIT_TEST(testDoReceivedActionFastExtensionDisabled);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -83,7 +75,12 @@ public:
   }
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtRejectMessageTest);
+A2_TEST(BtRejectMessageTest, testCreate)
+A2_TEST(BtRejectMessageTest, testCreateMessage)
+A2_TEST(BtRejectMessageTest, testDoReceivedAction)
+A2_TEST(BtRejectMessageTest, testDoReceivedActionNoMatch)
+A2_TEST(BtRejectMessageTest, testDoReceivedActionFastExtensionDisabled)
+A2_TEST(BtRejectMessageTest, testToString)
 
 void BtRejectMessageTest::testCreate()
 {
@@ -93,17 +90,17 @@ void BtRejectMessageTest::testCreate()
   bittorrent::setIntParam(&msg[9], 256);
   bittorrent::setIntParam(&msg[13], 1_k);
   std::shared_ptr<BtRejectMessage> pm(BtRejectMessage::create(&msg[4], 13));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)16, pm->getId());
-  CPPUNIT_ASSERT_EQUAL((size_t)12345, pm->getIndex());
-  CPPUNIT_ASSERT_EQUAL(256, pm->getBegin());
-  CPPUNIT_ASSERT_EQUAL((int32_t)1_k, pm->getLength());
+  REQUIRE_EQ((uint8_t)16, pm->getId());
+  REQUIRE_EQ((size_t)12345, pm->getIndex());
+  REQUIRE_EQ(256, pm->getBegin());
+  REQUIRE_EQ((int32_t)1_k, pm->getLength());
 
   // case: payload size is wrong
   try {
     unsigned char msg[18];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 14, 16);
     BtRejectMessage::create(&msg[4], 14);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -112,7 +109,7 @@ void BtRejectMessageTest::testCreate()
     unsigned char msg[17];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 13, 17);
     BtRejectMessage::create(&msg[4], 13);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -130,8 +127,8 @@ void BtRejectMessageTest::testCreateMessage()
   bittorrent::setIntParam(&data[9], 256);
   bittorrent::setIntParam(&data[13], 1_k);
   auto rawmsg = msg.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)17, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)17, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtRejectMessageTest::testDoReceivedAction()
@@ -139,11 +136,11 @@ void BtRejectMessageTest::testDoReceivedAction()
   peer->setFastExtensionEnabled(true);
   dispatcher->setRequestSlot(make_unique<RequestSlot>(1, 16, 32, 2));
 
-  CPPUNIT_ASSERT(dispatcher->getOutstandingRequest(1, 16, 32));
+  REQUIRE(dispatcher->getOutstandingRequest(1, 16, 32));
 
   msg->doReceivedAction();
 
-  CPPUNIT_ASSERT(!dispatcher->getOutstandingRequest(1, 16, 32));
+  REQUIRE(!dispatcher->getOutstandingRequest(1, 16, 32));
 }
 
 void BtRejectMessageTest::testDoReceivedActionNoMatch()
@@ -151,11 +148,11 @@ void BtRejectMessageTest::testDoReceivedActionNoMatch()
   peer->setFastExtensionEnabled(true);
   dispatcher->setRequestSlot(make_unique<RequestSlot>(2, 16, 32, 2));
 
-  CPPUNIT_ASSERT(dispatcher->getOutstandingRequest(2, 16, 32));
+  REQUIRE(dispatcher->getOutstandingRequest(2, 16, 32));
 
   msg->doReceivedAction();
 
-  CPPUNIT_ASSERT(dispatcher->getOutstandingRequest(2, 16, 32));
+  REQUIRE(dispatcher->getOutstandingRequest(2, 16, 32));
 }
 
 void BtRejectMessageTest::testDoReceivedActionFastExtensionDisabled()
@@ -163,10 +160,10 @@ void BtRejectMessageTest::testDoReceivedActionFastExtensionDisabled()
   RequestSlot slot(1, 16, 32, 2);
   dispatcher->setRequestSlot(make_unique<RequestSlot>(1, 16, 32, 2));
 
-  CPPUNIT_ASSERT(dispatcher->getOutstandingRequest(1, 16, 32));
+  REQUIRE(dispatcher->getOutstandingRequest(1, 16, 32));
   try {
     msg->doReceivedAction();
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -174,7 +171,7 @@ void BtRejectMessageTest::testDoReceivedActionFastExtensionDisabled()
 
 void BtRejectMessageTest::testToString()
 {
-  CPPUNIT_ASSERT_EQUAL(std::string("reject index=1, begin=16, length=32"),
+  REQUIRE_EQ(std::string("reject index=1, begin=16, length=32"),
                        msg->toString());
 }
 

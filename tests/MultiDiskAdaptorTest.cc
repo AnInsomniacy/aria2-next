@@ -4,7 +4,7 @@
 #include <cerrno>
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "FileEntry.h"
 #include "Exception.h"
@@ -16,17 +16,8 @@
 
 namespace aria2 {
 
-class MultiDiskAdaptorTest : public CppUnit::TestFixture {
+class MultiDiskAdaptorTest {
 
-  CPPUNIT_TEST_SUITE(MultiDiskAdaptorTest);
-  CPPUNIT_TEST(testWriteData);
-  CPPUNIT_TEST(testReadData);
-  CPPUNIT_TEST(testCutTrailingGarbage);
-  CPPUNIT_TEST(testSize);
-  CPPUNIT_TEST(testUtime);
-  CPPUNIT_TEST(testResetDiskWriterEntries);
-  CPPUNIT_TEST(testWriteCache);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::unique_ptr<MultiDiskAdaptor> adaptor;
@@ -47,7 +38,13 @@ public:
   void testWriteCache();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(MultiDiskAdaptorTest);
+A2_TEST(MultiDiskAdaptorTest, testWriteData)
+A2_TEST(MultiDiskAdaptorTest, testReadData)
+A2_TEST(MultiDiskAdaptorTest, testCutTrailingGarbage)
+A2_TEST(MultiDiskAdaptorTest, testSize)
+A2_TEST(MultiDiskAdaptorTest, testUtime)
+A2_TEST(MultiDiskAdaptorTest, testResetDiskWriterEntries)
+A2_TEST(MultiDiskAdaptorTest, testWriteCache)
 
 std::vector<std::shared_ptr<FileEntry>> createEntries()
 {
@@ -89,12 +86,12 @@ void MultiDiskAdaptorTest::testResetDiskWriterEntries()
     adaptor->openFile();
 
     auto& entries = adaptor->getDiskWriterEntries();
-    CPPUNIT_ASSERT(entries[0]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[1]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[2]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[3]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[4]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[5]->getDiskWriter());
+    REQUIRE(entries[0]->getDiskWriter());
+    REQUIRE(entries[1]->getDiskWriter());
+    REQUIRE(entries[2]->getDiskWriter());
+    REQUIRE(entries[3]->getDiskWriter());
+    REQUIRE(entries[4]->getDiskWriter());
+    REQUIRE(entries[5]->getDiskWriter());
 
     adaptor->closeFile();
   }
@@ -107,12 +104,12 @@ void MultiDiskAdaptorTest::testResetDiskWriterEntries()
 
     auto& entries = adaptor->getDiskWriterEntries();
     // Because entries[1] spans entries[0]
-    CPPUNIT_ASSERT(entries[0]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[1]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[2]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[3]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[4]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[5]->getDiskWriter());
+    REQUIRE(entries[0]->getDiskWriter());
+    REQUIRE(entries[1]->getDiskWriter());
+    REQUIRE(entries[2]->getDiskWriter());
+    REQUIRE(entries[3]->getDiskWriter());
+    REQUIRE(entries[4]->getDiskWriter());
+    REQUIRE(entries[5]->getDiskWriter());
 
     adaptor->closeFile();
   }
@@ -125,14 +122,14 @@ void MultiDiskAdaptorTest::testResetDiskWriterEntries()
     adaptor->openFile();
 
     auto& entries = adaptor->getDiskWriterEntries();
-    CPPUNIT_ASSERT(!entries[0]->getDiskWriter());
+    REQUIRE(!entries[0]->getDiskWriter());
     // Because entries[2] spans entries[1]
-    CPPUNIT_ASSERT(entries[1]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[1]->needsFileAllocation());
-    CPPUNIT_ASSERT(entries[2]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[3]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[4]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[5]->getDiskWriter());
+    REQUIRE(entries[1]->getDiskWriter());
+    REQUIRE(entries[1]->needsFileAllocation());
+    REQUIRE(entries[2]->getDiskWriter());
+    REQUIRE(entries[3]->getDiskWriter());
+    REQUIRE(entries[4]->getDiskWriter());
+    REQUIRE(entries[5]->getDiskWriter());
 
     adaptor->closeFile();
   }
@@ -144,14 +141,14 @@ void MultiDiskAdaptorTest::testResetDiskWriterEntries()
     adaptor->openFile();
 
     auto& entries = adaptor->getDiskWriterEntries();
-    CPPUNIT_ASSERT(entries[0]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[1]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[2]->getDiskWriter());
+    REQUIRE(entries[0]->getDiskWriter());
+    REQUIRE(entries[1]->getDiskWriter());
+    REQUIRE(entries[2]->getDiskWriter());
     // Because entries[4] spans entries[3]
-    CPPUNIT_ASSERT(entries[3]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[3]->needsFileAllocation());
-    CPPUNIT_ASSERT(entries[4]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[5]->getDiskWriter());
+    REQUIRE(entries[3]->getDiskWriter());
+    REQUIRE(entries[3]->needsFileAllocation());
+    REQUIRE(entries[4]->getDiskWriter());
+    REQUIRE(entries[5]->getDiskWriter());
 
     adaptor->closeFile();
   }
@@ -163,13 +160,13 @@ void MultiDiskAdaptorTest::testResetDiskWriterEntries()
     adaptor->openFile();
 
     auto& entries = adaptor->getDiskWriterEntries();
-    CPPUNIT_ASSERT(entries[0]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[1]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[2]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[3]->getDiskWriter());
+    REQUIRE(entries[0]->getDiskWriter());
+    REQUIRE(entries[1]->getDiskWriter());
+    REQUIRE(entries[2]->getDiskWriter());
+    REQUIRE(entries[3]->getDiskWriter());
     // entries[3] is 0 length. No overrap with entries[4]
-    CPPUNIT_ASSERT(!entries[4]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[5]->getDiskWriter());
+    REQUIRE(!entries[4]->getDiskWriter());
+    REQUIRE(entries[5]->getDiskWriter());
 
     adaptor->closeFile();
   }
@@ -182,12 +179,12 @@ void MultiDiskAdaptorTest::testResetDiskWriterEntries()
     adaptor->openFile();
 
     auto& entries = adaptor->getDiskWriterEntries();
-    CPPUNIT_ASSERT(entries[0]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[1]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[2]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[3]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[4]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[5]->getDiskWriter());
+    REQUIRE(entries[0]->getDiskWriter());
+    REQUIRE(entries[1]->getDiskWriter());
+    REQUIRE(entries[2]->getDiskWriter());
+    REQUIRE(!entries[3]->getDiskWriter());
+    REQUIRE(!entries[4]->getDiskWriter());
+    REQUIRE(entries[5]->getDiskWriter());
 
     adaptor->closeFile();
   }
@@ -201,12 +198,12 @@ void MultiDiskAdaptorTest::testResetDiskWriterEntries()
     adaptor->openFile();
 
     auto& entries = adaptor->getDiskWriterEntries();
-    CPPUNIT_ASSERT(entries[0]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[1]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[2]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[3]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[4]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[5]->getDiskWriter());
+    REQUIRE(entries[0]->getDiskWriter());
+    REQUIRE(entries[1]->getDiskWriter());
+    REQUIRE(entries[2]->getDiskWriter());
+    REQUIRE(entries[3]->getDiskWriter());
+    REQUIRE(entries[4]->getDiskWriter());
+    REQUIRE(!entries[5]->getDiskWriter());
 
     adaptor->closeFile();
   }
@@ -218,12 +215,12 @@ void MultiDiskAdaptorTest::testResetDiskWriterEntries()
     adaptor->setFileEntries(fileEntries.begin(), fileEntries.end());
     adaptor->openFile();
     auto& entries = adaptor->getDiskWriterEntries();
-    CPPUNIT_ASSERT(entries[0]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[1]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[2]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[3]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[4]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[5]->getDiskWriter());
+    REQUIRE(entries[0]->getDiskWriter());
+    REQUIRE(!entries[1]->getDiskWriter());
+    REQUIRE(!entries[2]->getDiskWriter());
+    REQUIRE(!entries[3]->getDiskWriter());
+    REQUIRE(!entries[4]->getDiskWriter());
+    REQUIRE(!entries[5]->getDiskWriter());
 
     adaptor->closeFile();
   }
@@ -235,14 +232,14 @@ void MultiDiskAdaptorTest::testResetDiskWriterEntries()
     adaptor->setFileEntries(fileEntries.begin(), fileEntries.end());
     adaptor->openFile();
     auto& entries = adaptor->getDiskWriterEntries();
-    CPPUNIT_ASSERT(entries[0]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[1]->getDiskWriter());
+    REQUIRE(entries[0]->getDiskWriter());
+    REQUIRE(entries[1]->getDiskWriter());
     // entries[1] spans entries[2]
-    CPPUNIT_ASSERT(entries[2]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[2]->needsFileAllocation());
-    CPPUNIT_ASSERT(!entries[3]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[4]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[5]->getDiskWriter());
+    REQUIRE(entries[2]->getDiskWriter());
+    REQUIRE(!entries[2]->needsFileAllocation());
+    REQUIRE(!entries[3]->getDiskWriter());
+    REQUIRE(!entries[4]->getDiskWriter());
+    REQUIRE(!entries[5]->getDiskWriter());
 
     adaptor->closeFile();
   }
@@ -255,17 +252,17 @@ void MultiDiskAdaptorTest::testResetDiskWriterEntries()
     adaptor->setFileEntries(fileEntries.begin(), fileEntries.end());
     adaptor->openFile();
     auto& entries = adaptor->getDiskWriterEntries();
-    CPPUNIT_ASSERT(!entries[0]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[1]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[2]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[3]->getDiskWriter());
-    CPPUNIT_ASSERT(!entries[4]->getDiskWriter());
+    REQUIRE(!entries[0]->getDiskWriter());
+    REQUIRE(!entries[1]->getDiskWriter());
+    REQUIRE(!entries[2]->getDiskWriter());
+    REQUIRE(!entries[3]->getDiskWriter());
+    REQUIRE(!entries[4]->getDiskWriter());
     // entries[6] spans entries[5] in the current implementation.
-    CPPUNIT_ASSERT(entries[5]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[6]->getDiskWriter());
-    CPPUNIT_ASSERT(entries[7]->getDiskWriter());
+    REQUIRE(entries[5]->getDiskWriter());
+    REQUIRE(entries[6]->getDiskWriter());
+    REQUIRE(entries[7]->getDiskWriter());
     // entries[6] spans entries[8]
-    CPPUNIT_ASSERT(entries[8]->getDiskWriter());
+    REQUIRE(entries[8]->getDiskWriter());
     adaptor->closeFile();
   }
 }
@@ -275,12 +272,12 @@ void readFile(const std::string& filename, char* buf, int bufLength)
 {
   FILE* f = fopen(filename.c_str(), "r");
   if (f == nullptr) {
-    CPPUNIT_FAIL(strerror(errno));
+    FAIL(strerror(errno));
   }
   int retval = fread(buf, 1, bufLength, f);
   fclose(f);
   if (retval != bufLength) {
-    CPPUNIT_FAIL("return value is not 1");
+    FAIL("return value is not 1");
   }
 }
 } // namespace
@@ -295,11 +292,11 @@ void MultiDiskAdaptorTest::testWriteData()
   adaptor->writeData((const unsigned char*)msg.c_str(), msg.size(), 0);
   adaptor->closeFile();
 
-  CPPUNIT_ASSERT(File(A2_TEST_OUT_DIR "/file0.txt").isFile());
+  REQUIRE(File(A2_TEST_OUT_DIR "/file0.txt").isFile());
   char buf[128];
   readFile(A2_TEST_OUT_DIR "/file1.txt", buf, 5);
   buf[5] = '\0';
-  CPPUNIT_ASSERT_EQUAL(msg, std::string(buf));
+  REQUIRE_EQ(msg, std::string(buf));
 
   adaptor->openFile();
   std::string msg2 = "67890ABCDEF";
@@ -308,10 +305,10 @@ void MultiDiskAdaptorTest::testWriteData()
 
   readFile(A2_TEST_OUT_DIR "/file1.txt", buf, 15);
   buf[15] = '\0';
-  CPPUNIT_ASSERT_EQUAL(std::string("1234567890ABCDE"), std::string(buf));
+  REQUIRE_EQ(std::string("1234567890ABCDE"), std::string(buf));
   readFile(A2_TEST_OUT_DIR "/file2.txt", buf, 1);
   buf[1] = '\0';
-  CPPUNIT_ASSERT_EQUAL(std::string("F"), std::string(buf));
+  REQUIRE_EQ(std::string("F"), std::string(buf));
 
   adaptor->openFile();
   std::string msg3 = "12345123456712";
@@ -320,18 +317,18 @@ void MultiDiskAdaptorTest::testWriteData()
 
   readFile(A2_TEST_OUT_DIR "/file1.txt", buf, 15);
   buf[15] = '\0';
-  CPPUNIT_ASSERT_EQUAL(std::string("123456789012345"), std::string(buf));
+  REQUIRE_EQ(std::string("123456789012345"), std::string(buf));
   readFile(A2_TEST_OUT_DIR "/file2.txt", buf, 7);
   buf[7] = '\0';
-  CPPUNIT_ASSERT_EQUAL(std::string("1234567"), std::string(buf));
+  REQUIRE_EQ(std::string("1234567"), std::string(buf));
 
-  CPPUNIT_ASSERT(File(A2_TEST_OUT_DIR "/file3.txt").isFile());
+  REQUIRE(File(A2_TEST_OUT_DIR "/file3.txt").isFile());
 
   readFile(A2_TEST_OUT_DIR "/file4.txt", buf, 2);
   buf[2] = '\0';
-  CPPUNIT_ASSERT_EQUAL(std::string("12"), std::string(buf));
+  REQUIRE_EQ(std::string("12"), std::string(buf));
 
-  CPPUNIT_ASSERT(File(A2_TEST_OUT_DIR "/file5.txt").isFile());
+  REQUIRE(File(A2_TEST_OUT_DIR "/file5.txt").isFile());
 }
 
 void MultiDiskAdaptorTest::testReadData()
@@ -347,16 +344,16 @@ void MultiDiskAdaptorTest::testReadData()
   unsigned char buf[128];
   adaptor->readData(buf, 15, 0);
   buf[15] = '\0';
-  CPPUNIT_ASSERT_EQUAL(std::string("1234567890ABCDE"), std::string((char*)buf));
+  REQUIRE_EQ(std::string("1234567890ABCDE"), std::string((char*)buf));
   adaptor->readData(buf, 10, 6);
   buf[10] = '\0';
-  CPPUNIT_ASSERT_EQUAL(std::string("7890ABCDEF"), std::string((char*)buf));
+  REQUIRE_EQ(std::string("7890ABCDEF"), std::string((char*)buf));
   adaptor->readData(buf, 4, 20);
   buf[4] = '\0';
-  CPPUNIT_ASSERT_EQUAL(std::string("KLMN"), std::string((char*)buf));
+  REQUIRE_EQ(std::string("KLMN"), std::string((char*)buf));
   adaptor->readData(buf, 25, 0);
   buf[25] = '\0';
-  CPPUNIT_ASSERT_EQUAL(std::string("1234567890ABCDEFGHIJKLMNO"),
+  REQUIRE_EQ(std::string("1234567890ABCDEFGHIJKLMNO"),
                        std::string((char*)buf));
 }
 
@@ -379,8 +376,8 @@ void MultiDiskAdaptorTest::testCutTrailingGarbage()
 
   adaptor.cutTrailingGarbage();
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)256, File(fileEntries[0]->getPath()).size());
-  CPPUNIT_ASSERT_EQUAL((int64_t)512, File(fileEntries[1]->getPath()).size());
+  REQUIRE_EQ((int64_t)256, File(fileEntries[0]->getPath()).size());
+  REQUIRE_EQ((int64_t)512, File(fileEntries[1]->getPath()).size());
 }
 
 void MultiDiskAdaptorTest::testSize()
@@ -400,7 +397,7 @@ void MultiDiskAdaptorTest::testSize()
 
   adaptor.openFile();
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)2, adaptor.size());
+  REQUIRE_EQ((int64_t)2, adaptor.size());
 }
 
 void MultiDiskAdaptorTest::testUtime()
@@ -427,17 +424,17 @@ void MultiDiskAdaptorTest::testUtime()
   time_t atime = (time_t)100000;
   time_t mtime = (time_t)200000;
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, adaptor.utime(Time(atime), Time(mtime)));
+  REQUIRE_EQ((size_t)2, adaptor.utime(Time(atime), Time(mtime)));
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       (time_t)mtime,
       File(entries[0]->getPath()).getModifiedTime().getTimeFromEpoch());
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       (time_t)mtime,
       File(entries[3]->getPath()).getModifiedTime().getTimeFromEpoch());
 
-  CPPUNIT_ASSERT(
+  REQUIRE(
       (time_t)mtime !=
       File(entries[2]->getPath()).getModifiedTime().getTimeFromEpoch());
 }
@@ -462,12 +459,12 @@ void MultiDiskAdaptorTest::testWriteCache()
   adaptor->openFile();
   adaptor->writeCache(&cache);
   for (int i = 0; i < 2; ++i) {
-    CPPUNIT_ASSERT_EQUAL(entries[i]->getLength(),
+    REQUIRE_EQ(entries[i]->getLength(),
                          File(entries[i]->getPath()).size());
   }
-  CPPUNIT_ASSERT_EQUAL(data1 + data2.substr(0, 2),
+  REQUIRE_EQ(data1 + data2.substr(0, 2),
                        readFile(entries[0]->getPath()));
-  CPPUNIT_ASSERT_EQUAL(data2.substr(2) + data3,
+  REQUIRE_EQ(data2.substr(2) + data3,
                        readFile(entries[1]->getPath()));
 
   adaptor->closeFile();
@@ -478,9 +475,9 @@ void MultiDiskAdaptorTest::testWriteCache()
   cache.cacheData(createDataCell(123, data2.c_str()));
   adaptor->openFile();
   adaptor->writeCache(&cache);
-  CPPUNIT_ASSERT_EQUAL((int64_t)(123 + data2.size()),
+  REQUIRE_EQ((int64_t)(123 + data2.size()),
                        File(entries[0]->getPath()).size());
-  CPPUNIT_ASSERT_EQUAL(data2, readFile(entries[0]->getPath()).substr(123));
+  REQUIRE_EQ(data2, readFile(entries[0]->getPath()).substr(123));
 }
 
 } // namespace aria2

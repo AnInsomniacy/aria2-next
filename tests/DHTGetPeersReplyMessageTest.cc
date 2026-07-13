@@ -1,6 +1,6 @@
 #include "DHTGetPeersReplyMessage.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTNode.h"
 #include "Exception.h"
@@ -12,12 +12,8 @@
 
 namespace aria2 {
 
-class DHTGetPeersReplyMessageTest : public CppUnit::TestFixture {
+class DHTGetPeersReplyMessageTest {
 
-  CPPUNIT_TEST_SUITE(DHTGetPeersReplyMessageTest);
-  CPPUNIT_TEST(testGetBencodedMessage);
-  CPPUNIT_TEST(testGetBencodedMessage6);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -29,7 +25,8 @@ public:
   void testGetBencodedMessage6();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTGetPeersReplyMessageTest);
+A2_TEST(DHTGetPeersReplyMessageTest, testGetBencodedMessage)
+A2_TEST(DHTGetPeersReplyMessageTest, testGetBencodedMessage6)
 
 void DHTGetPeersReplyMessageTest::testGetBencodedMessage()
 {
@@ -61,7 +58,7 @@ void DHTGetPeersReplyMessageTest::testGetBencodedMessage()
       nodes[i]->setPort(6881 + i);
 
       unsigned char buf[COMPACT_LEN_IPV6];
-      CPPUNIT_ASSERT_EQUAL(COMPACT_LEN_IPV4, bittorrent::packcompact(
+      REQUIRE_EQ(COMPACT_LEN_IPV4, bittorrent::packcompact(
                                                  buf, nodes[i]->getIPAddress(),
                                                  nodes[i]->getPort()));
       compactNodeInfo += std::string(&nodes[i]->getID()[0],
@@ -78,7 +75,7 @@ void DHTGetPeersReplyMessageTest::testGetBencodedMessage()
       auto peer =
           std::make_shared<Peer>("192.168.0." + util::uitos(i + 1), 6881 + i);
       unsigned char buffer[COMPACT_LEN_IPV6];
-      CPPUNIT_ASSERT_EQUAL(COMPACT_LEN_IPV4,
+      REQUIRE_EQ(COMPACT_LEN_IPV4,
                            bittorrent::packcompact(buffer, peer->getIPAddress(),
                                                    peer->getPort()));
       valuesList->append(String::g(buffer, COMPACT_LEN_IPV4));
@@ -89,7 +86,7 @@ void DHTGetPeersReplyMessageTest::testGetBencodedMessage()
     dict.put("r", std::move(rDict));
 
     std::string msgbody = msg.getBencodedMessage();
-    CPPUNIT_ASSERT_EQUAL(util::percentEncode(bencode2::encode(&dict)),
+    REQUIRE_EQ(util::percentEncode(bencode2::encode(&dict)),
                          util::percentEncode(msgbody));
   }
 }
@@ -124,7 +121,7 @@ void DHTGetPeersReplyMessageTest::testGetBencodedMessage6()
       nodes[i]->setPort(6881 + i);
 
       unsigned char buf[COMPACT_LEN_IPV6];
-      CPPUNIT_ASSERT_EQUAL(COMPACT_LEN_IPV6, bittorrent::packcompact(
+      REQUIRE_EQ(COMPACT_LEN_IPV6, bittorrent::packcompact(
                                                  buf, nodes[i]->getIPAddress(),
                                                  nodes[i]->getPort()));
       compactNodeInfo += std::string(&nodes[i]->getID()[0],
@@ -141,7 +138,7 @@ void DHTGetPeersReplyMessageTest::testGetBencodedMessage6()
       auto peer =
           std::make_shared<Peer>("2001::100" + util::uitos(i + 1), 6881 + i);
       unsigned char buffer[COMPACT_LEN_IPV6];
-      CPPUNIT_ASSERT_EQUAL(COMPACT_LEN_IPV6,
+      REQUIRE_EQ(COMPACT_LEN_IPV6,
                            bittorrent::packcompact(buffer, peer->getIPAddress(),
                                                    peer->getPort()));
       valuesList->append(String::g(buffer, COMPACT_LEN_IPV6));
@@ -152,7 +149,7 @@ void DHTGetPeersReplyMessageTest::testGetBencodedMessage6()
     dict.put("r", std::move(rDict));
 
     std::string msgbody = msg.getBencodedMessage();
-    CPPUNIT_ASSERT_EQUAL(util::percentEncode(bencode2::encode(&dict)),
+    REQUIRE_EQ(util::percentEncode(bencode2::encode(&dict)),
                          util::percentEncode(msgbody));
   }
 }

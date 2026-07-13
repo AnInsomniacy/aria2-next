@@ -1,23 +1,20 @@
 #include "ValueBaseBencodeParser.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "ValueBase.h"
 #include "BencodeParser.h"
 
 namespace aria2 {
 
-class ValueBaseBencodeParserTest : public CppUnit::TestFixture {
+class ValueBaseBencodeParserTest {
 
-  CPPUNIT_TEST_SUITE(ValueBaseBencodeParserTest);
-  CPPUNIT_TEST(testParseUpdate);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testParseUpdate();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(ValueBaseBencodeParserTest);
+A2_TEST(ValueBaseBencodeParserTest, testParseUpdate)
 
 namespace {
 void checkDecodeError(const std::string& src)
@@ -26,8 +23,8 @@ void checkDecodeError(const std::string& src)
   ssize_t error;
   std::shared_ptr<ValueBase> r =
       parser.parseFinal(src.c_str(), src.size(), error);
-  CPPUNIT_ASSERT(!r);
-  CPPUNIT_ASSERT(error < 0);
+  REQUIRE(!r);
+  REQUIRE(error < 0);
 }
 } // namespace
 
@@ -40,49 +37,49 @@ void ValueBaseBencodeParserTest::testParseUpdate()
     std::string src = "0:";
     std::shared_ptr<ValueBase> s =
         parser.parseFinal(src.c_str(), src.size(), error);
-    CPPUNIT_ASSERT_EQUAL(std::string(""), downcast<String>(s)->s());
+    REQUIRE_EQ(std::string(""), downcast<String>(s)->s());
   }
   {
     // integer 0
     std::string src = "i0e";
     std::shared_ptr<ValueBase> s =
         parser.parseFinal(src.c_str(), src.size(), error);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, downcast<Integer>(s)->i());
+    REQUIRE_EQ((int64_t)0, downcast<Integer>(s)->i());
   }
   {
     // empty dict
     std::string src = "de";
     std::shared_ptr<ValueBase> d =
         parser.parseFinal(src.c_str(), src.size(), error);
-    CPPUNIT_ASSERT(downcast<Dict>(d)->empty());
+    REQUIRE(downcast<Dict>(d)->empty());
   }
   {
     // empty list
     std::string src = "le";
     std::shared_ptr<ValueBase> l =
         parser.parseFinal(src.c_str(), src.size(), error);
-    CPPUNIT_ASSERT(downcast<List>(l)->empty());
+    REQUIRE(downcast<List>(l)->empty());
   }
   {
     // string
     std::string src = "3:foo";
     std::shared_ptr<ValueBase> s =
         parser.parseFinal(src.c_str(), src.size(), error);
-    CPPUNIT_ASSERT_EQUAL(std::string("foo"), downcast<String>(s)->s());
+    REQUIRE_EQ(std::string("foo"), downcast<String>(s)->s());
   }
   {
     // integer
     std::string src = "i9223372036854775807e";
     std::shared_ptr<ValueBase> s =
         parser.parseFinal(src.c_str(), src.size(), error);
-    CPPUNIT_ASSERT_EQUAL((int64_t)9223372036854775807LL,
+    REQUIRE_EQ((int64_t)9223372036854775807LL,
                          downcast<Integer>(s)->i());
   }
   {
     // float number, ignored and always 0.
     std::string src = "i+343243.342E-1333e";
     auto s = parser.parseFinal(src.c_str(), src.size(), error);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, downcast<Integer>(s)->i());
+    REQUIRE_EQ((int64_t)0, downcast<Integer>(s)->i());
   }
   {
     // dict, size 1
@@ -90,9 +87,9 @@ void ValueBaseBencodeParserTest::testParseUpdate()
     std::shared_ptr<ValueBase> d =
         parser.parseFinal(src.c_str(), src.size(), error);
     Dict* dict = downcast<Dict>(d);
-    CPPUNIT_ASSERT(dict);
-    CPPUNIT_ASSERT(dict->get("foo"));
-    CPPUNIT_ASSERT_EQUAL((int64_t)123,
+    REQUIRE(dict);
+    REQUIRE(dict->get("foo"));
+    REQUIRE_EQ((int64_t)123,
                          downcast<Integer>(dict->get("foo"))->i());
   }
   {
@@ -101,13 +98,13 @@ void ValueBaseBencodeParserTest::testParseUpdate()
     std::shared_ptr<ValueBase> d =
         parser.parseFinal(src.c_str(), src.size(), error);
     Dict* dict = downcast<Dict>(d);
-    CPPUNIT_ASSERT(dict);
-    CPPUNIT_ASSERT_EQUAL((size_t)2, dict->size());
-    CPPUNIT_ASSERT(dict->get("foo"));
-    CPPUNIT_ASSERT_EQUAL((int64_t)123,
+    REQUIRE(dict);
+    REQUIRE_EQ((size_t)2, dict->size());
+    REQUIRE(dict->get("foo"));
+    REQUIRE_EQ((int64_t)123,
                          downcast<Integer>(dict->get("foo"))->i());
-    CPPUNIT_ASSERT(dict->get("bar"));
-    CPPUNIT_ASSERT_EQUAL(std::string("e"),
+    REQUIRE(dict->get("bar"));
+    REQUIRE_EQ(std::string("e"),
                          downcast<String>(dict->get("bar"))->s());
   }
   {
@@ -116,9 +113,9 @@ void ValueBaseBencodeParserTest::testParseUpdate()
     std::shared_ptr<ValueBase> l =
         parser.parseFinal(src.c_str(), src.size(), error);
     List* list = downcast<List>(l);
-    CPPUNIT_ASSERT(list);
-    CPPUNIT_ASSERT_EQUAL((size_t)1, list->size());
-    CPPUNIT_ASSERT_EQUAL(std::string("foo"),
+    REQUIRE(list);
+    REQUIRE_EQ((size_t)1, list->size());
+    REQUIRE_EQ(std::string("foo"),
                          downcast<String>(list->get(0))->s());
   }
   {
@@ -127,11 +124,11 @@ void ValueBaseBencodeParserTest::testParseUpdate()
     std::shared_ptr<ValueBase> l =
         parser.parseFinal(src.c_str(), src.size(), error);
     List* list = downcast<List>(l);
-    CPPUNIT_ASSERT(list);
-    CPPUNIT_ASSERT_EQUAL((size_t)2, list->size());
-    CPPUNIT_ASSERT_EQUAL(std::string("foo"),
+    REQUIRE(list);
+    REQUIRE_EQ((size_t)2, list->size());
+    REQUIRE_EQ(std::string("foo"),
                          downcast<String>(list->get(0))->s());
-    CPPUNIT_ASSERT_EQUAL((int64_t)123, downcast<Integer>(list->get(1))->i());
+    REQUIRE_EQ((int64_t)123, downcast<Integer>(list->get(1))->i());
   }
   {
     // string, integer and list in dict
@@ -139,17 +136,17 @@ void ValueBaseBencodeParserTest::testParseUpdate()
     std::shared_ptr<ValueBase> r =
         parser.parseFinal(src.c_str(), src.size(), error);
     const Dict* dict = downcast<Dict>(r);
-    CPPUNIT_ASSERT(dict);
-    CPPUNIT_ASSERT_EQUAL(std::string("aria2"),
+    REQUIRE(dict);
+    REQUIRE_EQ(std::string("aria2"),
                          downcast<String>(dict->get("name"))->s());
-    CPPUNIT_ASSERT_EQUAL(static_cast<Integer::ValueType>(12345678900LL),
+    REQUIRE_EQ(static_cast<Integer::ValueType>(12345678900LL),
                          downcast<Integer>(dict->get("size"))->i());
     const List* list = downcast<List>(dict->get("files"));
-    CPPUNIT_ASSERT(list);
-    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), list->size());
-    CPPUNIT_ASSERT_EQUAL(std::string("bin"),
+    REQUIRE(list);
+    REQUIRE_EQ(static_cast<size_t>(2), list->size());
+    REQUIRE_EQ(std::string("bin"),
                          downcast<String>(list->get(0))->s());
-    CPPUNIT_ASSERT_EQUAL(std::string("doc"),
+    REQUIRE_EQ(std::string("doc"),
                          downcast<String>(list->get(1))->s());
   }
   {
@@ -158,11 +155,11 @@ void ValueBaseBencodeParserTest::testParseUpdate()
     std::shared_ptr<ValueBase> r =
         parser.parseFinal(src.c_str(), src.size(), error);
     const List* list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
-    CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(1), list->size());
+    REQUIRE(list);
+    REQUIRE_EQ(static_cast<size_t>(1), list->size());
     const Dict* dict = downcast<Dict>(list->get(0));
-    CPPUNIT_ASSERT(dict);
-    CPPUNIT_ASSERT_EQUAL(static_cast<Integer::ValueType>(123),
+    REQUIRE(dict);
+    REQUIRE_EQ(static_cast<Integer::ValueType>(123),
                          downcast<Integer>(dict->get("k"))->i());
   }
   {
@@ -176,7 +173,7 @@ void ValueBaseBencodeParserTest::testParseUpdate()
     std::string src = "";
     std::shared_ptr<ValueBase> s =
         parser.parseFinal(src.c_str(), src.size(), error);
-    CPPUNIT_ASSERT(!s);
+    REQUIRE(!s);
   }
   // integer, without ending 'e'
   checkDecodeError("i3");
@@ -204,9 +201,9 @@ void ValueBaseBencodeParserTest::testParseUpdate()
     std::string src = "5:aria2trail";
     std::shared_ptr<ValueBase> s =
         parser.parseFinal(src.c_str(), src.size(), error);
-    CPPUNIT_ASSERT_EQUAL(std::string("aria2"), downcast<String>(s)->s());
+    REQUIRE_EQ(std::string("aria2"), downcast<String>(s)->s());
     // Get trailing garbage position
-    CPPUNIT_ASSERT_EQUAL((ssize_t)7, error);
+    REQUIRE_EQ((ssize_t)7, error);
   }
   {
     // dict, empty member name
@@ -214,9 +211,9 @@ void ValueBaseBencodeParserTest::testParseUpdate()
     std::shared_ptr<ValueBase> d =
         parser.parseFinal(src.c_str(), src.size(), error);
     Dict* dict = downcast<Dict>(d);
-    CPPUNIT_ASSERT(dict);
-    CPPUNIT_ASSERT(dict->get(""));
-    CPPUNIT_ASSERT_EQUAL((int64_t)123, downcast<Integer>(dict->get(""))->i());
+    REQUIRE(dict);
+    REQUIRE(dict->get(""));
+    REQUIRE_EQ((int64_t)123, downcast<Integer>(dict->get(""))->i());
   }
 }
 

@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "Peer.h"
@@ -11,14 +11,8 @@
 
 namespace aria2 {
 
-class BtInterestedMessageTest : public CppUnit::TestFixture {
+class BtInterestedMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtInterestedMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testCreate();
@@ -27,7 +21,10 @@ public:
   void testToString();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtInterestedMessageTest);
+A2_TEST(BtInterestedMessageTest, testCreate)
+A2_TEST(BtInterestedMessageTest, testCreateMessage)
+A2_TEST(BtInterestedMessageTest, testDoReceivedAction)
+A2_TEST(BtInterestedMessageTest, testToString)
 
 void BtInterestedMessageTest::testCreate()
 {
@@ -35,14 +32,14 @@ void BtInterestedMessageTest::testCreate()
   bittorrent::createPeerMessageString(msg, sizeof(msg), 1, 2);
   std::shared_ptr<BtInterestedMessage> pm(
       BtInterestedMessage::create(&msg[4], 1));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)2, pm->getId());
+  REQUIRE_EQ((uint8_t)2, pm->getId());
 
   // case: payload size is wrong
   try {
     unsigned char msg[6];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 2, 2);
     BtInterestedMessage::create(&msg[4], 2);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -51,7 +48,7 @@ void BtInterestedMessageTest::testCreate()
     unsigned char msg[5];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 1, 3);
     BtInterestedMessage::create(&msg[4], 1);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -63,8 +60,8 @@ void BtInterestedMessageTest::testCreateMessage()
   unsigned char data[5];
   bittorrent::createPeerMessageString(data, sizeof(data), 1, 2);
   auto rawmsg = msg.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)5, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)5, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtInterestedMessageTest::testDoReceivedAction()
@@ -78,20 +75,20 @@ void BtInterestedMessageTest::testDoReceivedAction()
 
   msg.setPeerStorage(peerStorage.get());
 
-  CPPUNIT_ASSERT(!peer->peerInterested());
+  REQUIRE(!peer->peerInterested());
   msg.doReceivedAction();
-  CPPUNIT_ASSERT(peer->peerInterested());
-  CPPUNIT_ASSERT_EQUAL(1, peerStorage->getNumChokeExecuted());
+  REQUIRE(peer->peerInterested());
+  REQUIRE_EQ(1, peerStorage->getNumChokeExecuted());
 
   peer->amChoking(false);
   msg.doReceivedAction();
-  CPPUNIT_ASSERT_EQUAL(1, peerStorage->getNumChokeExecuted());
+  REQUIRE_EQ(1, peerStorage->getNumChokeExecuted());
 }
 
 void BtInterestedMessageTest::testToString()
 {
   BtInterestedMessage msg;
-  CPPUNIT_ASSERT_EQUAL(std::string("interested"), msg.toString());
+  REQUIRE_EQ(std::string("interested"), msg.toString());
 }
 
 } // namespace aria2

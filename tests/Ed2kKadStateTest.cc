@@ -1,6 +1,6 @@
 #include "Ed2kKadState.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Ed2kAttribute.h"
 #include "ed2k_constants.h"
@@ -10,20 +10,7 @@ namespace aria2 {
 
 namespace ed2k {
 
-class Ed2kKadStateTest : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(Ed2kKadStateTest);
-  CPPUNIT_TEST(testRoutingPromotesReplacementOnFailure);
-  CPPUNIT_TEST(testRoutingFindClosestAndSnapshot);
-  CPPUNIT_TEST(testRoutingRouterContactKeepsKadMetadata);
-  CPPUNIT_TEST(testRoutingFindsKnownContactByEndpoint);
-  CPPUNIT_TEST(testRoutingFindClosestExcludesRequester);
-  CPPUNIT_TEST(testRoutingBootstrapAndRefresh);
-  CPPUNIT_TEST(testKadSourceSearchCadence);
-  CPPUNIT_TEST(testTraversalContinuesBeforeSearch);
-  CPPUNIT_TEST(testExpiredTransactionCarriesContactForFailure);
-  CPPUNIT_TEST(testTransactionCompletionMatchesTarget);
-  CPPUNIT_TEST(testTransactionCompletionAndExpiry);
-  CPPUNIT_TEST_SUITE_END();
+class Ed2kKadStateTest {
 
 public:
   void testRoutingPromotesReplacementOnFailure();
@@ -39,7 +26,17 @@ public:
   void testTransactionCompletionAndExpiry();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(Ed2kKadStateTest);
+A2_TEST(Ed2kKadStateTest, testRoutingPromotesReplacementOnFailure)
+A2_TEST(Ed2kKadStateTest, testRoutingFindClosestAndSnapshot)
+A2_TEST(Ed2kKadStateTest, testRoutingRouterContactKeepsKadMetadata)
+A2_TEST(Ed2kKadStateTest, testRoutingFindsKnownContactByEndpoint)
+A2_TEST(Ed2kKadStateTest, testRoutingFindClosestExcludesRequester)
+A2_TEST(Ed2kKadStateTest, testRoutingBootstrapAndRefresh)
+A2_TEST(Ed2kKadStateTest, testKadSourceSearchCadence)
+A2_TEST(Ed2kKadStateTest, testTraversalContinuesBeforeSearch)
+A2_TEST(Ed2kKadStateTest, testExpiredTransactionCarriesContactForFailure)
+A2_TEST(Ed2kKadStateTest, testTransactionCompletionMatchesTarget)
+A2_TEST(Ed2kKadStateTest, testTransactionCompletionAndExpiry)
 
 namespace {
 
@@ -84,10 +81,10 @@ void Ed2kKadStateTest::testRoutingPromotesReplacementOnFailure()
   table.nodeFailed(live);
 
   auto closest = table.findClosest(self, 10, true);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, closest.size());
-  CPPUNIT_ASSERT_EQUAL(replacement.id, closest[0].id);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, table.liveSize());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, table.replacementSize());
+  REQUIRE_EQ((size_t)1, closest.size());
+  REQUIRE_EQ(replacement.id, closest[0].id);
+  REQUIRE_EQ((size_t)1, table.liveSize());
+  REQUIRE_EQ((size_t)0, table.replacementSize());
 }
 
 void Ed2kKadStateTest::testRoutingFindClosestAndSnapshot()
@@ -107,18 +104,18 @@ void Ed2kKadStateTest::testRoutingFindClosestAndSnapshot()
   table.addRouterNode(endpoint("203.0.113.1", 4672));
 
   auto confirmed = table.findClosest(self, 10, false);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, confirmed.size());
-  CPPUNIT_ASSERT_EQUAL(near.id, confirmed[0].id);
-  CPPUNIT_ASSERT_EQUAL(far.id, confirmed[1].id);
+  REQUIRE_EQ((size_t)2, confirmed.size());
+  REQUIRE_EQ(near.id, confirmed[0].id);
+  REQUIRE_EQ(far.id, confirmed[1].id);
 
   auto all = table.findClosest(self, 10, true);
-  CPPUNIT_ASSERT_EQUAL((size_t)3, all.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, table.getRouterNodes().size());
+  REQUIRE_EQ((size_t)3, all.size());
+  REQUIRE_EQ((size_t)1, table.getRouterNodes().size());
 
   KadRoutingTable restored(self, 10);
   restored.restore(table.snapshot());
-  CPPUNIT_ASSERT_EQUAL((size_t)3, restored.liveSize());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, restored.getRouterNodes().size());
+  REQUIRE_EQ((size_t)3, restored.liveSize());
+  REQUIRE_EQ((size_t)1, restored.getRouterNodes().size());
 }
 
 void Ed2kKadStateTest::testRoutingRouterContactKeepsKadMetadata()
@@ -133,21 +130,21 @@ void Ed2kKadStateTest::testRoutingRouterContactKeepsKadMetadata()
   table.addRouterNode(contact);
 
   auto routers = table.getRouterContacts();
-  CPPUNIT_ASSERT_EQUAL((size_t)1, routers.size());
-  CPPUNIT_ASSERT_EQUAL(contact.id, routers[0].id);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"), routers[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, routers[0].udpPort);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, routers[0].tcpPort);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)8, routers[0].version);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55667788, routers[0].udpKey);
+  REQUIRE_EQ((size_t)1, routers.size());
+  REQUIRE_EQ(contact.id, routers[0].id);
+  REQUIRE_EQ(std::string("203.0.113.9"), routers[0].host);
+  REQUIRE_EQ((uint16_t)4672, routers[0].udpPort);
+  REQUIRE_EQ((uint16_t)4662, routers[0].tcpPort);
+  REQUIRE_EQ((uint8_t)8, routers[0].version);
+  REQUIRE_EQ((uint32_t)0x55667788, routers[0].udpKey);
 
   KadRoutingTable restored(self, 10);
   restored.restore(table.snapshot());
   routers = restored.getRouterContacts();
-  CPPUNIT_ASSERT_EQUAL((size_t)1, routers.size());
-  CPPUNIT_ASSERT_EQUAL(contact.id, routers[0].id);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)8, routers[0].version);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55667788, routers[0].udpKey);
+  REQUIRE_EQ((size_t)1, routers.size());
+  REQUIRE_EQ(contact.id, routers[0].id);
+  REQUIRE_EQ((uint8_t)8, routers[0].version);
+  REQUIRE_EQ((uint32_t)0x55667788, routers[0].udpKey);
 }
 
 void Ed2kKadStateTest::testRoutingFindsKnownContactByEndpoint()
@@ -165,13 +162,13 @@ void Ed2kKadStateTest::testRoutingFindsKnownContactByEndpoint()
   table.addRouterNode(router);
 
   KadContact found;
-  CPPUNIT_ASSERT(table.findByEndpoint(found, endpoint("203.0.113.9", 4672)));
-  CPPUNIT_ASSERT_EQUAL(live.id, found.id);
-  CPPUNIT_ASSERT(table.findByEndpoint(found, endpoint("203.0.113.10", 4673)));
-  CPPUNIT_ASSERT_EQUAL(replacement.id, found.id);
-  CPPUNIT_ASSERT(table.findByEndpoint(found, endpoint("203.0.113.11", 4674)));
-  CPPUNIT_ASSERT_EQUAL(router.id, found.id);
-  CPPUNIT_ASSERT(!table.findByEndpoint(found, endpoint("203.0.113.12", 4675)));
+  REQUIRE(table.findByEndpoint(found, endpoint("203.0.113.9", 4672)));
+  REQUIRE_EQ(live.id, found.id);
+  REQUIRE(table.findByEndpoint(found, endpoint("203.0.113.10", 4673)));
+  REQUIRE_EQ(replacement.id, found.id);
+  REQUIRE(table.findByEndpoint(found, endpoint("203.0.113.11", 4674)));
+  REQUIRE_EQ(router.id, found.id);
+  REQUIRE(!table.findByEndpoint(found, endpoint("203.0.113.12", 4675)));
 }
 
 void Ed2kKadStateTest::testRoutingFindClosestExcludesRequester()
@@ -188,8 +185,8 @@ void Ed2kKadStateTest::testRoutingFindClosestExcludesRequester()
   auto closest =
       table.findClosestExcluding(self, requester.id, 8, false);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, closest.size());
-  CPPUNIT_ASSERT_EQUAL(other.id, closest[0].id);
+  REQUIRE_EQ((size_t)1, closest.size());
+  REQUIRE_EQ(other.id, closest[0].id);
 
   auto kad1 = contactFromHex("00000000000000000000000000000003",
                              "203.0.113.3", 4672);
@@ -205,21 +202,21 @@ void Ed2kKadStateTest::testRoutingFindClosestExcludesRequester()
   table.nodeSeen(acceptedDnsPort, 14);
 
   auto all = table.findClosest(self, 8, false);
-  CPPUNIT_ASSERT_EQUAL((size_t)3, all.size());
+  REQUIRE_EQ((size_t)3, all.size());
 }
 
 void Ed2kKadStateTest::testRoutingBootstrapAndRefresh()
 {
   auto self = hashFromHex("00000000000000000000000000000000");
   KadRoutingTable table(self, 10);
-  CPPUNIT_ASSERT(table.needBootstrap(100));
-  CPPUNIT_ASSERT(!table.needBootstrap(120));
-  CPPUNIT_ASSERT(table.needBootstrap(131));
+  REQUIRE(table.needBootstrap(100));
+  REQUIRE(!table.needBootstrap(120));
+  REQUIRE(table.needBootstrap(131));
 
   std::string target;
-  CPPUNIT_ASSERT(table.needRefresh(target, 200));
-  CPPUNIT_ASSERT_EQUAL(self, target);
-  CPPUNIT_ASSERT(!table.needRefresh(target, 210));
+  REQUIRE(table.needRefresh(target, 200));
+  REQUIRE_EQ(self, target);
+  REQUIRE(!table.needRefresh(target, 210));
 }
 
 void Ed2kKadStateTest::testKadSourceSearchCadence()
@@ -230,31 +227,31 @@ void Ed2kKadStateTest::testKadSourceSearchCadence()
       std::make_shared<KadRoutingTable>(
           hashFromHex("00000000000000000000000000000000"));
 
-  CPPUNIT_ASSERT(!shouldStartEd2kKadSourceSearch(&attrs, 100));
+  REQUIRE(!shouldStartEd2kKadSourceSearch(&attrs, 100));
 
   auto seed = contactFromHex("11111111111111111111111111111111",
                              "203.0.113.1", 4672);
   attrs.kadRoutingTable->heardAbout(seed, 100);
-  CPPUNIT_ASSERT(shouldStartEd2kKadSourceSearch(&attrs, 100));
+  REQUIRE(shouldStartEd2kKadSourceSearch(&attrs, 100));
 
   markEd2kKadSourceSearchStarted(&attrs, 100);
-  CPPUNIT_ASSERT_EQUAL((int64_t)100, attrs.lastKadSourceSearch);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1, attrs.kadSourceSearchCount);
-  CPPUNIT_ASSERT(!shouldStartEd2kKadSourceSearch(&attrs, 3699));
-  CPPUNIT_ASSERT(shouldStartEd2kKadSourceSearch(&attrs, 3700));
+  REQUIRE_EQ((int64_t)100, attrs.lastKadSourceSearch);
+  REQUIRE_EQ((uint32_t)1, attrs.kadSourceSearchCount);
+  REQUIRE(!shouldStartEd2kKadSourceSearch(&attrs, 3699));
+  REQUIRE(shouldStartEd2kKadSourceSearch(&attrs, 3700));
 
   attrs.kadSourceTraversal = make_unique<KadTraversal>(
       KadTraversalKind::SOURCE_LOOKUP, attrs.link.hash, 12345);
-  CPPUNIT_ASSERT(!shouldStartEd2kKadSourceSearch(&attrs, 3700));
+  REQUIRE(!shouldStartEd2kKadSourceSearch(&attrs, 3700));
   attrs.kadSourceTraversal.reset();
 
   markEd2kKadSourceSearchStarted(&attrs, 3700);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)2, attrs.kadSourceSearchCount);
-  CPPUNIT_ASSERT(!shouldStartEd2kKadSourceSearch(&attrs, 10899));
-  CPPUNIT_ASSERT(shouldStartEd2kKadSourceSearch(&attrs, 10900));
+  REQUIRE_EQ((uint32_t)2, attrs.kadSourceSearchCount);
+  REQUIRE(!shouldStartEd2kKadSourceSearch(&attrs, 10899));
+  REQUIRE(shouldStartEd2kKadSourceSearch(&attrs, 10900));
 
   attrs.peerStates.resize(50);
-  CPPUNIT_ASSERT(!shouldStartEd2kKadSourceSearch(&attrs, 20000));
+  REQUIRE(!shouldStartEd2kKadSourceSearch(&attrs, 20000));
 }
 
 void Ed2kKadStateTest::testTraversalContinuesBeforeSearch()
@@ -267,23 +264,24 @@ void Ed2kKadStateTest::testTraversalContinuesBeforeSearch()
   KadTraversal traversal(KadTraversalKind::SOURCE_LOOKUP, target, 12345, 1, 2);
 
   auto actions = traversal.start(std::vector<KadContact>{seed});
-  CPPUNIT_ASSERT_EQUAL((size_t)1, actions.size());
-  CPPUNIT_ASSERT_EQUAL(KadTraversalActionType::FIND_NODE, actions[0].type);
-  CPPUNIT_ASSERT_EQUAL(seed.id, actions[0].contact.id);
+  REQUIRE_EQ((size_t)1, actions.size());
+  REQUIRE_EQ(KadTraversalActionType::FIND_NODE, actions[0].type);
+  REQUIRE_EQ(seed.id, actions[0].contact.id);
 
   actions = traversal.onResponse(seed, std::vector<KadContact>{closer});
-  CPPUNIT_ASSERT_EQUAL((size_t)1, actions.size());
-  CPPUNIT_ASSERT_EQUAL(KadTraversalActionType::FIND_NODE, actions[0].type);
-  CPPUNIT_ASSERT_EQUAL(closer.id, actions[0].contact.id);
+  REQUIRE_EQ((size_t)1, actions.size());
+  REQUIRE_EQ(KadTraversalActionType::FIND_NODE, actions[0].type);
+  REQUIRE_EQ(closer.id, actions[0].contact.id);
 
   actions = traversal.onResponse(closer, std::vector<KadContact>());
-  CPPUNIT_ASSERT_EQUAL((size_t)2, actions.size());
-  CPPUNIT_ASSERT_EQUAL(KadTraversalActionType::SEARCH, actions[0].type);
-  CPPUNIT_ASSERT_EQUAL(KadTraversalActionType::SEARCH, actions[1].type);
-  CPPUNIT_ASSERT((actions[0].contact.id == seed.id &&
-                  actions[1].contact.id == closer.id) ||
-                 (actions[0].contact.id == closer.id &&
-                  actions[1].contact.id == seed.id));
+  REQUIRE_EQ((size_t)2, actions.size());
+  REQUIRE_EQ(KadTraversalActionType::SEARCH, actions[0].type);
+  REQUIRE_EQ(KadTraversalActionType::SEARCH, actions[1].type);
+  const bool pairedEitherOrder = (actions[0].contact.id == seed.id &&
+                                  actions[1].contact.id == closer.id) ||
+                                 (actions[0].contact.id == closer.id &&
+                                  actions[1].contact.id == seed.id);
+  REQUIRE(pairedEitherOrder);
 }
 
 void Ed2kKadStateTest::testExpiredTransactionCarriesContactForFailure()
@@ -299,10 +297,10 @@ void Ed2kKadStateTest::testExpiredTransactionCarriesContactForFailure()
   table.add(tx);
 
   auto expired = table.expire(113, 12);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, expired.size());
-  CPPUNIT_ASSERT_EQUAL(tx.contact.id, expired[0].contact.id);
-  CPPUNIT_ASSERT_EQUAL(tx.contact.host, expired[0].contact.host);
-  CPPUNIT_ASSERT_EQUAL(tx.contact.udpPort, expired[0].contact.udpPort);
+  REQUIRE_EQ((size_t)1, expired.size());
+  REQUIRE_EQ(tx.contact.id, expired[0].contact.id);
+  REQUIRE_EQ(tx.contact.host, expired[0].contact.host);
+  REQUIRE_EQ(tx.contact.udpPort, expired[0].contact.udpPort);
 }
 
 void Ed2kKadStateTest::testTransactionCompletionMatchesTarget()
@@ -325,12 +323,12 @@ void Ed2kKadStateTest::testTransactionCompletionMatchesTarget()
   table.add(lookup);
 
   KadTransaction completed;
-  CPPUNIT_ASSERT(table.complete(endpoint("203.0.113.9", 4672), KAD_RES,
+  REQUIRE(table.complete(endpoint("203.0.113.9", 4672), KAD_RES,
                                 lookup.targetId, completed));
-  CPPUNIT_ASSERT_EQUAL(KadTransactionPurpose::SOURCE_LOOKUP,
+  REQUIRE_EQ(KadTransactionPurpose::SOURCE_LOOKUP,
                        completed.purpose);
-  CPPUNIT_ASSERT_EQUAL(lookup.targetId, completed.targetId);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, table.size());
+  REQUIRE_EQ(lookup.targetId, completed.targetId);
+  REQUIRE_EQ((size_t)1, table.size());
 }
 
 void Ed2kKadStateTest::testTransactionCompletionAndExpiry()
@@ -344,15 +342,15 @@ void Ed2kKadStateTest::testTransactionCompletionAndExpiry()
   table.add(tx);
 
   KadTransaction completed;
-  CPPUNIT_ASSERT(table.complete(endpoint("203.0.113.9", 4672),
+  REQUIRE(table.complete(endpoint("203.0.113.9", 4672),
                                 KAD_BOOTSTRAP_RES, completed));
-  CPPUNIT_ASSERT_EQUAL(tx.targetId, completed.targetId);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, table.size());
+  REQUIRE_EQ(tx.targetId, completed.targetId);
+  REQUIRE_EQ((size_t)0, table.size());
 
   table.add(tx);
   auto expired = table.expire(113, 12);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, expired.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, table.size());
+  REQUIRE_EQ((size_t)1, expired.size());
+  REQUIRE_EQ((size_t)0, table.size());
 }
 
 } // namespace ed2k

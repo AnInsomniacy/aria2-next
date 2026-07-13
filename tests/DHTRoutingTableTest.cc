@@ -1,7 +1,7 @@
 #include "DHTRoutingTable.h"
 
 #include <cstring>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -13,13 +13,8 @@
 
 namespace aria2 {
 
-class DHTRoutingTableTest : public CppUnit::TestFixture {
+class DHTRoutingTableTest {
 
-  CPPUNIT_TEST_SUITE(DHTRoutingTableTest);
-  CPPUNIT_TEST(testAddNode);
-  CPPUNIT_TEST(testAddNode_localNode);
-  CPPUNIT_TEST(testGetClosestKNodes);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -31,7 +26,9 @@ public:
   void testGetClosestKNodes();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTRoutingTableTest);
+A2_TEST(DHTRoutingTableTest, testAddNode)
+A2_TEST(DHTRoutingTableTest, testAddNode_localNode)
+A2_TEST(DHTRoutingTableTest, testGetClosestKNodes)
 
 void DHTRoutingTableTest::testAddNode()
 {
@@ -60,7 +57,7 @@ void DHTRoutingTableTest::testAddNode_localNode()
   table.setTaskQueue(taskQueue.get());
 
   auto newNode = std::make_shared<DHTNode>(localNode->getID());
-  CPPUNIT_ASSERT(!table.addNode(newNode));
+  REQUIRE(!table.addNode(newNode));
 }
 
 namespace {
@@ -87,25 +84,25 @@ void DHTRoutingTableTest::testGetClosestKNodes()
   for (size_t i = 0; i < DHTBucket::K; ++i) {
     createID(id, 0xf0, i);
     nodes1[i] = std::make_shared<DHTNode>(id);
-    CPPUNIT_ASSERT(table.addNode(nodes1[i]));
+    REQUIRE(table.addNode(nodes1[i]));
   }
   for (size_t i = 0; i < DHTBucket::K; ++i) {
     createID(id, 0x80, i);
     nodes2[i] = std::make_shared<DHTNode>(id);
-    CPPUNIT_ASSERT(table.addNode(nodes2[i]));
+    REQUIRE(table.addNode(nodes2[i]));
   }
   for (size_t i = 0; i < DHTBucket::K; ++i) {
     createID(id, 0x70, i);
     nodes3[i] = std::make_shared<DHTNode>(id);
-    CPPUNIT_ASSERT(table.addNode(nodes3[i]));
+    REQUIRE(table.addNode(nodes3[i]));
   }
   {
     createID(id, 0x80, 0x10);
     std::vector<std::shared_ptr<DHTNode>> nodes;
     table.getClosestKNodes(nodes, id);
-    CPPUNIT_ASSERT_EQUAL((size_t)8, nodes.size());
+    REQUIRE_EQ((size_t)8, nodes.size());
     for (size_t i = 0; i < nodes.size(); ++i) {
-      CPPUNIT_ASSERT(
+      REQUIRE(
           memcmp(nodes2[0]->getID(), nodes[0]->getID(), DHT_ID_LENGTH) == 0);
     }
   }

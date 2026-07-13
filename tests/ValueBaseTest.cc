@@ -3,23 +3,15 @@
 #include <cstring>
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
 
 namespace aria2 {
 
-class ValueBaseTest : public CppUnit::TestFixture {
+class ValueBaseTest {
 
-  CPPUNIT_TEST_SUITE(ValueBaseTest);
-  CPPUNIT_TEST(testString);
-  CPPUNIT_TEST(testDict);
-  CPPUNIT_TEST(testDictIter);
-  CPPUNIT_TEST(testList);
-  CPPUNIT_TEST(testListIter);
-  CPPUNIT_TEST(testDowncast);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -34,27 +26,32 @@ public:
   void testDowncast();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(ValueBaseTest);
+A2_TEST(ValueBaseTest, testString)
+A2_TEST(ValueBaseTest, testDict)
+A2_TEST(ValueBaseTest, testDictIter)
+A2_TEST(ValueBaseTest, testList)
+A2_TEST(ValueBaseTest, testListIter)
+A2_TEST(ValueBaseTest, testDowncast)
 
 void ValueBaseTest::testString()
 {
   String s(std::string("aria2"));
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2"), s.s());
+  REQUIRE_EQ(std::string("aria2"), s.s());
 
   unsigned char dataWithNull[] = {0xf0, '\0', 0x0f};
   String sWithNull(dataWithNull, sizeof(dataWithNull));
-  CPPUNIT_ASSERT(
+  REQUIRE(
       memcmp(dataWithNull, sWithNull.s().c_str(), sizeof(dataWithNull)) == 0);
 
   String zero("");
-  CPPUNIT_ASSERT_EQUAL(std::string(""), zero.s());
+  REQUIRE_EQ(std::string(""), zero.s());
 
   String z;
-  CPPUNIT_ASSERT_EQUAL(std::string(""), z.s());
+  REQUIRE_EQ(std::string(""), z.s());
 
   const unsigned char uc[] = {0x08, 0x19, 0x2a, 0x3b};
   String data(uc, sizeof(uc));
-  CPPUNIT_ASSERT_EQUAL(util::toHex(uc, sizeof(uc)),
+  REQUIRE_EQ(util::toHex(uc, sizeof(uc)),
                        util::toHex(data.uc(), data.s().size()));
 }
 
@@ -62,57 +59,57 @@ void ValueBaseTest::testDowncast()
 {
   Integer integer(100);
   const Integer* x = downcast<Integer>(&integer);
-  CPPUNIT_ASSERT(x);
-  CPPUNIT_ASSERT_EQUAL(static_cast<Integer::ValueType>(100), x->i());
-  CPPUNIT_ASSERT(!downcast<String>(&integer));
+  REQUIRE(x);
+  REQUIRE_EQ(static_cast<Integer::ValueType>(100), x->i());
+  REQUIRE(!downcast<String>(&integer));
   std::shared_ptr<Integer> si(new Integer(101));
   const Integer* x2 = downcast<Integer>(si);
-  CPPUNIT_ASSERT_EQUAL(static_cast<Integer::ValueType>(101), x2->i());
+  REQUIRE_EQ(static_cast<Integer::ValueType>(101), x2->i());
 
   String str("foo");
   const String* x3 = downcast<String>(&str);
-  CPPUNIT_ASSERT_EQUAL(static_cast<String::ValueType>("foo"), x3->s());
+  REQUIRE_EQ(static_cast<String::ValueType>("foo"), x3->s());
 
   List list;
   const List* x4 = downcast<List>(&list);
-  CPPUNIT_ASSERT(x4);
+  REQUIRE(x4);
 
   Dict dict;
   const Dict* x5 = downcast<Dict>(&dict);
-  CPPUNIT_ASSERT(x5);
+  REQUIRE(x5);
 }
 
 void ValueBaseTest::testDict()
 {
   Dict dict;
-  CPPUNIT_ASSERT(dict.empty());
+  REQUIRE(dict.empty());
 
   dict.put("ki", Integer::g(7));
   dict.put("ks", String::g("abc"));
 
-  CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), dict.size());
-  CPPUNIT_ASSERT(dict.containsKey("ki"));
-  CPPUNIT_ASSERT_EQUAL(static_cast<Integer::ValueType>(7),
+  REQUIRE_EQ(static_cast<size_t>(2), dict.size());
+  REQUIRE(dict.containsKey("ki"));
+  REQUIRE_EQ(static_cast<Integer::ValueType>(7),
                        downcast<Integer>(dict["ki"])->i());
-  CPPUNIT_ASSERT(dict.containsKey("ks"));
-  CPPUNIT_ASSERT_EQUAL(std::string("abc"), downcast<String>(dict["ks"])->s());
+  REQUIRE(dict.containsKey("ks"));
+  REQUIRE_EQ(std::string("abc"), downcast<String>(dict["ks"])->s());
 
-  CPPUNIT_ASSERT(!dict["kn"]); // This does not adds kn key
-  CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), dict.size());
+  REQUIRE(!dict["kn"]); // This does not adds kn key
+  REQUIRE_EQ(static_cast<size_t>(2), dict.size());
 
   auto& ref = dict;
   ref["kn2"]; // This doesn't add kn2 key.
-  CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), ref.size());
-  CPPUNIT_ASSERT(!ref.containsKey("kn2"));
+  REQUIRE_EQ(static_cast<size_t>(2), ref.size());
+  REQUIRE(!ref.containsKey("kn2"));
 
   dict.removeKey("ks");
-  CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(1), dict.size());
-  CPPUNIT_ASSERT(!dict.containsKey("ks"));
+  REQUIRE_EQ(static_cast<size_t>(1), dict.size());
+  REQUIRE(!dict.containsKey("ks"));
 
   auto ki = dict.popValue("ki");
-  CPPUNIT_ASSERT_EQUAL(Integer::ValueType{7}, downcast<Integer>(ki)->i());
-  CPPUNIT_ASSERT(dict.empty());
-  CPPUNIT_ASSERT(!dict.containsKey("ki"));
+  REQUIRE_EQ(Integer::ValueType{7}, downcast<Integer>(ki)->i());
+  REQUIRE(dict.empty());
+  REQUIRE(!dict.containsKey("ki"));
 }
 
 void ValueBaseTest::testDictIter()
@@ -124,35 +121,35 @@ void ValueBaseTest::testDictIter()
   dict.put("alpha", String::g("alpha"));
 
   Dict::ValueType::iterator i = dict.begin();
-  CPPUNIT_ASSERT_EQUAL(std::string("alpha"), (*i++).first);
-  CPPUNIT_ASSERT_EQUAL(std::string("alpha2"), (*i++).first);
-  CPPUNIT_ASSERT_EQUAL(std::string("bravo"), (*i++).first);
-  CPPUNIT_ASSERT_EQUAL(std::string("charlie"), (*i++).first);
-  CPPUNIT_ASSERT(dict.end() == i);
+  REQUIRE_EQ(std::string("alpha"), (*i++).first);
+  REQUIRE_EQ(std::string("alpha2"), (*i++).first);
+  REQUIRE_EQ(std::string("bravo"), (*i++).first);
+  REQUIRE_EQ(std::string("charlie"), (*i++).first);
+  REQUIRE(dict.end() == i);
 
   const Dict& ref = dict;
   Dict::ValueType::const_iterator ci = ref.begin();
-  CPPUNIT_ASSERT_EQUAL(std::string("alpha"), (*ci++).first);
+  REQUIRE_EQ(std::string("alpha"), (*ci++).first);
   std::advance(ci, 3);
-  CPPUNIT_ASSERT(ref.end() == ci);
+  REQUIRE(ref.end() == ci);
 }
 
 void ValueBaseTest::testList()
 {
   List list;
-  CPPUNIT_ASSERT(list.empty());
+  REQUIRE(list.empty());
   list << Integer::g(7) << String::g("aria2");
 
-  CPPUNIT_ASSERT_EQUAL(static_cast<size_t>(2), list.size());
-  CPPUNIT_ASSERT_EQUAL(static_cast<Integer::ValueType>(7),
+  REQUIRE_EQ(static_cast<size_t>(2), list.size());
+  REQUIRE_EQ(static_cast<Integer::ValueType>(7),
                        downcast<Integer>(list[0])->i());
-  CPPUNIT_ASSERT_EQUAL(static_cast<String::ValueType>("aria2"),
+  REQUIRE_EQ(static_cast<String::ValueType>("aria2"),
                        downcast<String>(list[1])->s());
 
   const List& ref = list;
-  CPPUNIT_ASSERT_EQUAL(static_cast<Integer::ValueType>(7),
+  REQUIRE_EQ(static_cast<Integer::ValueType>(7),
                        downcast<Integer>(ref[0])->i());
-  CPPUNIT_ASSERT_EQUAL(static_cast<String::ValueType>("aria2"),
+  REQUIRE_EQ(static_cast<String::ValueType>("aria2"),
                        downcast<String>(ref[1])->s());
 }
 
@@ -163,22 +160,22 @@ void ValueBaseTest::testListIter()
        << String::g("alpha");
 
   List::ValueType::iterator i = list.begin();
-  CPPUNIT_ASSERT_EQUAL(static_cast<String::ValueType>("alpha2"),
+  REQUIRE_EQ(static_cast<String::ValueType>("alpha2"),
                        downcast<String>(*i++)->s());
-  CPPUNIT_ASSERT_EQUAL(static_cast<String::ValueType>("charlie"),
+  REQUIRE_EQ(static_cast<String::ValueType>("charlie"),
                        downcast<String>(*i++)->s());
-  CPPUNIT_ASSERT_EQUAL(static_cast<String::ValueType>("bravo"),
+  REQUIRE_EQ(static_cast<String::ValueType>("bravo"),
                        downcast<String>(*i++)->s());
-  CPPUNIT_ASSERT_EQUAL(static_cast<String::ValueType>("alpha"),
+  REQUIRE_EQ(static_cast<String::ValueType>("alpha"),
                        downcast<String>(*i++)->s());
-  CPPUNIT_ASSERT(list.end() == i);
+  REQUIRE(list.end() == i);
 
   const List& ref = list;
   List::ValueType::const_iterator ci = ref.begin();
-  CPPUNIT_ASSERT_EQUAL(static_cast<String::ValueType>("alpha2"),
+  REQUIRE_EQ(static_cast<String::ValueType>("alpha2"),
                        downcast<String>(*ci++)->s());
   std::advance(ci, 3);
-  CPPUNIT_ASSERT(ref.end() == ci);
+  REQUIRE(ref.end() == ci);
 }
 
 } // namespace aria2

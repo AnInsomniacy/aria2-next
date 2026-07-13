@@ -1,17 +1,12 @@
 #include "HttpTailReclaimPolicy.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "a2functional.h"
 
 namespace aria2 {
 
-class HttpTailReclaimPolicyTest : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(HttpTailReclaimPolicyTest);
-  CPPUNIT_TEST(testDetectTailBlocked);
-  CPPUNIT_TEST(testRejectNonTailBlockedStates);
-  CPPUNIT_TEST(testReclaimOnlyHardStalledTail);
-  CPPUNIT_TEST_SUITE_END();
+class HttpTailReclaimPolicyTest {
 
 public:
   void testDetectTailBlocked();
@@ -19,7 +14,9 @@ public:
   void testReclaimOnlyHardStalledTail();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(HttpTailReclaimPolicyTest);
+A2_TEST(HttpTailReclaimPolicyTest, testDetectTailBlocked)
+A2_TEST(HttpTailReclaimPolicyTest, testRejectNonTailBlockedStates)
+A2_TEST(HttpTailReclaimPolicyTest, testReclaimOnlyHardStalledTail)
 
 namespace {
 HttpTailReclaimState baseState()
@@ -42,51 +39,51 @@ HttpTailReclaimState baseState()
 
 void HttpTailReclaimPolicyTest::testDetectTailBlocked()
 {
-  CPPUNIT_ASSERT(isHttpTailBlocked(baseState()));
+  REQUIRE(isHttpTailBlocked(baseState()));
 }
 
 void HttpTailReclaimPolicyTest::testRejectNonTailBlockedStates()
 {
   auto state = baseState();
   state.hasMissingUnusedPiece = true;
-  CPPUNIT_ASSERT(!isHttpTailBlocked(state));
+  REQUIRE(!isHttpTailBlocked(state));
 
   state = baseState();
   state.numConcurrentCommand = 1;
-  CPPUNIT_ASSERT(!isHttpTailBlocked(state));
+  REQUIRE(!isHttpTailBlocked(state));
 
   state = baseState();
   state.numStreamCommand = 64;
-  CPPUNIT_ASSERT(!isHttpTailBlocked(state));
+  REQUIRE(!isHttpTailBlocked(state));
 
   state = baseState();
   state.protocol = "ftp";
-  CPPUNIT_ASSERT(!isHttpTailBlocked(state));
+  REQUIRE(!isHttpTailBlocked(state));
 
   state = baseState();
   state.p2pInvolved = true;
-  CPPUNIT_ASSERT(!isHttpTailBlocked(state));
+  REQUIRE(!isHttpTailBlocked(state));
 
   state = baseState();
   state.totalLength = 0;
-  CPPUNIT_ASSERT(!isHttpTailBlocked(state));
+  REQUIRE(!isHttpTailBlocked(state));
 
   state = baseState();
   state.pendingLength = 0;
-  CPPUNIT_ASSERT(!isHttpTailBlocked(state));
+  REQUIRE(!isHttpTailBlocked(state));
 }
 
 void HttpTailReclaimPolicyTest::testReclaimOnlyHardStalledTail()
 {
-  CPPUNIT_ASSERT(shouldReclaimHttpTailSegment(baseState()));
+  REQUIRE(shouldReclaimHttpTailSegment(baseState()));
 
   auto state = baseState();
   state.currentSessionDownloadLength += 1;
-  CPPUNIT_ASSERT(!shouldReclaimHttpTailSegment(state));
+  REQUIRE(!shouldReclaimHttpTailSegment(state));
 
   state = baseState();
   state.noProgressTime = 9_s;
-  CPPUNIT_ASSERT(!shouldReclaimHttpTailSegment(state));
+  REQUIRE(!shouldReclaimHttpTailSegment(state));
 }
 
 } // namespace aria2

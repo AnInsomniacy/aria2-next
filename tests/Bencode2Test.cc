@@ -1,23 +1,20 @@
 #include "bencode2.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "RecoverableException.h"
 
 namespace aria2 {
 
-class Bencode2Test : public CppUnit::TestFixture {
+class Bencode2Test {
 
-  CPPUNIT_TEST_SUITE(Bencode2Test);
-  CPPUNIT_TEST(testEncode);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
   void testEncode();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(Bencode2Test);
+A2_TEST(Bencode2Test, testEncode)
 
 void Bencode2Test::testEncode()
 {
@@ -32,7 +29,7 @@ void Bencode2Test::testEncode()
     attrs->put("license", String::g("GPL"));
     dict.put("attrs", std::move(attrs));
 
-    CPPUNIT_ASSERT_EQUAL(std::string("d"
+    REQUIRE_EQ(std::string("d"
                                      "5:attrsd7:license3:GPLe"
                                      "5:filesl6:aria2ce"
                                      "3:loci80000e"

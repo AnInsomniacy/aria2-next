@@ -2,24 +2,14 @@
 
 #include <string>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "prefs.h"
 
 namespace aria2 {
 
-class OptionTest : public CppUnit::TestFixture {
+class OptionTest {
 
-  CPPUNIT_TEST_SUITE(OptionTest);
-  CPPUNIT_TEST(testPutAndGet);
-  CPPUNIT_TEST(testPutAndGetAsInt);
-  CPPUNIT_TEST(testPutAndGetAsDouble);
-  CPPUNIT_TEST(testDefined);
-  CPPUNIT_TEST(testBlank);
-  CPPUNIT_TEST(testMerge);
-  CPPUNIT_TEST(testParent);
-  CPPUNIT_TEST(testRemove);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -35,15 +25,22 @@ public:
   void testRemove();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(OptionTest);
+A2_TEST(OptionTest, testPutAndGet)
+A2_TEST(OptionTest, testPutAndGetAsInt)
+A2_TEST(OptionTest, testPutAndGetAsDouble)
+A2_TEST(OptionTest, testDefined)
+A2_TEST(OptionTest, testBlank)
+A2_TEST(OptionTest, testMerge)
+A2_TEST(OptionTest, testParent)
+A2_TEST(OptionTest, testRemove)
 
 void OptionTest::testPutAndGet()
 {
   Option op;
   op.put(PREF_TIMEOUT, "value");
 
-  CPPUNIT_ASSERT(op.defined(PREF_TIMEOUT));
-  CPPUNIT_ASSERT_EQUAL(std::string("value"), op.get(PREF_TIMEOUT));
+  REQUIRE(op.defined(PREF_TIMEOUT));
+  REQUIRE_EQ(std::string("value"), op.get(PREF_TIMEOUT));
 }
 
 void OptionTest::testPutAndGetAsInt()
@@ -51,8 +48,8 @@ void OptionTest::testPutAndGetAsInt()
   Option op;
   op.put(PREF_TIMEOUT, "1000");
 
-  CPPUNIT_ASSERT(op.defined(PREF_TIMEOUT));
-  CPPUNIT_ASSERT_EQUAL((int32_t)1000, op.getAsInt(PREF_TIMEOUT));
+  REQUIRE(op.defined(PREF_TIMEOUT));
+  REQUIRE_EQ((int32_t)1000, op.getAsInt(PREF_TIMEOUT));
 }
 
 void OptionTest::testPutAndGetAsDouble()
@@ -60,7 +57,7 @@ void OptionTest::testPutAndGetAsDouble()
   Option op;
   op.put(PREF_TIMEOUT, "10.0");
 
-  CPPUNIT_ASSERT_EQUAL(10.0, op.getAsDouble(PREF_TIMEOUT));
+  REQUIRE_EQ(10.0, op.getAsDouble(PREF_TIMEOUT));
 }
 
 void OptionTest::testDefined()
@@ -68,9 +65,9 @@ void OptionTest::testDefined()
   Option op;
   op.put(PREF_TIMEOUT, "v");
   op.put(PREF_DIR, "");
-  CPPUNIT_ASSERT(op.defined(PREF_TIMEOUT));
-  CPPUNIT_ASSERT(op.defined(PREF_DIR));
-  CPPUNIT_ASSERT(!op.defined(PREF_DAEMON));
+  REQUIRE(op.defined(PREF_TIMEOUT));
+  REQUIRE(op.defined(PREF_DIR));
+  REQUIRE(!op.defined(PREF_DAEMON));
 }
 
 void OptionTest::testBlank()
@@ -78,9 +75,9 @@ void OptionTest::testBlank()
   Option op;
   op.put(PREF_TIMEOUT, "v");
   op.put(PREF_DIR, "");
-  CPPUNIT_ASSERT(!op.blank(PREF_TIMEOUT));
-  CPPUNIT_ASSERT(op.blank(PREF_DIR));
-  CPPUNIT_ASSERT(op.blank(PREF_DAEMON));
+  REQUIRE(!op.blank(PREF_TIMEOUT));
+  REQUIRE(op.blank(PREF_DIR));
+  REQUIRE(op.blank(PREF_DAEMON));
 }
 
 void OptionTest::testMerge()
@@ -92,10 +89,10 @@ void OptionTest::testMerge()
   dest.put(PREF_DAEMON, "false");
   dest.put(PREF_DIR, "foo");
   dest.merge(src);
-  CPPUNIT_ASSERT_EQUAL(100, dest.getAsInt(PREF_TIMEOUT));
-  CPPUNIT_ASSERT(dest.getAsBool(PREF_DAEMON));
-  CPPUNIT_ASSERT_EQUAL(std::string("foo"), dest.get(PREF_DIR));
-  CPPUNIT_ASSERT(!dest.defined(PREF_OUT));
+  REQUIRE_EQ(100, dest.getAsInt(PREF_TIMEOUT));
+  REQUIRE(dest.getAsBool(PREF_DAEMON));
+  REQUIRE_EQ(std::string("foo"), dest.get(PREF_DIR));
+  REQUIRE(!dest.defined(PREF_OUT));
 }
 
 void OptionTest::testParent()
@@ -104,26 +101,26 @@ void OptionTest::testParent()
   std::shared_ptr<Option> parent(new Option());
   parent->put(PREF_TIMEOUT, "100");
   child.put(PREF_DIR, "foo");
-  CPPUNIT_ASSERT(!child.defined(PREF_TIMEOUT));
-  CPPUNIT_ASSERT(!child.definedLocal(PREF_TIMEOUT));
+  REQUIRE(!child.defined(PREF_TIMEOUT));
+  REQUIRE(!child.definedLocal(PREF_TIMEOUT));
   child.setParent(parent);
-  CPPUNIT_ASSERT(child.defined(PREF_TIMEOUT));
-  CPPUNIT_ASSERT_EQUAL(std::string("100"), child.get(PREF_TIMEOUT));
-  CPPUNIT_ASSERT_EQUAL((int32_t)100, child.getAsInt(PREF_TIMEOUT));
-  CPPUNIT_ASSERT(!child.definedLocal(PREF_TIMEOUT));
+  REQUIRE(child.defined(PREF_TIMEOUT));
+  REQUIRE_EQ(std::string("100"), child.get(PREF_TIMEOUT));
+  REQUIRE_EQ((int32_t)100, child.getAsInt(PREF_TIMEOUT));
+  REQUIRE(!child.definedLocal(PREF_TIMEOUT));
   // blank
-  CPPUNIT_ASSERT(!child.blank(PREF_DIR));
+  REQUIRE(!child.blank(PREF_DIR));
   child.put(PREF_DIR, "");
-  CPPUNIT_ASSERT(child.blank(PREF_DIR));
-  CPPUNIT_ASSERT(!child.blank(PREF_TIMEOUT));
+  REQUIRE(child.blank(PREF_DIR));
+  REQUIRE(!child.blank(PREF_TIMEOUT));
   // override
   child.put(PREF_TIMEOUT, "200");
-  CPPUNIT_ASSERT(child.defined(PREF_TIMEOUT));
-  CPPUNIT_ASSERT(child.definedLocal(PREF_TIMEOUT));
-  CPPUNIT_ASSERT_EQUAL(std::string("200"), child.get(PREF_TIMEOUT));
+  REQUIRE(child.defined(PREF_TIMEOUT));
+  REQUIRE(child.definedLocal(PREF_TIMEOUT));
+  REQUIRE_EQ(std::string("200"), child.get(PREF_TIMEOUT));
   child.removeLocal(PREF_TIMEOUT);
-  CPPUNIT_ASSERT(child.defined(PREF_TIMEOUT));
-  CPPUNIT_ASSERT(!child.definedLocal(PREF_TIMEOUT));
+  REQUIRE(child.defined(PREF_TIMEOUT));
+  REQUIRE(!child.definedLocal(PREF_TIMEOUT));
 }
 
 void OptionTest::testRemove()
@@ -139,13 +136,13 @@ void OptionTest::testRemove()
 
   child.remove(PREF_DIR);
 
-  CPPUNIT_ASSERT(!child.defined(PREF_DIR));
+  REQUIRE(!child.defined(PREF_DIR));
 
   child.removeLocal(PREF_TIMEOUT);
 
-  CPPUNIT_ASSERT(!child.definedLocal(PREF_TIMEOUT));
-  CPPUNIT_ASSERT(child.defined(PREF_TIMEOUT));
-  CPPUNIT_ASSERT(parent->defined(PREF_TIMEOUT));
+  REQUIRE(!child.definedLocal(PREF_TIMEOUT));
+  REQUIRE(child.defined(PREF_TIMEOUT));
+  REQUIRE(parent->defined(PREF_TIMEOUT));
 }
 
 } // namespace aria2

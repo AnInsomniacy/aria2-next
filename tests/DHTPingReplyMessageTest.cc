@@ -1,6 +1,6 @@
 #include "DHTPingReplyMessage.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTNode.h"
 #include "Exception.h"
@@ -9,11 +9,8 @@
 
 namespace aria2 {
 
-class DHTPingReplyMessageTest : public CppUnit::TestFixture {
+class DHTPingReplyMessageTest {
 
-  CPPUNIT_TEST_SUITE(DHTPingReplyMessageTest);
-  CPPUNIT_TEST(testGetBencodedMessage);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -23,7 +20,7 @@ public:
   void testGetBencodedMessage();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTPingReplyMessageTest);
+A2_TEST(DHTPingReplyMessageTest, testGetBencodedMessage)
 
 void DHTPingReplyMessageTest::testGetBencodedMessage()
 {
@@ -49,7 +46,7 @@ void DHTPingReplyMessageTest::testGetBencodedMessage()
   rDict->put("id", String::g(id, DHT_ID_LENGTH));
   dict.put("r", std::move(rDict));
 
-  CPPUNIT_ASSERT_EQUAL(bencode2::encode(&dict), msgbody);
+  REQUIRE_EQ(bencode2::encode(&dict), msgbody);
 }
 
 } // namespace aria2

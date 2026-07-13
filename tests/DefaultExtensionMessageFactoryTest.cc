@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Peer.h"
 #include "MockPeerStorage.h"
@@ -27,16 +27,8 @@
 
 namespace aria2 {
 
-class DefaultExtensionMessageFactoryTest : public CppUnit::TestFixture {
+class DefaultExtensionMessageFactoryTest {
 
-  CPPUNIT_TEST_SUITE(DefaultExtensionMessageFactoryTest);
-  CPPUNIT_TEST(testCreateMessage_unknown);
-  CPPUNIT_TEST(testCreateMessage_Handshake);
-  CPPUNIT_TEST(testCreateMessage_UTPex);
-  CPPUNIT_TEST(testCreateMessage_UTMetadataRequest);
-  CPPUNIT_TEST(testCreateMessage_UTMetadataData);
-  CPPUNIT_TEST(testCreateMessage_UTMetadataReject);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::unique_ptr<MockPeerStorage> peerStorage_;
@@ -97,7 +89,12 @@ public:
   void testCreateMessage_UTMetadataReject();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DefaultExtensionMessageFactoryTest);
+A2_TEST(DefaultExtensionMessageFactoryTest, testCreateMessage_unknown)
+A2_TEST(DefaultExtensionMessageFactoryTest, testCreateMessage_Handshake)
+A2_TEST(DefaultExtensionMessageFactoryTest, testCreateMessage_UTPex)
+A2_TEST(DefaultExtensionMessageFactoryTest, testCreateMessage_UTMetadataRequest)
+A2_TEST(DefaultExtensionMessageFactoryTest, testCreateMessage_UTMetadataData)
+A2_TEST(DefaultExtensionMessageFactoryTest, testCreateMessage_UTMetadataReject)
 
 void DefaultExtensionMessageFactoryTest::testCreateMessage_unknown()
 {
@@ -110,7 +107,7 @@ void DefaultExtensionMessageFactoryTest::testCreateMessage_unknown()
     // this test fails because localhost doesn't have extension id = 255.
     factory_->createMessage(
         reinterpret_cast<const unsigned char*>(data.c_str()), data.size());
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (Exception& e) {
     std::cerr << e.stackTrace() << std::endl;
@@ -123,7 +120,7 @@ void DefaultExtensionMessageFactoryTest::testCreateMessage_Handshake()
 
   std::string data = std::string(&id[0], &id[1]) + "d1:v5:aria2e";
   auto m = createMessage<HandshakeExtensionMessage>(data);
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2"), m->getClientVersion());
+  REQUIRE_EQ(std::string("aria2"), m->getClientVersion());
 }
 
 void DefaultExtensionMessageFactoryTest::testCreateMessage_UTPex()
@@ -146,7 +143,7 @@ void DefaultExtensionMessageFactoryTest::testCreateMessage_UTPex()
                      std::string(&c4[0], &c4[6]) + "e";
 
   auto m = createMessage<UTPexExtensionMessage>(data);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       registry_->getExtensionMessageID(ExtensionMessageRegistry::UT_PEX),
       m->getExtensionMessageID());
 }
@@ -159,7 +156,7 @@ void DefaultExtensionMessageFactoryTest::testCreateMessage_UTMetadataRequest()
       getExtensionMessageID(ExtensionMessageRegistry::UT_METADATA) +
       "d8:msg_typei0e5:piecei1ee";
   auto m = createMessage<UTMetadataRequestExtensionMessage>(data);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, m->getIndex());
+  REQUIRE_EQ((size_t)1, m->getIndex());
 }
 
 void DefaultExtensionMessageFactoryTest::testCreateMessage_UTMetadataData()
@@ -170,9 +167,9 @@ void DefaultExtensionMessageFactoryTest::testCreateMessage_UTMetadataData()
       getExtensionMessageID(ExtensionMessageRegistry::UT_METADATA) +
       "d8:msg_typei1e5:piecei1e10:total_sizei300ee0000000000";
   auto m = createMessage<UTMetadataDataExtensionMessage>(data);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, m->getIndex());
-  CPPUNIT_ASSERT_EQUAL((size_t)300, m->getTotalSize());
-  CPPUNIT_ASSERT_EQUAL(std::string(10, '0'), m->getData());
+  REQUIRE_EQ((size_t)1, m->getIndex());
+  REQUIRE_EQ((size_t)300, m->getTotalSize());
+  REQUIRE_EQ(std::string(10, '0'), m->getData());
 }
 
 void DefaultExtensionMessageFactoryTest::testCreateMessage_UTMetadataReject()
@@ -183,7 +180,7 @@ void DefaultExtensionMessageFactoryTest::testCreateMessage_UTMetadataReject()
       getExtensionMessageID(ExtensionMessageRegistry::UT_METADATA) +
       "d8:msg_typei2e5:piecei1ee";
   auto m = createMessage<UTMetadataRejectExtensionMessage>(data);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, m->getIndex());
+  REQUIRE_EQ((size_t)1, m->getIndex());
 }
 
 } // namespace aria2

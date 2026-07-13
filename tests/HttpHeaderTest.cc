@@ -1,6 +1,6 @@
 #include "HttpHeader.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "a2io.h"
 #include "Range.h"
@@ -8,16 +8,8 @@
 
 namespace aria2 {
 
-class HttpHeaderTest : public CppUnit::TestFixture {
+class HttpHeaderTest {
 
-  CPPUNIT_TEST_SUITE(HttpHeaderTest);
-  CPPUNIT_TEST(testGetRange);
-  CPPUNIT_TEST(testGetRangeAcceptsLargeContentLength);
-  CPPUNIT_TEST(testFindAll);
-  CPPUNIT_TEST(testClearField);
-  CPPUNIT_TEST(testFieldContains);
-  CPPUNIT_TEST(testRemove);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testGetRange();
@@ -28,7 +20,12 @@ public:
   void testRemove();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(HttpHeaderTest);
+A2_TEST(HttpHeaderTest, testGetRange)
+A2_TEST(HttpHeaderTest, testGetRangeAcceptsLargeContentLength)
+A2_TEST(HttpHeaderTest, testFindAll)
+A2_TEST(HttpHeaderTest, testClearField)
+A2_TEST(HttpHeaderTest, testFieldContains)
+A2_TEST(HttpHeaderTest, testRemove)
 
 static_assert(sizeof(a2_off_t) >= 8, "a2_off_t must support large files");
 
@@ -42,9 +39,9 @@ void HttpHeaderTest::testGetRange()
 
     Range range = httpHeader.getRange();
 
-    CPPUNIT_ASSERT_EQUAL((int64_t)9223372036854775800LL, range.startByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)9223372036854775801LL, range.endByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)9223372036854775807LL, range.entityLength);
+    REQUIRE_EQ((int64_t)9223372036854775800LL, range.startByte);
+    REQUIRE_EQ((int64_t)9223372036854775801LL, range.endByte);
+    REQUIRE_EQ((int64_t)9223372036854775807LL, range.entityLength);
   }
   {
     HttpHeader httpHeader;
@@ -54,9 +51,9 @@ void HttpHeaderTest::testGetRange()
 
     Range range = httpHeader.getRange();
 
-    CPPUNIT_ASSERT_EQUAL((int64_t)9223372036854775800LL, range.startByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)9223372036854775801LL, range.endByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)9223372036854775807LL, range.entityLength);
+    REQUIRE_EQ((int64_t)9223372036854775800LL, range.startByte);
+    REQUIRE_EQ((int64_t)9223372036854775801LL, range.endByte);
+    REQUIRE_EQ((int64_t)9223372036854775807LL, range.entityLength);
   }
   {
     HttpHeader httpHeader;
@@ -64,9 +61,9 @@ void HttpHeaderTest::testGetRange()
 
     Range range = httpHeader.getRange();
 
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.startByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.endByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.entityLength);
+    REQUIRE_EQ((int64_t)0, range.startByte);
+    REQUIRE_EQ((int64_t)0, range.endByte);
+    REQUIRE_EQ((int64_t)0, range.entityLength);
   }
   {
     HttpHeader httpHeader;
@@ -74,9 +71,9 @@ void HttpHeaderTest::testGetRange()
 
     Range range = httpHeader.getRange();
 
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.startByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.endByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.entityLength);
+    REQUIRE_EQ((int64_t)0, range.startByte);
+    REQUIRE_EQ((int64_t)0, range.endByte);
+    REQUIRE_EQ((int64_t)0, range.entityLength);
   }
   {
     HttpHeader httpHeader;
@@ -84,9 +81,9 @@ void HttpHeaderTest::testGetRange()
 
     Range range = httpHeader.getRange();
 
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.startByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.endByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.entityLength);
+    REQUIRE_EQ((int64_t)0, range.startByte);
+    REQUIRE_EQ((int64_t)0, range.endByte);
+    REQUIRE_EQ((int64_t)0, range.entityLength);
   }
   {
     HttpHeader httpHeader;
@@ -94,9 +91,9 @@ void HttpHeaderTest::testGetRange()
 
     Range range = httpHeader.getRange();
 
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.startByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.endByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.entityLength);
+    REQUIRE_EQ((int64_t)0, range.startByte);
+    REQUIRE_EQ((int64_t)0, range.endByte);
+    REQUIRE_EQ((int64_t)0, range.entityLength);
   }
   {
     HttpHeader httpHeader;
@@ -104,9 +101,9 @@ void HttpHeaderTest::testGetRange()
 
     Range range = httpHeader.getRange();
 
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.startByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.endByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.entityLength);
+    REQUIRE_EQ((int64_t)0, range.startByte);
+    REQUIRE_EQ((int64_t)0, range.endByte);
+    REQUIRE_EQ((int64_t)0, range.entityLength);
   }
   {
     // Support for non-compliant server
@@ -115,16 +112,16 @@ void HttpHeaderTest::testGetRange()
 
     Range range = httpHeader.getRange();
 
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, range.startByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)1023, range.endByte);
-    CPPUNIT_ASSERT_EQUAL((int64_t)1024, range.entityLength);
+    REQUIRE_EQ((int64_t)0, range.startByte);
+    REQUIRE_EQ((int64_t)1023, range.endByte);
+    REQUIRE_EQ((int64_t)1024, range.entityLength);
   }
   {
     HttpHeader httpHeader;
     httpHeader.put(HttpHeader::CONTENT_RANGE, "bytes 0-/3");
     try {
       httpHeader.getRange();
-      CPPUNIT_FAIL("Exception must be thrown");
+      FAIL("Exception must be thrown");
     }
     catch (const DlAbortEx& e) {
       // success
@@ -135,7 +132,7 @@ void HttpHeaderTest::testGetRange()
     httpHeader.put(HttpHeader::CONTENT_RANGE, "bytes -0/3");
     try {
       httpHeader.getRange();
-      CPPUNIT_FAIL("Exception must be thrown");
+      FAIL("Exception must be thrown");
     }
     catch (const DlAbortEx& e) {
       // success
@@ -150,9 +147,9 @@ void HttpHeaderTest::testGetRangeAcceptsLargeContentLength()
 
   Range range = httpHeader.getRange();
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, range.startByte);
-  CPPUNIT_ASSERT_EQUAL((int64_t)6797948927LL, range.endByte);
-  CPPUNIT_ASSERT_EQUAL((int64_t)6797948928LL, range.entityLength);
+  REQUIRE_EQ((int64_t)0, range.startByte);
+  REQUIRE_EQ((int64_t)6797948927LL, range.endByte);
+  REQUIRE_EQ((int64_t)6797948928LL, range.entityLength);
 }
 
 void HttpHeaderTest::testFindAll()
@@ -163,9 +160,9 @@ void HttpHeaderTest::testFindAll()
   h.put(HttpHeader::CONNECTION, "200");
 
   std::vector<std::string> r(h.findAll(HttpHeader::LINK));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, r.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("100"), r[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string("101"), r[1]);
+  REQUIRE_EQ((size_t)2, r.size());
+  REQUIRE_EQ(std::string("100"), r[0]);
+  REQUIRE_EQ(std::string("101"), r[1]);
 }
 
 void HttpHeaderTest::testClearField()
@@ -175,13 +172,13 @@ void HttpHeaderTest::testClearField()
   h.setVersion("HTTP/1.1");
   h.put(HttpHeader::LINK, "Bar");
 
-  CPPUNIT_ASSERT_EQUAL(std::string("Bar"), h.find(HttpHeader::LINK));
+  REQUIRE_EQ(std::string("Bar"), h.find(HttpHeader::LINK));
 
   h.clearField();
 
-  CPPUNIT_ASSERT_EQUAL(std::string(""), h.find(HttpHeader::LINK));
-  CPPUNIT_ASSERT_EQUAL(200, h.getStatusCode());
-  CPPUNIT_ASSERT_EQUAL(std::string("HTTP/1.1"), h.getVersion());
+  REQUIRE_EQ(std::string(""), h.find(HttpHeader::LINK));
+  REQUIRE_EQ(200, h.getStatusCode());
+  REQUIRE_EQ(std::string("HTTP/1.1"), h.getVersion());
 }
 
 void HttpHeaderTest::testFieldContains()
@@ -191,14 +188,14 @@ void HttpHeaderTest::testFieldContains()
   h.put(HttpHeader::UPGRADE, "WebSocket");
   h.put(HttpHeader::SEC_WEBSOCKET_VERSION, "13");
   h.put(HttpHeader::SEC_WEBSOCKET_VERSION, "8, 7");
-  CPPUNIT_ASSERT(h.fieldContains(HttpHeader::CONNECTION, "upgrade"));
-  CPPUNIT_ASSERT(h.fieldContains(HttpHeader::CONNECTION, "keep-alive"));
-  CPPUNIT_ASSERT(!h.fieldContains(HttpHeader::CONNECTION, "close"));
-  CPPUNIT_ASSERT(h.fieldContains(HttpHeader::UPGRADE, "websocket"));
-  CPPUNIT_ASSERT(!h.fieldContains(HttpHeader::UPGRADE, "spdy"));
-  CPPUNIT_ASSERT(h.fieldContains(HttpHeader::SEC_WEBSOCKET_VERSION, "13"));
-  CPPUNIT_ASSERT(h.fieldContains(HttpHeader::SEC_WEBSOCKET_VERSION, "8"));
-  CPPUNIT_ASSERT(!h.fieldContains(HttpHeader::SEC_WEBSOCKET_VERSION, "6"));
+  REQUIRE(h.fieldContains(HttpHeader::CONNECTION, "upgrade"));
+  REQUIRE(h.fieldContains(HttpHeader::CONNECTION, "keep-alive"));
+  REQUIRE(!h.fieldContains(HttpHeader::CONNECTION, "close"));
+  REQUIRE(h.fieldContains(HttpHeader::UPGRADE, "websocket"));
+  REQUIRE(!h.fieldContains(HttpHeader::UPGRADE, "spdy"));
+  REQUIRE(h.fieldContains(HttpHeader::SEC_WEBSOCKET_VERSION, "13"));
+  REQUIRE(h.fieldContains(HttpHeader::SEC_WEBSOCKET_VERSION, "8"));
+  REQUIRE(!h.fieldContains(HttpHeader::SEC_WEBSOCKET_VERSION, "6"));
 }
 
 void HttpHeaderTest::testRemove()
@@ -210,8 +207,8 @@ void HttpHeaderTest::testRemove()
 
   h.remove(HttpHeader::TRANSFER_ENCODING);
 
-  CPPUNIT_ASSERT(!h.defined(HttpHeader::TRANSFER_ENCODING));
-  CPPUNIT_ASSERT(h.defined(HttpHeader::CONNECTION));
+  REQUIRE(!h.defined(HttpHeader::TRANSFER_ENCODING));
+  REQUIRE(h.defined(HttpHeader::CONNECTION));
 }
 
 } // namespace aria2

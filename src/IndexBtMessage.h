@@ -44,7 +44,7 @@ class IndexBtMessage : public SimpleBtMessage {
 private:
   size_t index_;
 
-  static const size_t MESSAGE_LENGTH = 9;
+  static constexpr size_t MESSAGE_LENGTH = 9;
 
 protected:
   template <typename T>

@@ -51,7 +51,7 @@ public:
   BtExtendedMessage(std::unique_ptr<ExtensionMessage> extensionMessage =
                         std::unique_ptr<ExtensionMessage>{});
 
-  static const uint8_t ID = 20;
+  static constexpr uint8_t ID = 20;
 
   static const char NAME[];
 

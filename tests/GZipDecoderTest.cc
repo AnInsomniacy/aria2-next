@@ -3,7 +3,7 @@
 #include <iostream>
 #include <fstream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "TestUtil.h"
 #include "Exception.h"
@@ -12,11 +12,8 @@
 
 namespace aria2 {
 
-class GZipDecoderTest : public CppUnit::TestFixture {
+class GZipDecoderTest {
 
-  CPPUNIT_TEST_SUITE(GZipDecoderTest);
-  CPPUNIT_TEST(testDecode);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -26,7 +23,7 @@ public:
   void testDecode();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(GZipDecoderTest);
+A2_TEST(GZipDecoderTest, testDecode)
 
 void GZipDecoderTest::testDecode()
 {
@@ -46,12 +43,12 @@ void GZipDecoderTest::testDecode()
 
     out.write(r.data(), r.size());
   }
-  CPPUNIT_ASSERT(decoder.finished());
+  REQUIRE(decoder.finished());
   decoder.release();
 
   out.close();
 
-  CPPUNIT_ASSERT_EQUAL(std::string("8b577b33c0411b2be9d4fa74c7402d54a8d21f96"),
+  REQUIRE_EQ(std::string("8b577b33c0411b2be9d4fa74c7402d54a8d21f96"),
                        fileHexDigest(MessageDigest::sha1().get(), outfile));
 }
 

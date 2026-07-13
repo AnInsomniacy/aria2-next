@@ -1,18 +1,12 @@
 #include "RpcResponse.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
 namespace rpc {
 
-class RpcResponseTest : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(RpcResponseTest);
-  CPPUNIT_TEST(testToJson);
-#ifdef ENABLE_XML_RPC
-  CPPUNIT_TEST(testToXml);
-#endif // ENABLE_XML_RPC
-  CPPUNIT_TEST_SUITE_END();
+class RpcResponseTest {
 
 public:
   void testToJson();
@@ -21,7 +15,10 @@ public:
 #endif // ENABLE_XML_RPC
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(RpcResponseTest);
+A2_TEST(RpcResponseTest, testToJson)
+#ifdef ENABLE_XML_RPC
+A2_TEST(RpcResponseTest, testToXml)
+#endif // ENABLE_XML_RPC
 
 void RpcResponseTest::testToJson()
 {
@@ -33,13 +30,13 @@ void RpcResponseTest::testToJson()
                     String::g("9"));
     results.push_back(std::move(res));
     std::string s = toJson(results.back(), "", false);
-    CPPUNIT_ASSERT_EQUAL(std::string("{\"id\":\"9\","
+    REQUIRE_EQ(std::string("{\"id\":\"9\","
                                      "\"jsonrpc\":\"2.0\","
                                      "\"result\":[1]}"),
                          s);
     // with callback
     s = toJson(results.back(), "cb", false);
-    CPPUNIT_ASSERT_EQUAL(std::string("cb({\"id\":\"9\","
+    REQUIRE_EQ(std::string("cb({\"id\":\"9\","
                                      "\"jsonrpc\":\"2.0\","
                                      "\"result\":[1]})"),
                          s);
@@ -52,7 +49,7 @@ void RpcResponseTest::testToJson()
     RpcResponse res(1, RpcResponse::AUTHORIZED, std::move(param), Null::g());
     results.push_back(std::move(res));
     std::string s = toJson(results.back(), "", false);
-    CPPUNIT_ASSERT_EQUAL(std::string("{\"id\":null,"
+    REQUIRE_EQ(std::string("{\"id\":null,"
                                      "\"jsonrpc\":\"2.0\","
                                      "\"error\":{\"code\":1,"
                                      "\"message\":\"HELLO ERROR\"}"
@@ -60,7 +57,7 @@ void RpcResponseTest::testToJson()
                          s);
     // with callback
     s = toJson(results.back(), "cb", false);
-    CPPUNIT_ASSERT_EQUAL(std::string("cb({\"id\":null,"
+    REQUIRE_EQ(std::string("cb({\"id\":null,"
                                      "\"jsonrpc\":\"2.0\","
                                      "\"error\":{\"code\":1,"
                                      "\"message\":\"HELLO ERROR\"}"
@@ -70,7 +67,7 @@ void RpcResponseTest::testToJson()
   {
     // batch response
     std::string s = toJsonBatch(results, "", false);
-    CPPUNIT_ASSERT_EQUAL(std::string("["
+    REQUIRE_EQ(std::string("["
                                      "{\"id\":\"9\","
                                      "\"jsonrpc\":\"2.0\","
                                      "\"result\":[1]},"
@@ -83,7 +80,7 @@ void RpcResponseTest::testToJson()
                          s);
     // with callback
     s = toJsonBatch(results, "cb", false);
-    CPPUNIT_ASSERT_EQUAL(std::string("cb(["
+    REQUIRE_EQ(std::string("cb(["
                                      "{\"id\":\"9\","
                                      "\"jsonrpc\":\"2.0\","
                                      "\"result\":[1]},"
@@ -105,7 +102,7 @@ void RpcResponseTest::testToXml()
   param->put("faultString", "No such method: make.hamburger");
   RpcResponse res(1, RpcResponse::AUTHORIZED, std::move(param), Null::g());
   std::string s = toXml(res, false);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("<?xml version=\"1.0\"?>"
                   "<methodResponse>"
                   "<fault>"

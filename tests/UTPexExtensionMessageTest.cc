@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "TestUtil.h"
 #include "Peer.h"
@@ -16,20 +16,8 @@
 
 namespace aria2 {
 
-class UTPexExtensionMessageTest : public CppUnit::TestFixture {
+class UTPexExtensionMessageTest {
 
-  CPPUNIT_TEST_SUITE(UTPexExtensionMessageTest);
-  CPPUNIT_TEST(testGetExtensionMessageID);
-  CPPUNIT_TEST(testGetExtensionName);
-  CPPUNIT_TEST(testGetBencodedData);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testAddFreshPeer);
-  CPPUNIT_TEST(testAddDroppedPeer);
-  CPPUNIT_TEST(testFreshPeersAreFull);
-  CPPUNIT_TEST(testDroppedPeersAreFull);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::unique_ptr<MockPeerStorage> peerStorage_;
@@ -53,18 +41,27 @@ public:
   void testDroppedPeersAreFull();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(UTPexExtensionMessageTest);
+A2_TEST(UTPexExtensionMessageTest, testGetExtensionMessageID)
+A2_TEST(UTPexExtensionMessageTest, testGetExtensionName)
+A2_TEST(UTPexExtensionMessageTest, testGetBencodedData)
+A2_TEST(UTPexExtensionMessageTest, testToString)
+A2_TEST(UTPexExtensionMessageTest, testDoReceivedAction)
+A2_TEST(UTPexExtensionMessageTest, testCreate)
+A2_TEST(UTPexExtensionMessageTest, testAddFreshPeer)
+A2_TEST(UTPexExtensionMessageTest, testAddDroppedPeer)
+A2_TEST(UTPexExtensionMessageTest, testFreshPeersAreFull)
+A2_TEST(UTPexExtensionMessageTest, testDroppedPeersAreFull)
 
 void UTPexExtensionMessageTest::testGetExtensionMessageID()
 {
   UTPexExtensionMessage msg(1);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, msg.getExtensionMessageID());
+  REQUIRE_EQ((uint8_t)1, msg.getExtensionMessageID());
 }
 
 void UTPexExtensionMessageTest::testGetExtensionName()
 {
   UTPexExtensionMessage msg(1);
-  CPPUNIT_ASSERT_EQUAL(std::string("ut_pex"),
+  REQUIRE_EQ(std::string("ut_pex"),
                        std::string(msg.getExtensionName()));
 }
 
@@ -74,22 +71,22 @@ void UTPexExtensionMessageTest::testGetBencodedData()
   auto p1 = std::make_shared<Peer>("192.168.0.1", 6881);
   p1->allocateSessionResource(256_k, 1_m);
   p1->setAllBitfield();
-  CPPUNIT_ASSERT(msg.addFreshPeer(p1)); // added seeder, check add.f flag
+  REQUIRE(msg.addFreshPeer(p1)); // added seeder, check add.f flag
   auto p2 = std::make_shared<Peer>("10.1.1.2", 9999);
-  CPPUNIT_ASSERT(msg.addFreshPeer(p2));
+  REQUIRE(msg.addFreshPeer(p2));
   auto p3 = std::make_shared<Peer>("192.168.0.2", 6882);
   p3->startDrop();
-  CPPUNIT_ASSERT(msg.addDroppedPeer(p3));
+  REQUIRE(msg.addDroppedPeer(p3));
   auto p4 = std::make_shared<Peer>("10.1.1.3", 10000);
   p4->startDrop();
-  CPPUNIT_ASSERT(msg.addDroppedPeer(p4));
+  REQUIRE(msg.addDroppedPeer(p4));
 
   auto p5 =
       std::make_shared<Peer>("1002:1035:4527:3546:7854:1237:3247:3217", 6881);
-  CPPUNIT_ASSERT(msg.addFreshPeer(p5));
+  REQUIRE(msg.addFreshPeer(p5));
   auto p6 = std::make_shared<Peer>("2001:db8:bd05:1d2:288a:1fc0:1:10ee", 6882);
   p6->startDrop();
-  CPPUNIT_ASSERT(msg.addDroppedPeer(p6));
+  REQUIRE(msg.addDroppedPeer(p6));
 
   unsigned char c1[COMPACT_LEN_IPV6];
   unsigned char c2[COMPACT_LEN_IPV6];
@@ -113,7 +110,7 @@ void UTPexExtensionMessageTest::testGetBencodedData()
       std::string(&c4[0], &c4[6]) +
       "8:dropped618:" + std::string(&c6[0], &c6[COMPACT_LEN_IPV6]) + "e";
   std::string bd = msg.getPayload();
-  CPPUNIT_ASSERT_EQUAL(util::percentEncode(expected), util::percentEncode(bd));
+  REQUIRE_EQ(util::percentEncode(expected), util::percentEncode(bd));
 }
 
 void UTPexExtensionMessageTest::testToString()
@@ -131,7 +128,7 @@ void UTPexExtensionMessageTest::testToString()
   std::shared_ptr<Peer> p4(new Peer("10.1.1.3", 10000));
   p4->startDrop();
   msg.addDroppedPeer(p4);
-  CPPUNIT_ASSERT_EQUAL(std::string("ut_pex added=2, dropped=2"),
+  REQUIRE_EQ(std::string("ut_pex added=2, dropped=2"),
                        msg.toString());
 }
 
@@ -156,25 +153,25 @@ void UTPexExtensionMessageTest::testDoReceivedAction()
 
   msg.doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)4, peerStorage_->getUnusedPeers().size());
+  REQUIRE_EQ((size_t)4, peerStorage_->getUnusedPeers().size());
   {
     std::shared_ptr<Peer> p = peerStorage_->getUnusedPeers()[0];
-    CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"), p->getIPAddress());
-    CPPUNIT_ASSERT_EQUAL((uint16_t)6881, p->getPort());
+    REQUIRE_EQ(std::string("192.168.0.1"), p->getIPAddress());
+    REQUIRE_EQ((uint16_t)6881, p->getPort());
   }
   {
     std::shared_ptr<Peer> p = peerStorage_->getUnusedPeers()[1];
-    CPPUNIT_ASSERT_EQUAL(std::string("1002:1035:4527:3546:7854:1237:3247:3217"),
+    REQUIRE_EQ(std::string("1002:1035:4527:3546:7854:1237:3247:3217"),
                          p->getIPAddress());
-    CPPUNIT_ASSERT_EQUAL((uint16_t)9999, p->getPort());
+    REQUIRE_EQ((uint16_t)9999, p->getPort());
   }
   {
     std::shared_ptr<Peer> p = peerStorage_->getUnusedPeers()[2];
-    CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.2"), p->getIPAddress());
+    REQUIRE_EQ(std::string("192.168.0.2"), p->getIPAddress());
   }
   {
     std::shared_ptr<Peer> p = peerStorage_->getUnusedPeers()[3];
-    CPPUNIT_ASSERT_EQUAL(std::string("2001:db8:bd05:1d2:288a:1fc0:1:10ee"),
+    REQUIRE_EQ(std::string("2001:db8:bd05:1d2:288a:1fc0:1:10ee"),
                          p->getIPAddress());
   }
 }
@@ -208,34 +205,34 @@ void UTPexExtensionMessageTest::testCreate()
 
   auto msg = UTPexExtensionMessage::create(
       reinterpret_cast<const unsigned char*>(data.c_str()), data.size());
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, msg->getExtensionMessageID());
-  CPPUNIT_ASSERT_EQUAL((size_t)3, msg->getFreshPeers().size());
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"),
+  REQUIRE_EQ((uint8_t)1, msg->getExtensionMessageID());
+  REQUIRE_EQ((size_t)3, msg->getFreshPeers().size());
+  REQUIRE_EQ(std::string("192.168.0.1"),
                        msg->getFreshPeers()[0]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6881, msg->getFreshPeers()[0]->getPort());
-  CPPUNIT_ASSERT_EQUAL(std::string("10.1.1.2"),
+  REQUIRE_EQ((uint16_t)6881, msg->getFreshPeers()[0]->getPort());
+  REQUIRE_EQ(std::string("10.1.1.2"),
                        msg->getFreshPeers()[1]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)9999, msg->getFreshPeers()[1]->getPort());
-  CPPUNIT_ASSERT_EQUAL(std::string("1002:1035:4527:3546:7854:1237:3247:3217"),
+  REQUIRE_EQ((uint16_t)9999, msg->getFreshPeers()[1]->getPort());
+  REQUIRE_EQ(std::string("1002:1035:4527:3546:7854:1237:3247:3217"),
                        msg->getFreshPeers()[2]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6997, msg->getFreshPeers()[2]->getPort());
+  REQUIRE_EQ((uint16_t)6997, msg->getFreshPeers()[2]->getPort());
 
-  CPPUNIT_ASSERT_EQUAL((size_t)3, msg->getDroppedPeers().size());
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.2"),
+  REQUIRE_EQ((size_t)3, msg->getDroppedPeers().size());
+  REQUIRE_EQ(std::string("192.168.0.2"),
                        msg->getDroppedPeers()[0]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6882, msg->getDroppedPeers()[0]->getPort());
-  CPPUNIT_ASSERT_EQUAL(std::string("10.1.1.3"),
+  REQUIRE_EQ((uint16_t)6882, msg->getDroppedPeers()[0]->getPort());
+  REQUIRE_EQ(std::string("10.1.1.3"),
                        msg->getDroppedPeers()[1]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)10000, msg->getDroppedPeers()[1]->getPort());
-  CPPUNIT_ASSERT_EQUAL(std::string("2001:db8:bd05:1d2:288a:1fc0:1:10ee"),
+  REQUIRE_EQ((uint16_t)10000, msg->getDroppedPeers()[1]->getPort());
+  REQUIRE_EQ(std::string("2001:db8:bd05:1d2:288a:1fc0:1:10ee"),
                        msg->getDroppedPeers()[2]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6998, msg->getDroppedPeers()[2]->getPort());
+  REQUIRE_EQ((uint16_t)6998, msg->getDroppedPeers()[2]->getPort());
   try {
     // 0 length data
     std::string in = "";
     UTPexExtensionMessage::create(
         reinterpret_cast<const unsigned char*>(in.c_str()), in.size());
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (Exception& e) {
     std::cerr << e.stackTrace() << std::endl;
@@ -246,60 +243,60 @@ void UTPexExtensionMessageTest::testAddFreshPeer()
 {
   UTPexExtensionMessage msg(1);
   std::shared_ptr<Peer> p1(new Peer("192.168.0.1", 6881));
-  CPPUNIT_ASSERT(msg.addFreshPeer(p1));
+  REQUIRE(msg.addFreshPeer(p1));
   std::shared_ptr<Peer> p2(new Peer("10.1.1.2", 9999));
   p2->setFirstContactTime(Timer(Timer().getTime() - 61_s));
-  CPPUNIT_ASSERT(!msg.addFreshPeer(p2));
+  REQUIRE(!msg.addFreshPeer(p2));
   std::shared_ptr<Peer> p3(new Peer("10.1.1.3", 9999, true));
-  CPPUNIT_ASSERT(!msg.addFreshPeer(p3));
+  REQUIRE(!msg.addFreshPeer(p3));
 }
 
 void UTPexExtensionMessageTest::testAddDroppedPeer()
 {
   UTPexExtensionMessage msg(1);
   std::shared_ptr<Peer> p1(new Peer("192.168.0.1", 6881));
-  CPPUNIT_ASSERT(!msg.addDroppedPeer(p1));
+  REQUIRE(!msg.addDroppedPeer(p1));
   std::shared_ptr<Peer> p2(new Peer("10.1.1.2", 9999));
   p2->startDrop();
-  CPPUNIT_ASSERT(msg.addFreshPeer(p2));
+  REQUIRE(msg.addFreshPeer(p2));
   std::shared_ptr<Peer> p3(new Peer("10.1.1.3", 9999, true));
   p3->startDrop();
-  CPPUNIT_ASSERT(!msg.addDroppedPeer(p3));
+  REQUIRE(!msg.addDroppedPeer(p3));
 }
 
 void UTPexExtensionMessageTest::testFreshPeersAreFull()
 {
   UTPexExtensionMessage msg(1);
-  CPPUNIT_ASSERT_EQUAL((size_t)50, msg.getMaxFreshPeer());
+  REQUIRE_EQ((size_t)50, msg.getMaxFreshPeer());
   msg.setMaxFreshPeer(2);
   std::shared_ptr<Peer> p1(new Peer("192.168.0.1", 6881));
-  CPPUNIT_ASSERT(msg.addFreshPeer(p1));
-  CPPUNIT_ASSERT(!msg.freshPeersAreFull());
+  REQUIRE(msg.addFreshPeer(p1));
+  REQUIRE(!msg.freshPeersAreFull());
   std::shared_ptr<Peer> p2(new Peer("10.1.1.2", 9999));
-  CPPUNIT_ASSERT(msg.addFreshPeer(p2));
-  CPPUNIT_ASSERT(msg.freshPeersAreFull());
+  REQUIRE(msg.addFreshPeer(p2));
+  REQUIRE(msg.freshPeersAreFull());
   std::shared_ptr<Peer> p3(new Peer("10.1.1.3", 9999));
-  CPPUNIT_ASSERT(msg.addFreshPeer(p3));
-  CPPUNIT_ASSERT(msg.freshPeersAreFull());
+  REQUIRE(msg.addFreshPeer(p3));
+  REQUIRE(msg.freshPeersAreFull());
 }
 
 void UTPexExtensionMessageTest::testDroppedPeersAreFull()
 {
   UTPexExtensionMessage msg(1);
-  CPPUNIT_ASSERT_EQUAL((size_t)50, msg.getMaxDroppedPeer());
+  REQUIRE_EQ((size_t)50, msg.getMaxDroppedPeer());
   msg.setMaxDroppedPeer(2);
   std::shared_ptr<Peer> p1(new Peer("192.168.0.1", 6881));
   p1->startDrop();
-  CPPUNIT_ASSERT(msg.addDroppedPeer(p1));
-  CPPUNIT_ASSERT(!msg.droppedPeersAreFull());
+  REQUIRE(msg.addDroppedPeer(p1));
+  REQUIRE(!msg.droppedPeersAreFull());
   std::shared_ptr<Peer> p2(new Peer("10.1.1.2", 9999));
   p2->startDrop();
-  CPPUNIT_ASSERT(msg.addDroppedPeer(p2));
-  CPPUNIT_ASSERT(msg.droppedPeersAreFull());
+  REQUIRE(msg.addDroppedPeer(p2));
+  REQUIRE(msg.droppedPeersAreFull());
   std::shared_ptr<Peer> p3(new Peer("10.1.1.3", 9999));
   p3->startDrop();
-  CPPUNIT_ASSERT(msg.addDroppedPeer(p3));
-  CPPUNIT_ASSERT(msg.droppedPeersAreFull());
+  REQUIRE(msg.addDroppedPeer(p3));
+  REQUIRE(msg.droppedPeersAreFull());
 }
 
 } // namespace aria2

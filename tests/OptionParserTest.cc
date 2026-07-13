@@ -3,7 +3,7 @@
 #include <cstring>
 #include <sstream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "OptionHandlerImpl.h"
 #include "Exception.h"
@@ -15,24 +15,8 @@
 
 namespace aria2 {
 
-class OptionParserTest : public CppUnit::TestFixture {
+class OptionParserTest {
 
-  CPPUNIT_TEST_SUITE(OptionParserTest);
-  CPPUNIT_TEST(testFindAll);
-  CPPUNIT_TEST(testFindByNameSubstring);
-  CPPUNIT_TEST(testFindByTag);
-  CPPUNIT_TEST(testFind);
-  CPPUNIT_TEST(testFindByShortName);
-  CPPUNIT_TEST(testFindById);
-  CPPUNIT_TEST(testParseDefaultValues);
-  CPPUNIT_TEST(testParseDefaultValuesDoesNotInjectCompileTimeCABundle);
-  CPPUNIT_TEST(testLogRotationOptions);
-  CPPUNIT_TEST(testP2PSharingOptionsAreNotBtOnly);
-  CPPUNIT_TEST(testParseArg);
-  CPPUNIT_TEST(testParse);
-  CPPUNIT_TEST(testParseInternal);
-  CPPUNIT_TEST(testParseKeyVals);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<OptionParser> oparser_;
@@ -86,72 +70,85 @@ public:
   void testParseKeyVals();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(OptionParserTest);
+A2_TEST(OptionParserTest, testFindAll)
+A2_TEST(OptionParserTest, testFindByNameSubstring)
+A2_TEST(OptionParserTest, testFindByTag)
+A2_TEST(OptionParserTest, testFind)
+A2_TEST(OptionParserTest, testFindByShortName)
+A2_TEST(OptionParserTest, testFindById)
+A2_TEST(OptionParserTest, testParseDefaultValues)
+A2_TEST(OptionParserTest, testParseDefaultValuesDoesNotInjectCompileTimeCABundle)
+A2_TEST(OptionParserTest, testLogRotationOptions)
+A2_TEST(OptionParserTest, testP2PSharingOptionsAreNotBtOnly)
+A2_TEST(OptionParserTest, testParseArg)
+A2_TEST(OptionParserTest, testParse)
+A2_TEST(OptionParserTest, testParseInternal)
+A2_TEST(OptionParserTest, testParseKeyVals)
 
 void OptionParserTest::testFindAll()
 {
   std::vector<const OptionHandler*> res = oparser_->findAll();
-  CPPUNIT_ASSERT_EQUAL((size_t)3, res.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("timeout"), std::string(res[0]->getName()));
-  CPPUNIT_ASSERT_EQUAL(std::string("dir"), std::string(res[1]->getName()));
-  CPPUNIT_ASSERT_EQUAL(std::string("out"), std::string(res[2]->getName()));
+  REQUIRE_EQ((size_t)3, res.size());
+  REQUIRE_EQ(std::string("timeout"), std::string(res[0]->getName()));
+  REQUIRE_EQ(std::string("dir"), std::string(res[1]->getName()));
+  REQUIRE_EQ(std::string("out"), std::string(res[2]->getName()));
 }
 
 void OptionParserTest::testFindByNameSubstring()
 {
   std::vector<const OptionHandler*> res = oparser_->findByNameSubstring("i");
-  CPPUNIT_ASSERT_EQUAL((size_t)2, res.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("timeout"), std::string(res[0]->getName()));
-  CPPUNIT_ASSERT_EQUAL(std::string("dir"), std::string(res[1]->getName()));
+  REQUIRE_EQ((size_t)2, res.size());
+  REQUIRE_EQ(std::string("timeout"), std::string(res[0]->getName()));
+  REQUIRE_EQ(std::string("dir"), std::string(res[1]->getName()));
 }
 
 void OptionParserTest::testFindByTag()
 {
   std::vector<const OptionHandler*> res = oparser_->findByTag(TAG_FILE);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, res.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("dir"), std::string(res[0]->getName()));
-  CPPUNIT_ASSERT_EQUAL(std::string("out"), std::string(res[1]->getName()));
+  REQUIRE_EQ((size_t)2, res.size());
+  REQUIRE_EQ(std::string("dir"), std::string(res[0]->getName()));
+  REQUIRE_EQ(std::string("out"), std::string(res[1]->getName()));
 }
 
 void OptionParserTest::testFind()
 {
   const OptionHandler* dir = oparser_->find(PREF_DIR);
-  CPPUNIT_ASSERT(dir);
-  CPPUNIT_ASSERT_EQUAL(std::string("dir"), std::string(dir->getName()));
+  REQUIRE(dir);
+  REQUIRE_EQ(std::string("dir"), std::string(dir->getName()));
 
   const OptionHandler* daemon = oparser_->find(PREF_DAEMON);
-  CPPUNIT_ASSERT(!daemon);
+  REQUIRE(!daemon);
 
   const OptionHandler* log = oparser_->find(PREF_LOG);
-  CPPUNIT_ASSERT(!log);
+  REQUIRE(!log);
 }
 
 void OptionParserTest::testFindByShortName()
 {
   const OptionHandler* timeout = oparser_->findByShortName('A');
-  CPPUNIT_ASSERT(timeout);
-  CPPUNIT_ASSERT_EQUAL(std::string("timeout"), std::string(timeout->getName()));
+  REQUIRE(timeout);
+  REQUIRE_EQ(std::string("timeout"), std::string(timeout->getName()));
 
-  CPPUNIT_ASSERT(!oparser_->findByShortName('C'));
+  REQUIRE(!oparser_->findByShortName('C'));
 }
 
 void OptionParserTest::testFindById()
 {
   const OptionHandler* timeout = oparser_->findById(PREF_TIMEOUT->i);
-  CPPUNIT_ASSERT(timeout);
-  CPPUNIT_ASSERT_EQUAL(std::string("timeout"), std::string(timeout->getName()));
+  REQUIRE(timeout);
+  REQUIRE_EQ(std::string("timeout"), std::string(timeout->getName()));
 
-  CPPUNIT_ASSERT(!oparser_->findById(9999));
+  REQUIRE(!oparser_->findById(9999));
 }
 
 void OptionParserTest::testParseDefaultValues()
 {
   Option option;
   oparser_->parseDefaultValues(option);
-  CPPUNIT_ASSERT_EQUAL(std::string("ALPHA"), option.get(PREF_TIMEOUT));
-  CPPUNIT_ASSERT_EQUAL(std::string("1048576"), option.get(PREF_OUT));
-  CPPUNIT_ASSERT_EQUAL(std::string("CHARLIE"), option.get(PREF_DAEMON));
-  CPPUNIT_ASSERT(!option.defined(PREF_DIR));
+  REQUIRE_EQ(std::string("ALPHA"), option.get(PREF_TIMEOUT));
+  REQUIRE_EQ(std::string("1048576"), option.get(PREF_OUT));
+  REQUIRE_EQ(std::string("CHARLIE"), option.get(PREF_DAEMON));
+  REQUIRE(!option.defined(PREF_DIR));
 }
 
 void OptionParserTest::testParseDefaultValuesDoesNotInjectCompileTimeCABundle()
@@ -159,7 +156,7 @@ void OptionParserTest::testParseDefaultValuesDoesNotInjectCompileTimeCABundle()
   Option option;
   OptionParser::getInstance()->parseDefaultValues(option);
 
-  CPPUNIT_ASSERT(!option.defined(PREF_CA_CERTIFICATE));
+  REQUIRE(!option.defined(PREF_CA_CERTIFICATE));
 }
 
 void OptionParserTest::testLogRotationOptions()
@@ -168,31 +165,31 @@ void OptionParserTest::testLogRotationOptions()
 
   Option defaults;
   parser->parseDefaultValues(defaults);
-  CPPUNIT_ASSERT_EQUAL((int64_t)10_m,
+  REQUIRE_EQ((int64_t)10_m,
                        defaults.getAsLLInt(PREF_LOG_MAX_SIZE));
-  CPPUNIT_ASSERT_EQUAL(4, defaults.getAsInt(PREF_LOG_MAX_FILES));
-  CPPUNIT_ASSERT_EQUAL(V_TRACE, defaults.get(PREF_LOG_LEVEL));
-  CPPUNIT_ASSERT_EQUAL(V_INFO, defaults.get(PREF_CONSOLE_LOG_LEVEL));
+  REQUIRE_EQ(4, defaults.getAsInt(PREF_LOG_MAX_FILES));
+  REQUIRE_EQ(V_TRACE, defaults.get(PREF_LOG_LEVEL));
+  REQUIRE_EQ(V_INFO, defaults.get(PREF_CONSOLE_LOG_LEVEL));
 
   Option configured;
   std::stringstream input;
   input << "log-max-size=20M\n";
   input << "log-max-files=6\n";
   parser->parse(configured, input);
-  CPPUNIT_ASSERT_EQUAL((int64_t)20_m,
+  REQUIRE_EQ((int64_t)20_m,
                        configured.getAsLLInt(PREF_LOG_MAX_SIZE));
-  CPPUNIT_ASSERT_EQUAL(6, configured.getAsInt(PREF_LOG_MAX_FILES));
+  REQUIRE_EQ(6, configured.getAsInt(PREF_LOG_MAX_FILES));
 
   try {
     parser->find(PREF_LOG_MAX_FILES)->parse(configured, "0");
-    CPPUNIT_FAIL("zero log file count must be rejected");
+    FAIL("zero log file count must be rejected");
   }
   catch (Exception&) {
   }
 
   try {
     parser->find(PREF_LOG_LEVEL)->parse(configured, "notice");
-    CPPUNIT_FAIL("notice log level must be rejected");
+    FAIL("notice log level must be rejected");
   }
   catch (Exception&) {
   }
@@ -206,16 +203,16 @@ void OptionParserTest::testP2PSharingOptionsAreNotBtOnly()
   const auto detachShareOnly = parser->find(PREF_DETACH_SHARE_ONLY);
   const auto oldBtDetachSeedOnly = option::k2p("bt-detach-seed-only");
 
-  CPPUNIT_ASSERT(seedRatio);
-  CPPUNIT_ASSERT(seedRatio->hasTag(TAG_BITTORRENT));
-  CPPUNIT_ASSERT(seedRatio->hasTag(TAG_ED2K));
-  CPPUNIT_ASSERT(seedTime);
-  CPPUNIT_ASSERT(seedTime->hasTag(TAG_BITTORRENT));
-  CPPUNIT_ASSERT(seedTime->hasTag(TAG_ED2K));
-  CPPUNIT_ASSERT(detachShareOnly);
-  CPPUNIT_ASSERT(detachShareOnly->hasTag(TAG_BITTORRENT));
-  CPPUNIT_ASSERT(detachShareOnly->hasTag(TAG_ED2K));
-  CPPUNIT_ASSERT_EQUAL((size_t)0, oldBtDetachSeedOnly->i);
+  REQUIRE(seedRatio);
+  REQUIRE(seedRatio->hasTag(TAG_BITTORRENT));
+  REQUIRE(seedRatio->hasTag(TAG_ED2K));
+  REQUIRE(seedTime);
+  REQUIRE(seedTime->hasTag(TAG_BITTORRENT));
+  REQUIRE(seedTime->hasTag(TAG_ED2K));
+  REQUIRE(detachShareOnly);
+  REQUIRE(detachShareOnly->hasTag(TAG_BITTORRENT));
+  REQUIRE(detachShareOnly->hasTag(TAG_ED2K));
+  REQUIRE_EQ((size_t)0, oldBtDetachSeedOnly->i);
 }
 
 void OptionParserTest::testParseArg()
@@ -247,15 +244,15 @@ void OptionParserTest::testParseArg()
 
   oparser_->parseArg(s, nonopts, argc, argv);
 
-  CPPUNIT_ASSERT_EQUAL(std::string("timeout=ALPHA\n"
+  REQUIRE_EQ(std::string("timeout=ALPHA\n"
                                    "dir=BRAVO\n"),
                        s.str());
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, nonopts.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("nonopt1"), nonopts[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string("nonopt2"), nonopts[1]);
+  REQUIRE_EQ((size_t)2, nonopts.size());
+  REQUIRE_EQ(std::string("nonopt1"), nonopts[0]);
+  REQUIRE_EQ(std::string("nonopt2"), nonopts[1]);
 
-  CPPUNIT_ASSERT_EQUAL(std::string("*****"), std::string(argTimeout));
+  REQUIRE_EQ(std::string("*****"), std::string(argTimeout));
 }
 
 void OptionParserTest::testParse()
@@ -266,8 +263,8 @@ void OptionParserTest::testParse()
                         "\n"
                         "dir=World");
   oparser_->parse(option, in);
-  CPPUNIT_ASSERT_EQUAL(std::string("Hello"), option.get(PREF_TIMEOUT));
-  CPPUNIT_ASSERT_EQUAL(std::string("World"), option.get(PREF_DIR));
+  REQUIRE_EQ(std::string("Hello"), option.get(PREF_TIMEOUT));
+  REQUIRE_EQ(std::string("World"), option.get(PREF_DIR));
 }
 
 void OptionParserTest::testParseInternal()
@@ -276,8 +273,8 @@ void OptionParserTest::testParseInternal()
   std::istringstream in("daemon=true\n"
                         "timeout=Hello\n");
   oparser_->parseInternal(option, in);
-  CPPUNIT_ASSERT_EQUAL(std::string("true"), option.get(PREF_DAEMON));
-  CPPUNIT_ASSERT_EQUAL(std::string("Hello"), option.get(PREF_TIMEOUT));
+  REQUIRE_EQ(std::string("true"), option.get(PREF_DAEMON));
+  REQUIRE_EQ(std::string("Hello"), option.get(PREF_TIMEOUT));
 }
 
 void OptionParserTest::testParseKeyVals()
@@ -288,8 +285,8 @@ void OptionParserTest::testParseKeyVals()
   kv.push_back(std::make_pair("UNKNOWN", "x"));
   kv.push_back(std::make_pair("dir", "World"));
   oparser_->parse(option, kv);
-  CPPUNIT_ASSERT_EQUAL(std::string("Hello"), option.get(PREF_TIMEOUT));
-  CPPUNIT_ASSERT_EQUAL(std::string("World"), option.get(PREF_DIR));
+  REQUIRE_EQ(std::string("Hello"), option.get(PREF_TIMEOUT));
+  REQUIRE_EQ(std::string("World"), option.get(PREF_DIR));
 }
 
 } // namespace aria2

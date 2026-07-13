@@ -1,6 +1,6 @@
 #include "IteratableChecksumValidator.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "TestUtil.h"
 #include "DownloadContext.h"
@@ -12,12 +12,8 @@
 
 namespace aria2 {
 
-class IteratableChecksumValidatorTest : public CppUnit::TestFixture {
+class IteratableChecksumValidatorTest {
 
-  CPPUNIT_TEST_SUITE(IteratableChecksumValidatorTest);
-  CPPUNIT_TEST(testValidate);
-  CPPUNIT_TEST(testValidate_fail);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -27,7 +23,8 @@ public:
   void testValidate_fail();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(IteratableChecksumValidatorTest);
+A2_TEST(IteratableChecksumValidatorTest, testValidate)
+A2_TEST(IteratableChecksumValidatorTest, testValidate_fail)
 
 void IteratableChecksumValidatorTest::testValidate()
 {
@@ -47,7 +44,7 @@ void IteratableChecksumValidatorTest::testValidate()
     validator.validateChunk();
   }
 
-  CPPUNIT_ASSERT(ps->downloadFinished());
+  REQUIRE(ps->downloadFinished());
 }
 
 void IteratableChecksumValidatorTest::testValidate_fail()
@@ -69,7 +66,7 @@ void IteratableChecksumValidatorTest::testValidate_fail()
     validator.validateChunk();
   }
 
-  CPPUNIT_ASSERT(!ps->downloadFinished());
+  REQUIRE(!ps->downloadFinished());
 }
 
 } // namespace aria2

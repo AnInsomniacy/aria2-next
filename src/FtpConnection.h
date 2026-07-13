@@ -76,7 +76,7 @@ private:
   bool bulkReceiveResponse(std::pair<int, std::string>& response);
 
   // prepare for large banners
-  static const size_t MAX_RECV_BUFFER = 64_k;
+  static constexpr size_t MAX_RECV_BUFFER = 64_k;
 
 public:
   FtpConnection(cuid_t cuid, const std::shared_ptr<SocketCore>& socket,

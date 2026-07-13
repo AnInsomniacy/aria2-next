@@ -3,7 +3,7 @@
 #include <vector>
 #include <deque>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "MockPieceStorage.h"
 #include "DownloadContext.h"
@@ -16,11 +16,8 @@
 
 namespace aria2 {
 
-class UTMetadataRequestFactoryTest : public CppUnit::TestFixture {
+class UTMetadataRequestFactoryTest {
 
-  CPPUNIT_TEST_SUITE(UTMetadataRequestFactoryTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testCreate();
@@ -46,7 +43,7 @@ public:
   };
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(UTMetadataRequestFactoryTest);
+A2_TEST(UTMetadataRequestFactoryTest, testCreate)
 
 void UTMetadataRequestFactoryTest::testCreate()
 {
@@ -65,13 +62,13 @@ void UTMetadataRequestFactoryTest::testCreate()
   factory.setUTMetadataRequestTracker(&tracker);
 
   auto msgs = factory.create(1, &ps);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, msgs.size());
+  REQUIRE_EQ((size_t)1, msgs.size());
 
   msgs = factory.create(1, &ps);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, msgs.size());
+  REQUIRE_EQ((size_t)1, msgs.size());
 
   msgs = factory.create(1, &ps);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, msgs.size());
+  REQUIRE_EQ((size_t)0, msgs.size());
 }
 
 } // namespace aria2

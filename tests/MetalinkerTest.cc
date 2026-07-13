@@ -1,17 +1,14 @@
 #include "Metalinker.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "MetalinkEntry.h"
 #include "a2functional.h"
 
 namespace aria2 {
 
-class MetalinkerTest : public CppUnit::TestFixture {
+class MetalinkerTest {
 
-  CPPUNIT_TEST_SUITE(MetalinkerTest);
-  CPPUNIT_TEST(testQueryEntry);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -21,7 +18,7 @@ public:
   void testQueryEntry();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(MetalinkerTest);
+A2_TEST(MetalinkerTest, testQueryEntry)
 
 void MetalinkerTest::testQueryEntry()
 {
@@ -46,17 +43,17 @@ void MetalinkerTest::testQueryEntry()
   os = "Linux-m68k";
   {
     auto result = metalinker.queryEntry(version, language, os);
-    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
-    CPPUNIT_ASSERT_EQUAL(std::string("0.5.1"), result.at(0)->version);
-    CPPUNIT_ASSERT_EQUAL(std::string("ja-JP"), result.at(0)->languages[0]);
-    CPPUNIT_ASSERT_EQUAL(std::string("Linux-m68k"), result.at(0)->oses[0]);
+    REQUIRE_EQ((size_t)1, result.size());
+    REQUIRE_EQ(std::string("0.5.1"), result.at(0)->version);
+    REQUIRE_EQ(std::string("ja-JP"), result.at(0)->languages[0]);
+    REQUIRE_EQ(std::string("Linux-m68k"), result.at(0)->oses[0]);
   }
   version = "0.6.0";
   language = "";
   os = "";
   {
     auto result = metalinker.queryEntry(version, language, os);
-    CPPUNIT_ASSERT_EQUAL((size_t)0, result.size());
+    REQUIRE_EQ((size_t)0, result.size());
   }
 
   version = "0.5.2";
@@ -64,10 +61,10 @@ void MetalinkerTest::testQueryEntry()
   os = "";
   {
     auto result = metalinker.queryEntry(version, language, os);
-    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
-    CPPUNIT_ASSERT_EQUAL(std::string("0.5.2"), result.at(0)->version);
-    CPPUNIT_ASSERT_EQUAL(std::string("en-US"), result.at(0)->languages[0]);
-    CPPUNIT_ASSERT_EQUAL(std::string("Linux-x86"), result.at(0)->oses[0]);
+    REQUIRE_EQ((size_t)1, result.size());
+    REQUIRE_EQ(std::string("0.5.2"), result.at(0)->version);
+    REQUIRE_EQ(std::string("en-US"), result.at(0)->languages[0]);
+    REQUIRE_EQ(std::string("Linux-x86"), result.at(0)->oses[0]);
   }
 }
 

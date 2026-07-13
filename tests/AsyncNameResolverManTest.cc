@@ -1,26 +1,14 @@
 #include "AsyncNameResolverMan.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Option.h"
 #include "prefs.h"
 
 namespace aria2 {
 
-class AsyncNameResolverManTest : public CppUnit::TestFixture {
+class AsyncNameResolverManTest {
 
-  CPPUNIT_TEST_SUITE(AsyncNameResolverManTest);
-  CPPUNIT_TEST(testConfigureDefaults);
-  CPPUNIT_TEST(testConfigureWithExplicitServers);
-  CPPUNIT_TEST(testIPv4SuccessCompletesWithoutWaitingForIPv6);
-  CPPUNIT_TEST(testIPv6OnlySuccessCompletesAfterIPv4Error);
-  CPPUNIT_TEST(testIPv6SuccessWaitsWhileIPv4IsPending);
-  CPPUNIT_TEST(testAllResolversFailed);
-  CPPUNIT_TEST(testNoResolversKeepsHistoricalFailureStatus);
-  CPPUNIT_TEST(testFallbackAllowedForResolverInfrastructureErrors);
-  CPPUNIT_TEST(testFallbackRejectedForAuthoritativeResolverErrors);
-  CPPUNIT_TEST(testFallbackRejectedForExplicitAsyncDnsServers);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -39,7 +27,16 @@ public:
   void testFallbackRejectedForExplicitAsyncDnsServers();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(AsyncNameResolverManTest);
+A2_TEST(AsyncNameResolverManTest, testConfigureDefaults)
+A2_TEST(AsyncNameResolverManTest, testConfigureWithExplicitServers)
+A2_TEST(AsyncNameResolverManTest, testIPv4SuccessCompletesWithoutWaitingForIPv6)
+A2_TEST(AsyncNameResolverManTest, testIPv6OnlySuccessCompletesAfterIPv4Error)
+A2_TEST(AsyncNameResolverManTest, testIPv6SuccessWaitsWhileIPv4IsPending)
+A2_TEST(AsyncNameResolverManTest, testAllResolversFailed)
+A2_TEST(AsyncNameResolverManTest, testNoResolversKeepsHistoricalFailureStatus)
+A2_TEST(AsyncNameResolverManTest, testFallbackAllowedForResolverInfrastructureErrors)
+A2_TEST(AsyncNameResolverManTest, testFallbackRejectedForAuthoritativeResolverErrors)
+A2_TEST(AsyncNameResolverManTest, testFallbackRejectedForExplicitAsyncDnsServers)
 
 void AsyncNameResolverManTest::testConfigureDefaults()
 {
@@ -48,7 +45,7 @@ void AsyncNameResolverManTest::testConfigureDefaults()
 
   configureAsyncNameResolverMan(&man, &option);
 
-  CPPUNIT_ASSERT(!man.started());
+  REQUIRE(!man.started());
 }
 
 void AsyncNameResolverManTest::testConfigureWithExplicitServers()
@@ -59,58 +56,58 @@ void AsyncNameResolverManTest::testConfigureWithExplicitServers()
 
   configureAsyncNameResolverMan(&man, &option);
 
-  CPPUNIT_ASSERT(!man.started());
+  REQUIRE(!man.started());
 }
 
 void AsyncNameResolverManTest::testIPv4SuccessCompletesWithoutWaitingForIPv6()
 {
-  CPPUNIT_ASSERT_EQUAL(1, evaluateAsyncNameResolverStatus(2, 1, 0, true));
+  REQUIRE_EQ(1, evaluateAsyncNameResolverStatus(2, 1, 0, true));
 }
 
 void AsyncNameResolverManTest::testIPv6OnlySuccessCompletesAfterIPv4Error()
 {
-  CPPUNIT_ASSERT_EQUAL(1, evaluateAsyncNameResolverStatus(2, 1, 1, false));
+  REQUIRE_EQ(1, evaluateAsyncNameResolverStatus(2, 1, 1, false));
 }
 
 void AsyncNameResolverManTest::testIPv6SuccessWaitsWhileIPv4IsPending()
 {
-  CPPUNIT_ASSERT_EQUAL(0, evaluateAsyncNameResolverStatus(2, 1, 0, false));
+  REQUIRE_EQ(0, evaluateAsyncNameResolverStatus(2, 1, 0, false));
 }
 
 void AsyncNameResolverManTest::testAllResolversFailed()
 {
-  CPPUNIT_ASSERT_EQUAL(-1, evaluateAsyncNameResolverStatus(2, 0, 2, false));
+  REQUIRE_EQ(-1, evaluateAsyncNameResolverStatus(2, 0, 2, false));
 }
 
 void AsyncNameResolverManTest::testNoResolversKeepsHistoricalFailureStatus()
 {
-  CPPUNIT_ASSERT_EQUAL(-1, evaluateAsyncNameResolverStatus(0, 0, 0, false));
+  REQUIRE_EQ(-1, evaluateAsyncNameResolverStatus(0, 0, 0, false));
 }
 
 void AsyncNameResolverManTest::testFallbackAllowedForResolverInfrastructureErrors()
 {
-  CPPUNIT_ASSERT(shouldFallbackToSystemResolver(ARES_ENOSERVER, false));
-  CPPUNIT_ASSERT(shouldFallbackToSystemResolver(ARES_ECONNREFUSED, false));
-  CPPUNIT_ASSERT(shouldFallbackToSystemResolver(ARES_ETIMEOUT, false));
-  CPPUNIT_ASSERT(shouldFallbackToSystemResolver(ARES_EFILE, false));
-  CPPUNIT_ASSERT(shouldFallbackToSystemResolver(ARES_ELOADIPHLPAPI, false));
-  CPPUNIT_ASSERT(shouldFallbackToSystemResolver(ARES_EADDRGETNETWORKPARAMS,
+  REQUIRE(shouldFallbackToSystemResolver(ARES_ENOSERVER, false));
+  REQUIRE(shouldFallbackToSystemResolver(ARES_ECONNREFUSED, false));
+  REQUIRE(shouldFallbackToSystemResolver(ARES_ETIMEOUT, false));
+  REQUIRE(shouldFallbackToSystemResolver(ARES_EFILE, false));
+  REQUIRE(shouldFallbackToSystemResolver(ARES_ELOADIPHLPAPI, false));
+  REQUIRE(shouldFallbackToSystemResolver(ARES_EADDRGETNETWORKPARAMS,
                                                 false));
 }
 
 void AsyncNameResolverManTest::testFallbackRejectedForAuthoritativeResolverErrors()
 {
-  CPPUNIT_ASSERT(!shouldFallbackToSystemResolver(ARES_ENOTFOUND, false));
-  CPPUNIT_ASSERT(!shouldFallbackToSystemResolver(ARES_ENONAME, false));
-  CPPUNIT_ASSERT(!shouldFallbackToSystemResolver(ARES_ENODATA, false));
-  CPPUNIT_ASSERT(!shouldFallbackToSystemResolver(ARES_EREFUSED, false));
+  REQUIRE(!shouldFallbackToSystemResolver(ARES_ENOTFOUND, false));
+  REQUIRE(!shouldFallbackToSystemResolver(ARES_ENONAME, false));
+  REQUIRE(!shouldFallbackToSystemResolver(ARES_ENODATA, false));
+  REQUIRE(!shouldFallbackToSystemResolver(ARES_EREFUSED, false));
 }
 
 void AsyncNameResolverManTest::testFallbackRejectedForExplicitAsyncDnsServers()
 {
-  CPPUNIT_ASSERT(!shouldFallbackToSystemResolver(ARES_ENOSERVER, true));
-  CPPUNIT_ASSERT(!shouldFallbackToSystemResolver(ARES_ECONNREFUSED, true));
-  CPPUNIT_ASSERT(!shouldFallbackToSystemResolver(ARES_ETIMEOUT, true));
+  REQUIRE(!shouldFallbackToSystemResolver(ARES_ENOSERVER, true));
+  REQUIRE(!shouldFallbackToSystemResolver(ARES_ECONNREFUSED, true));
+  REQUIRE(!shouldFallbackToSystemResolver(ARES_ETIMEOUT, true));
 }
 
 } // namespace aria2

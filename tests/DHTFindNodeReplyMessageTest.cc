@@ -1,6 +1,6 @@
 #include "DHTFindNodeReplyMessage.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTNode.h"
 #include "Exception.h"
@@ -11,12 +11,8 @@
 
 namespace aria2 {
 
-class DHTFindNodeReplyMessageTest : public CppUnit::TestFixture {
+class DHTFindNodeReplyMessageTest {
 
-  CPPUNIT_TEST_SUITE(DHTFindNodeReplyMessageTest);
-  CPPUNIT_TEST(testGetBencodedMessage);
-  CPPUNIT_TEST(testGetBencodedMessage6);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -28,7 +24,8 @@ public:
   void testGetBencodedMessage6();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTFindNodeReplyMessageTest);
+A2_TEST(DHTFindNodeReplyMessageTest, testGetBencodedMessage)
+A2_TEST(DHTFindNodeReplyMessageTest, testGetBencodedMessage6)
 
 void DHTFindNodeReplyMessageTest::testGetBencodedMessage()
 {
@@ -49,7 +46,7 @@ void DHTFindNodeReplyMessageTest::testGetBencodedMessage()
     nodes[i]->setPort(6881 + i);
 
     unsigned char buf[COMPACT_LEN_IPV6];
-    CPPUNIT_ASSERT_EQUAL(COMPACT_LEN_IPV4,
+    REQUIRE_EQ(COMPACT_LEN_IPV4,
                          bittorrent::packcompact(buf, nodes[i]->getIPAddress(),
                                                  nodes[i]->getPort()));
     compactNodeInfo +=
@@ -70,7 +67,7 @@ void DHTFindNodeReplyMessageTest::testGetBencodedMessage()
   rDict->put("nodes", compactNodeInfo);
   dict.put("r", std::move(rDict));
 
-  CPPUNIT_ASSERT_EQUAL(bencode2::encode(&dict), msgbody);
+  REQUIRE_EQ(bencode2::encode(&dict), msgbody);
 }
 
 void DHTFindNodeReplyMessageTest::testGetBencodedMessage6()
@@ -92,7 +89,7 @@ void DHTFindNodeReplyMessageTest::testGetBencodedMessage6()
     nodes[i]->setPort(6881 + i);
 
     unsigned char buf[COMPACT_LEN_IPV6];
-    CPPUNIT_ASSERT_EQUAL(COMPACT_LEN_IPV6,
+    REQUIRE_EQ(COMPACT_LEN_IPV6,
                          bittorrent::packcompact(buf, nodes[i]->getIPAddress(),
                                                  nodes[i]->getPort()));
     compactNodeInfo +=
@@ -113,7 +110,7 @@ void DHTFindNodeReplyMessageTest::testGetBencodedMessage6()
   rDict->put("nodes6", compactNodeInfo);
   dict.put("r", std::move(rDict));
 
-  CPPUNIT_ASSERT_EQUAL(bencode2::encode(&dict), msgbody);
+  REQUIRE_EQ(bencode2::encode(&dict), msgbody);
 }
 
 } // namespace aria2

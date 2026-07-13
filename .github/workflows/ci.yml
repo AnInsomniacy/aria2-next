@@ -26,7 +26,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             make cmake ninja-build pkg-config curl tar ca-certificates \
-            libcppunit-dev libssl-dev libsqlite3-dev \
+            libssl-dev libsqlite3-dev \
             libxml2-dev zlib1g-dev libssh2-1-dev
 
       - name: Verify runner tools

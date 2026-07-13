@@ -2,21 +2,15 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "util.h"
 #include "BtConstants.h"
 
 namespace aria2 {
 
-class BtHandshakeMessageTest : public CppUnit::TestFixture {
+class BtHandshakeMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtHandshakeMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST(testSetDHTEnabled);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -32,7 +26,10 @@ public:
 
 std::string BtHandshakeMessageTest::BTPSTR = "BitTorrent protocol";
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtHandshakeMessageTest);
+A2_TEST(BtHandshakeMessageTest, testCreate)
+A2_TEST(BtHandshakeMessageTest, testCreateMessage)
+A2_TEST(BtHandshakeMessageTest, testToString)
+A2_TEST(BtHandshakeMessageTest, testSetDHTEnabled)
 
 void createHandshakeMessageData(unsigned char* msg)
 {
@@ -57,17 +54,17 @@ void BtHandshakeMessageTest::testCreate()
   createHandshakeMessageData(msg);
   std::shared_ptr<BtHandshakeMessage> message =
       BtHandshakeMessage::create(&msg[0], sizeof(msg));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)INT8_MAX, message->getId());
-  CPPUNIT_ASSERT_EQUAL((uint8_t)19, message->getPstrlen());
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ((uint8_t)INT8_MAX, message->getId());
+  REQUIRE_EQ((uint8_t)19, message->getPstrlen());
+  REQUIRE_EQ(
       util::toHex((const unsigned char*)BTPSTR.c_str(), BTPSTR.size()),
       util::toHex(message->getPstr(), BtHandshakeMessage::PSTR_LENGTH));
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("0000000000100004"),
       util::toHex(message->getReserved(), BtHandshakeMessage::RESERVED_LENGTH));
-  CPPUNIT_ASSERT_EQUAL(std::string("ffffffffffffffffffffffffffffffffffffffff"),
+  REQUIRE_EQ(std::string("ffffffffffffffffffffffffffffffffffffffff"),
                        util::toHex(message->getInfoHash(), INFO_HASH_LENGTH));
-  CPPUNIT_ASSERT_EQUAL(std::string("f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"),
+  REQUIRE_EQ(std::string("f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"),
                        util::toHex(message->getPeerId(), PEER_ID_LENGTH));
 }
 
@@ -87,8 +84,8 @@ void BtHandshakeMessageTest::testCreateMessage()
   unsigned char data[68];
   createHandshakeMessageData(data);
   auto rawmsg = msg->createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)68, rawmsg.size());
-  CPPUNIT_ASSERT_EQUAL(util::toHex((const unsigned char*)data, 68),
+  REQUIRE_EQ((size_t)68, rawmsg.size());
+  REQUIRE_EQ(util::toHex((const unsigned char*)data, 68),
                        util::toHex(rawmsg.data(), 68));
 }
 
@@ -105,7 +102,7 @@ void BtHandshakeMessageTest::testToString()
   msg.setInfoHash(infoHash);
   msg.setPeerId(peerId);
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("handshake "
                   "peerId=%F0%F0%F0%F0%F0%F0%F0%F0%F0%F0%F0%F0%F0%F0%F0%F0%F0%"
                   "F0%F0%F0, reserved=0000000000100004"),
@@ -115,11 +112,11 @@ void BtHandshakeMessageTest::testToString()
 void BtHandshakeMessageTest::testSetDHTEnabled()
 {
   BtHandshakeMessage msg;
-  CPPUNIT_ASSERT(!msg.isDHTEnabled());
+  REQUIRE(!msg.isDHTEnabled());
   msg.setDHTEnabled(false);
-  CPPUNIT_ASSERT(!msg.isDHTEnabled());
+  REQUIRE(!msg.isDHTEnabled());
   msg.setDHTEnabled(true);
-  CPPUNIT_ASSERT(msg.isDHTEnabled());
+  REQUIRE(msg.isDHTEnabled());
 }
 
 } // namespace aria2

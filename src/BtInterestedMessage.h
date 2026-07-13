@@ -50,7 +50,7 @@ public:
   BtInterestedMessage();
   virtual ~BtInterestedMessage();
 
-  static const uint8_t ID = 2;
+  static constexpr uint8_t ID = 2;
 
   static const char NAME[];
 

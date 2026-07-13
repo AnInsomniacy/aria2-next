@@ -1,7 +1,7 @@
 #include "DHTBucketTree.h"
 
 #include <cstring>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTNode.h"
 #include "DHTBucket.h"
@@ -10,14 +10,8 @@
 
 namespace aria2 {
 
-class DHTBucketTreeTest : public CppUnit::TestFixture {
+class DHTBucketTreeTest {
 
-  CPPUNIT_TEST_SUITE(DHTBucketTreeTest);
-  CPPUNIT_TEST(testDig);
-  CPPUNIT_TEST(testFindBucketFor);
-  CPPUNIT_TEST(testFindClosestKNodes);
-  CPPUNIT_TEST(testEnumerateBucket);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testDig();
@@ -26,7 +20,10 @@ public:
   void testEnumerateBucket();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTBucketTreeTest);
+A2_TEST(DHTBucketTreeTest, testDig)
+A2_TEST(DHTBucketTreeTest, testFindBucketFor)
+A2_TEST(DHTBucketTreeTest, testFindClosestKNodes)
+A2_TEST(DHTBucketTreeTest, testEnumerateBucket)
 
 void DHTBucketTreeTest::testDig()
 {
@@ -50,12 +47,12 @@ void DHTBucketTreeTest::testDig()
   //                     localNode is here
   {
     DHTBucketTreeNode b(bucket1);
-    CPPUNIT_ASSERT(!b.dig(localNode->getID()));
+    REQUIRE(!b.dig(localNode->getID()));
   }
   {
     DHTBucketTreeNode b(make_unique<DHTBucketTreeNode>(bucket3),
                         make_unique<DHTBucketTreeNode>(bucket1));
-    CPPUNIT_ASSERT(b.dig(localNode->getID()) == b.getRight());
+    REQUIRE(b.dig(localNode->getID()) == b.getRight());
   }
 }
 
@@ -74,7 +71,7 @@ void DHTBucketTreeTest::testFindBucketFor()
 
   {
     DHTBucketTreeNode b(bucket5);
-    CPPUNIT_ASSERT(*bucket5 == *dht::findBucketFor(&b, localNodeID));
+    REQUIRE(*bucket5 == *dht::findBucketFor(&b, localNodeID));
   }
   {
     // Tree: number is prefix
@@ -102,7 +99,7 @@ void DHTBucketTreeTest::testFindBucketFor()
     auto bp3 = make_unique<DHTBucketTreeNode>(std::move(bp2), std::move(b1));
     DHTBucketTreeNode bp4(std::move(b2), std::move(bp3));
 
-    CPPUNIT_ASSERT(*bucket5 == *dht::findBucketFor(&bp4, localNode->getID()));
+    REQUIRE(*bucket5 == *dht::findBucketFor(&bp4, localNode->getID()));
   }
 }
 
@@ -149,30 +146,30 @@ void DHTBucketTreeTest::testFindClosestKNodes()
       memset(targetID, 0x80, DHT_ID_LENGTH);
       std::vector<std::shared_ptr<DHTNode>> nodes;
       dht::findClosestKNodes(nodes, &bp4, targetID);
-      CPPUNIT_ASSERT_EQUAL((size_t)8, nodes.size());
-      CPPUNIT_ASSERT(bucket4->isInRange(nodes[0]));
-      CPPUNIT_ASSERT(bucket4->isInRange(nodes[1]));
-      CPPUNIT_ASSERT(bucket5->isInRange(nodes[2]));
-      CPPUNIT_ASSERT(bucket5->isInRange(nodes[3]));
-      CPPUNIT_ASSERT(bucket3->isInRange(nodes[4]));
-      CPPUNIT_ASSERT(bucket3->isInRange(nodes[5]));
-      CPPUNIT_ASSERT(bucket1->isInRange(nodes[6]));
-      CPPUNIT_ASSERT(bucket1->isInRange(nodes[7]));
+      REQUIRE_EQ((size_t)8, nodes.size());
+      REQUIRE(bucket4->isInRange(nodes[0]));
+      REQUIRE(bucket4->isInRange(nodes[1]));
+      REQUIRE(bucket5->isInRange(nodes[2]));
+      REQUIRE(bucket5->isInRange(nodes[3]));
+      REQUIRE(bucket3->isInRange(nodes[4]));
+      REQUIRE(bucket3->isInRange(nodes[5]));
+      REQUIRE(bucket1->isInRange(nodes[6]));
+      REQUIRE(bucket1->isInRange(nodes[7]));
     }
     {
       unsigned char targetID[DHT_ID_LENGTH];
       memset(targetID, 0xf0, DHT_ID_LENGTH);
       std::vector<std::shared_ptr<DHTNode>> nodes;
       dht::findClosestKNodes(nodes, &bp4, targetID);
-      CPPUNIT_ASSERT_EQUAL((size_t)8, nodes.size());
-      CPPUNIT_ASSERT(bucket1->isInRange(nodes[0]));
-      CPPUNIT_ASSERT(bucket1->isInRange(nodes[1]));
-      CPPUNIT_ASSERT(bucket3->isInRange(nodes[2]));
-      CPPUNIT_ASSERT(bucket3->isInRange(nodes[3]));
-      CPPUNIT_ASSERT(bucket5->isInRange(nodes[4]));
-      CPPUNIT_ASSERT(bucket5->isInRange(nodes[5]));
-      CPPUNIT_ASSERT(bucket4->isInRange(nodes[6]));
-      CPPUNIT_ASSERT(bucket4->isInRange(nodes[7]));
+      REQUIRE_EQ((size_t)8, nodes.size());
+      REQUIRE(bucket1->isInRange(nodes[0]));
+      REQUIRE(bucket1->isInRange(nodes[1]));
+      REQUIRE(bucket3->isInRange(nodes[2]));
+      REQUIRE(bucket3->isInRange(nodes[3]));
+      REQUIRE(bucket5->isInRange(nodes[4]));
+      REQUIRE(bucket5->isInRange(nodes[5]));
+      REQUIRE(bucket4->isInRange(nodes[6]));
+      REQUIRE(bucket4->isInRange(nodes[7]));
     }
     {
       for (size_t i = 0; i < 6; ++i) {
@@ -183,9 +180,9 @@ void DHTBucketTreeTest::testFindClosestKNodes()
       memset(targetID, 0x80, DHT_ID_LENGTH);
       std::vector<std::shared_ptr<DHTNode>> nodes;
       dht::findClosestKNodes(nodes, &bp4, targetID);
-      CPPUNIT_ASSERT_EQUAL((size_t)8, nodes.size());
+      REQUIRE_EQ((size_t)8, nodes.size());
       for (size_t i = 0; i < DHTBucket::K; ++i) {
-        CPPUNIT_ASSERT(bucket4->isInRange(nodes[i]));
+        REQUIRE(bucket4->isInRange(nodes[i]));
       }
     }
   }
@@ -208,8 +205,8 @@ void DHTBucketTreeTest::testEnumerateBucket()
     DHTBucketTreeNode b(bucket1);
     std::vector<std::shared_ptr<DHTBucket>> buckets;
     dht::enumerateBucket(buckets, &b);
-    CPPUNIT_ASSERT_EQUAL((size_t)1, buckets.size());
-    CPPUNIT_ASSERT(*bucket1 == *buckets[0]);
+    REQUIRE_EQ((size_t)1, buckets.size());
+    REQUIRE(*bucket1 == *buckets[0]);
   }
   {
     auto b1 = make_unique<DHTBucketTreeNode>(bucket1);
@@ -225,12 +222,12 @@ void DHTBucketTreeTest::testEnumerateBucket()
 
     std::vector<std::shared_ptr<DHTBucket>> buckets;
     dht::enumerateBucket(buckets, &bp4);
-    CPPUNIT_ASSERT_EQUAL((size_t)5, buckets.size());
-    CPPUNIT_ASSERT(*bucket2 == *buckets[0]);
-    CPPUNIT_ASSERT(*bucket4 == *buckets[1]);
-    CPPUNIT_ASSERT(*bucket5 == *buckets[2]);
-    CPPUNIT_ASSERT(*bucket3 == *buckets[3]);
-    CPPUNIT_ASSERT(*bucket1 == *buckets[4]);
+    REQUIRE_EQ((size_t)5, buckets.size());
+    REQUIRE(*bucket2 == *buckets[0]);
+    REQUIRE(*bucket4 == *buckets[1]);
+    REQUIRE(*bucket5 == *buckets[2]);
+    REQUIRE(*bucket3 == *buckets[3]);
+    REQUIRE(*bucket1 == *buckets[4]);
   }
 }
 

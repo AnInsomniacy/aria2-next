@@ -1,6 +1,6 @@
 #include "PriorityPieceSelector.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "array_fun.h"
 #include "BitfieldMan.h"
@@ -9,17 +9,14 @@
 
 namespace aria2 {
 
-class PriorityPieceSelectorTest : public CppUnit::TestFixture {
+class PriorityPieceSelectorTest {
 
-  CPPUNIT_TEST_SUITE(PriorityPieceSelectorTest);
-  CPPUNIT_TEST(testSelect);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testSelect();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(PriorityPieceSelectorTest);
+A2_TEST(PriorityPieceSelectorTest, testSelect)
 
 void PriorityPieceSelectorTest::testSelect()
 {
@@ -34,13 +31,13 @@ void PriorityPieceSelectorTest::testSelect()
   selector.setPriorityPiece(std::begin(A), std::end(A));
 
   size_t index;
-  CPPUNIT_ASSERT(selector.select(index, bf.getBitfield(), bf.countBlock()));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, index);
+  REQUIRE(selector.select(index, bf.getBitfield(), bf.countBlock()));
+  REQUIRE_EQ((size_t)1, index);
   bf.unsetBit(1);
-  CPPUNIT_ASSERT(selector.select(index, bf.getBitfield(), bf.countBlock()));
-  CPPUNIT_ASSERT_EQUAL((size_t)200, index);
+  REQUIRE(selector.select(index, bf.getBitfield(), bf.countBlock()));
+  REQUIRE_EQ((size_t)200, index);
   bf.unsetBit(200);
-  CPPUNIT_ASSERT(!selector.select(index, bf.getBitfield(), bf.countBlock()));
+  REQUIRE(!selector.select(index, bf.getBitfield(), bf.countBlock()));
 }
 
 } // namespace aria2

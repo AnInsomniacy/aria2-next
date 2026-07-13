@@ -50,7 +50,7 @@ public:
 
   virtual ~BtBitfieldMessage();
 
-  static const uint8_t ID = 5;
+  static constexpr uint8_t ID = 5;
 
   static const char NAME[];
 

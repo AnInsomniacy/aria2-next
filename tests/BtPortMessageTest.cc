@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "util.h"
@@ -16,15 +16,8 @@
 
 namespace aria2 {
 
-class BtPortMessageTest : public CppUnit::TestFixture {
+class BtPortMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtPortMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST(testDoReceivedAction_bootstrap);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -56,7 +49,11 @@ public:
   };
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtPortMessageTest);
+A2_TEST(BtPortMessageTest, testCreate)
+A2_TEST(BtPortMessageTest, testToString)
+A2_TEST(BtPortMessageTest, testCreateMessage)
+A2_TEST(BtPortMessageTest, testDoReceivedAction)
+A2_TEST(BtPortMessageTest, testDoReceivedAction_bootstrap)
 
 void BtPortMessageTest::testCreate()
 {
@@ -64,15 +61,15 @@ void BtPortMessageTest::testCreate()
   bittorrent::createPeerMessageString(msg, sizeof(msg), 3, 9);
   bittorrent::setShortIntParam(&msg[5], 12345);
   std::shared_ptr<BtPortMessage> pm(BtPortMessage::create(&msg[4], 3));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)9, pm->getId());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)12345, pm->getPort());
+  REQUIRE_EQ((uint8_t)9, pm->getId());
+  REQUIRE_EQ((uint16_t)12345, pm->getPort());
 
   // case: payload size is wrong
   try {
     unsigned char msg[8];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 4, 9);
     BtPortMessage::create(&msg[4], 4);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -81,7 +78,7 @@ void BtPortMessageTest::testCreate()
     unsigned char msg[7];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 3, 10);
     BtPortMessage::create(&msg[4], 3);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -90,7 +87,7 @@ void BtPortMessageTest::testCreate()
 void BtPortMessageTest::testToString()
 {
   BtPortMessage msg(1);
-  CPPUNIT_ASSERT_EQUAL(std::string("port port=1"), msg.toString());
+  REQUIRE_EQ(std::string("port port=1"), msg.toString());
 }
 
 void BtPortMessageTest::testCreateMessage()
@@ -100,8 +97,8 @@ void BtPortMessageTest::testCreateMessage()
   bittorrent::createPeerMessageString(data, sizeof(data), 3, 9);
   bittorrent::setShortIntParam(&data[5], 6881);
   auto rawmsg = msg.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)7, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)7, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtPortMessageTest::testDoReceivedAction()
@@ -135,13 +132,13 @@ void BtPortMessageTest::testDoReceivedAction()
 
   msg.doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, taskQueue.immediateTaskQueue_.size());
+  REQUIRE_EQ((size_t)1, taskQueue.immediateTaskQueue_.size());
 
   auto task =
       std::dynamic_pointer_cast<MockDHTTask>(taskQueue.immediateTaskQueue_[0]);
   std::shared_ptr<DHTNode> node = task->remoteNode_;
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"), node->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6881, node->getPort());
+  REQUIRE_EQ(std::string("192.168.0.1"), node->getIPAddress());
+  REQUIRE_EQ((uint16_t)6881, node->getPort());
 }
 
 void BtPortMessageTest::testDoReceivedAction_bootstrap()
@@ -164,16 +161,16 @@ void BtPortMessageTest::testDoReceivedAction_bootstrap()
 
   msg.doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, taskQueue.immediateTaskQueue_.size());
+  REQUIRE_EQ((size_t)2, taskQueue.immediateTaskQueue_.size());
   auto task =
       std::dynamic_pointer_cast<MockDHTTask>(taskQueue.immediateTaskQueue_[0]);
   std::shared_ptr<DHTNode> node(task->remoteNode_);
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"), node->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6881, node->getPort());
+  REQUIRE_EQ(std::string("192.168.0.1"), node->getIPAddress());
+  REQUIRE_EQ((uint16_t)6881, node->getPort());
 
   auto task2 =
       std::dynamic_pointer_cast<MockDHTTask>(taskQueue.immediateTaskQueue_[1]);
-  CPPUNIT_ASSERT(memcmp(nodeID, task2->targetID_, DHT_ID_LENGTH) == 0);
+  REQUIRE(memcmp(nodeID, task2->targetID_, DHT_ID_LENGTH) == 0);
 }
 
 } // namespace aria2

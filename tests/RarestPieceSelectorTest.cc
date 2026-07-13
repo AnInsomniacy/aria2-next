@@ -1,6 +1,6 @@
 #include "RarestPieceSelector.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "BitfieldMan.h"
 #include "PieceStatMan.h"
@@ -8,11 +8,8 @@
 
 namespace aria2 {
 
-class RarestPieceSelectorTest : public CppUnit::TestFixture {
+class RarestPieceSelectorTest {
 
-  CPPUNIT_TEST_SUITE(RarestPieceSelectorTest);
-  CPPUNIT_TEST(testSelect);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -26,7 +23,7 @@ public:
   void testSelect();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(RarestPieceSelectorTest);
+A2_TEST(RarestPieceSelectorTest, testSelect)
 
 void RarestPieceSelectorTest::testSelect()
 {
@@ -38,13 +35,13 @@ void RarestPieceSelectorTest::testSelect()
 
   pieceStatMan->addPieceStats(0);
 
-  CPPUNIT_ASSERT(selector.select(index, bf.getBitfield(), bf.countBlock()));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, index);
+  REQUIRE(selector.select(index, bf.getBitfield(), bf.countBlock()));
+  REQUIRE_EQ((size_t)1, index);
 
   pieceStatMan->addPieceStats(1);
 
-  CPPUNIT_ASSERT(selector.select(index, bf.getBitfield(), bf.countBlock()));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, index);
+  REQUIRE(selector.select(index, bf.getBitfield(), bf.countBlock()));
+  REQUIRE_EQ((size_t)2, index);
 }
 
 } // namespace aria2

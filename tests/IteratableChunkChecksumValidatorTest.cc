@@ -1,6 +1,6 @@
 #include "IteratableChunkChecksumValidator.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "TestUtil.h"
 #include "DownloadContext.h"
@@ -12,12 +12,8 @@
 
 namespace aria2 {
 
-class IteratableChunkChecksumValidatorTest : public CppUnit::TestFixture {
+class IteratableChunkChecksumValidatorTest {
 
-  CPPUNIT_TEST_SUITE(IteratableChunkChecksumValidatorTest);
-  CPPUNIT_TEST(testValidate);
-  CPPUNIT_TEST(testValidate_readError);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   static const std::string csArray[];
@@ -29,7 +25,8 @@ public:
   void testValidate_readError();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(IteratableChunkChecksumValidatorTest);
+A2_TEST(IteratableChunkChecksumValidatorTest, testValidate)
+A2_TEST(IteratableChunkChecksumValidatorTest, testValidate_readError)
 
 const std::string IteratableChunkChecksumValidatorTest::csArray[] = {
     fromHex("29b0e7878271645fffb7eec7db4a7473a1c00bc1"),
@@ -52,12 +49,12 @@ void IteratableChunkChecksumValidatorTest::testValidate()
   validator.init();
 
   validator.validateChunk();
-  CPPUNIT_ASSERT(!validator.finished());
+  REQUIRE(!validator.finished());
   validator.validateChunk();
-  CPPUNIT_ASSERT(!validator.finished());
+  REQUIRE(!validator.finished());
   validator.validateChunk();
-  CPPUNIT_ASSERT(validator.finished());
-  CPPUNIT_ASSERT(ps->downloadFinished());
+  REQUIRE(validator.finished());
+  REQUIRE(ps->downloadFinished());
 
   // make the test fail
   std::deque<std::string> badHashes(&csArray[0], &csArray[3]);
@@ -69,9 +66,9 @@ void IteratableChunkChecksumValidatorTest::testValidate()
   while (!validator.finished()) {
     validator.validateChunk();
   }
-  CPPUNIT_ASSERT(ps->hasPiece(0));
-  CPPUNIT_ASSERT(!ps->hasPiece(1));
-  CPPUNIT_ASSERT(ps->hasPiece(2));
+  REQUIRE(ps->hasPiece(0));
+  REQUIRE(!ps->hasPiece(1));
+  REQUIRE(ps->hasPiece(2));
 }
 
 void IteratableChunkChecksumValidatorTest::testValidate_readError()
@@ -96,14 +93,14 @@ void IteratableChunkChecksumValidatorTest::testValidate_readError()
     validator.validateChunk();
   }
 
-  CPPUNIT_ASSERT(ps->hasPiece(0));
-  CPPUNIT_ASSERT(ps->hasPiece(1));
-  CPPUNIT_ASSERT(!ps->hasPiece(2)); // #2 piece is not valid because
+  REQUIRE(ps->hasPiece(0));
+  REQUIRE(ps->hasPiece(1));
+  REQUIRE(!ps->hasPiece(2)); // #2 piece is not valid because
                                     // #program expects its size is
                                     // #100, but it reads only 50
                                     // #bytes and raises error.
-  CPPUNIT_ASSERT(!ps->hasPiece(3));
-  CPPUNIT_ASSERT(!ps->hasPiece(4));
+  REQUIRE(!ps->hasPiece(3));
+  REQUIRE(!ps->hasPiece(4));
 }
 
 } // namespace aria2

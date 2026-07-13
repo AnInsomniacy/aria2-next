@@ -1,18 +1,15 @@
 #include "Exception.h"
 
 #include <iostream>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DownloadFailureException.h"
 #include "util.h"
 
 namespace aria2 {
 
-class ExceptionTest : public CppUnit::TestFixture {
+class ExceptionTest {
 
-  CPPUNIT_TEST_SUITE(ExceptionTest);
-  CPPUNIT_TEST(testStackTrace);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -22,7 +19,7 @@ public:
   void testStackTrace();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(ExceptionTest);
+A2_TEST(ExceptionTest, testStackTrace)
 
 void ExceptionTest::testStackTrace()
 {
@@ -37,19 +34,19 @@ void ExceptionTest::testStackTrace()
   stackTrace =
       util::replace(stackTrace, std::string(__FILE__), "ExceptionTest.cc");
 
-  CPPUNIT_ASSERT(stackTrace.find(
+  REQUIRE(stackTrace.find(
                      "Exception: [ExceptionTest.cc:") != std::string::npos);
-  CPPUNIT_ASSERT(stackTrace.find("] errorCode=2 exception thrown\n") !=
+  REQUIRE(stackTrace.find("] errorCode=2 exception thrown\n") !=
                  std::string::npos);
-  CPPUNIT_ASSERT(stackTrace.find(
+  REQUIRE(stackTrace.find(
                      "  -> [ExceptionTest.cc:") != std::string::npos);
-  CPPUNIT_ASSERT(stackTrace.find("] errorCode=2 cause2\n") !=
+  REQUIRE(stackTrace.find("] errorCode=2 cause2\n") !=
                  std::string::npos);
-  CPPUNIT_ASSERT(stackTrace.find("] errorCode=2 cause1\n") !=
+  REQUIRE(stackTrace.find("] errorCode=2 cause1\n") !=
                  std::string::npos);
-  CPPUNIT_ASSERT(stackTrace.find("exception thrown\n  ->") <
+  REQUIRE(stackTrace.find("exception thrown\n  ->") <
                  stackTrace.find("cause2\n  ->"));
-  CPPUNIT_ASSERT(stackTrace.find("cause2\n  ->") < stackTrace.find("cause1\n"));
+  REQUIRE(stackTrace.find("cause2\n  ->") < stackTrace.find("cause1\n"));
 }
 
 } // namespace aria2

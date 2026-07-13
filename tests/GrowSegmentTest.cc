@@ -1,15 +1,11 @@
 #include "GrowSegment.h"
 #include "Piece.h"
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class GrowSegmentTest : public CppUnit::TestFixture {
+class GrowSegmentTest {
 
-  CPPUNIT_TEST_SUITE(GrowSegmentTest);
-  CPPUNIT_TEST(testUpdateWrittenLength);
-  CPPUNIT_TEST(testClear);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -19,25 +15,26 @@ public:
   void testClear();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(GrowSegmentTest);
+A2_TEST(GrowSegmentTest, testUpdateWrittenLength)
+A2_TEST(GrowSegmentTest, testClear)
 
 void GrowSegmentTest::testUpdateWrittenLength()
 {
   GrowSegment segment(std::shared_ptr<Piece>(new Piece()));
   segment.updateWrittenLength(32_k);
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)32_k, segment.getPositionToWrite());
-  CPPUNIT_ASSERT(!segment.complete());
-  CPPUNIT_ASSERT(segment.getPiece()->pieceComplete());
+  REQUIRE_EQ((int64_t)32_k, segment.getPositionToWrite());
+  REQUIRE(!segment.complete());
+  REQUIRE(segment.getPiece()->pieceComplete());
 }
 
 void GrowSegmentTest::testClear()
 {
   GrowSegment segment(std::shared_ptr<Piece>(new Piece()));
   segment.updateWrittenLength(32_k);
-  CPPUNIT_ASSERT_EQUAL((int64_t)32_k, segment.getWrittenLength());
+  REQUIRE_EQ((int64_t)32_k, segment.getWrittenLength());
   segment.clear(nullptr);
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, segment.getWrittenLength());
+  REQUIRE_EQ((int64_t)0, segment.getWrittenLength());
 }
 
 } // namespace aria2

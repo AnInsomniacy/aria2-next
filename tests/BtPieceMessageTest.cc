@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "MockBtMessage.h"
@@ -19,22 +19,8 @@
 
 namespace aria2 {
 
-class BtPieceMessageTest : public CppUnit::TestFixture {
+class BtPieceMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtPieceMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessageHeader);
-  CPPUNIT_TEST(testChokingEvent);
-  CPPUNIT_TEST(testChokingEvent_allowedFastEnabled);
-  CPPUNIT_TEST(testChokingEvent_inAmAllowedIndexSet);
-  CPPUNIT_TEST(testChokingEvent_invalidate);
-  CPPUNIT_TEST(testCancelSendingPieceEvent);
-  CPPUNIT_TEST(testCancelSendingPieceEvent_noMatch);
-  CPPUNIT_TEST(testCancelSendingPieceEvent_allowedFastEnabled);
-  CPPUNIT_TEST(testCancelSendingPieceEvent_invalidate);
-  CPPUNIT_TEST(testToString);
-
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testCreate();
@@ -87,7 +73,17 @@ public:
   }
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtPieceMessageTest);
+A2_TEST(BtPieceMessageTest, testCreate)
+A2_TEST(BtPieceMessageTest, testCreateMessageHeader)
+A2_TEST(BtPieceMessageTest, testChokingEvent)
+A2_TEST(BtPieceMessageTest, testChokingEvent_allowedFastEnabled)
+A2_TEST(BtPieceMessageTest, testChokingEvent_inAmAllowedIndexSet)
+A2_TEST(BtPieceMessageTest, testChokingEvent_invalidate)
+A2_TEST(BtPieceMessageTest, testCancelSendingPieceEvent)
+A2_TEST(BtPieceMessageTest, testCancelSendingPieceEvent_noMatch)
+A2_TEST(BtPieceMessageTest, testCancelSendingPieceEvent_allowedFastEnabled)
+A2_TEST(BtPieceMessageTest, testCancelSendingPieceEvent_invalidate)
+A2_TEST(BtPieceMessageTest, testToString)
 
 void BtPieceMessageTest::testCreate()
 {
@@ -99,17 +95,17 @@ void BtPieceMessageTest::testCreate()
   bittorrent::setIntParam(&msg[9], 256);
   memcpy(&msg[13], data, sizeof(data));
   std::shared_ptr<BtPieceMessage> pm(BtPieceMessage::create(&msg[4], 11));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)7, pm->getId());
-  CPPUNIT_ASSERT_EQUAL((size_t)12345, pm->getIndex());
-  CPPUNIT_ASSERT_EQUAL(256, pm->getBegin());
-  CPPUNIT_ASSERT_EQUAL(2, pm->getBlockLength());
+  REQUIRE_EQ((uint8_t)7, pm->getId());
+  REQUIRE_EQ((size_t)12345, pm->getIndex());
+  REQUIRE_EQ(256, pm->getBegin());
+  REQUIRE_EQ(2, pm->getBlockLength());
 
   // case: payload size is wrong
   try {
     unsigned char msg[13];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 9, 7);
     BtPieceMessage::create(&msg[4], 9);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -118,7 +114,7 @@ void BtPieceMessageTest::testCreate()
     unsigned char msg[13 + 2];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 11, 8);
     BtPieceMessage::create(&msg[4], 11);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -136,38 +132,38 @@ void BtPieceMessageTest::testCreateMessageHeader()
   bittorrent::setIntParam(&data[9], 256);
   unsigned char rawmsg[13];
   msg.createMessageHeader(rawmsg);
-  CPPUNIT_ASSERT(memcmp(rawmsg, data, 13) == 0);
+  REQUIRE(memcmp(rawmsg, data, 13) == 0);
 }
 
 void BtPieceMessageTest::testChokingEvent()
 {
-  CPPUNIT_ASSERT(!msg->isInvalidate());
-  CPPUNIT_ASSERT(!peer->isInAmAllowedIndexSet(1));
-  CPPUNIT_ASSERT(!peer->isFastExtensionEnabled());
+  REQUIRE(!msg->isInvalidate());
+  REQUIRE(!peer->isInAmAllowedIndexSet(1));
+  REQUIRE(!peer->isFastExtensionEnabled());
 
   msg->onChokingEvent(BtChokingEvent());
 
-  CPPUNIT_ASSERT(msg->isInvalidate());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, btMessageDispatcher->messageQueue.size());
+  REQUIRE(msg->isInvalidate());
+  REQUIRE_EQ((size_t)0, btMessageDispatcher->messageQueue.size());
 }
 
 void BtPieceMessageTest::testChokingEvent_allowedFastEnabled()
 {
   peer->setFastExtensionEnabled(true);
 
-  CPPUNIT_ASSERT(!msg->isInvalidate());
-  CPPUNIT_ASSERT(!peer->isInAmAllowedIndexSet(1));
-  CPPUNIT_ASSERT(peer->isFastExtensionEnabled());
+  REQUIRE(!msg->isInvalidate());
+  REQUIRE(!peer->isInAmAllowedIndexSet(1));
+  REQUIRE(peer->isFastExtensionEnabled());
 
   msg->onChokingEvent(BtChokingEvent());
 
-  CPPUNIT_ASSERT(msg->isInvalidate());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, btMessageDispatcher->messageQueue.size());
+  REQUIRE(msg->isInvalidate());
+  REQUIRE_EQ((size_t)1, btMessageDispatcher->messageQueue.size());
   auto rej = static_cast<const BtRejectMessage*>(
       btMessageDispatcher->messageQueue.front().get());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rej->getIndex());
-  CPPUNIT_ASSERT_EQUAL((int32_t)1_k, rej->getBegin());
-  CPPUNIT_ASSERT_EQUAL((int32_t)16_k, rej->getLength());
+  REQUIRE_EQ((size_t)1, rej->getIndex());
+  REQUIRE_EQ((int32_t)1_k, rej->getBegin());
+  REQUIRE_EQ((int32_t)16_k, rej->getLength());
 }
 
 void BtPieceMessageTest::testChokingEvent_inAmAllowedIndexSet()
@@ -175,90 +171,90 @@ void BtPieceMessageTest::testChokingEvent_inAmAllowedIndexSet()
   peer->setFastExtensionEnabled(true);
   peer->addAmAllowedIndex(1);
 
-  CPPUNIT_ASSERT(!msg->isInvalidate());
-  CPPUNIT_ASSERT(peer->isInAmAllowedIndexSet(1));
-  CPPUNIT_ASSERT(peer->isFastExtensionEnabled());
+  REQUIRE(!msg->isInvalidate());
+  REQUIRE(peer->isInAmAllowedIndexSet(1));
+  REQUIRE(peer->isFastExtensionEnabled());
 
   msg->onChokingEvent(BtChokingEvent());
 
-  CPPUNIT_ASSERT(!msg->isInvalidate());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, btMessageDispatcher->messageQueue.size());
+  REQUIRE(!msg->isInvalidate());
+  REQUIRE_EQ((size_t)0, btMessageDispatcher->messageQueue.size());
 }
 
 void BtPieceMessageTest::testChokingEvent_invalidate()
 {
   msg->setInvalidate(true);
-  CPPUNIT_ASSERT(msg->isInvalidate());
-  CPPUNIT_ASSERT(!peer->isInAmAllowedIndexSet(1));
-  CPPUNIT_ASSERT(!peer->isFastExtensionEnabled());
+  REQUIRE(msg->isInvalidate());
+  REQUIRE(!peer->isInAmAllowedIndexSet(1));
+  REQUIRE(!peer->isFastExtensionEnabled());
 
   msg->onChokingEvent(BtChokingEvent());
 
-  CPPUNIT_ASSERT(msg->isInvalidate());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, btMessageDispatcher->messageQueue.size());
+  REQUIRE(msg->isInvalidate());
+  REQUIRE_EQ((size_t)0, btMessageDispatcher->messageQueue.size());
 }
 
 void BtPieceMessageTest::testCancelSendingPieceEvent()
 {
-  CPPUNIT_ASSERT(!msg->isInvalidate());
-  CPPUNIT_ASSERT(!peer->isFastExtensionEnabled());
+  REQUIRE(!msg->isInvalidate());
+  REQUIRE(!peer->isFastExtensionEnabled());
 
   msg->onCancelSendingPieceEvent(BtCancelSendingPieceEvent(1, 1_k, 16_k));
 
-  CPPUNIT_ASSERT(msg->isInvalidate());
+  REQUIRE(msg->isInvalidate());
 }
 
 void BtPieceMessageTest::testCancelSendingPieceEvent_noMatch()
 {
-  CPPUNIT_ASSERT(!msg->isInvalidate());
-  CPPUNIT_ASSERT(!peer->isFastExtensionEnabled());
+  REQUIRE(!msg->isInvalidate());
+  REQUIRE(!peer->isFastExtensionEnabled());
 
   msg->onCancelSendingPieceEvent(BtCancelSendingPieceEvent(0, 1_k, 16_k));
 
-  CPPUNIT_ASSERT(!msg->isInvalidate());
+  REQUIRE(!msg->isInvalidate());
 
   msg->onCancelSendingPieceEvent(BtCancelSendingPieceEvent(1, 0, 16_k));
 
-  CPPUNIT_ASSERT(!msg->isInvalidate());
+  REQUIRE(!msg->isInvalidate());
 
   msg->onCancelSendingPieceEvent(BtCancelSendingPieceEvent(1, 1_k, 0));
 
-  CPPUNIT_ASSERT(!msg->isInvalidate());
+  REQUIRE(!msg->isInvalidate());
 }
 
 void BtPieceMessageTest::testCancelSendingPieceEvent_allowedFastEnabled()
 {
   peer->setFastExtensionEnabled(true);
-  CPPUNIT_ASSERT(!msg->isInvalidate());
-  CPPUNIT_ASSERT(peer->isFastExtensionEnabled());
+  REQUIRE(!msg->isInvalidate());
+  REQUIRE(peer->isFastExtensionEnabled());
 
   msg->onCancelSendingPieceEvent(BtCancelSendingPieceEvent(1, 1_k, 16_k));
 
-  CPPUNIT_ASSERT(msg->isInvalidate());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, btMessageDispatcher->messageQueue.size());
+  REQUIRE(msg->isInvalidate());
+  REQUIRE_EQ((size_t)1, btMessageDispatcher->messageQueue.size());
   auto rej = static_cast<const BtRejectMessage*>(
       btMessageDispatcher->messageQueue.front().get());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rej->getIndex());
-  CPPUNIT_ASSERT_EQUAL((int32_t)1_k, rej->getBegin());
-  CPPUNIT_ASSERT_EQUAL((int32_t)16_k, rej->getLength());
+  REQUIRE_EQ((size_t)1, rej->getIndex());
+  REQUIRE_EQ((int32_t)1_k, rej->getBegin());
+  REQUIRE_EQ((int32_t)16_k, rej->getLength());
 }
 
 void BtPieceMessageTest::testCancelSendingPieceEvent_invalidate()
 {
   msg->setInvalidate(true);
   peer->setFastExtensionEnabled(true);
-  CPPUNIT_ASSERT(msg->isInvalidate());
-  CPPUNIT_ASSERT(peer->isFastExtensionEnabled());
+  REQUIRE(msg->isInvalidate());
+  REQUIRE(peer->isFastExtensionEnabled());
 
   msg->onCancelSendingPieceEvent(BtCancelSendingPieceEvent(1, 1_k, 16_k));
 
-  CPPUNIT_ASSERT(msg->isInvalidate());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, btMessageDispatcher->messageQueue.size());
+  REQUIRE(msg->isInvalidate());
+  REQUIRE_EQ((size_t)0, btMessageDispatcher->messageQueue.size());
 }
 
 void BtPieceMessageTest::testToString()
 {
-  CPPUNIT_ASSERT_EQUAL(std::string("piece index=1, begin=1024, length=16384"),
+  REQUIRE_EQ(std::string("piece index=1, begin=1024, length=16384"),
                        msg->toString());
 }
 

@@ -1,6 +1,6 @@
 #include "SingleFileAllocationIterator.h"
 #include <fstream>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "File.h"
 #include "DefaultDiskWriter.h"
@@ -8,11 +8,8 @@
 
 namespace aria2 {
 
-class SingleFileAllocationIteratorTest : public CppUnit::TestFixture {
+class SingleFileAllocationIteratorTest {
 
-  CPPUNIT_TEST_SUITE(SingleFileAllocationIteratorTest);
-  CPPUNIT_TEST(testAllocate);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -21,7 +18,7 @@ public:
   void testAllocate();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(SingleFileAllocationIteratorTest);
+A2_TEST(SingleFileAllocationIteratorTest, testAllocate)
 
 void SingleFileAllocationIteratorTest::testAllocate()
 {
@@ -33,7 +30,7 @@ void SingleFileAllocationIteratorTest::testAllocate()
   of.close();
 
   File x(fn);
-  CPPUNIT_ASSERT_EQUAL((int64_t)10, x.size());
+  REQUIRE_EQ((int64_t)10, x.size());
 
   DefaultDiskWriter writer(fn);
   int64_t offset = 10;
@@ -48,7 +45,7 @@ void SingleFileAllocationIteratorTest::testAllocate()
     itr.allocateChunk();
   }
   File f(fn);
-  CPPUNIT_ASSERT_EQUAL((int64_t)40_k, f.size());
+  REQUIRE_EQ((int64_t)40_k, f.size());
 }
 
 } // namespace aria2

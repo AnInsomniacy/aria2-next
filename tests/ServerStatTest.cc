@@ -3,19 +3,15 @@
 #include <iostream>
 #include <sstream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
 
 namespace aria2 {
 
-class ServerStatTest : public CppUnit::TestFixture {
+class ServerStatTest {
 
-  CPPUNIT_TEST_SUITE(ServerStatTest);
-  CPPUNIT_TEST(testSetStatus);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -26,22 +22,23 @@ public:
   void testToString();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(ServerStatTest);
+A2_TEST(ServerStatTest, testSetStatus)
+A2_TEST(ServerStatTest, testToString)
 
 void ServerStatTest::testSetStatus()
 {
   ServerStat ss("localhost", "http");
-  CPPUNIT_ASSERT_EQUAL(ServerStat::OK, ss.getStatus());
+  REQUIRE_EQ(ServerStat::OK, ss.getStatus());
   ss.setStatus("ERROR");
-  CPPUNIT_ASSERT_EQUAL(ServerStat::A2_ERROR, ss.getStatus());
+  REQUIRE_EQ(ServerStat::A2_ERROR, ss.getStatus());
   // See undefined status string will not change current status.
   ss.setStatus("__BADSTATUS");
-  CPPUNIT_ASSERT_EQUAL(ServerStat::A2_ERROR, ss.getStatus());
+  REQUIRE_EQ(ServerStat::A2_ERROR, ss.getStatus());
   ss.setStatus("OK");
-  CPPUNIT_ASSERT_EQUAL(ServerStat::OK, ss.getStatus());
+  REQUIRE_EQ(ServerStat::OK, ss.getStatus());
   // See undefined status string will not change current status.
   ss.setStatus("__BADSTATUS");
-  CPPUNIT_ASSERT_EQUAL(ServerStat::OK, ss.getStatus());
+  REQUIRE_EQ(ServerStat::OK, ss.getStatus());
 }
 
 void ServerStatTest::testToString()
@@ -53,7 +50,7 @@ void ServerStatTest::testToString()
   localhost_http.setMultiConnectionAvgSpeed(102);
   localhost_http.setCounter(5);
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("host=localhost, protocol=http, dl_speed=90000,"
                   " sc_avg_speed=101, mc_avg_speed=102,"
                   " last_updated=1000, counter=5, status=OK"),
@@ -64,7 +61,7 @@ void ServerStatTest::testToString()
   localhost_ftp.setLastUpdated(Time(1210000000));
   localhost_ftp.setStatus("ERROR");
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("host=localhost, protocol=ftp, dl_speed=10000,"
                   " sc_avg_speed=0, mc_avg_speed=0,"
                   " last_updated=1210000000, counter=0, status=ERROR"),

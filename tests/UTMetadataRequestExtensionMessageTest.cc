@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Peer.h"
 #include "DownloadContext.h"
@@ -20,16 +20,8 @@
 
 namespace aria2 {
 
-class UTMetadataRequestExtensionMessageTest : public CppUnit::TestFixture {
+class UTMetadataRequestExtensionMessageTest {
 
-  CPPUNIT_TEST_SUITE(UTMetadataRequestExtensionMessageTest);
-  CPPUNIT_TEST(testGetExtensionMessageID);
-  CPPUNIT_TEST(testGetExtensionName);
-  CPPUNIT_TEST(testGetBencodedData);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST(testDoReceivedAction_reject);
-  CPPUNIT_TEST(testDoReceivedAction_data);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   std::unique_ptr<DownloadContext> dctx_;
@@ -50,7 +42,7 @@ public:
 
   template <typename T> const T* getFirstDispatchedMessage()
   {
-    CPPUNIT_ASSERT(BtExtendedMessage::ID ==
+    REQUIRE(BtExtendedMessage::ID ==
                    dispatcher_->messageQueue.front()->getId());
     auto msg = static_cast<const BtExtendedMessage*>(
         dispatcher_->messageQueue.front().get());
@@ -65,18 +57,23 @@ public:
   void testDoReceivedAction_data();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(UTMetadataRequestExtensionMessageTest);
+A2_TEST(UTMetadataRequestExtensionMessageTest, testGetExtensionMessageID)
+A2_TEST(UTMetadataRequestExtensionMessageTest, testGetExtensionName)
+A2_TEST(UTMetadataRequestExtensionMessageTest, testGetBencodedData)
+A2_TEST(UTMetadataRequestExtensionMessageTest, testToString)
+A2_TEST(UTMetadataRequestExtensionMessageTest, testDoReceivedAction_reject)
+A2_TEST(UTMetadataRequestExtensionMessageTest, testDoReceivedAction_data)
 
 void UTMetadataRequestExtensionMessageTest::testGetExtensionMessageID()
 {
   UTMetadataRequestExtensionMessage msg(1);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, msg.getExtensionMessageID());
+  REQUIRE_EQ((uint8_t)1, msg.getExtensionMessageID());
 }
 
 void UTMetadataRequestExtensionMessageTest::testGetExtensionName()
 {
   UTMetadataRequestExtensionMessage msg(1);
-  CPPUNIT_ASSERT_EQUAL(std::string("ut_metadata"),
+  REQUIRE_EQ(std::string("ut_metadata"),
                        std::string(msg.getExtensionName()));
 }
 
@@ -84,7 +81,7 @@ void UTMetadataRequestExtensionMessageTest::testGetBencodedData()
 {
   UTMetadataRequestExtensionMessage msg(1);
   msg.setIndex(99);
-  CPPUNIT_ASSERT_EQUAL(std::string("d8:msg_typei0e5:piecei99ee"),
+  REQUIRE_EQ(std::string("d8:msg_typei0e5:piecei99ee"),
                        msg.getPayload());
 }
 
@@ -92,7 +89,7 @@ void UTMetadataRequestExtensionMessageTest::testToString()
 {
   UTMetadataRequestExtensionMessage msg(1);
   msg.setIndex(100);
-  CPPUNIT_ASSERT_EQUAL(std::string("ut_metadata request piece=100"),
+  REQUIRE_EQ(std::string("ut_metadata request piece=100"),
                        msg.toString());
 }
 
@@ -108,9 +105,9 @@ void UTMetadataRequestExtensionMessageTest::testDoReceivedAction_reject()
 
   auto m = getFirstDispatchedMessage<UTMetadataRejectExtensionMessage>();
 
-  CPPUNIT_ASSERT(m);
-  CPPUNIT_ASSERT_EQUAL((size_t)10, m->getIndex());
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, m->getExtensionMessageID());
+  REQUIRE(m);
+  REQUIRE_EQ((size_t)10, m->getIndex());
+  REQUIRE_EQ((uint8_t)1, m->getExtensionMessageID());
 }
 
 void UTMetadataRequestExtensionMessageTest::testDoReceivedAction_data()
@@ -133,11 +130,11 @@ void UTMetadataRequestExtensionMessageTest::testDoReceivedAction_data()
 
   auto m = getFirstDispatchedMessage<UTMetadataDataExtensionMessage>();
 
-  CPPUNIT_ASSERT(m);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, m->getIndex());
-  CPPUNIT_ASSERT_EQUAL(second, m->getData());
-  CPPUNIT_ASSERT_EQUAL(metadataSize, m->getTotalSize());
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, m->getExtensionMessageID());
+  REQUIRE(m);
+  REQUIRE_EQ((size_t)1, m->getIndex());
+  REQUIRE_EQ(second, m->getData());
+  REQUIRE_EQ(metadataSize, m->getTotalSize());
+  REQUIRE_EQ((uint8_t)1, m->getExtensionMessageID());
 
   dispatcher_->messageQueue.clear();
 
@@ -152,16 +149,16 @@ void UTMetadataRequestExtensionMessageTest::testDoReceivedAction_data()
 
   m = getFirstDispatchedMessage<UTMetadataDataExtensionMessage>();
 
-  CPPUNIT_ASSERT(m);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, m->getIndex());
-  CPPUNIT_ASSERT_EQUAL(third, m->getData());
-  CPPUNIT_ASSERT_EQUAL(metadataSize, m->getTotalSize());
+  REQUIRE(m);
+  REQUIRE_EQ((size_t)2, m->getIndex());
+  REQUIRE_EQ(third, m->getData());
+  REQUIRE_EQ(metadataSize, m->getTotalSize());
 
   msg.setIndex(3);
 
   try {
     msg.doReceivedAction();
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (DlAbortEx& e) {
     // success

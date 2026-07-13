@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "util.h"
 #include "DirectDiskAdaptor.h"
@@ -11,19 +11,8 @@
 
 namespace aria2 {
 
-class PieceTest : public CppUnit::TestFixture {
+class PieceTest {
 
-  CPPUNIT_TEST_SUITE(PieceTest);
-  CPPUNIT_TEST(testCompleteBlock);
-  CPPUNIT_TEST(testGetCompletedLength);
-  CPPUNIT_TEST(testFlushWrCache);
-  CPPUNIT_TEST(testAppendWrCache);
-  CPPUNIT_TEST(testUpdateWrCacheRestoresMissingCacheEntry);
-
-  CPPUNIT_TEST(testGetDigestWithWrCache);
-  CPPUNIT_TEST(testUpdateHash);
-
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<DirectDiskAdaptor> adaptor_;
@@ -48,7 +37,13 @@ public:
   void testUpdateHash();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(PieceTest);
+A2_TEST(PieceTest, testCompleteBlock)
+A2_TEST(PieceTest, testGetCompletedLength)
+A2_TEST(PieceTest, testFlushWrCache)
+A2_TEST(PieceTest, testAppendWrCache)
+A2_TEST(PieceTest, testUpdateWrCacheRestoresMissingCacheEntry)
+A2_TEST(PieceTest, testGetDigestWithWrCache)
+A2_TEST(PieceTest, testUpdateHash)
 
 void PieceTest::testCompleteBlock()
 {
@@ -57,7 +52,7 @@ void PieceTest::testCompleteBlock()
 
   p.completeBlock(5);
 
-  CPPUNIT_ASSERT(p.hasBlock(5));
+  REQUIRE(p.hasBlock(5));
 }
 
 void PieceTest::testGetCompletedLength()
@@ -70,7 +65,7 @@ void PieceTest::testGetCompletedLength()
   p.completeBlock(9);
   p.completeBlock(10); // <-- 100 bytes
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)(blockLength * 3 + 100),
+  REQUIRE_EQ((int64_t)(blockLength * 3 + 100),
                        p.getCompletedLength());
 }
 
@@ -88,16 +83,16 @@ void PieceTest::testFlushWrCache()
   p.updateWrCache(&dc, data, 0, 4, 3);
   p.flushWrCache(&dc);
 
-  CPPUNIT_ASSERT_EQUAL(std::string("foo bar"), writer_->getString());
+  REQUIRE_EQ(std::string("foo bar"), writer_->getString());
 
   data = new unsigned char[3];
   memcpy(data, "foo", 3);
   p.updateWrCache(&dc, data, 0, 3, 0);
-  CPPUNIT_ASSERT_EQUAL((size_t)3, dc.getSize());
+  REQUIRE_EQ((size_t)3, dc.getSize());
   p.clearWrCache(&dc);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, dc.getSize());
+  REQUIRE_EQ((size_t)0, dc.getSize());
   p.releaseWrCache(&dc);
-  CPPUNIT_ASSERT(!p.getWrDiskCacheEntry());
+  REQUIRE(!p.getWrDiskCacheEntry());
 }
 
 void PieceTest::testAppendWrCache()
@@ -112,9 +107,9 @@ void PieceTest::testAppendWrCache()
   p.updateWrCache(&dc, data, 0, 3, capacity, 0);
   size_t alen = p.appendWrCache(
       &dc, 3, reinterpret_cast<const unsigned char*>("barbaz"), 6);
-  CPPUNIT_ASSERT_EQUAL((size_t)3, alen);
+  REQUIRE_EQ((size_t)3, alen);
   p.flushWrCache(&dc);
-  CPPUNIT_ASSERT_EQUAL(std::string("foobar"), writer_->getString());
+  REQUIRE_EQ(std::string("foobar"), writer_->getString());
 }
 
 void PieceTest::testUpdateWrCacheRestoresMissingCacheEntry()
@@ -128,16 +123,16 @@ void PieceTest::testUpdateWrCacheRestoresMissingCacheEntry()
   memcpy(data, "foo", 3);
   p.updateWrCache(&dc, data, 0, 3, 0);
 
-  CPPUNIT_ASSERT(dc.remove(p.getWrDiskCacheEntry()));
-  CPPUNIT_ASSERT_EQUAL((size_t)0, dc.getSize());
+  REQUIRE(dc.remove(p.getWrDiskCacheEntry()));
+  REQUIRE_EQ((size_t)0, dc.getSize());
 
   data = new unsigned char[3];
   memcpy(data, "bar", 3);
   p.updateWrCache(&dc, data, 0, 3, 3);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)6, dc.getSize());
+  REQUIRE_EQ((size_t)6, dc.getSize());
   p.flushWrCache(&dc);
-  CPPUNIT_ASSERT_EQUAL(std::string("foobar"), writer_->getString());
+  REQUIRE_EQ(std::string("foobar"), writer_->getString());
 }
 
 void PieceTest::testGetDigestWithWrCache()
@@ -159,7 +154,7 @@ void PieceTest::testGetDigestWithWrCache()
   memcpy(data, "y", 1);
   p.updateWrCache(&dc, data, 0, 1, 24);
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("32d10c7b8cf96570ca04ce37f2a19d84240d3a89"),
       util::toHex(p.getDigestWithWrCache(p.getLength(), adaptor_)));
 }
@@ -170,17 +165,17 @@ void PieceTest::testUpdateHash()
   p.setHashType("sha-1");
 
   std::string spam("SPAM!");
-  CPPUNIT_ASSERT(p.updateHash(
+  REQUIRE(p.updateHash(
       0, reinterpret_cast<const unsigned char*>(spam.c_str()), spam.size()));
-  CPPUNIT_ASSERT(!p.isHashCalculated());
+  REQUIRE(!p.isHashCalculated());
 
   std::string spamspam("SPAM!SPAM!!");
-  CPPUNIT_ASSERT(p.updateHash(
+  REQUIRE(p.updateHash(
       spam.size(), reinterpret_cast<const unsigned char*>(spamspam.c_str()),
       spamspam.size()));
-  CPPUNIT_ASSERT(p.isHashCalculated());
+  REQUIRE(p.isHashCalculated());
 
-  CPPUNIT_ASSERT_EQUAL(std::string("d9189aff79e075a2e60271b9556a710dc1bc7de7"),
+  REQUIRE_EQ(std::string("d9189aff79e075a2e60271b9556a710dc1bc7de7"),
                        util::toHex(p.getDigest()));
 }
 

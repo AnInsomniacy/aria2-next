@@ -1,6 +1,6 @@
 #include "MetalinkPostDownloadHandler.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "RequestGroup.h"
 #include "Option.h"
@@ -12,14 +12,8 @@
 
 namespace aria2 {
 
-class MetalinkPostDownloadHandlerTest : public CppUnit::TestFixture {
+class MetalinkPostDownloadHandlerTest {
 
-  CPPUNIT_TEST_SUITE(MetalinkPostDownloadHandlerTest);
-  CPPUNIT_TEST(testCanHandle_extension);
-  CPPUNIT_TEST(testCanHandle_contentType);
-  CPPUNIT_TEST(testGetNextRequestGroups);
-  CPPUNIT_TEST(testGetNextRequestGroups_withBaseUri);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<Option> option_;
@@ -33,7 +27,10 @@ public:
   void testGetNextRequestGroups_withBaseUri();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(MetalinkPostDownloadHandlerTest);
+A2_TEST(MetalinkPostDownloadHandlerTest, testCanHandle_extension)
+A2_TEST(MetalinkPostDownloadHandlerTest, testCanHandle_contentType)
+A2_TEST(MetalinkPostDownloadHandlerTest, testGetNextRequestGroups)
+A2_TEST(MetalinkPostDownloadHandlerTest, testGetNextRequestGroups_withBaseUri)
 
 void MetalinkPostDownloadHandlerTest::testCanHandle_extension()
 {
@@ -44,10 +41,10 @@ void MetalinkPostDownloadHandlerTest::testCanHandle_extension()
 
   MetalinkPostDownloadHandler handler;
 
-  CPPUNIT_ASSERT(handler.canHandle(&rg));
+  REQUIRE(handler.canHandle(&rg));
 
   dctx->getFirstFileEntry()->setPath("test.metalink2");
-  CPPUNIT_ASSERT(!handler.canHandle(&rg));
+  REQUIRE(!handler.canHandle(&rg));
 }
 
 void MetalinkPostDownloadHandlerTest::testCanHandle_contentType()
@@ -59,10 +56,10 @@ void MetalinkPostDownloadHandlerTest::testCanHandle_contentType()
 
   MetalinkPostDownloadHandler handler;
 
-  CPPUNIT_ASSERT(handler.canHandle(&rg));
+  REQUIRE(handler.canHandle(&rg));
 
   dctx->getFirstFileEntry()->setContentType("application/octet-stream");
-  CPPUNIT_ASSERT(!handler.canHandle(&rg));
+  REQUIRE(!handler.canHandle(&rg));
 }
 
 void MetalinkPostDownloadHandlerTest::testGetNextRequestGroups()
@@ -78,14 +75,14 @@ void MetalinkPostDownloadHandlerTest::testGetNextRequestGroups()
   std::vector<std::shared_ptr<RequestGroup>> groups;
   handler.getNextRequestGroups(groups, &rg);
 #ifdef ENABLE_BITTORRENT
-  CPPUNIT_ASSERT_EQUAL((size_t)6 /* 5 + 1 torrent file download */,
+  REQUIRE_EQ((size_t)6 /* 5 + 1 torrent file download */,
                        groups.size());
 #else
-  CPPUNIT_ASSERT_EQUAL((size_t)5, groups.size());
+  REQUIRE_EQ((size_t)5, groups.size());
 #endif // ENABLE_BITTORRENT
 
   for (auto& nrg : groups) {
-    CPPUNIT_ASSERT_EQUAL(rg.getGID(), nrg->following());
+    REQUIRE_EQ(rg.getGID(), nrg->following());
   }
 }
 
@@ -102,8 +99,8 @@ void MetalinkPostDownloadHandlerTest::testGetNextRequestGroups_withBaseUri()
   MetalinkPostDownloadHandler handler;
   std::vector<std::shared_ptr<RequestGroup>> groups;
   handler.getNextRequestGroups(groups, &rg);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, groups.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("http://base/dir/example.ext"),
+  REQUIRE_EQ((size_t)1, groups.size());
+  REQUIRE_EQ(std::string("http://base/dir/example.ext"),
                        groups[0]
                            ->getDownloadContext()
                            ->getFirstFileEntry()

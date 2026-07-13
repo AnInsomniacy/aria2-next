@@ -1,15 +1,11 @@
 #include "BtKeepAliveMessage.h"
 #include <cstring>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class BtKeepAliveMessageTest : public CppUnit::TestFixture {
+class BtKeepAliveMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtKeepAliveMessageTest);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -19,23 +15,24 @@ public:
   void testToString();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtKeepAliveMessageTest);
+A2_TEST(BtKeepAliveMessageTest, testCreateMessage)
+A2_TEST(BtKeepAliveMessageTest, testToString)
 
 void BtKeepAliveMessageTest::testCreateMessage()
 {
   char data[4];
   memset(data, 0, sizeof(data));
   BtKeepAliveMessage message;
-  CPPUNIT_ASSERT_EQUAL((uint8_t)99, message.getId());
+  REQUIRE_EQ((uint8_t)99, message.getId());
   auto rawmsg = message.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)4, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)4, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtKeepAliveMessageTest::testToString()
 {
   BtKeepAliveMessage msg;
-  CPPUNIT_ASSERT_EQUAL(std::string("keep alive"), msg.toString());
+  REQUIRE_EQ(std::string("keep alive"), msg.toString());
 }
 
 } // namespace aria2

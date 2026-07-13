@@ -3,7 +3,7 @@
 #include <cstring>
 #include <algorithm>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTNode.h"
 #include "DHTNodeLookupEntry.h"
@@ -12,11 +12,8 @@
 
 namespace aria2 {
 
-class DHTIDCloserTest : public CppUnit::TestFixture {
+class DHTIDCloserTest {
 
-  CPPUNIT_TEST_SUITE(DHTIDCloserTest);
-  CPPUNIT_TEST(testOperator);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -26,7 +23,7 @@ public:
   void testOperator();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTIDCloserTest);
+A2_TEST(DHTIDCloserTest, testOperator)
 
 void DHTIDCloserTest::testOperator()
 {
@@ -62,11 +59,11 @@ void DHTIDCloserTest::testOperator()
   std::sort(std::begin(entries), std::end(entries),
             DHTIDCloser(ep3->node->getID()));
 
-  CPPUNIT_ASSERT(*ep3 == *entries[0]);
-  CPPUNIT_ASSERT(*ep2 == *entries[1]);
-  CPPUNIT_ASSERT(*ep4 == *entries[2]);
-  CPPUNIT_ASSERT(*ep1 == *entries[3]);
-  CPPUNIT_ASSERT(*ep5 == *entries[4]);
+  REQUIRE(*ep3 == *entries[0]);
+  REQUIRE(*ep2 == *entries[1]);
+  REQUIRE(*ep4 == *entries[2]);
+  REQUIRE(*ep1 == *entries[3]);
+  REQUIRE(*ep5 == *entries[4]);
 }
 
 } // namespace aria2

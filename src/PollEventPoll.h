@@ -123,10 +123,10 @@ public:
                      Command* command) override;
 #endif // ENABLE_ASYNC_DNS
 
-  static const int IEV_READ = POLLIN;
-  static const int IEV_WRITE = POLLOUT;
-  static const int IEV_ERROR = POLLERR;
-  static const int IEV_HUP = POLLHUP;
+  static constexpr int IEV_READ = POLLIN;
+  static constexpr int IEV_WRITE = POLLOUT;
+  static constexpr int IEV_ERROR = POLLERR;
+  static constexpr int IEV_HUP = POLLHUP;
 };
 
 } // namespace aria2

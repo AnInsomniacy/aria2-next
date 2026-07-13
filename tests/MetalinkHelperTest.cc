@@ -1,6 +1,6 @@
 #include "metalink_helper.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "MetalinkEntry.h"
 #include "Option.h"
@@ -10,13 +10,8 @@
 
 namespace aria2 {
 
-class MetalinkHelperTest : public CppUnit::TestFixture {
+class MetalinkHelperTest {
 
-  CPPUNIT_TEST_SUITE(MetalinkHelperTest);
-  CPPUNIT_TEST(testParseAndQuery);
-  CPPUNIT_TEST(testParseAndQuery_version);
-  CPPUNIT_TEST(testGroupEntryByMetaurlName);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -25,13 +20,15 @@ public:
   void testGroupEntryByMetaurlName();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(MetalinkHelperTest);
+A2_TEST(MetalinkHelperTest, testParseAndQuery)
+A2_TEST(MetalinkHelperTest, testParseAndQuery_version)
+A2_TEST(MetalinkHelperTest, testGroupEntryByMetaurlName)
 
 void MetalinkHelperTest::testParseAndQuery()
 {
   Option option;
   auto result = metalink::parseAndQuery(A2_TEST_DIR "/test.xml", &option);
-  CPPUNIT_ASSERT_EQUAL((size_t)5, result.size());
+  REQUIRE_EQ((size_t)5, result.size());
 }
 
 void MetalinkHelperTest::testParseAndQuery_version()
@@ -39,9 +36,9 @@ void MetalinkHelperTest::testParseAndQuery_version()
   Option option;
   option.put(PREF_METALINK_VERSION, "0.5.1");
   auto result = metalink::parseAndQuery(A2_TEST_DIR "/test.xml", &option);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  REQUIRE_EQ((size_t)1, result.size());
   auto& entry = result.front();
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2-0.5.1.tar.bz2"), entry->getPath());
+  REQUIRE_EQ(std::string("aria2-0.5.1.tar.bz2"), entry->getPath());
 }
 
 void MetalinkHelperTest::testGroupEntryByMetaurlName()
@@ -92,15 +89,15 @@ void MetalinkHelperTest::testGroupEntryByMetaurlName()
 
   auto result = metalink::groupEntryByMetaurlName(entries);
 
-  CPPUNIT_ASSERT_EQUAL(std::string("http://meta1"), result[0].first);
-  CPPUNIT_ASSERT_EQUAL(std::string("1"), result[0].second[0]->version);
-  CPPUNIT_ASSERT_EQUAL(std::string(""), result[1].first);
-  CPPUNIT_ASSERT_EQUAL(std::string("2"), result[1].second[0]->version);
-  CPPUNIT_ASSERT_EQUAL(std::string("http://meta2"), result[2].first);
-  CPPUNIT_ASSERT_EQUAL(std::string("3"), result[2].second[0]->version);
-  CPPUNIT_ASSERT_EQUAL(std::string("http://meta1"), result[3].first);
-  CPPUNIT_ASSERT_EQUAL(std::string("4"), result[3].second[0]->version);
-  CPPUNIT_ASSERT_EQUAL(std::string("6"), result[3].second[1]->version);
+  REQUIRE_EQ(std::string("http://meta1"), result[0].first);
+  REQUIRE_EQ(std::string("1"), result[0].second[0]->version);
+  REQUIRE_EQ(std::string(""), result[1].first);
+  REQUIRE_EQ(std::string("2"), result[1].second[0]->version);
+  REQUIRE_EQ(std::string("http://meta2"), result[2].first);
+  REQUIRE_EQ(std::string("3"), result[2].second[0]->version);
+  REQUIRE_EQ(std::string("http://meta1"), result[3].first);
+  REQUIRE_EQ(std::string("4"), result[3].second[0]->version);
+  REQUIRE_EQ(std::string("6"), result[3].second[1]->version);
 }
 
 } // namespace aria2

@@ -9,7 +9,7 @@ Maintained by [@AnInsomniacy](https://github.com/AnInsomniacy). Issues and pull 
 - CMake 3.25 or newer
 - Ninja
 - A C99 and C++11 capable compiler
-- CppUnit for the local test suite
+- No extra test dependency: the doctest framework is vendored in third_party/doctest
 - OpenSSL, zlib, SQLite, Expat or libxml2, c-ares, and libssh2 development packages when building the default feature set
 
 ### Getting Started

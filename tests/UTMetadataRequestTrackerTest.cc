@@ -1,18 +1,11 @@
 #include "UTMetadataRequestTracker.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class UTMetadataRequestTrackerTest : public CppUnit::TestFixture {
+class UTMetadataRequestTrackerTest {
 
-  CPPUNIT_TEST_SUITE(UTMetadataRequestTrackerTest);
-  CPPUNIT_TEST(testAdd);
-  CPPUNIT_TEST(testRemove);
-  CPPUNIT_TEST(testGetAllTrackedIndex);
-  CPPUNIT_TEST(testCount);
-  CPPUNIT_TEST(testAvail);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testAdd();
@@ -22,13 +15,17 @@ public:
   void testAvail();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(UTMetadataRequestTrackerTest);
+A2_TEST(UTMetadataRequestTrackerTest, testAdd)
+A2_TEST(UTMetadataRequestTrackerTest, testRemove)
+A2_TEST(UTMetadataRequestTrackerTest, testGetAllTrackedIndex)
+A2_TEST(UTMetadataRequestTrackerTest, testCount)
+A2_TEST(UTMetadataRequestTrackerTest, testAvail)
 
 void UTMetadataRequestTrackerTest::testAdd()
 {
   UTMetadataRequestTracker tr;
   tr.add(1);
-  CPPUNIT_ASSERT(tr.tracks(1));
+  REQUIRE(tr.tracks(1));
 }
 
 void UTMetadataRequestTrackerTest::testRemove()
@@ -36,7 +33,7 @@ void UTMetadataRequestTrackerTest::testRemove()
   UTMetadataRequestTracker tr;
   tr.add(1);
   tr.remove(1);
-  CPPUNIT_ASSERT(!tr.tracks(1));
+  REQUIRE(!tr.tracks(1));
 }
 
 void UTMetadataRequestTrackerTest::testGetAllTrackedIndex()
@@ -46,9 +43,9 @@ void UTMetadataRequestTrackerTest::testGetAllTrackedIndex()
   tr.add(2);
 
   std::vector<size_t> indexes = tr.getAllTrackedIndex();
-  CPPUNIT_ASSERT_EQUAL((size_t)2, indexes.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, indexes[0]);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, indexes[1]);
+  REQUIRE_EQ((size_t)2, indexes.size());
+  REQUIRE_EQ((size_t)1, indexes[0]);
+  REQUIRE_EQ((size_t)2, indexes[1]);
 }
 
 void UTMetadataRequestTrackerTest::testCount()
@@ -56,17 +53,17 @@ void UTMetadataRequestTrackerTest::testCount()
   UTMetadataRequestTracker tr;
   tr.add(1);
   tr.add(2);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, tr.count());
+  REQUIRE_EQ((size_t)2, tr.count());
 }
 
 void UTMetadataRequestTrackerTest::testAvail()
 {
   UTMetadataRequestTracker tr;
-  CPPUNIT_ASSERT_EQUAL((size_t)1, tr.avail());
+  REQUIRE_EQ((size_t)1, tr.avail());
   tr.add(1);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, tr.avail());
+  REQUIRE_EQ((size_t)0, tr.avail());
   tr.add(2);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, tr.avail());
+  REQUIRE_EQ((size_t)0, tr.avail());
 }
 
 } // namespace aria2

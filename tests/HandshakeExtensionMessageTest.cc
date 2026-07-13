@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Peer.h"
 #include "Exception.h"
@@ -14,17 +14,8 @@
 
 namespace aria2 {
 
-class HandshakeExtensionMessageTest : public CppUnit::TestFixture {
+class HandshakeExtensionMessageTest {
 
-  CPPUNIT_TEST_SUITE(HandshakeExtensionMessageTest);
-  CPPUNIT_TEST(testGetExtensionMessageID);
-  CPPUNIT_TEST(testGetExtensionName);
-  CPPUNIT_TEST(testGetBencodedData);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreate_stringnum);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -40,18 +31,24 @@ public:
   void testCreate_stringnum();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(HandshakeExtensionMessageTest);
+A2_TEST(HandshakeExtensionMessageTest, testGetExtensionMessageID)
+A2_TEST(HandshakeExtensionMessageTest, testGetExtensionName)
+A2_TEST(HandshakeExtensionMessageTest, testGetBencodedData)
+A2_TEST(HandshakeExtensionMessageTest, testToString)
+A2_TEST(HandshakeExtensionMessageTest, testDoReceivedAction)
+A2_TEST(HandshakeExtensionMessageTest, testCreate)
+A2_TEST(HandshakeExtensionMessageTest, testCreate_stringnum)
 
 void HandshakeExtensionMessageTest::testGetExtensionMessageID()
 {
   HandshakeExtensionMessage msg;
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0, msg.getExtensionMessageID());
+  REQUIRE_EQ((uint8_t)0, msg.getExtensionMessageID());
 }
 
 void HandshakeExtensionMessageTest::testGetExtensionName()
 {
   HandshakeExtensionMessage msg;
-  CPPUNIT_ASSERT_EQUAL(std::string("handshake"),
+  REQUIRE_EQ(std::string("handshake"),
                        std::string(msg.getExtensionName()));
 }
 
@@ -63,7 +60,7 @@ void HandshakeExtensionMessageTest::testGetBencodedData()
   msg.setExtension(ExtensionMessageRegistry::UT_PEX, 1);
   msg.setExtension(ExtensionMessageRegistry::UT_METADATA, 2);
   msg.setMetadataSize(1_k);
-  CPPUNIT_ASSERT_EQUAL(std::string("d"
+  REQUIRE_EQ(std::string("d"
                                    "1:md11:ut_metadatai2e6:ut_pexi1ee"
                                    "13:metadata_sizei1024e"
                                    "1:pi6889e"
@@ -72,7 +69,7 @@ void HandshakeExtensionMessageTest::testGetBencodedData()
                        msg.getPayload());
 
   msg.setMetadataSize(0);
-  CPPUNIT_ASSERT(msg.getPayload().find("metadata_size") == std::string::npos);
+  REQUIRE(msg.getPayload().find("metadata_size") == std::string::npos);
 }
 
 void HandshakeExtensionMessageTest::testToString()
@@ -83,7 +80,7 @@ void HandshakeExtensionMessageTest::testToString()
   msg.setExtension(ExtensionMessageRegistry::UT_PEX, 1);
   msg.setExtension(ExtensionMessageRegistry::UT_METADATA, 2);
   msg.setMetadataSize(1_k);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("handshake client=aria2, tcpPort=6889, metadataSize=1024,"
                   " ut_metadata=2, ut_pex=1"),
       msg.toString());
@@ -112,23 +109,23 @@ void HandshakeExtensionMessageTest::testDoReceivedAction()
 
   msg.doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6889, peer->getPort());
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, peer->getExtensionMessageID(
+  REQUIRE_EQ((uint16_t)6889, peer->getPort());
+  REQUIRE_EQ((uint8_t)1, peer->getExtensionMessageID(
                                        ExtensionMessageRegistry::UT_PEX));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)3, peer->getExtensionMessageID(
+  REQUIRE_EQ((uint8_t)3, peer->getExtensionMessageID(
                                        ExtensionMessageRegistry::UT_METADATA));
-  CPPUNIT_ASSERT(peer->isSeeder());
+  REQUIRE(peer->isSeeder());
   auto attrs = bittorrent::getTorrentAttrs(dctx);
-  CPPUNIT_ASSERT_EQUAL((size_t)1_k, attrs->metadataSize);
-  CPPUNIT_ASSERT_EQUAL((int64_t)1_k, dctx->getTotalLength());
-  CPPUNIT_ASSERT(dctx->knowsTotalLength());
+  REQUIRE_EQ((size_t)1_k, attrs->metadataSize);
+  REQUIRE_EQ((int64_t)1_k, dctx->getTotalLength());
+  REQUIRE(dctx->knowsTotalLength());
 
   // See Peer is not marked as seeder if !attrs->metadata.empty()
   peer->allocateSessionResource(1_k, 1_m);
   attrs->metadataSize = 1_k;
   attrs->metadata = std::string('0', attrs->metadataSize);
   msg.doReceivedAction();
-  CPPUNIT_ASSERT(!peer->isSeeder());
+  REQUIRE(!peer->isSeeder());
 }
 
 void HandshakeExtensionMessageTest::testCreate()
@@ -138,17 +135,17 @@ void HandshakeExtensionMessageTest::testCreate()
   std::shared_ptr<HandshakeExtensionMessage> m(
       HandshakeExtensionMessage::create(
           reinterpret_cast<const unsigned char*>(in.c_str()), in.size()));
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2"), m->getClientVersion());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6881, m->getTCPPort());
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(std::string("aria2"), m->getClientVersion());
+  REQUIRE_EQ((uint16_t)6881, m->getTCPPort());
+  REQUIRE_EQ(
       (uint8_t)1, m->getExtensionMessageID(ExtensionMessageRegistry::UT_PEX));
-  CPPUNIT_ASSERT_EQUAL((size_t)1_k, m->getMetadataSize());
+  REQUIRE_EQ((size_t)1_k, m->getMetadataSize());
   try {
     // bad payload format
     std::string in = "011:hello world";
     HandshakeExtensionMessage::create(
         reinterpret_cast<const unsigned char*>(in.c_str()), in.size());
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (Exception& e) {
     std::cerr << e.stackTrace() << std::endl;
@@ -158,7 +155,7 @@ void HandshakeExtensionMessageTest::testCreate()
     std::string in = "011:hello";
     HandshakeExtensionMessage::create(
         reinterpret_cast<const unsigned char*>(in.c_str()), in.size());
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (Exception& e) {
     std::cerr << e.stackTrace() << std::endl;
@@ -168,7 +165,7 @@ void HandshakeExtensionMessageTest::testCreate()
     std::string in = "";
     HandshakeExtensionMessage::create(
         reinterpret_cast<const unsigned char*>(in.c_str()), in.size());
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (Exception& e) {
     std::cerr << e.stackTrace() << std::endl;
@@ -181,11 +178,11 @@ void HandshakeExtensionMessageTest::testCreate_stringnum()
   std::shared_ptr<HandshakeExtensionMessage> m(
       HandshakeExtensionMessage::create(
           reinterpret_cast<const unsigned char*>(in.c_str()), in.size()));
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2"), m->getClientVersion());
+  REQUIRE_EQ(std::string("aria2"), m->getClientVersion());
   // port number in string is not allowed
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0, m->getTCPPort());
+  REQUIRE_EQ((uint16_t)0, m->getTCPPort());
   // extension ID in string is not allowed
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       (uint8_t)0, m->getExtensionMessageID(ExtensionMessageRegistry::UT_PEX));
 }
 

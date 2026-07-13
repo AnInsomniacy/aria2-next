@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "Peer.h"
@@ -12,14 +12,8 @@
 
 namespace aria2 {
 
-class BtHaveAllMessageTest : public CppUnit::TestFixture {
+class BtHaveAllMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtHaveAllMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST(testDoReceivedAction_goodByeSeeder);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -31,21 +25,24 @@ public:
   void testDoReceivedAction_goodByeSeeder();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtHaveAllMessageTest);
+A2_TEST(BtHaveAllMessageTest, testCreate)
+A2_TEST(BtHaveAllMessageTest, testCreateMessage)
+A2_TEST(BtHaveAllMessageTest, testDoReceivedAction)
+A2_TEST(BtHaveAllMessageTest, testDoReceivedAction_goodByeSeeder)
 
 void BtHaveAllMessageTest::testCreate()
 {
   unsigned char msg[5];
   bittorrent::createPeerMessageString(msg, sizeof(msg), 1, 14);
   std::shared_ptr<BtHaveAllMessage> pm(BtHaveAllMessage::create(&msg[4], 1));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)14, pm->getId());
+  REQUIRE_EQ((uint8_t)14, pm->getId());
 
   // case: payload size is wrong
   try {
     unsigned char msg[6];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 2, 14);
     BtHaveAllMessage::create(&msg[4], 2);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -54,7 +51,7 @@ void BtHaveAllMessageTest::testCreate()
     unsigned char msg[5];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 1, 15);
     BtHaveAllMessage::create(&msg[4], 1);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -66,8 +63,8 @@ void BtHaveAllMessageTest::testCreateMessage()
   unsigned char data[5];
   bittorrent::createPeerMessageString(data, sizeof(data), 1, 14);
   auto rawmsg = msg.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)5, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)5, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtHaveAllMessageTest::testDoReceivedAction()
@@ -82,13 +79,13 @@ void BtHaveAllMessageTest::testDoReceivedAction()
 
   msg.doReceivedAction();
 
-  CPPUNIT_ASSERT(peer->isSeeder());
+  REQUIRE(peer->isSeeder());
 
   peer->setFastExtensionEnabled(false);
 
   try {
     msg.doReceivedAction();
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -108,7 +105,7 @@ void BtHaveAllMessageTest::testDoReceivedAction_goodByeSeeder()
 
   try {
     msg.doReceivedAction();
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (DlAbortEx& e) {
     // success

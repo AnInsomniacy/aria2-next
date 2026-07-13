@@ -42,7 +42,7 @@ namespace aria2 {
 
 class DHTTokenTracker {
 private:
-  static const size_t SECRET_SIZE = 4;
+  static constexpr size_t SECRET_SIZE = 4;
 
   unsigned char secret_[2][SECRET_SIZE];
 

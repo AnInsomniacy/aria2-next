@@ -47,7 +47,7 @@ class DHTTaskFactory;
 class BtPortMessage : public SimpleBtMessage {
 private:
   uint16_t port_;
-  static const size_t MESSAGE_LENGTH = 7;
+  static constexpr size_t MESSAGE_LENGTH = 7;
 
   DHTNode* localNode_;
 
@@ -60,7 +60,7 @@ private:
 public:
   BtPortMessage(uint16_t port);
 
-  static const uint8_t ID = 9;
+  static constexpr uint8_t ID = 9;
 
   static const char NAME[];
 

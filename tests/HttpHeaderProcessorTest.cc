@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "HttpHeader.h"
 #include "DlRetryEx.h"
@@ -10,24 +10,8 @@
 
 namespace aria2 {
 
-class HttpHeaderProcessorTest : public CppUnit::TestFixture {
+class HttpHeaderProcessorTest {
 
-  CPPUNIT_TEST_SUITE(HttpHeaderProcessorTest);
-  CPPUNIT_TEST(testParse1);
-  CPPUNIT_TEST(testParse2);
-  CPPUNIT_TEST(testParse3);
-  CPPUNIT_TEST(testGetLastBytesProcessed);
-  CPPUNIT_TEST(testGetLastBytesProcessed_nullChar);
-  CPPUNIT_TEST(testGetHttpResponseHeader);
-  CPPUNIT_TEST(testGetHttpResponseHeader_statusOnly);
-  CPPUNIT_TEST(testGetHttpResponseHeader_ignoresEmptyFieldWithoutColon);
-  CPPUNIT_TEST(testGetHttpResponseHeader_insufficientStatusLength);
-  CPPUNIT_TEST(testGetHttpResponseHeader_nameStartsWs);
-  CPPUNIT_TEST(testGetHttpResponseHeader_teAndCl);
-  CPPUNIT_TEST(testBeyondLimit);
-  CPPUNIT_TEST(testGetHeaderString);
-  CPPUNIT_TEST(testGetHttpRequestHeader);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testParse1();
@@ -46,22 +30,35 @@ public:
   void testGetHttpRequestHeader();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(HttpHeaderProcessorTest);
+A2_TEST(HttpHeaderProcessorTest, testParse1)
+A2_TEST(HttpHeaderProcessorTest, testParse2)
+A2_TEST(HttpHeaderProcessorTest, testParse3)
+A2_TEST(HttpHeaderProcessorTest, testGetLastBytesProcessed)
+A2_TEST(HttpHeaderProcessorTest, testGetLastBytesProcessed_nullChar)
+A2_TEST(HttpHeaderProcessorTest, testGetHttpResponseHeader)
+A2_TEST(HttpHeaderProcessorTest, testGetHttpResponseHeader_statusOnly)
+A2_TEST(HttpHeaderProcessorTest, testGetHttpResponseHeader_ignoresEmptyFieldWithoutColon)
+A2_TEST(HttpHeaderProcessorTest, testGetHttpResponseHeader_insufficientStatusLength)
+A2_TEST(HttpHeaderProcessorTest, testGetHttpResponseHeader_nameStartsWs)
+A2_TEST(HttpHeaderProcessorTest, testGetHttpResponseHeader_teAndCl)
+A2_TEST(HttpHeaderProcessorTest, testBeyondLimit)
+A2_TEST(HttpHeaderProcessorTest, testGetHeaderString)
+A2_TEST(HttpHeaderProcessorTest, testGetHttpRequestHeader)
 
 void HttpHeaderProcessorTest::testParse1()
 {
   HttpHeaderProcessor proc(HttpHeaderProcessor::CLIENT_PARSER);
   std::string hd1 = "HTTP/1.1 200 OK\r\n";
-  CPPUNIT_ASSERT(!proc.parse(hd1));
-  CPPUNIT_ASSERT(proc.parse("\r\n"));
+  REQUIRE(!proc.parse(hd1));
+  REQUIRE(proc.parse("\r\n"));
 }
 
 void HttpHeaderProcessorTest::testParse2()
 {
   HttpHeaderProcessor proc(HttpHeaderProcessor::CLIENT_PARSER);
   std::string hd1 = "HTTP/1.1 200 OK\n";
-  CPPUNIT_ASSERT(!proc.parse(hd1));
-  CPPUNIT_ASSERT(proc.parse("\n"));
+  REQUIRE(!proc.parse(hd1));
+  REQUIRE(proc.parse("\n"));
 }
 
 void HttpHeaderProcessorTest::testParse3()
@@ -77,17 +74,17 @@ void HttpHeaderProcessorTest::testParse3()
                   "Authorization: bar\r\n"
                   "Content-Type:\r\n"
                   "\r\n";
-  CPPUNIT_ASSERT(proc.parse(s));
+  REQUIRE(proc.parse(s));
   auto h = proc.getResult();
-  CPPUNIT_ASSERT_EQUAL(std::string("close"), h->find(HttpHeader::CONNECTION));
-  CPPUNIT_ASSERT_EQUAL(std::string("text1 text2 text3"),
+  REQUIRE_EQ(std::string("close"), h->find(HttpHeader::CONNECTION));
+  REQUIRE_EQ(std::string("text1 text2 text3"),
                        h->find(HttpHeader::ACCEPT_ENCODING));
-  CPPUNIT_ASSERT_EQUAL(std::string("foo"),
+  REQUIRE_EQ(std::string("foo"),
                        h->findAll(HttpHeader::AUTHORIZATION)[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string("bar"),
+  REQUIRE_EQ(std::string("bar"),
                        h->findAll(HttpHeader::AUTHORIZATION)[1]);
-  CPPUNIT_ASSERT_EQUAL(std::string(""), h->find(HttpHeader::CONTENT_TYPE));
-  CPPUNIT_ASSERT(h->defined(HttpHeader::CONTENT_TYPE));
+  REQUIRE_EQ(std::string(""), h->find(HttpHeader::CONTENT_TYPE));
+  REQUIRE(h->defined(HttpHeader::CONTENT_TYPE));
 }
 
 void HttpHeaderProcessorTest::testGetLastBytesProcessed()
@@ -95,15 +92,15 @@ void HttpHeaderProcessorTest::testGetLastBytesProcessed()
   HttpHeaderProcessor proc(HttpHeaderProcessor::CLIENT_PARSER);
   std::string hd1 = "HTTP/1.1 200 OK\r\n"
                     "\r\nputbackme";
-  CPPUNIT_ASSERT(proc.parse(hd1));
-  CPPUNIT_ASSERT_EQUAL((size_t)19, proc.getLastBytesProcessed());
+  REQUIRE(proc.parse(hd1));
+  REQUIRE_EQ((size_t)19, proc.getLastBytesProcessed());
 
   proc.clear();
 
   std::string hd2 = "HTTP/1.1 200 OK\n"
                     "\nputbackme";
-  CPPUNIT_ASSERT(proc.parse(hd2));
-  CPPUNIT_ASSERT_EQUAL((size_t)17, proc.getLastBytesProcessed());
+  REQUIRE(proc.parse(hd2));
+  REQUIRE_EQ((size_t)17, proc.getLastBytesProcessed());
 }
 
 void HttpHeaderProcessorTest::testGetLastBytesProcessed_nullChar()
@@ -113,8 +110,8 @@ void HttpHeaderProcessorTest::testGetLastBytesProcessed_nullChar()
                    "foo: foo\0bar\r\n"
                    "\r\nputbackme";
   std::string hd1(&x[0], &x[sizeof(x) - 1]);
-  CPPUNIT_ASSERT(proc.parse(hd1));
-  CPPUNIT_ASSERT_EQUAL((size_t)33, proc.getLastBytesProcessed());
+  REQUIRE(proc.parse(hd1));
+  REQUIRE_EQ((size_t)33, proc.getLastBytesProcessed());
 }
 
 void HttpHeaderProcessorTest::testGetHttpResponseHeader()
@@ -132,17 +129,17 @@ void HttpHeaderProcessorTest::testGetHttpResponseHeader()
                    "\r\n"
                    "Content-Encoding: body";
 
-  CPPUNIT_ASSERT(proc.parse(hd));
+  REQUIRE(proc.parse(hd));
 
   auto header = proc.getResult();
-  CPPUNIT_ASSERT_EQUAL(404, header->getStatusCode());
-  CPPUNIT_ASSERT_EQUAL(std::string("Not Found"), header->getReasonPhrase());
-  CPPUNIT_ASSERT_EQUAL(std::string("HTTP/1.1"), header->getVersion());
-  CPPUNIT_ASSERT_EQUAL(std::string("9187"),
+  REQUIRE_EQ(404, header->getStatusCode());
+  REQUIRE_EQ(std::string("Not Found"), header->getReasonPhrase());
+  REQUIRE_EQ(std::string("HTTP/1.1"), header->getVersion());
+  REQUIRE_EQ(std::string("9187"),
                        header->find(HttpHeader::CONTENT_LENGTH));
-  CPPUNIT_ASSERT_EQUAL(std::string("text/html; charset=UTF-8"),
+  REQUIRE_EQ(std::string("text/html; charset=UTF-8"),
                        header->find(HttpHeader::CONTENT_TYPE));
-  CPPUNIT_ASSERT(!header->defined(HttpHeader::CONTENT_ENCODING));
+  REQUIRE(!header->defined(HttpHeader::CONTENT_ENCODING));
 }
 
 void HttpHeaderProcessorTest::testGetHttpResponseHeader_statusOnly()
@@ -150,9 +147,9 @@ void HttpHeaderProcessorTest::testGetHttpResponseHeader_statusOnly()
   HttpHeaderProcessor proc(HttpHeaderProcessor::CLIENT_PARSER);
 
   std::string hd = "HTTP/1.1 200\r\n\r\n";
-  CPPUNIT_ASSERT(proc.parse(hd));
+  REQUIRE(proc.parse(hd));
   auto header = proc.getResult();
-  CPPUNIT_ASSERT_EQUAL(200, header->getStatusCode());
+  REQUIRE_EQ(200, header->getStatusCode());
 }
 
 void HttpHeaderProcessorTest::testGetHttpResponseHeader_ignoresEmptyFieldWithoutColon()
@@ -163,11 +160,11 @@ void HttpHeaderProcessorTest::testGetHttpResponseHeader_ignoresEmptyFieldWithout
                    "X-Empty-Header\r\n"
                    "Content-Length: 10\r\n"
                    "\r\n";
-  CPPUNIT_ASSERT(proc.parse(hd));
+  REQUIRE(proc.parse(hd));
 
   auto header = proc.getResult();
-  CPPUNIT_ASSERT_EQUAL(200, header->getStatusCode());
-  CPPUNIT_ASSERT_EQUAL(std::string("10"),
+  REQUIRE_EQ(200, header->getStatusCode());
+  REQUIRE_EQ(std::string("10"),
                        header->find(HttpHeader::CONTENT_LENGTH));
 }
 
@@ -179,7 +176,7 @@ void HttpHeaderProcessorTest::
   std::string hd = "HTTP/1.1 20\r\n\r\n";
   try {
     proc.parse(hd);
-    CPPUNIT_FAIL("Exception must be thrown.");
+    FAIL("Exception must be thrown.");
   }
   catch (DlAbortEx& ex) {
     // Success
@@ -195,7 +192,7 @@ void HttpHeaderProcessorTest::testGetHttpResponseHeader_nameStartsWs()
                    "\r\n";
   try {
     proc.parse(hd);
-    CPPUNIT_FAIL("Exception must be thrown.");
+    FAIL("Exception must be thrown.");
   }
   catch (DlAbortEx& ex) {
     // Success
@@ -207,7 +204,7 @@ void HttpHeaderProcessorTest::testGetHttpResponseHeader_nameStartsWs()
        "\r\n";
   try {
     proc.parse(hd);
-    CPPUNIT_FAIL("Exception must be thrown.");
+    FAIL("Exception must be thrown.");
   }
   catch (DlAbortEx& ex) {
     // Success
@@ -219,7 +216,7 @@ void HttpHeaderProcessorTest::testGetHttpResponseHeader_nameStartsWs()
        "\r\n";
   try {
     proc.parse(hd);
-    CPPUNIT_FAIL("Exception must be thrown.");
+    FAIL("Exception must be thrown.");
   }
   catch (DlAbortEx& ex) {
     // Success
@@ -236,13 +233,13 @@ void HttpHeaderProcessorTest::testGetHttpResponseHeader_teAndCl()
                    "Content-Range: 1-200/300\r\n"
                    "\r\n";
 
-  CPPUNIT_ASSERT(proc.parse(hd));
+  REQUIRE(proc.parse(hd));
 
   auto httpHeader = proc.getResult();
-  CPPUNIT_ASSERT_EQUAL(std::string("chunked"),
+  REQUIRE_EQ(std::string("chunked"),
                        httpHeader->find(HttpHeader::TRANSFER_ENCODING));
-  CPPUNIT_ASSERT(!httpHeader->defined(HttpHeader::CONTENT_LENGTH));
-  CPPUNIT_ASSERT(!httpHeader->defined(HttpHeader::CONTENT_RANGE));
+  REQUIRE(!httpHeader->defined(HttpHeader::CONTENT_LENGTH));
+  REQUIRE(!httpHeader->defined(HttpHeader::CONTENT_RANGE));
 }
 
 void HttpHeaderProcessorTest::testBeyondLimit()
@@ -255,7 +252,7 @@ void HttpHeaderProcessorTest::testBeyondLimit()
   proc.parse(hd1);
   try {
     proc.parse(hd2);
-    CPPUNIT_FAIL("Exception must be thrown.");
+    FAIL("Exception must be thrown.");
   }
   catch (DlAbortEx& ex) {
     // Success
@@ -276,9 +273,9 @@ void HttpHeaderProcessorTest::testGetHeaderString()
                    "Content-Type: text/html; charset=UTF-8\r\n"
                    "\r\nputbackme";
 
-  CPPUNIT_ASSERT(proc.parse(hd));
+  REQUIRE(proc.parse(hd));
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("HTTP/1.1 200 OK\r\n"
                   "Date: Mon, 25 Jun 2007 16:04:59 GMT\r\n"
                   "Server: Apache/2.2.3 (Debian)\r\n"
@@ -301,16 +298,16 @@ void HttpHeaderProcessorTest::testGetHttpRequestHeader()
                         "\r\n"
                         "Content-Encoding: body";
 
-  CPPUNIT_ASSERT(proc.parse(request));
+  REQUIRE(proc.parse(request));
 
   auto httpHeader = proc.getResult();
-  CPPUNIT_ASSERT_EQUAL(std::string("GET"), httpHeader->getMethod());
-  CPPUNIT_ASSERT_EQUAL(std::string("/index.html"),
+  REQUIRE_EQ(std::string("GET"), httpHeader->getMethod());
+  REQUIRE_EQ(std::string("/index.html"),
                        httpHeader->getRequestPath());
-  CPPUNIT_ASSERT_EQUAL(std::string("HTTP/1.1"), httpHeader->getVersion());
-  CPPUNIT_ASSERT_EQUAL(std::string("close"),
+  REQUIRE_EQ(std::string("HTTP/1.1"), httpHeader->getVersion());
+  REQUIRE_EQ(std::string("close"),
                        httpHeader->find(HttpHeader::CONNECTION));
-  CPPUNIT_ASSERT(!httpHeader->defined(HttpHeader::CONTENT_ENCODING));
+  REQUIRE(!httpHeader->defined(HttpHeader::CONTENT_ENCODING));
 }
 
 } // namespace aria2

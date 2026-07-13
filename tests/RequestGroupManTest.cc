@@ -1,8 +1,9 @@
 #include "RequestGroupMan.h"
 
 #include <fstream>
+#include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "TestUtil.h"
 #include "Ed2kAttribute.h"
@@ -50,21 +51,8 @@ public:
 };
 } // namespace
 
-class RequestGroupManTest : public CppUnit::TestFixture {
+class RequestGroupManTest {
 
-  CPPUNIT_TEST_SUITE(RequestGroupManTest);
-  CPPUNIT_TEST(testIsSameFileBeingDownloaded);
-  CPPUNIT_TEST(testGetInitialCommands);
-  CPPUNIT_TEST(testLoadServerStat);
-  CPPUNIT_TEST(testSaveServerStat);
-  CPPUNIT_TEST(testChangeReservedGroupPosition);
-  CPPUNIT_TEST(testFillRequestGroupFromReserver);
-  CPPUNIT_TEST(testFillRequestGroupFromReserver_uriParser);
-  CPPUNIT_TEST(testReduceMaxConcurrentDownloads);
-  CPPUNIT_TEST(testUserRemoveDoesNotKeepControlFile);
-  CPPUNIT_TEST(testInsertReservedGroup);
-  CPPUNIT_TEST(testAddDownloadResult);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::unique_ptr<DownloadEngine> e_;
@@ -100,7 +88,17 @@ public:
   void testAddDownloadResult();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(RequestGroupManTest);
+A2_TEST(RequestGroupManTest, testIsSameFileBeingDownloaded)
+A2_TEST(RequestGroupManTest, testGetInitialCommands)
+A2_TEST(RequestGroupManTest, testLoadServerStat)
+A2_TEST(RequestGroupManTest, testSaveServerStat)
+A2_TEST(RequestGroupManTest, testChangeReservedGroupPosition)
+A2_TEST(RequestGroupManTest, testFillRequestGroupFromReserver)
+A2_TEST(RequestGroupManTest, testFillRequestGroupFromReserver_uriParser)
+A2_TEST(RequestGroupManTest, testReduceMaxConcurrentDownloads)
+A2_TEST(RequestGroupManTest, testUserRemoveDoesNotKeepControlFile)
+A2_TEST(RequestGroupManTest, testInsertReservedGroup)
+A2_TEST(RequestGroupManTest, testAddDownloadResult)
 
 void RequestGroupManTest::testIsSameFileBeingDownloaded()
 {
@@ -123,11 +121,11 @@ void RequestGroupManTest::testIsSameFileBeingDownloaded()
   gm.addRequestGroup(rg1);
   gm.addRequestGroup(rg2);
 
-  CPPUNIT_ASSERT(gm.isSameFileBeingDownloaded(rg1.get()));
+  REQUIRE(gm.isSameFileBeingDownloaded(rg1.get()));
 
   dctx2->getFirstFileEntry()->setPath("aria2.tar.gz");
 
-  CPPUNIT_ASSERT(!gm.isSameFileBeingDownloaded(rg1.get()));
+  REQUIRE(!gm.isSameFileBeingDownloaded(rg1.get()));
 }
 
 void RequestGroupManTest::testGetInitialCommands()
@@ -145,12 +143,12 @@ void RequestGroupManTest::testSaveServerStat()
   if (f.exists()) {
     f.remove();
   }
-  CPPUNIT_ASSERT(rm.saveServerStat(f.getPath()));
-  CPPUNIT_ASSERT(f.isFile());
+  REQUIRE(rm.saveServerStat(f.getPath()));
+  REQUIRE(f.isFile());
 
   f.remove();
-  CPPUNIT_ASSERT(f.mkdirs());
-  CPPUNIT_ASSERT(!rm.saveServerStat(f.getPath()));
+  REQUIRE(f.mkdirs());
+  REQUIRE(!rm.saveServerStat(f.getPath()));
 }
 
 void RequestGroupManTest::testLoadServerStat()
@@ -164,11 +162,11 @@ void RequestGroupManTest::testLoadServerStat()
   RequestGroupMan rm(std::vector<std::shared_ptr<RequestGroup>>(), 0,
                      option_.get());
   std::cerr << "testLoadServerStat" << std::endl;
-  CPPUNIT_ASSERT(rm.loadServerStat(f.getPath()));
+  REQUIRE(rm.loadServerStat(f.getPath()));
   std::shared_ptr<ServerStat> ss_localhost =
       rm.findServerStat("localhost", "http");
-  CPPUNIT_ASSERT(ss_localhost);
-  CPPUNIT_ASSERT_EQUAL(std::string("localhost"), ss_localhost->getHostname());
+  REQUIRE(ss_localhost);
+  REQUIRE_EQ(std::string("localhost"), ss_localhost->getHostname());
 }
 
 void RequestGroupManTest::testChangeReservedGroupPosition()
@@ -180,45 +178,45 @@ void RequestGroupManTest::testChangeReservedGroupPosition()
       std::make_shared<RequestGroup>(GroupId::create(), util::copy(option_))};
   RequestGroupMan rm(gs, 0, option_.get());
 
-  CPPUNIT_ASSERT_EQUAL((size_t)0, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)0, rm.changeReservedGroupPosition(
                                       gs[0]->getGID(), 0, OFFSET_MODE_SET));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)1, rm.changeReservedGroupPosition(
                                       gs[0]->getGID(), 1, OFFSET_MODE_SET));
-  CPPUNIT_ASSERT_EQUAL((size_t)3, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)3, rm.changeReservedGroupPosition(
                                       gs[0]->getGID(), 10, OFFSET_MODE_SET));
-  CPPUNIT_ASSERT_EQUAL((size_t)0, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)0, rm.changeReservedGroupPosition(
                                       gs[0]->getGID(), -10, OFFSET_MODE_SET));
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)1, rm.changeReservedGroupPosition(
                                       gs[1]->getGID(), 0, OFFSET_MODE_CUR));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)2, rm.changeReservedGroupPosition(
                                       gs[1]->getGID(), 1, OFFSET_MODE_CUR));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)1, rm.changeReservedGroupPosition(
                                       gs[1]->getGID(), -1, OFFSET_MODE_CUR));
-  CPPUNIT_ASSERT_EQUAL((size_t)0, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)0, rm.changeReservedGroupPosition(
                                       gs[1]->getGID(), -10, OFFSET_MODE_CUR));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)1, rm.changeReservedGroupPosition(
                                       gs[1]->getGID(), 1, OFFSET_MODE_CUR));
-  CPPUNIT_ASSERT_EQUAL((size_t)3, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)3, rm.changeReservedGroupPosition(
                                       gs[1]->getGID(), 10, OFFSET_MODE_CUR));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)1, rm.changeReservedGroupPosition(
                                       gs[1]->getGID(), -2, OFFSET_MODE_CUR));
 
-  CPPUNIT_ASSERT_EQUAL((size_t)3, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)3, rm.changeReservedGroupPosition(
                                       gs[3]->getGID(), 0, OFFSET_MODE_END));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)2, rm.changeReservedGroupPosition(
                                       gs[3]->getGID(), -1, OFFSET_MODE_END));
-  CPPUNIT_ASSERT_EQUAL((size_t)0, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)0, rm.changeReservedGroupPosition(
                                       gs[3]->getGID(), -10, OFFSET_MODE_END));
-  CPPUNIT_ASSERT_EQUAL((size_t)3, rm.changeReservedGroupPosition(
+  REQUIRE_EQ((size_t)3, rm.changeReservedGroupPosition(
                                       gs[3]->getGID(), 10, OFFSET_MODE_END));
 
-  CPPUNIT_ASSERT_EQUAL((size_t)4, rm.getReservedGroups().size());
+  REQUIRE_EQ((size_t)4, rm.getReservedGroups().size());
 
   try {
     rm.changeReservedGroupPosition(GroupId::create()->getNumericId(), 0,
                                    OFFSET_MODE_CUR);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (RecoverableException& e) {
     // success
@@ -244,7 +242,7 @@ void RequestGroupManTest::testFillRequestGroupFromReserver()
   }
   rgman_->fillRequestGroupFromReserver(e_.get());
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, rgman_->getReservedGroups().size());
+  REQUIRE_EQ((size_t)2, rgman_->getReservedGroups().size());
 }
 
 void RequestGroupManTest::testFillRequestGroupFromReserver_uriParser()
@@ -265,10 +263,10 @@ void RequestGroupManTest::testFillRequestGroupFromReserver_uriParser()
   rgman_->fillRequestGroupFromReserver(e_.get());
 
   RequestGroupList::const_iterator itr;
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rgman_->getReservedGroups().size());
+  REQUIRE_EQ((size_t)1, rgman_->getReservedGroups().size());
   itr = rgman_->getReservedGroups().begin();
-  CPPUNIT_ASSERT_EQUAL(rgs[0]->getGID(), (*itr)->getGID());
-  CPPUNIT_ASSERT_EQUAL((size_t)3, rgman_->getRequestGroups().size());
+  REQUIRE_EQ(rgs[0]->getGID(), (*itr)->getGID());
+  REQUIRE_EQ((size_t)3, rgman_->getRequestGroups().size());
 }
 
 void RequestGroupManTest::testReduceMaxConcurrentDownloads()
@@ -289,21 +287,21 @@ void RequestGroupManTest::testReduceMaxConcurrentDownloads()
 
   rgman_->setMaxConcurrentDownloads(1);
   rgman_->reduceActiveDownloadsToLimit(e_.get());
-  CPPUNIT_ASSERT(!rgs[0]->isHaltRequested());
-  CPPUNIT_ASSERT(rgs[1]->isHaltRequested());
-  CPPUNIT_ASSERT(rgs[2]->isHaltRequested());
+  REQUIRE(!rgs[0]->isHaltRequested());
+  REQUIRE(rgs[1]->isHaltRequested());
+  REQUIRE(rgs[2]->isHaltRequested());
 
   while (e_->run(true) != 0)
     ;
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rgman_->getRequestGroups().size());
+  REQUIRE_EQ((size_t)1, rgman_->getRequestGroups().size());
   auto active = rgman_->getRequestGroups().begin();
-  CPPUNIT_ASSERT_EQUAL(rgs[0]->getGID(), (*active)->getGID());
-  CPPUNIT_ASSERT_EQUAL((size_t)2, rgman_->getReservedGroups().size());
-  CPPUNIT_ASSERT(findReservedGroup(rgman_, rgs[1]->getGID()));
-  CPPUNIT_ASSERT(findReservedGroup(rgman_, rgs[2]->getGID()));
-  CPPUNIT_ASSERT(!rgs[1]->isPauseRequested());
-  CPPUNIT_ASSERT(!rgs[2]->isPauseRequested());
+  REQUIRE_EQ(rgs[0]->getGID(), (*active)->getGID());
+  REQUIRE_EQ((size_t)2, rgman_->getReservedGroups().size());
+  REQUIRE(findReservedGroup(rgman_, rgs[1]->getGID()));
+  REQUIRE(findReservedGroup(rgman_, rgs[2]->getGID()));
+  REQUIRE(!rgs[1]->isPauseRequested());
+  REQUIRE(!rgs[2]->isPauseRequested());
 }
 
 void RequestGroupManTest::testUserRemoveDoesNotKeepControlFile()
@@ -325,7 +323,7 @@ void RequestGroupManTest::testUserRemoveDoesNotKeepControlFile()
   group->setProgressInfoFile(std::make_shared<DefaultBtProgressInfoFile>(
       group->getDownloadContext(), group->getPieceStorage(), option_.get()));
   group->saveControlFile();
-  CPPUNIT_ASSERT(File(ctrlPath).isFile());
+  REQUIRE(File(ctrlPath).isFile());
 
   rgman_->addRequestGroup(group);
   e_->addCommand(make_unique<ActiveDownloadCommand>(e_->newCUID(),
@@ -335,11 +333,11 @@ void RequestGroupManTest::testUserRemoveDoesNotKeepControlFile()
   while (e_->run(true) != 0)
     ;
 
-  CPPUNIT_ASSERT(!File(ctrlPath).exists());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, rgman_->getRequestGroups().size());
+  REQUIRE(!File(ctrlPath).exists());
+  REQUIRE_EQ((size_t)0, rgman_->getRequestGroups().size());
   auto result = rgman_->findDownloadResult(group->getGID());
-  CPPUNIT_ASSERT(result);
-  CPPUNIT_ASSERT_EQUAL(error_code::REMOVED, result->result);
+  REQUIRE(result);
+  REQUIRE_EQ(error_code::REMOVED, result->result);
 }
 
 void RequestGroupManTest::testInsertReservedGroup()
@@ -355,18 +353,18 @@ void RequestGroupManTest::testInsertReservedGroup()
       std::shared_ptr<RequestGroup>(
           new RequestGroup(GroupId::create(), util::copy(option_)))};
   rgman_->insertReservedGroup(0, rgs1);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, rgman_->getReservedGroups().size());
+  REQUIRE_EQ((size_t)2, rgman_->getReservedGroups().size());
   RequestGroupList::const_iterator itr;
   itr = rgman_->getReservedGroups().begin();
-  CPPUNIT_ASSERT_EQUAL(rgs1[0]->getGID(), (*itr++)->getGID());
-  CPPUNIT_ASSERT_EQUAL(rgs1[1]->getGID(), (*itr++)->getGID());
+  REQUIRE_EQ(rgs1[0]->getGID(), (*itr++)->getGID());
+  REQUIRE_EQ(rgs1[1]->getGID(), (*itr++)->getGID());
 
   rgman_->insertReservedGroup(1, rgs2);
-  CPPUNIT_ASSERT_EQUAL((size_t)4, rgman_->getReservedGroups().size());
+  REQUIRE_EQ((size_t)4, rgman_->getReservedGroups().size());
   itr = rgman_->getReservedGroups().begin();
   ++itr;
-  CPPUNIT_ASSERT_EQUAL(rgs2[0]->getGID(), (*itr++)->getGID());
-  CPPUNIT_ASSERT_EQUAL(rgs2[1]->getGID(), (*itr++)->getGID());
+  REQUIRE_EQ(rgs2[0]->getGID(), (*itr++)->getGID());
+  REQUIRE_EQ(rgs2[1]->getGID(), (*itr++)->getGID());
 }
 
 void RequestGroupManTest::testAddDownloadResult()
@@ -378,7 +376,7 @@ void RequestGroupManTest::testAddDownloadResult()
   rgman_->addDownloadResult(createDownloadResult(error_code::FINISHED, uri));
   rgman_->addDownloadResult(createDownloadResult(error_code::FINISHED, uri));
   rgman_->addDownloadResult(createDownloadResult(error_code::FINISHED, uri));
-  CPPUNIT_ASSERT_EQUAL(error_code::TIME_OUT,
+  REQUIRE_EQ(error_code::TIME_OUT,
                        rgman_->getDownloadStat().getLastErrorResult());
 }
 

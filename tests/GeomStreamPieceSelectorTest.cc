@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -10,17 +10,14 @@
 
 namespace aria2 {
 
-class GeomStreamPieceSelectorTest : public CppUnit::TestFixture {
+class GeomStreamPieceSelectorTest {
 
-  CPPUNIT_TEST_SUITE(GeomStreamPieceSelectorTest);
-  CPPUNIT_TEST(testOnBitfieldInit);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testOnBitfieldInit();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(GeomStreamPieceSelectorTest);
+A2_TEST(GeomStreamPieceSelectorTest, testOnBitfieldInit)
 
 void GeomStreamPieceSelectorTest::testOnBitfieldInit()
 {
@@ -32,20 +29,20 @@ void GeomStreamPieceSelectorTest::testOnBitfieldInit()
   memset(igbf, 0, 3);
   size_t index;
   // 11111|11111|00000|00000
-  CPPUNIT_ASSERT(sel.select(index, 20_k, igbf, sizeof(igbf)));
-  CPPUNIT_ASSERT_EQUAL((size_t)11, index);
+  REQUIRE(sel.select(index, 20_k, igbf, sizeof(igbf)));
+  REQUIRE_EQ((size_t)11, index);
   bf.setUseBit(11);
   // 11111|11111|10000|00000
-  CPPUNIT_ASSERT(sel.select(index, 20_k, igbf, sizeof(igbf)));
-  CPPUNIT_ASSERT_EQUAL((size_t)12, index);
+  REQUIRE(sel.select(index, 20_k, igbf, sizeof(igbf)));
+  REQUIRE_EQ((size_t)12, index);
   bf.setUseBit(12);
   // 11111|11111|11000|00000
-  CPPUNIT_ASSERT(sel.select(index, 20_k, igbf, sizeof(igbf)));
-  CPPUNIT_ASSERT_EQUAL((size_t)13, index);
+  REQUIRE(sel.select(index, 20_k, igbf, sizeof(igbf)));
+  REQUIRE_EQ((size_t)13, index);
   bf.setUseBit(13);
   // 11111|11111|11100|00000
-  CPPUNIT_ASSERT(sel.select(index, 20_k, igbf, sizeof(igbf)));
-  CPPUNIT_ASSERT_EQUAL((size_t)15, index);
+  REQUIRE(sel.select(index, 20_k, igbf, sizeof(igbf)));
+  REQUIRE_EQ((size_t)15, index);
 }
 
 } // namespace aria2

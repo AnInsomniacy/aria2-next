@@ -51,7 +51,7 @@ private:
 
   size_t bytesProcessed_;
 
-  static const size_t OUTBUF_LENGTH = 16_k;
+  static constexpr size_t OUTBUF_LENGTH = 16_k;
 
 public:
   GZipDecodingStreamFilter(std::unique_ptr<StreamFilter> delegate = nullptr);

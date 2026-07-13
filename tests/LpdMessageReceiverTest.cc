@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "TestUtil.h"
 #include "Exception.h"
@@ -16,22 +16,19 @@
 
 namespace aria2 {
 
-class LpdMessageReceiverTest : public CppUnit::TestFixture {
+class LpdMessageReceiverTest {
 
-  CPPUNIT_TEST_SUITE(LpdMessageReceiverTest);
-  CPPUNIT_TEST(testReceiveMessage);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testReceiveMessage();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(LpdMessageReceiverTest);
+A2_TEST(LpdMessageReceiverTest, testReceiveMessage)
 
 void LpdMessageReceiverTest::testReceiveMessage()
 {
   LpdMessageReceiver rcv(LPD_MULTICAST_ADDR, LPD_MULTICAST_PORT);
-  CPPUNIT_ASSERT(rcv.init(""));
+  REQUIRE(rcv.init(""));
 
   std::shared_ptr<SocketCore> sendsock(new SocketCore(SOCK_DGRAM));
   sendsock->create(AF_INET);
@@ -49,10 +46,10 @@ void LpdMessageReceiverTest::testReceiveMessage()
 
   rcv.getSocket()->isReadable(5);
   auto msg = rcv.receiveMessage();
-  CPPUNIT_ASSERT(msg);
-  CPPUNIT_ASSERT_EQUAL(std::string("cd41c7fdddfd034a15a04d7ff881216e01c4ceaf"),
+  REQUIRE(msg);
+  REQUIRE_EQ(std::string("cd41c7fdddfd034a15a04d7ff881216e01c4ceaf"),
                        util::toHex(msg->infoHash));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6000, msg->peer->getPort());
+  REQUIRE_EQ((uint16_t)6000, msg->peer->getPort());
 
   // Bad infohash
   std::string badInfoHashString = "cd41c7fdddfd034a15a04d7ff881216e01c4ce";
@@ -63,7 +60,7 @@ void LpdMessageReceiverTest::testReceiveMessage()
 
   rcv.getSocket()->isReadable(5);
   msg = rcv.receiveMessage();
-  CPPUNIT_ASSERT(!msg);
+  REQUIRE(!msg);
 
   // Bad port
   request = bittorrent::createLpdRequest(LPD_MULTICAST_ADDR, LPD_MULTICAST_PORT,
@@ -73,11 +70,11 @@ void LpdMessageReceiverTest::testReceiveMessage()
 
   rcv.getSocket()->isReadable(5);
   msg = rcv.receiveMessage();
-  CPPUNIT_ASSERT(!msg);
+  REQUIRE(!msg);
 
   // No data available
   msg = rcv.receiveMessage();
-  CPPUNIT_ASSERT(!msg);
+  REQUIRE(!msg);
 }
 
 } // namespace aria2

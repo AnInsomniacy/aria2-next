@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -16,11 +16,8 @@
 
 namespace aria2 {
 
-class MSEHandshakeTest : public CppUnit::TestFixture {
+class MSEHandshakeTest {
 
-  CPPUNIT_TEST_SUITE(MSEHandshakeTest);
-  CPPUNIT_TEST(testHandshake);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<DownloadContext> dctx_;
@@ -44,7 +41,7 @@ public:
   void testHandshake();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(MSEHandshakeTest);
+A2_TEST(MSEHandshakeTest, testHandshake)
 
 namespace {
 std::pair<std::shared_ptr<SocketCore>, std::shared_ptr<SocketCore>>
@@ -154,9 +151,9 @@ void MSEHandshakeTest::testHandshake()
 
     doHandshake(initiator, receiver);
 
-    CPPUNIT_ASSERT_EQUAL(MSEHandshake::CRYPTO_PLAIN_TEXT,
+    REQUIRE_EQ(MSEHandshake::CRYPTO_PLAIN_TEXT,
                          initiator->getNegotiatedCryptoType());
-    CPPUNIT_ASSERT_EQUAL(MSEHandshake::CRYPTO_PLAIN_TEXT,
+    REQUIRE_EQ(MSEHandshake::CRYPTO_PLAIN_TEXT,
                          receiver->getNegotiatedCryptoType());
   }
   {
@@ -172,9 +169,9 @@ void MSEHandshakeTest::testHandshake()
 
     doHandshake(initiator, receiver);
 
-    CPPUNIT_ASSERT_EQUAL(MSEHandshake::CRYPTO_ARC4,
+    REQUIRE_EQ(MSEHandshake::CRYPTO_ARC4,
                          initiator->getNegotiatedCryptoType());
-    CPPUNIT_ASSERT_EQUAL(MSEHandshake::CRYPTO_ARC4,
+    REQUIRE_EQ(MSEHandshake::CRYPTO_ARC4,
                          receiver->getNegotiatedCryptoType());
   }
 }

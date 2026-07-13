@@ -1,6 +1,6 @@
 #include "DirectDiskAdaptor.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "FileEntry.h"
 #include "DefaultDiskWriter.h"
@@ -14,15 +14,8 @@
 
 namespace aria2 {
 
-class DirectDiskAdaptorTest : public CppUnit::TestFixture {
+class DirectDiskAdaptorTest {
 
-  CPPUNIT_TEST_SUITE(DirectDiskAdaptorTest);
-  CPPUNIT_TEST(testCutTrailingGarbage);
-  CPPUNIT_TEST(testNoAllocationEnablesSparse);
-  CPPUNIT_TEST(testAdaptiveAllocationUsesPlatformAllocator);
-  CPPUNIT_TEST(testWriteCache);
-  CPPUNIT_TEST(testWriteCache_mergesContiguousCells);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -36,7 +29,11 @@ public:
   void testWriteCache_mergesContiguousCells();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DirectDiskAdaptorTest);
+A2_TEST(DirectDiskAdaptorTest, testCutTrailingGarbage)
+A2_TEST(DirectDiskAdaptorTest, testNoAllocationEnablesSparse)
+A2_TEST(DirectDiskAdaptorTest, testAdaptiveAllocationUsesPlatformAllocator)
+A2_TEST(DirectDiskAdaptorTest, testWriteCache)
+A2_TEST(DirectDiskAdaptorTest, testWriteCache_mergesContiguousCells)
 
 void DirectDiskAdaptorTest::testCutTrailingGarbage()
 {
@@ -53,7 +50,7 @@ void DirectDiskAdaptorTest::testCutTrailingGarbage()
 
   adaptor.cutTrailingGarbage();
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)entry->getLength(),
+  REQUIRE_EQ((int64_t)entry->getLength(),
                        File(entry->getPath()).size());
 }
 
@@ -121,9 +118,9 @@ void DirectDiskAdaptorTest::testNoAllocationEnablesSparse()
 
   adaptor.initAndOpenFile();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, writerPtr->initAndOpenFileCount);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, writerPtr->enableSparseCount);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, writerPtr->truncateCount);
+  REQUIRE_EQ((size_t)1, writerPtr->initAndOpenFileCount);
+  REQUIRE_EQ((size_t)1, writerPtr->enableSparseCount);
+  REQUIRE_EQ((size_t)0, writerPtr->truncateCount);
 }
 
 void DirectDiskAdaptorTest::testAdaptiveAllocationUsesPlatformAllocator()
@@ -142,7 +139,7 @@ void DirectDiskAdaptorTest::testAdaptiveAllocationUsesPlatformAllocator()
   auto itr = adaptor.fileAllocationIterator();
 
 #ifdef HAVE_SOME_FALLOCATE
-  CPPUNIT_ASSERT(dynamic_cast<FallocFileAllocationIterator*>(itr.get()));
+  REQUIRE(dynamic_cast<FallocFileAllocationIterator*>(itr.get()));
 #endif // HAVE_SOME_FALLOCATE
 }
 
@@ -160,20 +157,20 @@ void DirectDiskAdaptorTest::testWriteCache()
   cache.cacheData(createDataCell(5, data1.c_str()));
   cache.cacheData(createDataCell(5 + data1.size(), data2.c_str()));
   adaptor->writeCache(&cache);
-  CPPUNIT_ASSERT_EQUAL(data1 + data2, dw->getString().substr(5));
+  REQUIRE_EQ(data1 + data2, dw->getString().substr(5));
 
   cache.clear();
   dw->setString("");
   cache.cacheData(createDataCell(4_k, data1.c_str()));
   adaptor->writeCache(&cache);
-  CPPUNIT_ASSERT_EQUAL(data1, dw->getString().substr(4_k));
+  REQUIRE_EQ(data1, dw->getString().substr(4_k));
 
   cache.clear();
   dw->setString("???????");
   cache.cacheData(createDataCell(0, "abc"));
   cache.cacheData(createDataCell(4, "efg"));
   adaptor->writeCache(&cache);
-  CPPUNIT_ASSERT_EQUAL(std::string("abc?efg"), dw->getString());
+  REQUIRE_EQ(std::string("abc?efg"), dw->getString());
 }
 
 namespace {
@@ -219,11 +216,11 @@ void DirectDiskAdaptorTest::testWriteCache_mergesContiguousCells()
 
   adaptor->writeCache(&cache);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, dw->writes.size());
-  CPPUNIT_ASSERT_EQUAL((int64_t)10, dw->writes[0].first);
-  CPPUNIT_ASSERT_EQUAL(std::string("abcdef"), dw->writes[0].second);
-  CPPUNIT_ASSERT_EQUAL((int64_t)20, dw->writes[1].first);
-  CPPUNIT_ASSERT_EQUAL(std::string("ghi"), dw->writes[1].second);
+  REQUIRE_EQ((size_t)2, dw->writes.size());
+  REQUIRE_EQ((int64_t)10, dw->writes[0].first);
+  REQUIRE_EQ(std::string("abcdef"), dw->writes[0].second);
+  REQUIRE_EQ((int64_t)20, dw->writes[1].first);
+  REQUIRE_EQ(std::string("ghi"), dw->writes[1].second);
 }
 
 } // namespace aria2

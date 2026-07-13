@@ -2,6 +2,7 @@
 
 set(ARIA2_TEST_SOURCES_BASE
   tests/AllTest.cc
+  tests/a2doctest.h
   tests/TestUtil.cc
   tests/TestUtil.h
   tests/SocketCoreTest.cc
@@ -244,7 +245,6 @@ set(ARIA2_TEST_SOURCES_ENABLE_METALINK
 )
 
 set(ARIA2_TEST_SOURCES_ENABLE_ASYNC_DNS
-  tests/AsyncNameResolverTest.cc
   tests/AsyncNameResolverManTest.cc
 )
 

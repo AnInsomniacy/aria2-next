@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DefaultPieceStorage.h"
 #include "DownloadContext.h"
@@ -22,20 +22,8 @@
 
 namespace aria2 {
 
-class BtDependencyTest : public CppUnit::TestFixture {
+class BtDependencyTest {
 
-  CPPUNIT_TEST_SUITE(BtDependencyTest);
-  CPPUNIT_TEST(testResolve);
-  CPPUNIT_TEST(testResolve_preservesChecksum);
-  CPPUNIT_TEST(testResolve_nullDependee);
-  CPPUNIT_TEST(testResolve_originalNameNoMatch);
-  CPPUNIT_TEST(testResolve_singleFileWithoutOriginalName);
-  CPPUNIT_TEST(testResolve_multiFile);
-  CPPUNIT_TEST(testResolve_metadata);
-  CPPUNIT_TEST(testResolve_loadError);
-  CPPUNIT_TEST(testResolve_dependeeFailure);
-  CPPUNIT_TEST(testResolve_dependeeInProgress);
-  CPPUNIT_TEST_SUITE_END();
 
   std::shared_ptr<RequestGroup>
   createDependant(const std::shared_ptr<Option>& option)
@@ -87,7 +75,16 @@ public:
   void testResolve_dependeeInProgress();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtDependencyTest);
+A2_TEST(BtDependencyTest, testResolve)
+A2_TEST(BtDependencyTest, testResolve_preservesChecksum)
+A2_TEST(BtDependencyTest, testResolve_nullDependee)
+A2_TEST(BtDependencyTest, testResolve_originalNameNoMatch)
+A2_TEST(BtDependencyTest, testResolve_singleFileWithoutOriginalName)
+A2_TEST(BtDependencyTest, testResolve_multiFile)
+A2_TEST(BtDependencyTest, testResolve_metadata)
+A2_TEST(BtDependencyTest, testResolve_loadError)
+A2_TEST(BtDependencyTest, testResolve_dependeeFailure)
+A2_TEST(BtDependencyTest, testResolve_dependeeInProgress)
 
 void BtDependencyTest::testResolve()
 {
@@ -99,17 +96,17 @@ void BtDependencyTest::testResolve()
   dependee->getPieceStorage()->markAllPiecesDone();
 
   BtDependency dep(dependant.get(), dependee);
-  CPPUNIT_ASSERT(dep.resolve());
+  REQUIRE(dep.resolve());
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("cd41c7fdddfd034a15a04d7ff881216e01c4ceaf"),
       bittorrent::getInfoHashString(dependant->getDownloadContext()));
   const std::shared_ptr<FileEntry>& firstFileEntry =
       dependant->getDownloadContext()->getFirstFileEntry();
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp/outfile.path"),
+  REQUIRE_EQ(std::string("/tmp/outfile.path"),
                        firstFileEntry->getPath());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, firstFileEntry->getRemainingUris().size());
-  CPPUNIT_ASSERT(firstFileEntry->isRequested());
+  REQUIRE_EQ((size_t)1, firstFileEntry->getRemainingUris().size());
+  REQUIRE(firstFileEntry->isRequested());
 }
 
 void BtDependencyTest::testResolve_preservesChecksum()
@@ -126,19 +123,19 @@ void BtDependencyTest::testResolve_preservesChecksum()
   dependee->getPieceStorage()->markAllPiecesDone();
 
   BtDependency dep(dependant.get(), dependee);
-  CPPUNIT_ASSERT(dep.resolve());
+  REQUIRE(dep.resolve());
 
   const std::shared_ptr<DownloadContext>& dctx =
       dependant->getDownloadContext();
-  CPPUNIT_ASSERT_EQUAL(std::string("sha-1"), dctx->getHashType());
-  CPPUNIT_ASSERT_EQUAL(digest, dctx->getDigest());
+  REQUIRE_EQ(std::string("sha-1"), dctx->getHashType());
+  REQUIRE_EQ(digest, dctx->getDigest());
 }
 
 void BtDependencyTest::testResolve_nullDependee()
 {
   std::shared_ptr<RequestGroup> dependant = createDependant(option_);
   BtDependency dep(dependant.get(), std::shared_ptr<RequestGroup>());
-  CPPUNIT_ASSERT(dep.resolve());
+  REQUIRE(dep.resolve());
 }
 
 void BtDependencyTest::testResolve_originalNameNoMatch()
@@ -153,9 +150,9 @@ void BtDependencyTest::testResolve_originalNameNoMatch()
   dependee->getPieceStorage()->markAllPiecesDone();
 
   BtDependency dep(dependant.get(), dependee);
-  CPPUNIT_ASSERT(dep.resolve());
+  REQUIRE(dep.resolve());
 
-  CPPUNIT_ASSERT(!dependant->getDownloadContext()->hasAttribute(CTX_ATTR_BT));
+  REQUIRE(!dependant->getDownloadContext()->hasAttribute(CTX_ATTR_BT));
 }
 
 void BtDependencyTest::testResolve_singleFileWithoutOriginalName()
@@ -168,8 +165,8 @@ void BtDependencyTest::testResolve_singleFileWithoutOriginalName()
   dependee->getPieceStorage()->getDiskAdaptor()->enableReadOnly();
   dependee->getPieceStorage()->markAllPiecesDone();
   BtDependency dep(dependant.get(), dependee);
-  CPPUNIT_ASSERT(dep.resolve());
-  CPPUNIT_ASSERT(dependant->getDownloadContext()->hasAttribute(CTX_ATTR_BT));
+  REQUIRE(dep.resolve());
+  REQUIRE(dependant->getDownloadContext()->hasAttribute(CTX_ATTR_BT));
 }
 
 void BtDependencyTest::testResolve_multiFile()
@@ -184,18 +181,18 @@ void BtDependencyTest::testResolve_multiFile()
   dependee->getPieceStorage()->markAllPiecesDone();
 
   BtDependency dep(dependant.get(), dependee);
-  CPPUNIT_ASSERT(dep.resolve());
+  REQUIRE(dep.resolve());
 
-  CPPUNIT_ASSERT(dependant->getDownloadContext()->hasAttribute(CTX_ATTR_BT));
+  REQUIRE(dependant->getDownloadContext()->hasAttribute(CTX_ATTR_BT));
 
   const std::vector<std::shared_ptr<FileEntry>>& fileEntries =
       dependant->getDownloadContext()->getFileEntries();
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp/outfile.path"),
+  REQUIRE_EQ(std::string("/tmp/outfile.path"),
                        fileEntries[0]->getPath());
-  CPPUNIT_ASSERT(fileEntries[0]->isRequested());
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp/aria2-test/aria2-0.2.2.tar.bz2"),
+  REQUIRE(fileEntries[0]->isRequested());
+  REQUIRE_EQ(std::string("/tmp/aria2-test/aria2-0.2.2.tar.bz2"),
                        fileEntries[1]->getPath());
-  CPPUNIT_ASSERT(!fileEntries[1]->isRequested());
+  REQUIRE(!fileEntries[1]->isRequested());
 }
 
 void BtDependencyTest::testResolve_metadata()
@@ -221,12 +218,12 @@ void BtDependencyTest::testResolve_metadata()
   dependee->getDownloadContext()->setAttribute(CTX_ATTR_BT,
                                                make_unique<TorrentAttribute>());
   BtDependency dep(dependant.get(), dependee);
-  CPPUNIT_ASSERT(dep.resolve());
+  REQUIRE(dep.resolve());
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("cd41c7fdddfd034a15a04d7ff881216e01c4ceaf"),
       bittorrent::getInfoHashString(dependant->getDownloadContext()));
-  CPPUNIT_ASSERT(
+  REQUIRE(
       dependant->getDownloadContext()->getFirstFileEntry()->isRequested());
 }
 
@@ -237,10 +234,10 @@ void BtDependencyTest::testResolve_loadError()
   dependee->getPieceStorage()->markAllPiecesDone();
 
   BtDependency dep(dependant.get(), dependee);
-  CPPUNIT_ASSERT(dep.resolve());
+  REQUIRE(dep.resolve());
 
-  CPPUNIT_ASSERT(!dependant->getDownloadContext()->hasAttribute(CTX_ATTR_BT));
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp/outfile.path"),
+  REQUIRE(!dependant->getDownloadContext()->hasAttribute(CTX_ATTR_BT));
+  REQUIRE_EQ(std::string("/tmp/outfile.path"),
                        dependant->getFirstFilePath());
 }
 
@@ -250,10 +247,10 @@ void BtDependencyTest::testResolve_dependeeFailure()
   auto dependee = createDependee(option_, "notExist", 40);
 
   BtDependency dep(dependant.get(), dependee);
-  CPPUNIT_ASSERT(dep.resolve());
+  REQUIRE(dep.resolve());
 
-  CPPUNIT_ASSERT(!dependant->getDownloadContext()->hasAttribute(CTX_ATTR_BT));
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp/outfile.path"),
+  REQUIRE(!dependant->getDownloadContext()->hasAttribute(CTX_ATTR_BT));
+  REQUIRE_EQ(std::string("/tmp/outfile.path"),
                        dependant->getFirstFilePath());
 }
 
@@ -265,8 +262,8 @@ void BtDependencyTest::testResolve_dependeeInProgress()
   dependee->increaseNumCommand();
 
   BtDependency dep(dependant.get(), dependee);
-  CPPUNIT_ASSERT(!dep.resolve());
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp/outfile.path"),
+  REQUIRE(!dep.resolve());
+  REQUIRE_EQ(std::string("/tmp/outfile.path"),
                        dependant->getFirstFilePath());
 }
 

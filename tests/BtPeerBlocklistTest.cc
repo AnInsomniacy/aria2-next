@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "DownloadEngine.h"
@@ -15,12 +15,7 @@
 
 namespace aria2 {
 
-class BtPeerBlocklistTest : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(BtPeerBlocklistTest);
-  CPPUNIT_TEST(testLoadBtnRules);
-  CPPUNIT_TEST(testRejectInvalidReload);
-  CPPUNIT_TEST(testStopBlocklistedPeerCommand);
-  CPPUNIT_TEST_SUITE_END();
+class BtPeerBlocklistTest {
 
 public:
   void testLoadBtnRules();
@@ -28,7 +23,9 @@ public:
   void testStopBlocklistedPeerCommand();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtPeerBlocklistTest);
+A2_TEST(BtPeerBlocklistTest, testLoadBtnRules)
+A2_TEST(BtPeerBlocklistTest, testRejectInvalidReload)
+A2_TEST(BtPeerBlocklistTest, testStopBlocklistedPeerCommand)
 
 void BtPeerBlocklistTest::testLoadBtnRules()
 {
@@ -42,14 +39,14 @@ void BtPeerBlocklistTest::testLoadBtnRules()
 
   blocklist.load(input, "memory");
 
-  CPPUNIT_ASSERT_EQUAL((size_t)4, blocklist.count());
-  CPPUNIT_ASSERT(blocklist.contains("203.0.113.25"));
-  CPPUNIT_ASSERT(!blocklist.contains("203.0.113.26"));
-  CPPUNIT_ASSERT(blocklist.contains("198.51.100.255"));
-  CPPUNIT_ASSERT(!blocklist.contains("198.51.101.0"));
-  CPPUNIT_ASSERT(blocklist.contains("2001:db8::1234"));
-  CPPUNIT_ASSERT(blocklist.contains("2001:db8:abcd:ffff::1"));
-  CPPUNIT_ASSERT(!blocklist.contains("2001:db8:abce::1"));
+  REQUIRE_EQ((size_t)4, blocklist.count());
+  REQUIRE(blocklist.contains("203.0.113.25"));
+  REQUIRE(!blocklist.contains("203.0.113.26"));
+  REQUIRE(blocklist.contains("198.51.100.255"));
+  REQUIRE(!blocklist.contains("198.51.101.0"));
+  REQUIRE(blocklist.contains("2001:db8::1234"));
+  REQUIRE(blocklist.contains("2001:db8:abcd:ffff::1"));
+  REQUIRE(!blocklist.contains("2001:db8:abce::1"));
 }
 
 void BtPeerBlocklistTest::testRejectInvalidReload()
@@ -59,10 +56,10 @@ void BtPeerBlocklistTest::testRejectInvalidReload()
   blocklist.load(valid, "valid");
 
   std::istringstream invalid("not-an-ip\n");
-  CPPUNIT_ASSERT_THROW(blocklist.load(invalid, "invalid"), Exception);
+  REQUIRE_THROWS_AS(blocklist.load(invalid, "invalid"), Exception);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, blocklist.count());
-  CPPUNIT_ASSERT(blocklist.contains("203.0.113.10"));
+  REQUIRE_EQ((size_t)1, blocklist.count());
+  REQUIRE(blocklist.contains("203.0.113.10"));
 }
 
 namespace {
@@ -110,10 +107,10 @@ void BtPeerBlocklistTest::testStopBlocklistedPeerCommand()
   std::istringstream input("203.0.113.0/24\n");
   engine.getBtRegistry()->getPeerBlocklist()->load(input, "memory");
 
-  CPPUNIT_ASSERT(command.execute());
-  CPPUNIT_ASSERT(command.blocked);
-  CPPUNIT_ASSERT(!command.executed);
-  CPPUNIT_ASSERT(!command.retried);
+  REQUIRE(command.execute());
+  REQUIRE(command.blocked);
+  REQUIRE(!command.executed);
+  REQUIRE(!command.retried);
 }
 
 } // namespace aria2

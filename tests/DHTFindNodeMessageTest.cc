@@ -1,6 +1,6 @@
 #include "DHTFindNodeMessage.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTNode.h"
 #include "Exception.h"
@@ -13,12 +13,8 @@
 
 namespace aria2 {
 
-class DHTFindNodeMessageTest : public CppUnit::TestFixture {
+class DHTFindNodeMessageTest {
 
-  CPPUNIT_TEST_SUITE(DHTFindNodeMessageTest);
-  CPPUNIT_TEST(testGetBencodedMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   std::shared_ptr<DHTNode> localNode_;
@@ -50,7 +46,8 @@ public:
   };
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTFindNodeMessageTest);
+A2_TEST(DHTFindNodeMessageTest, testGetBencodedMessage)
+A2_TEST(DHTFindNodeMessageTest, testDoReceivedAction)
 
 void DHTFindNodeMessageTest::testGetBencodedMessage()
 {
@@ -75,7 +72,7 @@ void DHTFindNodeMessageTest::testGetBencodedMessage()
   aDict->put("target", String::g(targetNode->getID(), DHT_ID_LENGTH));
   dict.put("a", std::move(aDict));
 
-  CPPUNIT_ASSERT_EQUAL(bencode2::encode(&dict), msgbody);
+  REQUIRE_EQ(bencode2::encode(&dict), msgbody);
 }
 
 void DHTFindNodeMessageTest::testDoReceivedAction()
@@ -100,14 +97,14 @@ void DHTFindNodeMessageTest::testDoReceivedAction()
 
   msg.doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, dispatcher.messageQueue_.size());
+  REQUIRE_EQ((size_t)1, dispatcher.messageQueue_.size());
   auto m = dynamic_cast<DHTFindNodeReplyMessage*>(
       dispatcher.messageQueue_[0].message_.get());
-  CPPUNIT_ASSERT(*localNode_ == *m->getLocalNode());
-  CPPUNIT_ASSERT(*remoteNode_ == *m->getRemoteNode());
-  CPPUNIT_ASSERT_EQUAL(std::string("find_node"), m->getMessageType());
-  CPPUNIT_ASSERT_EQUAL(msg.getTransactionID(), m->getTransactionID());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, m->getClosestKNodes().size());
+  REQUIRE(*localNode_ == *m->getLocalNode());
+  REQUIRE(*remoteNode_ == *m->getRemoteNode());
+  REQUIRE_EQ(std::string("find_node"), m->getMessageType());
+  REQUIRE_EQ(msg.getTransactionID(), m->getTransactionID());
+  REQUIRE_EQ((size_t)1, m->getClosestKNodes().size());
 }
 
 } // namespace aria2

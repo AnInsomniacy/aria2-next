@@ -4,7 +4,7 @@
 #include <sstream>
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTRoutingTableSerializer.h"
 #include "Exception.h"
@@ -16,12 +16,8 @@
 
 namespace aria2 {
 
-class DHTRoutingTableDeserializerTest : public CppUnit::TestFixture {
+class DHTRoutingTableDeserializerTest {
 
-  CPPUNIT_TEST_SUITE(DHTRoutingTableDeserializerTest);
-  CPPUNIT_TEST(testDeserialize);
-  CPPUNIT_TEST(testDeserialize6);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -33,7 +29,8 @@ public:
   void testDeserialize6();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTRoutingTableDeserializerTest);
+A2_TEST(DHTRoutingTableDeserializerTest, testDeserialize)
+A2_TEST(DHTRoutingTableDeserializerTest, testDeserialize6)
 
 void DHTRoutingTableDeserializerTest::testDeserialize()
 {
@@ -58,18 +55,18 @@ void DHTRoutingTableDeserializerTest::testDeserialize()
   DHTRoutingTableDeserializer d(AF_INET);
   d.deserialize(filename);
 
-  CPPUNIT_ASSERT(memcmp(localNode->getID(), d.getLocalNode()->getID(),
+  REQUIRE(memcmp(localNode->getID(), d.getLocalNode()->getID(),
                         DHT_ID_LENGTH) == 0);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, d.getNodes().size());
+  REQUIRE_EQ((size_t)2, d.getNodes().size());
   const std::vector<std::shared_ptr<DHTNode>>& dsnodes = d.getNodes();
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"), dsnodes[0]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6881, dsnodes[0]->getPort());
-  CPPUNIT_ASSERT(
+  REQUIRE_EQ(std::string("192.168.0.1"), dsnodes[0]->getIPAddress());
+  REQUIRE_EQ((uint16_t)6881, dsnodes[0]->getPort());
+  REQUIRE(
       memcmp(nodes[0]->getID(), dsnodes[0]->getID(), DHT_ID_LENGTH) == 0);
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.3"), dsnodes[1]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6883, dsnodes[1]->getPort());
-  CPPUNIT_ASSERT(
+  REQUIRE_EQ(std::string("192.168.0.3"), dsnodes[1]->getIPAddress());
+  REQUIRE_EQ((uint16_t)6883, dsnodes[1]->getPort());
+  REQUIRE(
       memcmp(nodes[2]->getID(), dsnodes[1]->getID(), DHT_ID_LENGTH) == 0);
 }
 
@@ -96,18 +93,18 @@ void DHTRoutingTableDeserializerTest::testDeserialize6()
   DHTRoutingTableDeserializer d(AF_INET6);
   d.deserialize(filename);
 
-  CPPUNIT_ASSERT(memcmp(localNode->getID(), d.getLocalNode()->getID(),
+  REQUIRE(memcmp(localNode->getID(), d.getLocalNode()->getID(),
                         DHT_ID_LENGTH) == 0);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, d.getNodes().size());
+  REQUIRE_EQ((size_t)2, d.getNodes().size());
   const std::vector<std::shared_ptr<DHTNode>>& dsnodes = d.getNodes();
-  CPPUNIT_ASSERT_EQUAL(std::string("2001::1001"), dsnodes[0]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6881, dsnodes[0]->getPort());
-  CPPUNIT_ASSERT(
+  REQUIRE_EQ(std::string("2001::1001"), dsnodes[0]->getIPAddress());
+  REQUIRE_EQ((uint16_t)6881, dsnodes[0]->getPort());
+  REQUIRE(
       memcmp(nodes[0]->getID(), dsnodes[0]->getID(), DHT_ID_LENGTH) == 0);
-  CPPUNIT_ASSERT_EQUAL(std::string("2001::1003"), dsnodes[1]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6883, dsnodes[1]->getPort());
-  CPPUNIT_ASSERT(
+  REQUIRE_EQ(std::string("2001::1003"), dsnodes[1]->getIPAddress());
+  REQUIRE_EQ((uint16_t)6883, dsnodes[1]->getPort());
+  REQUIRE(
       memcmp(nodes[2]->getID(), dsnodes[1]->getID(), DHT_ID_LENGTH) == 0);
 }
 

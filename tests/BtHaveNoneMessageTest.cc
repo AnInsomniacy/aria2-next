@@ -2,21 +2,15 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "Peer.h"
 
 namespace aria2 {
 
-class BtHaveNoneMessageTest : public CppUnit::TestFixture {
+class BtHaveNoneMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtHaveNoneMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -28,21 +22,24 @@ public:
   void testToString();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtHaveNoneMessageTest);
+A2_TEST(BtHaveNoneMessageTest, testCreate)
+A2_TEST(BtHaveNoneMessageTest, testCreateMessage)
+A2_TEST(BtHaveNoneMessageTest, testDoReceivedAction)
+A2_TEST(BtHaveNoneMessageTest, testToString)
 
 void BtHaveNoneMessageTest::testCreate()
 {
   unsigned char msg[5];
   bittorrent::createPeerMessageString(msg, sizeof(msg), 1, 15);
   std::shared_ptr<BtHaveNoneMessage> pm(BtHaveNoneMessage::create(&msg[4], 1));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)15, pm->getId());
+  REQUIRE_EQ((uint8_t)15, pm->getId());
 
   // case: payload size is wrong
   try {
     unsigned char msg[6];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 2, 15);
     BtHaveNoneMessage::create(&msg[4], 2);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -51,7 +48,7 @@ void BtHaveNoneMessageTest::testCreate()
     unsigned char msg[5];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 1, 16);
     BtHaveNoneMessage::create(&msg[4], 1);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -63,8 +60,8 @@ void BtHaveNoneMessageTest::testCreateMessage()
   unsigned char data[5];
   bittorrent::createPeerMessageString(data, sizeof(data), 1, 15);
   auto rawmsg = msg.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)5, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)5, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtHaveNoneMessageTest::testDoReceivedAction()
@@ -79,7 +76,7 @@ void BtHaveNoneMessageTest::testDoReceivedAction()
   peer->setFastExtensionEnabled(false);
   try {
     msg.doReceivedAction();
-    CPPUNIT_FAIL("an exception must be thrown.");
+    FAIL("an exception must be thrown.");
   }
   catch (...) {
   }
@@ -88,7 +85,7 @@ void BtHaveNoneMessageTest::testDoReceivedAction()
 void BtHaveNoneMessageTest::testToString()
 {
   BtHaveNoneMessage msg;
-  CPPUNIT_ASSERT_EQUAL(std::string("have none"), msg.toString());
+  REQUIRE_EQ(std::string("have none"), msg.toString());
 }
 
 } // namespace aria2

@@ -1,7 +1,7 @@
 #include "util.h"
 #include "util_security.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 // Test vectors from RFC 6234
 enum {
@@ -210,15 +210,8 @@ static struct hmachash {
 
 namespace aria2 {
 
-class SecurityTest : public CppUnit::TestFixture {
+class SecurityTest {
 
-  CPPUNIT_TEST_SUITE(SecurityTest);
-  CPPUNIT_TEST(testCompareByte);
-  CPPUNIT_TEST(testCompareArray);
-  CPPUNIT_TEST(testHMAC);
-  CPPUNIT_TEST(testHMACRandom);
-  CPPUNIT_TEST(testPBKDF2);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -231,37 +224,41 @@ public:
   void testPBKDF2();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(SecurityTest);
+A2_TEST(SecurityTest, testCompareByte)
+A2_TEST(SecurityTest, testCompareArray)
+A2_TEST(SecurityTest, testHMAC)
+A2_TEST(SecurityTest, testHMACRandom)
+A2_TEST(SecurityTest, testPBKDF2)
 
 void SecurityTest::testCompareByte()
 {
-  CPPUNIT_ASSERT(util::security::compare('a', 'a'));
-  CPPUNIT_ASSERT(util::security::compare('\0', '\0'));
-  CPPUNIT_ASSERT(util::security::compare(0xff, 0xff));
+  REQUIRE(util::security::compare('a', 'a'));
+  REQUIRE(util::security::compare('\0', '\0'));
+  REQUIRE(util::security::compare(0xff, 0xff));
 
-  CPPUNIT_ASSERT(!util::security::compare('a', 'f'));
-  CPPUNIT_ASSERT(!util::security::compare('\xfe', 'f'));
-  CPPUNIT_ASSERT(!util::security::compare(0, 0xff));
+  REQUIRE(!util::security::compare('a', 'f'));
+  REQUIRE(!util::security::compare('\xfe', 'f'));
+  REQUIRE(!util::security::compare(0, 0xff));
 }
 
 void SecurityTest::testCompareArray()
 {
-  CPPUNIT_ASSERT(util::security::compare("", "", 0));
-  CPPUNIT_ASSERT(util::security::compare("a", "a", 1));
-  CPPUNIT_ASSERT(util::security::compare("a", "ab", 1));
-  CPPUNIT_ASSERT(util::security::compare("a\0b", "a\0b", 3));
-  CPPUNIT_ASSERT(
+  REQUIRE(util::security::compare("", "", 0));
+  REQUIRE(util::security::compare("a", "a", 1));
+  REQUIRE(util::security::compare("a", "ab", 1));
+  REQUIRE(util::security::compare("a\0b", "a\0b", 3));
+  REQUIRE(
       util::security::compare("a\0b", "a\0b", 4)); // implicit null-termination
-  CPPUNIT_ASSERT(util::security::compare("a\0", "a\0b", 2));
-  CPPUNIT_ASSERT(util::security::compare("a\xff", "a\xff", 2));
+  REQUIRE(util::security::compare("a\0", "a\0b", 2));
+  REQUIRE(util::security::compare("a\xff", "a\xff", 2));
 
-  CPPUNIT_ASSERT(!util::security::compare("a", "b", 1));
-  CPPUNIT_ASSERT(!util::security::compare("a", "bb", 1));
-  CPPUNIT_ASSERT(!util::security::compare("a\1b", "a\0b", 3));
-  CPPUNIT_ASSERT(
+  REQUIRE(!util::security::compare("a", "b", 1));
+  REQUIRE(!util::security::compare("a", "bb", 1));
+  REQUIRE(!util::security::compare("a\1b", "a\0b", 3));
+  REQUIRE(
       !util::security::compare("a\1b", "a\0b", 4)); // implicit null-termination
-  CPPUNIT_ASSERT(!util::security::compare("a\4", "a\0b", 2));
-  CPPUNIT_ASSERT(!util::security::compare("a\0", "a\xff", 2));
+  REQUIRE(!util::security::compare("a\4", "a\0b", 2));
+  REQUIRE(!util::security::compare("a\0", "a\xff", 2));
 }
 
 static struct {
@@ -294,11 +291,11 @@ void SecurityTest::testHMAC()
       auto h2 = util::security::HMAC::create(hmac.hash, key, keylen - 1);
       auto r = h->getResult(data, datalen);
       auto hr = util::toUpper(util::toHex(r.getBytes()));
-      CPPUNIT_ASSERT(util::security::compare(hr.data(), result, resultlen));
-      CPPUNIT_ASSERT(r == r);
+      REQUIRE(util::security::compare(hr.data(), result, resultlen));
+      REQUIRE(r == r);
       auto r2 = r;
-      CPPUNIT_ASSERT(r == r2);
-      CPPUNIT_ASSERT(r != h2->getResult(data, datalen));
+      REQUIRE(r == r2);
+      REQUIRE(r != h2->getResult(data, datalen));
     }
   }
 }
@@ -306,9 +303,9 @@ void SecurityTest::testHMAC()
 void SecurityTest::testHMACRandom()
 {
   auto h = util::security::HMAC::createRandom();
-  CPPUNIT_ASSERT(h->getResult("abc") == h->getResult("abc"));
+  REQUIRE(h->getResult("abc") == h->getResult("abc"));
   auto r = h->getResult("def");
-  CPPUNIT_ASSERT(r == h->getResult("def"));
+  REQUIRE(r == h->getResult("def"));
 
   // Sanity check. At the very least 3 out of ten times 2 random hmacs should
   // be different from each other and the 0-secret hmac.
@@ -317,15 +314,15 @@ void SecurityTest::testHMACRandom()
     auto h1 = util::security::HMAC::createRandom("sha-1");
     auto h2 = util::security::HMAC::createRandom("sha-1");
     auto h3 = util::security::HMAC::create("sha-1", "");
-    CPPUNIT_ASSERT(h1->getResult("abc") == h1->getResult("abc"));
-    CPPUNIT_ASSERT(h2->getResult("abc") == h2->getResult("abc"));
+    REQUIRE(h1->getResult("abc") == h1->getResult("abc"));
+    REQUIRE(h2->getResult("abc") == h2->getResult("abc"));
     if (h1->getResult("abc") != h2->getResult("abc") &&
         h1->getResult("abc") != h3->getResult("abc") &&
         h2->getResult("abc") != h3->getResult("abc")) {
       ++diff;
     }
   }
-  CPPUNIT_ASSERT(diff > 3);
+  REQUIRE(diff > 3);
 }
 
 static struct pbkdf2 {
@@ -411,8 +408,8 @@ void SecurityTest::testPBKDF2()
         util::toHex(e.getBytes()).c_str()
         );
 #endif
-    CPPUNIT_ASSERT(r == e);
-    CPPUNIT_ASSERT(r.getBytes() == std::string((char*)test.key, kl));
+    REQUIRE(r == e);
+    REQUIRE(r.getBytes() == std::string((char*)test.key, kl));
   }
 }
 

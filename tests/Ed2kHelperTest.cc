@@ -3,7 +3,7 @@
 #include "Ed2kKadState.h"
 
 #include <algorithm>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 #include <cstring>
 #include <zlib.h>
 
@@ -15,53 +15,8 @@ namespace aria2 {
 
 namespace ed2k {
 
-class Ed2kHelperTest : public CppUnit::TestFixture {
+class Ed2kHelperTest {
 
-  CPPUNIT_TEST_SUITE(Ed2kHelperTest);
-  CPPUNIT_TEST(testParseFileLink);
-  CPPUNIT_TEST(testParseFileLinkWithOptions);
-  CPPUNIT_TEST(testParseFileLinkWithSourceCryptOptions);
-  CPPUNIT_TEST(testParseServerLink);
-  CPPUNIT_TEST(testParseSearchLink);
-  CPPUNIT_TEST(testParseRejectsMalformedLinks);
-  CPPUNIT_TEST(testSerializeFileLink);
-  CPPUNIT_TEST(testPacketHelpers);
-  CPPUNIT_TEST(testTagParser);
-  CPPUNIT_TEST(testProtocolPayloads);
-  CPPUNIT_TEST(testServerPayloadParsers);
-  CPPUNIT_TEST(testSearchRequestPayload);
-  CPPUNIT_TEST(testSearchResultPayload);
-  CPPUNIT_TEST(testKadKeywordTarget);
-  CPPUNIT_TEST(testKadSearchEntriesToSearchResults);
-  CPPUNIT_TEST(testKadSourceEndpointPreservesUdpAndCryptMetadata);
-  CPPUNIT_TEST(testSourceExchange2Payloads);
-  CPPUNIT_TEST(testMultipacketPayloads);
-  CPPUNIT_TEST(testCompressedPartPayloads);
-  CPPUNIT_TEST(testInflateCompressedPartData);
-  CPPUNIT_TEST(testCompressedPartInflaterKeepsBlockOwnerAcrossChunks);
-  CPPUNIT_TEST(testInflatePackedPacketPayload);
-  CPPUNIT_TEST(testEmuleInfoPayload);
-  CPPUNIT_TEST(testLocalEmulePeerInfoCapabilities);
-  CPPUNIT_TEST(testPeerHelloPayload);
-  CPPUNIT_TEST(testUdpReaskPayloads);
-  CPPUNIT_TEST(testAichPayloads);
-  CPPUNIT_TEST(testAichRecoveryData);
-  CPPUNIT_TEST(testAichHashTree);
-  CPPUNIT_TEST(testAichHashTreeKeepsPartLevel);
-  CPPUNIT_TEST(testKadUInt128ConversionMatchesAMule);
-  CPPUNIT_TEST(testKadPacketPayloads);
-  CPPUNIT_TEST(testKadDirectCallbackPayload);
-  CPPUNIT_TEST(testKadBuddyCallbackPayload);
-  CPPUNIT_TEST(testKadObfuscatedPacketRoundTrip);
-  CPPUNIT_TEST(testKadSearchPublishAndFirewallPayloads);
-  CPPUNIT_TEST(testKadRoutingStatePayload);
-  CPPUNIT_TEST(testServerStatePayload);
-  CPPUNIT_TEST(testNodesDatParser);
-  CPPUNIT_TEST(testServerMetParser);
-  CPPUNIT_TEST(testMd4Digest);
-  CPPUNIT_TEST(testRootHash);
-  CPPUNIT_TEST(testHashSetPartCount);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testParseFileLink();
@@ -109,7 +64,49 @@ public:
   void testHashSetPartCount();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(Ed2kHelperTest);
+A2_TEST(Ed2kHelperTest, testParseFileLink)
+A2_TEST(Ed2kHelperTest, testParseFileLinkWithOptions)
+A2_TEST(Ed2kHelperTest, testParseFileLinkWithSourceCryptOptions)
+A2_TEST(Ed2kHelperTest, testParseServerLink)
+A2_TEST(Ed2kHelperTest, testParseSearchLink)
+A2_TEST(Ed2kHelperTest, testParseRejectsMalformedLinks)
+A2_TEST(Ed2kHelperTest, testSerializeFileLink)
+A2_TEST(Ed2kHelperTest, testPacketHelpers)
+A2_TEST(Ed2kHelperTest, testTagParser)
+A2_TEST(Ed2kHelperTest, testProtocolPayloads)
+A2_TEST(Ed2kHelperTest, testServerPayloadParsers)
+A2_TEST(Ed2kHelperTest, testSearchRequestPayload)
+A2_TEST(Ed2kHelperTest, testSearchResultPayload)
+A2_TEST(Ed2kHelperTest, testKadKeywordTarget)
+A2_TEST(Ed2kHelperTest, testKadSearchEntriesToSearchResults)
+A2_TEST(Ed2kHelperTest, testKadSourceEndpointPreservesUdpAndCryptMetadata)
+A2_TEST(Ed2kHelperTest, testSourceExchange2Payloads)
+A2_TEST(Ed2kHelperTest, testMultipacketPayloads)
+A2_TEST(Ed2kHelperTest, testCompressedPartPayloads)
+A2_TEST(Ed2kHelperTest, testInflateCompressedPartData)
+A2_TEST(Ed2kHelperTest, testCompressedPartInflaterKeepsBlockOwnerAcrossChunks)
+A2_TEST(Ed2kHelperTest, testInflatePackedPacketPayload)
+A2_TEST(Ed2kHelperTest, testEmuleInfoPayload)
+A2_TEST(Ed2kHelperTest, testLocalEmulePeerInfoCapabilities)
+A2_TEST(Ed2kHelperTest, testPeerHelloPayload)
+A2_TEST(Ed2kHelperTest, testUdpReaskPayloads)
+A2_TEST(Ed2kHelperTest, testAichPayloads)
+A2_TEST(Ed2kHelperTest, testAichRecoveryData)
+A2_TEST(Ed2kHelperTest, testAichHashTree)
+A2_TEST(Ed2kHelperTest, testAichHashTreeKeepsPartLevel)
+A2_TEST(Ed2kHelperTest, testKadUInt128ConversionMatchesAMule)
+A2_TEST(Ed2kHelperTest, testKadPacketPayloads)
+A2_TEST(Ed2kHelperTest, testKadDirectCallbackPayload)
+A2_TEST(Ed2kHelperTest, testKadBuddyCallbackPayload)
+A2_TEST(Ed2kHelperTest, testKadObfuscatedPacketRoundTrip)
+A2_TEST(Ed2kHelperTest, testKadSearchPublishAndFirewallPayloads)
+A2_TEST(Ed2kHelperTest, testKadRoutingStatePayload)
+A2_TEST(Ed2kHelperTest, testServerStatePayload)
+A2_TEST(Ed2kHelperTest, testNodesDatParser)
+A2_TEST(Ed2kHelperTest, testServerMetParser)
+A2_TEST(Ed2kHelperTest, testMd4Digest)
+A2_TEST(Ed2kHelperTest, testRootHash)
+A2_TEST(Ed2kHelperTest, testHashSetPartCount)
 
 void Ed2kHelperTest::testParseFileLink()
 {
@@ -117,23 +114,23 @@ void Ed2kHelperTest::testParseFileLink()
       "ed2k://|file|aria2%20next.bin|12345|"
       "0123456789ABCDEF0123456789ABCDEF|/");
 
-  CPPUNIT_ASSERT_EQUAL(LinkType::FILE, link.type);
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2 next.bin"), link.name);
-  CPPUNIT_ASSERT_EQUAL((int64_t)12345, link.size);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(LinkType::FILE, link.type);
+  REQUIRE_EQ(std::string("aria2 next.bin"), link.name);
+  REQUIRE_EQ((int64_t)12345, link.size);
+  REQUIRE_EQ(
       std::string("0123456789abcdef0123456789abcdef"),
       util::toHex(link.hash));
 
   auto unsafeName = parseLink(
       "ed2k://|file|aria2%2Fnext%5Ctest.bin|12345|"
       "0123456789ABCDEF0123456789ABCDEF|/");
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2_next_test.bin"), unsafeName.name);
+  REQUIRE_EQ(std::string("aria2_next_test.bin"), unsafeName.name);
 
   auto encodedSeparators = parseLink(
       "ed2k://%7Cfile%7Caria2%20next.bin%7C12345%7C"
       "0123456789ABCDEF0123456789ABCDEF%7C/");
-  CPPUNIT_ASSERT_EQUAL(LinkType::FILE, encodedSeparators.type);
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2 next.bin"), encodedSeparators.name);
+  REQUIRE_EQ(LinkType::FILE, encodedSeparators.type);
+  REQUIRE_EQ(std::string("aria2 next.bin"), encodedSeparators.name);
 }
 
 void Ed2kHelperTest::testParseFileLinkWithOptions()
@@ -146,17 +143,17 @@ void Ed2kHelperTest::testParseFileLinkWithOptions()
       "h=ABCDEFGHIJKLMNOPQRSTUVWXYZ234567|"
       "sources,192.0.2.1:4662,198.51.100.7:7777|/");
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, link.pieceHashes.size());
-  CPPUNIT_ASSERT_EQUAL(std::string(16, '\x11'), link.pieceHashes[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string(16, '\x22'), link.pieceHashes[1]);
+  REQUIRE_EQ((size_t)2, link.pieceHashes.size());
+  REQUIRE_EQ(std::string(16, '\x11'), link.pieceHashes[0]);
+  REQUIRE_EQ(std::string(16, '\x22'), link.pieceHashes[1]);
   std::string aichRoot("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567");
-  CPPUNIT_ASSERT_EQUAL(base32::decode(aichRoot.begin(), aichRoot.end()),
+  REQUIRE_EQ(base32::decode(aichRoot.begin(), aichRoot.end()),
                        link.aichHash);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, link.sources.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("192.0.2.1"), link.sources[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, link.sources[0].port);
-  CPPUNIT_ASSERT_EQUAL(std::string("198.51.100.7"), link.sources[1].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)7777, link.sources[1].port);
+  REQUIRE_EQ((size_t)2, link.sources.size());
+  REQUIRE_EQ(std::string("192.0.2.1"), link.sources[0].host);
+  REQUIRE_EQ((uint16_t)4662, link.sources[0].port);
+  REQUIRE_EQ(std::string("198.51.100.7"), link.sources[1].host);
+  REQUIRE_EQ((uint16_t)7777, link.sources[1].port);
 }
 
 void Ed2kHelperTest::testParseFileLinkWithSourceCryptOptions()
@@ -168,40 +165,40 @@ void Ed2kHelperTest::testParseFileLinkWithSourceCryptOptions()
       "11111111111111111111111111111111,"
       "peer.example.test:7777:1|/");
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, link.sources.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.1"), link.sources[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, link.sources[0].port);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)131, link.sources[0].cryptOptions);
-  CPPUNIT_ASSERT_EQUAL(std::string(16, '\x11'), link.sources[0].userHash);
-  CPPUNIT_ASSERT_EQUAL(std::string("peer.example.test"), link.sources[1].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)7777, link.sources[1].port);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)1, link.sources[1].cryptOptions);
-  CPPUNIT_ASSERT(link.sources[1].userHash.empty());
+  REQUIRE_EQ((size_t)2, link.sources.size());
+  REQUIRE_EQ(std::string("203.0.113.1"), link.sources[0].host);
+  REQUIRE_EQ((uint16_t)4662, link.sources[0].port);
+  REQUIRE_EQ((uint16_t)131, link.sources[0].cryptOptions);
+  REQUIRE_EQ(std::string(16, '\x11'), link.sources[0].userHash);
+  REQUIRE_EQ(std::string("peer.example.test"), link.sources[1].host);
+  REQUIRE_EQ((uint16_t)7777, link.sources[1].port);
+  REQUIRE_EQ((uint16_t)1, link.sources[1].cryptOptions);
+  REQUIRE(link.sources[1].userHash.empty());
 
   auto reparsed = parseLink(toFileLink(link));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)131, reparsed.sources[0].cryptOptions);
-  CPPUNIT_ASSERT_EQUAL(std::string(16, '\x11'), reparsed.sources[0].userHash);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)1, reparsed.sources[1].cryptOptions);
+  REQUIRE_EQ((uint16_t)131, reparsed.sources[0].cryptOptions);
+  REQUIRE_EQ(std::string(16, '\x11'), reparsed.sources[0].userHash);
+  REQUIRE_EQ((uint16_t)1, reparsed.sources[1].cryptOptions);
 }
 
 void Ed2kHelperTest::testParseServerLink()
 {
   auto server = parseLink("ed2k://|server|203.0.113.10|4232|/");
 
-  CPPUNIT_ASSERT_EQUAL(LinkType::SERVER, server.type);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), server.server.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4232, server.server.port);
+  REQUIRE_EQ(LinkType::SERVER, server.type);
+  REQUIRE_EQ(std::string("203.0.113.10"), server.server.host);
+  REQUIRE_EQ((uint16_t)4232, server.server.port);
 
   auto serverList =
       parseLink("ed2k://|serverlist|http%3A%2F%2Fexample.test%2Fserver.met|/");
-  CPPUNIT_ASSERT_EQUAL(LinkType::SERVER_LIST, serverList.type);
-  CPPUNIT_ASSERT_EQUAL(std::string("http://example.test/server.met"),
+  REQUIRE_EQ(LinkType::SERVER_LIST, serverList.type);
+  REQUIRE_EQ(std::string("http://example.test/server.met"),
                        serverList.url);
 
   auto nodes =
       parseLink("ed2k://|nodeslist|https%3A%2F%2Fexample.test%2Fnodes.dat|/");
-  CPPUNIT_ASSERT_EQUAL(LinkType::NODES_LIST, nodes.type);
-  CPPUNIT_ASSERT_EQUAL(std::string("https://example.test/nodes.dat"),
+  REQUIRE_EQ(LinkType::NODES_LIST, nodes.type);
+  REQUIRE_EQ(std::string("https://example.test/nodes.dat"),
                        nodes.url);
 }
 
@@ -209,35 +206,35 @@ void Ed2kHelperTest::testParseSearchLink()
 {
   auto search = parseLink("ed2k://|search|linux%20iso|/");
 
-  CPPUNIT_ASSERT_EQUAL(LinkType::SEARCH, search.type);
-  CPPUNIT_ASSERT_EQUAL(std::string("linux iso"), search.name);
+  REQUIRE_EQ(LinkType::SEARCH, search.type);
+  REQUIRE_EQ(std::string("linux iso"), search.name);
 }
 
 void Ed2kHelperTest::testParseRejectsMalformedLinks()
 {
-  CPPUNIT_ASSERT_THROW(parseLink("http://example.test/file"),
+  REQUIRE_THROWS_AS(parseLink("http://example.test/file"),
                        RecoverableException);
-  CPPUNIT_ASSERT_THROW(
+  REQUIRE_THROWS_AS(
       parseLink("ed2k://|file|bad.bin|x|0123456789abcdef0123456789abcdef|/"),
       RecoverableException);
-  CPPUNIT_ASSERT_THROW(parseLink("ed2k://|file|bad.bin|1|not-a-hash|/"),
+  REQUIRE_THROWS_AS(parseLink("ed2k://|file|bad.bin|1|not-a-hash|/"),
                        RecoverableException);
-  CPPUNIT_ASSERT_THROW(
+  REQUIRE_THROWS_AS(
       parseLink("ed2k://|file|empty.bin|0|0123456789abcdef0123456789abcdef|/"),
       RecoverableException);
-  CPPUNIT_ASSERT_THROW(
+  REQUIRE_THROWS_AS(
       parseLink("ed2k://|file|huge.bin|274877906944|"
                 "0123456789abcdef0123456789abcdef|/"),
       RecoverableException);
-  CPPUNIT_ASSERT_THROW(
+  REQUIRE_THROWS_AS(
       parseLink("ed2k://|file|bad-parts.bin|1|"
                 "0123456789abcdef0123456789abcdef|p=|/"),
       RecoverableException);
-  CPPUNIT_ASSERT_THROW(
+  REQUIRE_THROWS_AS(
       parseLink("ed2k://|file|bad-aich.bin|1|"
                 "0123456789abcdef0123456789abcdef|h=ABC|/"),
       RecoverableException);
-  CPPUNIT_ASSERT_THROW(parseLink("ed2k://|server|127.0.0.1|70000|/"),
+  REQUIRE_THROWS_AS(parseLink("ed2k://|server|127.0.0.1|70000|/"),
                        RecoverableException);
 }
 
@@ -253,13 +250,13 @@ void Ed2kHelperTest::testSerializeFileLink()
 
   auto reparsed = parseLink(toFileLink(link));
 
-  CPPUNIT_ASSERT_EQUAL(link.name, reparsed.name);
-  CPPUNIT_ASSERT_EQUAL(link.size, reparsed.size);
-  CPPUNIT_ASSERT_EQUAL(link.hash, reparsed.hash);
-  CPPUNIT_ASSERT_EQUAL(link.pieceHashes[0], reparsed.pieceHashes[0]);
-  CPPUNIT_ASSERT_EQUAL(link.aichHash, reparsed.aichHash);
-  CPPUNIT_ASSERT_EQUAL(std::string("192.0.2.1"), reparsed.sources[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, reparsed.sources[0].port);
+  REQUIRE_EQ(link.name, reparsed.name);
+  REQUIRE_EQ(link.size, reparsed.size);
+  REQUIRE_EQ(link.hash, reparsed.hash);
+  REQUIRE_EQ(link.pieceHashes[0], reparsed.pieceHashes[0]);
+  REQUIRE_EQ(link.aichHash, reparsed.aichHash);
+  REQUIRE_EQ(std::string("192.0.2.1"), reparsed.sources[0].host);
+  REQUIRE_EQ((uint16_t)4662, reparsed.sources[0].port);
 }
 
 void Ed2kHelperTest::testPacketHelpers()
@@ -268,23 +265,23 @@ void Ed2kHelperTest::testPacketHelpers()
   payload += "abc";
   auto packet = createPacket(PROTO_EDONKEY, OP_GETSOURCES, payload);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)9, packet.size());
-  CPPUNIT_ASSERT_EQUAL((unsigned char)PROTO_EDONKEY,
+  REQUIRE_EQ((size_t)9, packet.size());
+  REQUIRE_EQ((unsigned char)PROTO_EDONKEY,
                        (unsigned char)packet[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string("04000000"), util::toHex(packet.substr(1, 4)));
-  CPPUNIT_ASSERT_EQUAL((unsigned char)OP_GETSOURCES,
+  REQUIRE_EQ(std::string("04000000"), util::toHex(packet.substr(1, 4)));
+  REQUIRE_EQ((unsigned char)OP_GETSOURCES,
                        (unsigned char)packet[5]);
-  CPPUNIT_ASSERT_EQUAL(std::string("abc"), packet.substr(6));
+  REQUIRE_EQ(std::string("abc"), packet.substr(6));
 
   PacketHeader header;
-  CPPUNIT_ASSERT(readPacketHeader(header, packet.data(), packet.size()));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)PROTO_EDONKEY, header.protocol);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)4, header.size);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)OP_GETSOURCES, header.opcode);
-  CPPUNIT_ASSERT_EQUAL((size_t)3, header.payloadSize());
+  REQUIRE(readPacketHeader(header, packet.data(), packet.size()));
+  REQUIRE_EQ((uint8_t)PROTO_EDONKEY, header.protocol);
+  REQUIRE_EQ((uint32_t)4, header.size);
+  REQUIRE_EQ((uint8_t)OP_GETSOURCES, header.opcode);
+  REQUIRE_EQ((size_t)3, header.payloadSize());
 
-  CPPUNIT_ASSERT_EQUAL(std::string("78563412"), util::toHex(packUInt32(0x12345678)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x12345678,
+  REQUIRE_EQ(std::string("78563412"), util::toHex(packUInt32(0x12345678)));
+  REQUIRE_EQ((uint32_t)0x12345678,
                        readUInt32(std::string("\x78\x56\x34\x12", 4).data()));
 }
 
@@ -311,17 +308,17 @@ void Ed2kHelperTest::testTagParser()
   payload += packUInt32(0x6f71c138);
 
   std::vector<Tag> tags;
-  CPPUNIT_ASSERT(parseTagList(tags, payload));
-  CPPUNIT_ASSERT_EQUAL((size_t)5, tags.size());
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0x01, tags[0].id);
-  CPPUNIT_ASSERT_EQUAL(std::string("video.mkv"), tags[0].stringValue);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0x15, tags[1].id);
-  CPPUNIT_ASSERT_EQUAL((uint64_t)77, tags[1].intValue);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0x02, tags[2].id);
-  CPPUNIT_ASSERT_EQUAL((uint64_t)0x100000005LL, tags[2].intValue);
-  CPPUNIT_ASSERT_EQUAL(std::string("Vid"), tags[3].stringValue);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0xfe, tags[4].id);
-  CPPUNIT_ASSERT_EQUAL((uint64_t)0x6f71c138, tags[4].intValue);
+  REQUIRE(parseTagList(tags, payload));
+  REQUIRE_EQ((size_t)5, tags.size());
+  REQUIRE_EQ((uint8_t)0x01, tags[0].id);
+  REQUIRE_EQ(std::string("video.mkv"), tags[0].stringValue);
+  REQUIRE_EQ((uint8_t)0x15, tags[1].id);
+  REQUIRE_EQ((uint64_t)77, tags[1].intValue);
+  REQUIRE_EQ((uint8_t)0x02, tags[2].id);
+  REQUIRE_EQ((uint64_t)0x100000005LL, tags[2].intValue);
+  REQUIRE_EQ(std::string("Vid"), tags[3].stringValue);
+  REQUIRE_EQ((uint8_t)0xfe, tags[4].id);
+  REQUIRE_EQ((uint64_t)0x6f71c138, tags[4].intValue);
 }
 
 void Ed2kHelperTest::testProtocolPayloads()
@@ -334,26 +331,26 @@ void Ed2kHelperTest::testProtocolPayloads()
 
   auto login = createLoginRequestPayload(clientHash, 0x04030201, 0,
                                          "aria2-next");
-  CPPUNIT_ASSERT_EQUAL(clientHash, login.substr(0, HASH_LENGTH));
-  CPPUNIT_ASSERT_EQUAL(std::string("010203040000"),
+  REQUIRE_EQ(clientHash, login.substr(0, HASH_LENGTH));
+  REQUIRE_EQ(std::string("010203040000"),
                        util::toHex(login.substr(16, 6)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)4, readUInt32(login.data() + 22));
+  REQUIRE_EQ((uint32_t)4, readUInt32(login.data() + 22));
 
   auto source32 = createGetSourcesPayload(fileHash, 9728001);
-  CPPUNIT_ASSERT_EQUAL((size_t)20, source32.size());
-  CPPUNIT_ASSERT_EQUAL(fileHash, source32.substr(0, HASH_LENGTH));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)9728001, readUInt32(source32.data() + 16));
+  REQUIRE_EQ((size_t)20, source32.size());
+  REQUIRE_EQ(fileHash, source32.substr(0, HASH_LENGTH));
+  REQUIRE_EQ((uint32_t)9728001, readUInt32(source32.data() + 16));
 
   auto source64 = createGetSourcesPayload(fileHash, 0x100000001LL);
-  CPPUNIT_ASSERT_EQUAL((size_t)28, source64.size());
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, readUInt32(source64.data() + 16));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1, readUInt32(source64.data() + 20));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1, readUInt32(source64.data() + 24));
+  REQUIRE_EQ((size_t)28, source64.size());
+  REQUIRE_EQ((uint32_t)0, readUInt32(source64.data() + 16));
+  REQUIRE_EQ((uint32_t)1, readUInt32(source64.data() + 20));
+  REQUIRE_EQ((uint32_t)1, readUInt32(source64.data() + 24));
 
   auto globSources = createGlobGetSourcesPayload(fileHash, 9728001, false);
-  CPPUNIT_ASSERT_EQUAL((size_t)16, globSources.size());
-  CPPUNIT_ASSERT_EQUAL(fileHash, globSources);
-  CPPUNIT_ASSERT_EQUAL(source32,
+  REQUIRE_EQ((size_t)16, globSources.size());
+  REQUIRE_EQ(fileHash, globSources);
+  REQUIRE_EQ(source32,
                        createGlobGetSourcesPayload(fileHash, 9728001, true));
 
   std::vector<Endpoint> sources;
@@ -363,37 +360,37 @@ void Ed2kHelperTest::testProtocolPayloads()
   sources.push_back(source);
   auto found = createFoundSourcesPayload(fileHash, sources);
   auto parsedSources = parseFoundSourcesPayload(found);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, parsedSources.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), parsedSources[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, parsedSources[0].port);
-  CPPUNIT_ASSERT(parseFoundSourcesPayload(parsedSources, found, fileHash));
-  CPPUNIT_ASSERT(!parseFoundSourcesPayload(parsedSources, found, clientHash));
+  REQUIRE_EQ((size_t)1, parsedSources.size());
+  REQUIRE_EQ(std::string("1.2.3.4"), parsedSources[0].host);
+  REQUIRE_EQ((uint16_t)4662, parsedSources[0].port);
+  REQUIRE(parseFoundSourcesPayload(parsedSources, found, fileHash));
+  REQUIRE(!parseFoundSourcesPayload(parsedSources, found, clientHash));
   std::vector<FoundSource> foundSources;
-  CPPUNIT_ASSERT(parseFoundSourcesPayload(foundSources, found, fileHash));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, foundSources.size());
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x04030201, foundSources[0].clientId);
-  CPPUNIT_ASSERT(!foundSources[0].lowId);
+  REQUIRE(parseFoundSourcesPayload(foundSources, found, fileHash));
+  REQUIRE_EQ((size_t)1, foundSources.size());
+  REQUIRE_EQ((uint32_t)0x04030201, foundSources[0].clientId);
+  REQUIRE(!foundSources[0].lowId);
 
   Endpoint lowId;
   lowId.host = "120.0.0.0";
   lowId.port = 4662;
   auto lowIdPayload =
       createFoundSourcesPayload(fileHash, std::vector<Endpoint>{lowId});
-  CPPUNIT_ASSERT(parseFoundSourcesPayload(foundSources, lowIdPayload,
+  REQUIRE(parseFoundSourcesPayload(foundSources, lowIdPayload,
                                           fileHash));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)120, foundSources[0].clientId);
-  CPPUNIT_ASSERT(foundSources[0].lowId);
+  REQUIRE_EQ((uint32_t)120, foundSources[0].clientId);
+  REQUIRE(foundSources[0].lowId);
 
   auto obfuPayload = found;
   obfuPayload.push_back(static_cast<char>(0x81));
   obfuPayload += clientHash;
-  CPPUNIT_ASSERT(parseFoundSourcesPayload(foundSources, obfuPayload, fileHash,
+  REQUIRE(parseFoundSourcesPayload(foundSources, obfuPayload, fileHash,
                                           true));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, foundSources.size());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0x81,
+  REQUIRE_EQ((size_t)1, foundSources.size());
+  REQUIRE_EQ((uint16_t)0x81,
                        foundSources[0].endpoint.cryptOptions);
-  CPPUNIT_ASSERT_EQUAL(clientHash, foundSources[0].endpoint.userHash);
-  CPPUNIT_ASSERT(!parseFoundSourcesPayload(foundSources, obfuPayload, fileHash));
+  REQUIRE_EQ(clientHash, foundSources[0].endpoint.userHash);
+  REQUIRE(!parseFoundSourcesPayload(foundSources, obfuPayload, fileHash));
 
   Endpoint source2;
   source2.host = "5.6.7.8";
@@ -404,46 +401,46 @@ void Ed2kHelperTest::testProtocolPayloads()
                      createFoundSourcesPayload(fileHash,
                                                std::vector<Endpoint>{source2}));
   std::vector<Endpoint> packedSources;
-  CPPUNIT_ASSERT(parsePackedFoundSourcesPayloads(packedSources, packedFound,
+  REQUIRE(parsePackedFoundSourcesPayloads(packedSources, packedFound,
                                                  fileHash));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, packedSources.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("5.6.7.8"), packedSources[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, packedSources[0].port);
+  REQUIRE_EQ((size_t)1, packedSources.size());
+  REQUIRE_EQ(std::string("5.6.7.8"), packedSources[0].host);
+  REQUIRE_EQ((uint16_t)4662, packedSources[0].port);
   std::vector<FoundSource> packedFoundSources;
-  CPPUNIT_ASSERT(parsePackedFoundSourcesPayloads(packedFoundSources,
+  REQUIRE(parsePackedFoundSourcesPayloads(packedFoundSources,
                                                  packedFound, fileHash));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, packedFoundSources.size());
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x08070605,
+  REQUIRE_EQ((size_t)1, packedFoundSources.size());
+  REQUIRE_EQ((uint32_t)0x08070605,
                        packedFoundSources[0].clientId);
-  CPPUNIT_ASSERT(!packedFoundSources[0].lowId);
+  REQUIRE(!packedFoundSources[0].lowId);
   auto packedWithBadTail =
       createFoundSourcesPayload(fileHash, std::vector<Endpoint>{source}) +
       createDatagram(PROTO_EDONKEY, OP_GLOBFOUNDSOURCES,
                      createFoundSourcesPayload(clientHash,
                                                std::vector<Endpoint>{source2})) +
       std::string("\xe3\x90", 2);
-  CPPUNIT_ASSERT(parsePackedFoundSourcesPayloads(
+  REQUIRE(parsePackedFoundSourcesPayloads(
       packedFoundSources, packedWithBadTail, fileHash));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, packedFoundSources.size());
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x04030201,
+  REQUIRE_EQ((size_t)1, packedFoundSources.size());
+  REQUIRE_EQ((uint32_t)0x04030201,
                        packedFoundSources[0].clientId);
 
   auto callbackRequest = createCallbackRequestPayload(120);
-  CPPUNIT_ASSERT_EQUAL(std::string("78000000"),
+  REQUIRE_EQ(std::string("78000000"),
                        util::toHex(callbackRequest));
   Endpoint callbackEndpoint;
-  CPPUNIT_ASSERT(parseCallbackRequestIncomingPayload(
+  REQUIRE(parseCallbackRequestIncomingPayload(
       callbackEndpoint, packUInt32(0x04030201) + packUInt16(4662)));
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), callbackEndpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, callbackEndpoint.port);
-  CPPUNIT_ASSERT(parseCallbackRequestIncomingPayload(
+  REQUIRE_EQ(std::string("1.2.3.4"), callbackEndpoint.host);
+  REQUIRE_EQ((uint16_t)4662, callbackEndpoint.port);
+  REQUIRE(parseCallbackRequestIncomingPayload(
       callbackEndpoint, packUInt32(0x04030201) + packUInt16(4662) +
                             std::string(1, '\x83') + clientHash));
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), callbackEndpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, callbackEndpoint.port);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0x83, callbackEndpoint.cryptOptions);
-  CPPUNIT_ASSERT_EQUAL(clientHash, callbackEndpoint.userHash);
-  CPPUNIT_ASSERT(parseCallbackRequestIncomingPayload(
+  REQUIRE_EQ(std::string("1.2.3.4"), callbackEndpoint.host);
+  REQUIRE_EQ((uint16_t)4662, callbackEndpoint.port);
+  REQUIRE_EQ((uint16_t)0x83, callbackEndpoint.cryptOptions);
+  REQUIRE_EQ(clientHash, callbackEndpoint.userHash);
+  REQUIRE(parseCallbackRequestIncomingPayload(
       callbackEndpoint, packUInt32(0x04030201) + packUInt16(4662) +
                             std::string(1, '\x83') + clientHash +
                             std::string("ignored")));
@@ -453,13 +450,13 @@ void Ed2kHelperTest::testProtocolPayloads()
   bitfield.push_back(false);
   bitfield.push_back(true);
   auto status = createFileStatusPayload(fileHash, bitfield);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0x05, static_cast<uint8_t>(status[18]));
+  REQUIRE_EQ((uint8_t)0x05, static_cast<uint8_t>(status[18]));
   std::vector<bool> parsedBitfield;
-  CPPUNIT_ASSERT(parseFileStatusPayload(parsedBitfield, status, fileHash));
-  CPPUNIT_ASSERT_EQUAL((size_t)3, parsedBitfield.size());
-  CPPUNIT_ASSERT(parsedBitfield[0]);
-  CPPUNIT_ASSERT(!parsedBitfield[1]);
-  CPPUNIT_ASSERT(parsedBitfield[2]);
+  REQUIRE(parseFileStatusPayload(parsedBitfield, status, fileHash));
+  REQUIRE_EQ((size_t)3, parsedBitfield.size());
+  REQUIRE(parsedBitfield[0]);
+  REQUIRE(!parsedBitfield[1]);
+  REQUIRE(parsedBitfield[2]);
 
   std::vector<PartRange> ranges;
   PartRange range;
@@ -470,121 +467,121 @@ void Ed2kHelperTest::testProtocolPayloads()
   range.end = 30;
   ranges.push_back(range);
   auto requestParts = createRequestPartsPayload(fileHash, ranges, false);
-  CPPUNIT_ASSERT_EQUAL((size_t)40, requestParts.size());
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, readUInt32(requestParts.data() + 16));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)20, readUInt32(requestParts.data() + 20));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, readUInt32(requestParts.data() + 24));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)10, readUInt32(requestParts.data() + 28));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)30, readUInt32(requestParts.data() + 32));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, readUInt32(requestParts.data() + 36));
+  REQUIRE_EQ((size_t)40, requestParts.size());
+  REQUIRE_EQ((uint32_t)0, readUInt32(requestParts.data() + 16));
+  REQUIRE_EQ((uint32_t)20, readUInt32(requestParts.data() + 20));
+  REQUIRE_EQ((uint32_t)0, readUInt32(requestParts.data() + 24));
+  REQUIRE_EQ((uint32_t)10, readUInt32(requestParts.data() + 28));
+  REQUIRE_EQ((uint32_t)30, readUInt32(requestParts.data() + 32));
+  REQUIRE_EQ((uint32_t)0, readUInt32(requestParts.data() + 36));
 
   auto requestParts64 = createRequestPartsPayload(fileHash, ranges, true);
-  CPPUNIT_ASSERT_EQUAL((size_t)64, requestParts64.size());
-  CPPUNIT_ASSERT_EQUAL((uint64_t)0, readUInt64(requestParts64.data() + 16));
-  CPPUNIT_ASSERT_EQUAL((uint64_t)20, readUInt64(requestParts64.data() + 24));
-  CPPUNIT_ASSERT_EQUAL((uint64_t)0, readUInt64(requestParts64.data() + 32));
-  CPPUNIT_ASSERT_EQUAL((uint64_t)10, readUInt64(requestParts64.data() + 40));
-  CPPUNIT_ASSERT_EQUAL((uint64_t)30, readUInt64(requestParts64.data() + 48));
-  CPPUNIT_ASSERT_EQUAL((uint64_t)0, readUInt64(requestParts64.data() + 56));
+  REQUIRE_EQ((size_t)64, requestParts64.size());
+  REQUIRE_EQ((uint64_t)0, readUInt64(requestParts64.data() + 16));
+  REQUIRE_EQ((uint64_t)20, readUInt64(requestParts64.data() + 24));
+  REQUIRE_EQ((uint64_t)0, readUInt64(requestParts64.data() + 32));
+  REQUIRE_EQ((uint64_t)10, readUInt64(requestParts64.data() + 40));
+  REQUIRE_EQ((uint64_t)30, readUInt64(requestParts64.data() + 48));
+  REQUIRE_EQ((uint64_t)0, readUInt64(requestParts64.data() + 56));
 
   range.begin = 0x100000000LL;
   range.end = 0x100000100LL;
-  CPPUNIT_ASSERT_THROW(createRequestPartsPayload(
+  REQUIRE_THROWS_AS(createRequestPartsPayload(
                            fileHash, std::vector<PartRange>(1, range), false),
                        DlAbortEx);
-  CPPUNIT_ASSERT_NO_THROW(createRequestPartsPayload(
+  REQUIRE_NOTHROW(createRequestPartsPayload(
       fileHash, std::vector<PartRange>(1, range), true));
 }
 
 void Ed2kHelperTest::testServerPayloadParsers()
 {
   ServerIdChange idChange;
-  CPPUNIT_ASSERT(parseServerIdChangePayload(idChange, packUInt32(0x04030201)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x04030201, idChange.clientId);
-  CPPUNIT_ASSERT(idChange.highId);
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), idChange.ipAddress);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, idChange.tcpFlags);
+  REQUIRE(parseServerIdChangePayload(idChange, packUInt32(0x04030201)));
+  REQUIRE_EQ((uint32_t)0x04030201, idChange.clientId);
+  REQUIRE(idChange.highId);
+  REQUIRE_EQ(std::string("1.2.3.4"), idChange.ipAddress);
+  REQUIRE_EQ((uint32_t)0, idChange.tcpFlags);
 
-  CPPUNIT_ASSERT(parseServerIdChangePayload(idChange, packUInt32(120)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)120, idChange.clientId);
-  CPPUNIT_ASSERT(!idChange.highId);
-  CPPUNIT_ASSERT(idChange.ipAddress.empty());
-  CPPUNIT_ASSERT(parseServerIdChangePayload(
+  REQUIRE(parseServerIdChangePayload(idChange, packUInt32(120)));
+  REQUIRE_EQ((uint32_t)120, idChange.clientId);
+  REQUIRE(!idChange.highId);
+  REQUIRE(idChange.ipAddress.empty());
+  REQUIRE(parseServerIdChangePayload(
       idChange, packUInt32(120) + packUInt32(0x55aa) + packUInt32(4661)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)120, idChange.clientId);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa, idChange.tcpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)4661, idChange.auxPort);
-  CPPUNIT_ASSERT(parseServerIdChangePayload(
+  REQUIRE_EQ((uint32_t)120, idChange.clientId);
+  REQUIRE_EQ((uint32_t)0x55aa, idChange.tcpFlags);
+  REQUIRE_EQ((uint32_t)4661, idChange.auxPort);
+  REQUIRE(parseServerIdChangePayload(
       idChange, packUInt32(0x04030201) + packUInt32(SRV_TCPFLG_TCPOBFUSCATION) +
                     packUInt32(4661) + packUInt32(0x04030201) +
                     packUInt32(4666)));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4666, idChange.tcpObfuscationPort);
-  CPPUNIT_ASSERT(parseServerIdChangePayload(
+  REQUIRE_EQ((uint16_t)4666, idChange.tcpObfuscationPort);
+  REQUIRE(parseServerIdChangePayload(
       idChange, packUInt32(0x04030201) + packUInt32(0x55aa) +
                     packUInt32(4661) + packUInt32(0x04030201)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x04030201, idChange.clientId);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa, idChange.tcpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)4661, idChange.auxPort);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0, idChange.tcpObfuscationPort);
+  REQUIRE_EQ((uint32_t)0x04030201, idChange.clientId);
+  REQUIRE_EQ((uint32_t)0x55aa, idChange.tcpFlags);
+  REQUIRE_EQ((uint32_t)4661, idChange.auxPort);
+  REQUIRE_EQ((uint16_t)0, idChange.tcpObfuscationPort);
 
-  CPPUNIT_ASSERT(parseServerIdChangePayload(
+  REQUIRE(parseServerIdChangePayload(
       idChange, packUInt32(0x04030201) + packUInt32(0x55aa) +
                     packUInt32(4661) + packUInt32(0x04030201) +
                     packUInt32(4666) + packUInt32(0xdeadbeef)));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4666, idChange.tcpObfuscationPort);
+  REQUIRE_EQ((uint16_t)4666, idChange.tcpObfuscationPort);
 
   ServerStatus status;
-  CPPUNIT_ASSERT(parseServerStatusPayload(status,
+  REQUIRE(parseServerStatusPayload(status,
                                           packUInt32(1234) + packUInt32(5678)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1234, status.users);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)5678, status.files);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, status.challenge);
+  REQUIRE_EQ((uint32_t)1234, status.users);
+  REQUIRE_EQ((uint32_t)5678, status.files);
+  REQUIRE_EQ((uint32_t)0, status.challenge);
 
-  CPPUNIT_ASSERT(parseServerStatusPayload(
+  REQUIRE(parseServerStatusPayload(
       status, packUInt32(1234) + packUInt32(5678) + packUInt32(9000)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1234, status.users);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)5678, status.files);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, status.challenge);
+  REQUIRE_EQ((uint32_t)1234, status.users);
+  REQUIRE_EQ((uint32_t)5678, status.files);
+  REQUIRE_EQ((uint32_t)0, status.challenge);
 
-  CPPUNIT_ASSERT(parseServerStatusPayload(
+  REQUIRE(parseServerStatusPayload(
       status, packUInt32(0x55aa0011) + packUInt32(1234) +
                   packUInt32(5678) + packUInt32(9000)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa0011, status.users);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1234, status.files);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, status.challenge);
+  REQUIRE_EQ((uint32_t)0x55aa0011, status.users);
+  REQUIRE_EQ((uint32_t)1234, status.files);
+  REQUIRE_EQ((uint32_t)0, status.challenge);
 
-  CPPUNIT_ASSERT(parseServerUdpStatusPayload(
+  REQUIRE(parseServerUdpStatusPayload(
       status, packUInt32(0x55aa0011) + packUInt32(1234) +
                   packUInt32(5678) + packUInt32(9000) + packUInt32(100) +
                   packUInt32(200) + packUInt32(0x01020304) +
                   packUInt32(77) + packUInt16(4665) + packUInt16(4666) +
                   packUInt32(0x11223344)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa0011, status.challenge);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1234, status.users);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)5678, status.files);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)9000, status.maxUsers);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)100, status.softFiles);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)200, status.hardFiles);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x01020304, status.udpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)77, status.lowIdUsers);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4665, status.udpObfuscationPort);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4666, status.tcpObfuscationPort);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x11223344, status.udpKey);
-  CPPUNIT_ASSERT(parseServerUdpStatusPayload(
+  REQUIRE_EQ((uint32_t)0x55aa0011, status.challenge);
+  REQUIRE_EQ((uint32_t)1234, status.users);
+  REQUIRE_EQ((uint32_t)5678, status.files);
+  REQUIRE_EQ((uint32_t)9000, status.maxUsers);
+  REQUIRE_EQ((uint32_t)100, status.softFiles);
+  REQUIRE_EQ((uint32_t)200, status.hardFiles);
+  REQUIRE_EQ((uint32_t)0x01020304, status.udpFlags);
+  REQUIRE_EQ((uint32_t)77, status.lowIdUsers);
+  REQUIRE_EQ((uint16_t)4665, status.udpObfuscationPort);
+  REQUIRE_EQ((uint16_t)4666, status.tcpObfuscationPort);
+  REQUIRE_EQ((uint32_t)0x11223344, status.udpKey);
+  REQUIRE(parseServerUdpStatusPayload(
       status, packUInt32(0x55aa0011) + packUInt32(1234) +
                   packUInt32(5678) + packUInt32(9000) + packUInt32(100) +
                   packUInt32(200) + packUInt32(0x01020304) +
                   packUInt32(77) + packUInt16(4665) + packUInt16(4666) +
                   packUInt32(0x11223344) + packUInt16(0)));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa0011, status.challenge);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4665, status.udpObfuscationPort);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4666, status.tcpObfuscationPort);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x11223344, status.udpKey);
+  REQUIRE_EQ((uint32_t)0x55aa0011, status.challenge);
+  REQUIRE_EQ((uint16_t)4665, status.udpObfuscationPort);
+  REQUIRE_EQ((uint16_t)4666, status.tcpObfuscationPort);
+  REQUIRE_EQ((uint32_t)0x11223344, status.udpKey);
 
   std::string messagePayload = packUInt16(5) + "hello";
   std::string message;
-  CPPUNIT_ASSERT(parseServerMessagePayload(message, messagePayload));
-  CPPUNIT_ASSERT_EQUAL(std::string("hello"), message);
+  REQUIRE(parseServerMessagePayload(message, messagePayload));
+  REQUIRE_EQ(std::string("hello"), message);
 
   std::string identPayload(16, '\x11');
   identPayload += packUInt32(0x04030201);
@@ -594,11 +591,11 @@ void Ed2kHelperTest::testServerPayloadParsers()
   identPayload += createStringTag(0x0b, "server description");
   identPayload += packUInt16(0);
   ServerIdent ident;
-  CPPUNIT_ASSERT(parseServerIdentPayload(ident, identPayload));
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), ident.endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, ident.endpoint.port);
-  CPPUNIT_ASSERT_EQUAL(std::string("server name"), ident.name);
-  CPPUNIT_ASSERT_EQUAL(std::string("server description"), ident.description);
+  REQUIRE(parseServerIdentPayload(ident, identPayload));
+  REQUIRE_EQ(std::string("1.2.3.4"), ident.endpoint.host);
+  REQUIRE_EQ((uint16_t)4661, ident.endpoint.port);
+  REQUIRE_EQ(std::string("server name"), ident.name);
+  REQUIRE_EQ(std::string("server description"), ident.description);
 
   std::vector<Endpoint> servers;
   std::string serverList;
@@ -608,12 +605,12 @@ void Ed2kHelperTest::testServerPayloadParsers()
   serverList += packUInt32(0x08070605);
   serverList += packUInt16(4662);
   serverList += packUInt16(0);
-  CPPUNIT_ASSERT(parseServerListPayload(servers, serverList));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, servers.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), servers[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, servers[0].port);
-  CPPUNIT_ASSERT_EQUAL(std::string("5.6.7.8"), servers[1].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, servers[1].port);
+  REQUIRE(parseServerListPayload(servers, serverList));
+  REQUIRE_EQ((size_t)2, servers.size());
+  REQUIRE_EQ(std::string("1.2.3.4"), servers[0].host);
+  REQUIRE_EQ((uint16_t)4661, servers[0].port);
+  REQUIRE_EQ(std::string("5.6.7.8"), servers[1].host);
+  REQUIRE_EQ((uint16_t)4662, servers[1].port);
 }
 
 void Ed2kHelperTest::testSearchResultPayload()
@@ -658,22 +655,22 @@ void Ed2kHelperTest::testSearchResultPayload()
   payload.push_back('\x01');
 
   SearchResult result;
-  CPPUNIT_ASSERT(parseSearchResultPayload(result, payload, "server"));
-  CPPUNIT_ASSERT(result.moreResults);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.entries.size());
-  CPPUNIT_ASSERT_EQUAL(fileHash, result.entries[0].hash);
-  CPPUNIT_ASSERT_EQUAL(std::string("video.mkv"), result.entries[0].name);
-  CPPUNIT_ASSERT_EQUAL((int64_t)0x100000005LL, result.entries[0].size);
-  CPPUNIT_ASSERT_EQUAL(std::string("Video"), result.entries[0].fileType);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)42, result.entries[0].sourceCount);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)7, result.entries[0].completeSourceCount);
-  CPPUNIT_ASSERT_EQUAL(std::string("H264"), result.entries[0].mediaCodec);
-  CPPUNIT_ASSERT_EQUAL(std::string("server"), result.entries[0].sourceNetwork);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.entries[0].sources.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"),
+  REQUIRE(parseSearchResultPayload(result, payload, "server"));
+  REQUIRE(result.moreResults);
+  REQUIRE_EQ((size_t)1, result.entries.size());
+  REQUIRE_EQ(fileHash, result.entries[0].hash);
+  REQUIRE_EQ(std::string("video.mkv"), result.entries[0].name);
+  REQUIRE_EQ((int64_t)0x100000005LL, result.entries[0].size);
+  REQUIRE_EQ(std::string("Video"), result.entries[0].fileType);
+  REQUIRE_EQ((uint32_t)42, result.entries[0].sourceCount);
+  REQUIRE_EQ((uint32_t)7, result.entries[0].completeSourceCount);
+  REQUIRE_EQ(std::string("H264"), result.entries[0].mediaCodec);
+  REQUIRE_EQ(std::string("server"), result.entries[0].sourceNetwork);
+  REQUIRE_EQ((size_t)1, result.entries[0].sources.size());
+  REQUIRE_EQ(std::string("1.2.3.4"),
                        result.entries[0].sources[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, result.entries[0].sources[0].port);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ((uint16_t)4662, result.entries[0].sources[0].port);
+  REQUIRE_EQ(
       std::string("ed2k://|file|video.mkv|4294967301|"
                   "0123456789abcdef0123456789abcdef|"
                   "sources,1.2.3.4:4662|/"),
@@ -740,23 +737,23 @@ void Ed2kHelperTest::testSearchRequestPayload()
   expected += packUInt16(1);
   expected.push_back('\x04');
 
-  CPPUNIT_ASSERT_EQUAL(util::toHex(expected), util::toHex(payload));
+  REQUIRE_EQ(util::toHex(expected), util::toHex(payload));
 
   auto clamped = createSearchRequestPayload(query, false);
-  CPPUNIT_ASSERT_EQUAL(static_cast<char>(0x03), clamped[28]);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0xffffffffu, readUInt32(clamped.data() + 29));
+  REQUIRE_EQ(static_cast<char>(0x03), clamped[28]);
+  REQUIRE_EQ((uint32_t)0xffffffffu, readUInt32(clamped.data() + 29));
 }
 
 void Ed2kHelperTest::testKadKeywordTarget()
 {
-  CPPUNIT_ASSERT_EQUAL(std::string("oxymoronaccelerator"),
+  REQUIRE_EQ(std::string("oxymoronaccelerator"),
                        pickKadKeyword("The oxymoronaccelerator 2"));
-  CPPUNIT_ASSERT_EQUAL(std::string("ubuntu"),
+  REQUIRE_EQ(std::string("ubuntu"),
                        pickKadKeyword("Ubuntu-22.04 ISO"));
-  CPPUNIT_ASSERT_EQUAL(std::string(), pickKadKeyword("a 12 ()"));
+  REQUIRE_EQ(std::string(), pickKadKeyword("a 12 ()"));
 
   auto target = createKadKeywordTarget("The oxymoronaccelerator 2");
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("bfdc1e49ecaa72c4f57ed35998a5a40d"),
       util::toHex(target));
 }
@@ -806,16 +803,16 @@ void Ed2kHelperTest::testKadSearchEntriesToSearchResults()
   auto results = kadSearchEntriesToSearchResults(std::vector<KadSearchEntry>{entry},
                                                  "kad");
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, results.size());
-  CPPUNIT_ASSERT_EQUAL(fileId, results[0].hash);
-  CPPUNIT_ASSERT_EQUAL(std::string("video.mkv"), results[0].name);
-  CPPUNIT_ASSERT_EQUAL((int64_t)0x100000005LL, results[0].size);
-  CPPUNIT_ASSERT_EQUAL(std::string("Video"), results[0].fileType);
-  CPPUNIT_ASSERT_EQUAL(std::string("mkv"), results[0].extension);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)3, results[0].sourceCount);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)2, results[0].completeSourceCount);
-  CPPUNIT_ASSERT_EQUAL(std::string("kad"), results[0].sourceNetwork);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ((size_t)1, results.size());
+  REQUIRE_EQ(fileId, results[0].hash);
+  REQUIRE_EQ(std::string("video.mkv"), results[0].name);
+  REQUIRE_EQ((int64_t)0x100000005LL, results[0].size);
+  REQUIRE_EQ(std::string("Video"), results[0].fileType);
+  REQUIRE_EQ(std::string("mkv"), results[0].extension);
+  REQUIRE_EQ((uint32_t)3, results[0].sourceCount);
+  REQUIRE_EQ((uint32_t)2, results[0].completeSourceCount);
+  REQUIRE_EQ(std::string("kad"), results[0].sourceNetwork);
+  REQUIRE_EQ(
       std::string("ed2k://|file|video.mkv|4294967301|"
                   "0123456789abcdef0123456789abcdef|/"),
       results[0].ed2kLink);
@@ -857,26 +854,26 @@ void Ed2kHelperTest::testKadSourceEndpointPreservesUdpAndCryptMetadata()
   entry.tags.push_back(encryption);
 
   Endpoint endpoint;
-  CPPUNIT_ASSERT(extractKadSourceEndpoint(endpoint, entry));
-  CPPUNIT_ASSERT_EQUAL(std::string("220.132.181.52"), endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, endpoint.port);
-  CPPUNIT_ASSERT_EQUAL(std::string(HASH_LENGTH, '\x44'), endpoint.userHash);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0x03, endpoint.cryptOptions);
+  REQUIRE(extractKadSourceEndpoint(endpoint, entry));
+  REQUIRE_EQ(std::string("220.132.181.52"), endpoint.host);
+  REQUIRE_EQ((uint16_t)4662, endpoint.port);
+  REQUIRE_EQ(std::string(HASH_LENGTH, '\x44'), endpoint.userHash);
+  REQUIRE_EQ((uint16_t)0x03, endpoint.cryptOptions);
 
   entry.id = util::fromHex(std::begin("0c7fab2a8d37bed47b551391d0d8241d"),
                            std::end("0c7fab2a8d37bed47b551391d0d8241d") - 1);
-  CPPUNIT_ASSERT(extractKadSourceEndpoint(endpoint, entry));
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE(extractKadSourceEndpoint(endpoint, entry));
+  REQUIRE_EQ(
       std::string("0c7fab2a8d37bed47b551391d0d8241d"),
       util::toHex(endpoint.userHash));
 
   KadSourceEndpoint source;
-  CPPUNIT_ASSERT(extractKadSourceEndpoint(source, entry));
-  CPPUNIT_ASSERT_EQUAL(std::string("220.132.181.52"), source.endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, source.endpoint.port);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, source.udpPort);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, source.sourceType);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0x03, source.endpoint.cryptOptions);
+  REQUIRE(extractKadSourceEndpoint(source, entry));
+  REQUIRE_EQ(std::string("220.132.181.52"), source.endpoint.host);
+  REQUIRE_EQ((uint16_t)4662, source.endpoint.port);
+  REQUIRE_EQ((uint16_t)4672, source.udpPort);
+  REQUIRE_EQ((uint8_t)1, source.sourceType);
+  REQUIRE_EQ((uint16_t)0x03, source.endpoint.cryptOptions);
 
   sourceType.intValue = 3;
   entry.tags[0] = sourceType;
@@ -884,10 +881,10 @@ void Ed2kHelperTest::testKadSourceEndpointPreservesUdpAndCryptMetadata()
       createStringTag(0xf8, "11111111111111111111111111111111");
   size_t buddyHashTagOffset = 0;
   entry.tags.push_back(readTag(buddyHashTagPayload, buddyHashTagOffset));
-  CPPUNIT_ASSERT(extractKadSourceEndpoint(source, entry));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)3, source.sourceType);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, source.udpPort);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE(extractKadSourceEndpoint(source, entry));
+  REQUIRE_EQ((uint8_t)3, source.sourceType);
+  REQUIRE_EQ((uint16_t)4672, source.udpPort);
+  REQUIRE_EQ(
       std::string("\x11\x11\x11\x11\x11\x11\x11\x11"
                   "\x11\x11\x11\x11\x11\x11\x11\x11",
                   HASH_LENGTH),
@@ -895,25 +892,25 @@ void Ed2kHelperTest::testKadSourceEndpointPreservesUdpAndCryptMetadata()
 
   sourceType.intValue = 5;
   entry.tags[0] = sourceType;
-  CPPUNIT_ASSERT(extractKadSourceEndpoint(source, entry));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)5, source.sourceType);
+  REQUIRE(extractKadSourceEndpoint(source, entry));
+  REQUIRE_EQ((uint8_t)5, source.sourceType);
 
   sourceType.intValue = 6;
   entry.tags[0] = sourceType;
-  CPPUNIT_ASSERT(extractKadSourceEndpoint(source, entry));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)6, source.sourceType);
+  REQUIRE(extractKadSourceEndpoint(source, entry));
+  REQUIRE_EQ((uint8_t)6, source.sourceType);
 
   KadSearchResult result;
   result.entries.push_back(entry);
   auto endpoints = extractKadSourceEndpoints(result);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, endpoints.size());
+  REQUIRE_EQ((size_t)0, endpoints.size());
 
   sourceType.intValue = 4;
   result.entries[0].tags[0] = sourceType;
   endpoints = extractKadSourceEndpoints(result);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, endpoints.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("220.132.181.52"), endpoints[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, endpoints[0].port);
+  REQUIRE_EQ((size_t)1, endpoints.size());
+  REQUIRE_EQ(std::string("220.132.181.52"), endpoints[0].host);
+  REQUIRE_EQ((uint16_t)4662, endpoints[0].port);
 }
 
 void Ed2kHelperTest::testSourceExchange2Payloads()
@@ -924,38 +921,38 @@ void Ed2kHelperTest::testSourceExchange2Payloads()
   auto userHash = util::fromHex(userHashHex.begin(), userHashHex.end());
 
   auto request = createRequestSources2Payload(fileHash);
-  CPPUNIT_ASSERT_EQUAL((size_t)19, request.size());
-  CPPUNIT_ASSERT_EQUAL((uint8_t)4, static_cast<uint8_t>(request[0]));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0, readUInt16(request.data() + 1));
-  CPPUNIT_ASSERT_EQUAL(fileHash, request.substr(3, HASH_LENGTH));
+  REQUIRE_EQ((size_t)19, request.size());
+  REQUIRE_EQ((uint8_t)4, static_cast<uint8_t>(request[0]));
+  REQUIRE_EQ((uint16_t)0, readUInt16(request.data() + 1));
+  REQUIRE_EQ(fileHash, request.substr(3, HASH_LENGTH));
   uint8_t requestVersion = 0;
-  CPPUNIT_ASSERT(parseRequestSources2Payload(requestVersion, fileHash,
+  REQUIRE(parseRequestSources2Payload(requestVersion, fileHash,
                                             fileHash));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, requestVersion);
-  CPPUNIT_ASSERT(parseRequestSources2Payload(requestVersion, request,
+  REQUIRE_EQ((uint8_t)1, requestVersion);
+  REQUIRE(parseRequestSources2Payload(requestVersion, request,
                                             fileHash));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)4, requestVersion);
+  REQUIRE_EQ((uint8_t)4, requestVersion);
 
   EmulePeerInfo sx2Peer;
   sx2Peer.miscOptions2.supportsSourceExchange2 = true;
   auto selectedRequest = createRequestSourcesPayload(fileHash, sx2Peer);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)OP_REQUESTSOURCES2, selectedRequest.opcode);
-  CPPUNIT_ASSERT_EQUAL(request, selectedRequest.payload);
+  REQUIRE_EQ((uint8_t)OP_REQUESTSOURCES2, selectedRequest.opcode);
+  REQUIRE_EQ(request, selectedRequest.payload);
 
   EmulePeerInfo sx1Peer;
   sx1Peer.miscOptions.sourceExchange1Version = 3;
   selectedRequest = createRequestSourcesPayload(fileHash, sx1Peer);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)OP_REQUESTSOURCES, selectedRequest.opcode);
-  CPPUNIT_ASSERT_EQUAL(fileHash, selectedRequest.payload);
+  REQUIRE_EQ((uint8_t)OP_REQUESTSOURCES, selectedRequest.opcode);
+  REQUIRE_EQ(fileHash, selectedRequest.payload);
 
   sx1Peer.miscOptions.sourceExchange1Version = 1;
   selectedRequest = createRequestSourcesPayload(fileHash, sx1Peer);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0, selectedRequest.opcode);
-  CPPUNIT_ASSERT(selectedRequest.payload.empty());
+  REQUIRE_EQ((uint8_t)0, selectedRequest.opcode);
+  REQUIRE(selectedRequest.payload.empty());
 
   selectedRequest = createRequestSourcesPayload(fileHash, EmulePeerInfo());
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0, selectedRequest.opcode);
-  CPPUNIT_ASSERT(selectedRequest.payload.empty());
+  REQUIRE_EQ((uint8_t)0, selectedRequest.opcode);
+  REQUIRE(selectedRequest.payload.empty());
 
   SourceExchangeEntry entry;
   entry.endpoint.host = "203.0.113.9";
@@ -968,31 +965,31 @@ void Ed2kHelperTest::testSourceExchange2Payloads()
 
   auto answer = createAnswerSources2Payload(fileHash, entries);
   SourceExchangeAnswer parsed;
-  CPPUNIT_ASSERT(parseAnswerSources2Payload(parsed, answer, fileHash));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)4, parsed.version);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.entries.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"),
+  REQUIRE(parseAnswerSources2Payload(parsed, answer, fileHash));
+  REQUIRE_EQ((uint8_t)4, parsed.version);
+  REQUIRE_EQ((size_t)1, parsed.entries.size());
+  REQUIRE_EQ(std::string("203.0.113.9"),
                        parsed.entries[0].endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, parsed.entries[0].endpoint.port);
-  CPPUNIT_ASSERT_EQUAL(std::string("198.51.100.2"),
+  REQUIRE_EQ((uint16_t)4662, parsed.entries[0].endpoint.port);
+  REQUIRE_EQ(std::string("198.51.100.2"),
                        parsed.entries[0].server.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, parsed.entries[0].server.port);
-  CPPUNIT_ASSERT_EQUAL(userHash, parsed.entries[0].userHash);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0x83, parsed.entries[0].cryptOptions);
+  REQUIRE_EQ((uint16_t)4661, parsed.entries[0].server.port);
+  REQUIRE_EQ(userHash, parsed.entries[0].userHash);
+  REQUIRE_EQ((uint8_t)0x83, parsed.entries[0].cryptOptions);
 
   auto sx1 = createAnswerSourcesPayload(fileHash, 1, entries);
-  CPPUNIT_ASSERT(parseAnswerSourcesPayload(parsed, sx1, fileHash, 1));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, parsed.version);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.entries.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"),
+  REQUIRE(parseAnswerSourcesPayload(parsed, sx1, fileHash, 1));
+  REQUIRE_EQ((uint8_t)1, parsed.version);
+  REQUIRE_EQ((size_t)1, parsed.entries.size());
+  REQUIRE_EQ(std::string("203.0.113.9"),
                        parsed.entries[0].endpoint.host);
-  CPPUNIT_ASSERT(parsed.entries[0].userHash.empty());
+  REQUIRE(parsed.entries[0].userHash.empty());
 
   auto sx4 = createAnswerSourcesPayload(fileHash, 4, entries);
-  CPPUNIT_ASSERT(parseAnswerSourcesPayload(parsed, sx4, fileHash, 4));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)4, parsed.version);
-  CPPUNIT_ASSERT_EQUAL(userHash, parsed.entries[0].userHash);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0x83, parsed.entries[0].cryptOptions);
+  REQUIRE(parseAnswerSourcesPayload(parsed, sx4, fileHash, 4));
+  REQUIRE_EQ((uint8_t)4, parsed.version);
+  REQUIRE_EQ(userHash, parsed.entries[0].userHash);
+  REQUIRE_EQ((uint8_t)0x83, parsed.entries[0].cryptOptions);
 }
 
 void Ed2kHelperTest::testMultipacketPayloads()
@@ -1013,28 +1010,28 @@ void Ed2kHelperTest::testMultipacketPayloads()
   auto request = createMultipacketFileRequestPayload(
       fileHash, ed2k::PIECE_LENGTH + 1, localParts, remoteInfo, true);
 
-  CPPUNIT_ASSERT_EQUAL(fileHash, request.substr(0, HASH_LENGTH));
-  CPPUNIT_ASSERT_EQUAL(static_cast<uint64_t>(ed2k::PIECE_LENGTH + 1),
+  REQUIRE_EQ(fileHash, request.substr(0, HASH_LENGTH));
+  REQUIRE_EQ(static_cast<uint64_t>(ed2k::PIECE_LENGTH + 1),
                        readUInt64(request.data() + HASH_LENGTH));
   size_t offset = HASH_LENGTH + 8;
-  CPPUNIT_ASSERT_EQUAL((uint8_t)OP_REQUESTFILENAME,
+  REQUIRE_EQ((uint8_t)OP_REQUESTFILENAME,
                        static_cast<uint8_t>(request[offset++]));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)2, readUInt16(request.data() + offset));
+  REQUIRE_EQ((uint16_t)2, readUInt16(request.data() + offset));
   offset += 2;
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0x01, static_cast<uint8_t>(request[offset++]));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0, readUInt16(request.data() + offset));
+  REQUIRE_EQ((uint8_t)0x01, static_cast<uint8_t>(request[offset++]));
+  REQUIRE_EQ((uint16_t)0, readUInt16(request.data() + offset));
   offset += 2;
-  CPPUNIT_ASSERT_EQUAL((uint8_t)OP_SETREQFILEID,
+  REQUIRE_EQ((uint8_t)OP_SETREQFILEID,
                        static_cast<uint8_t>(request[offset++]));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)OP_REQUESTSOURCES2,
+  REQUIRE_EQ((uint8_t)OP_REQUESTSOURCES2,
                        static_cast<uint8_t>(request[offset++]));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)SOURCE_EXCHANGE2_VERSION,
+  REQUIRE_EQ((uint8_t)SOURCE_EXCHANGE2_VERSION,
                        static_cast<uint8_t>(request[offset++]));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0, readUInt16(request.data() + offset));
+  REQUIRE_EQ((uint16_t)0, readUInt16(request.data() + offset));
   offset += 2;
-  CPPUNIT_ASSERT_EQUAL((uint8_t)OP_AICHFILEHASHREQ,
+  REQUIRE_EQ((uint8_t)OP_AICHFILEHASHREQ,
                        static_cast<uint8_t>(request[offset++]));
-  CPPUNIT_ASSERT_EQUAL(request.size(), offset);
+  REQUIRE_EQ(request.size(), offset);
 
   auto answerPayload = fileHash;
   answerPayload.push_back(static_cast<char>(OP_REQFILENAMEANSWER));
@@ -1047,22 +1044,22 @@ void Ed2kHelperTest::testMultipacketPayloads()
   answerPayload += aichRoot;
 
   MultipacketAnswer answer;
-  CPPUNIT_ASSERT(parseMultipacketAnswerPayload(answer, answerPayload,
+  REQUIRE(parseMultipacketAnswerPayload(answer, answerPayload,
                                               fileHash));
-  CPPUNIT_ASSERT_EQUAL(std::string("test.iso"), answer.fileName);
-  CPPUNIT_ASSERT(answer.hasFileStatus);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, answer.partStatus.size());
-  CPPUNIT_ASSERT(answer.partStatus[0]);
-  CPPUNIT_ASSERT(answer.partStatus[1]);
-  CPPUNIT_ASSERT(answer.hasAichRootHash);
-  CPPUNIT_ASSERT_EQUAL(aichRoot, answer.aichRootHash);
+  REQUIRE_EQ(std::string("test.iso"), answer.fileName);
+  REQUIRE(answer.hasFileStatus);
+  REQUIRE_EQ((size_t)2, answer.partStatus.size());
+  REQUIRE(answer.partStatus[0]);
+  REQUIRE(answer.partStatus[1]);
+  REQUIRE(answer.hasAichRootHash);
+  REQUIRE_EQ(aichRoot, answer.aichRootHash);
 
   std::vector<bool> completeStatus;
-  CPPUNIT_ASSERT(parseFileStatusPayload(
+  REQUIRE(parseFileStatusPayload(
       completeStatus, fileHash + packUInt16(0), fileHash, 2));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, completeStatus.size());
-  CPPUNIT_ASSERT(completeStatus[0]);
-  CPPUNIT_ASSERT(completeStatus[1]);
+  REQUIRE_EQ((size_t)2, completeStatus.size());
+  REQUIRE(completeStatus[0]);
+  REQUIRE(completeStatus[1]);
 }
 
 void Ed2kHelperTest::testCompressedPartPayloads()
@@ -1073,21 +1070,21 @@ void Ed2kHelperTest::testCompressedPartPayloads()
   auto payload32 = fileHash + packUInt32(184320) + packUInt32(4) + "data";
   CompressedPartHeader header;
   std::string compressedData;
-  CPPUNIT_ASSERT(parseCompressedPartPayload(header, compressedData, payload32,
+  REQUIRE(parseCompressedPartPayload(header, compressedData, payload32,
                                            fileHash, false));
-  CPPUNIT_ASSERT_EQUAL((int64_t)184320, header.begin);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)4, header.totalCompressedLength);
-  CPPUNIT_ASSERT_EQUAL(std::string("data"), compressedData);
+  REQUIRE_EQ((int64_t)184320, header.begin);
+  REQUIRE_EQ((uint32_t)4, header.totalCompressedLength);
+  REQUIRE_EQ(std::string("data"), compressedData);
 
   auto payload64 = fileHash + packUInt64(0x100000001LL) + packUInt32(7) + "xy";
-  CPPUNIT_ASSERT(parseCompressedPartPayload(header, compressedData, payload64,
+  REQUIRE(parseCompressedPartPayload(header, compressedData, payload64,
                                            fileHash, true));
-  CPPUNIT_ASSERT_EQUAL((int64_t)0x100000001LL, header.begin);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)7, header.totalCompressedLength);
-  CPPUNIT_ASSERT_EQUAL(std::string("xy"), compressedData);
+  REQUIRE_EQ((int64_t)0x100000001LL, header.begin);
+  REQUIRE_EQ((uint32_t)7, header.totalCompressedLength);
+  REQUIRE_EQ(std::string("xy"), compressedData);
 
   auto bad = fileHash + packUInt32(0) + packUInt32(3) + "tiny";
-  CPPUNIT_ASSERT(!parseCompressedPartPayload(header, compressedData, bad,
+  REQUIRE(!parseCompressedPartPayload(header, compressedData, bad,
                                             fileHash, false));
 }
 
@@ -1100,23 +1097,23 @@ void Ed2kHelperTest::testInflateCompressedPartData()
 
   z_stream strm;
   memset(&strm, 0, sizeof(strm));
-  CPPUNIT_ASSERT_EQUAL(Z_OK, deflateInit(&strm, Z_DEFAULT_COMPRESSION));
+  REQUIRE_EQ(Z_OK, deflateInit(&strm, Z_DEFAULT_COMPRESSION));
   strm.avail_in = input.size();
   strm.next_in = reinterpret_cast<unsigned char*>(&input[0]);
   std::string compressed(compressBound(input.size()), '\0');
   strm.avail_out = compressed.size();
   strm.next_out = reinterpret_cast<unsigned char*>(&compressed[0]);
-  CPPUNIT_ASSERT_EQUAL(Z_STREAM_END, deflate(&strm, Z_FINISH));
+  REQUIRE_EQ(Z_STREAM_END, deflate(&strm, Z_FINISH));
   compressed.resize(compressed.size() - strm.avail_out);
-  CPPUNIT_ASSERT_EQUAL(Z_OK, deflateEnd(&strm));
+  REQUIRE_EQ(Z_OK, deflateEnd(&strm));
 
   std::string inflated;
-  CPPUNIT_ASSERT(inflateCompressedPartData(inflated, compressed, input.size()));
-  CPPUNIT_ASSERT_EQUAL(input, inflated);
+  REQUIRE(inflateCompressedPartData(inflated, compressed, input.size()));
+  REQUIRE_EQ(input, inflated);
 
-  CPPUNIT_ASSERT(!inflateCompressedPartData(inflated, compressed,
+  REQUIRE(!inflateCompressedPartData(inflated, compressed,
                                            input.size() - 1));
-  CPPUNIT_ASSERT(!inflateCompressedPartData(inflated, "not zlib", input.size()));
+  REQUIRE(!inflateCompressedPartData(inflated, "not zlib", input.size()));
 }
 
 void Ed2kHelperTest::testCompressedPartInflaterKeepsBlockOwnerAcrossChunks()
@@ -1128,36 +1125,36 @@ void Ed2kHelperTest::testCompressedPartInflaterKeepsBlockOwnerAcrossChunks()
 
   z_stream strm;
   memset(&strm, 0, sizeof(strm));
-  CPPUNIT_ASSERT_EQUAL(Z_OK, deflateInit(&strm, Z_DEFAULT_COMPRESSION));
+  REQUIRE_EQ(Z_OK, deflateInit(&strm, Z_DEFAULT_COMPRESSION));
   strm.avail_in = 98304;
   strm.next_in = reinterpret_cast<unsigned char*>(&input[0]);
   std::string compressed(compressBound(input.size()), '\0');
   strm.avail_out = compressed.size();
   strm.next_out = reinterpret_cast<unsigned char*>(&compressed[0]);
-  CPPUNIT_ASSERT_EQUAL(Z_OK, deflate(&strm, Z_SYNC_FLUSH));
+  REQUIRE_EQ(Z_OK, deflate(&strm, Z_SYNC_FLUSH));
   const auto firstCompressedLength = compressed.size() - strm.avail_out;
   strm.avail_in = input.size() - 98304;
   strm.next_in = reinterpret_cast<unsigned char*>(&input[98304]);
-  CPPUNIT_ASSERT_EQUAL(Z_STREAM_END, deflate(&strm, Z_FINISH));
+  REQUIRE_EQ(Z_STREAM_END, deflate(&strm, Z_FINISH));
   compressed.resize(compressed.size() - strm.avail_out);
-  CPPUNIT_ASSERT_EQUAL(Z_OK, deflateEnd(&strm));
+  REQUIRE_EQ(Z_OK, deflateEnd(&strm));
 
   CompressedPartInflater inflater;
   std::string first;
-  CPPUNIT_ASSERT(inflater.inflateChunk(
+  REQUIRE(inflater.inflateChunk(
       first, compressed.substr(0, firstCompressedLength), 0, 98304));
-  CPPUNIT_ASSERT(inflater.active());
-  CPPUNIT_ASSERT_EQUAL(static_cast<int64_t>(0), inflater.blockBegin());
-  CPPUNIT_ASSERT_EQUAL(static_cast<int64_t>(first.size()),
+  REQUIRE(inflater.active());
+  REQUIRE_EQ(static_cast<int64_t>(0), inflater.blockBegin());
+  REQUIRE_EQ(static_cast<int64_t>(first.size()),
                        inflater.inflatedLength());
-  CPPUNIT_ASSERT_EQUAL(input.substr(0, 98304), first);
+  REQUIRE_EQ(input.substr(0, 98304), first);
 
   std::string second;
-  CPPUNIT_ASSERT(inflater.inflateChunk(
+  REQUIRE(inflater.inflateChunk(
       second, compressed.substr(firstCompressedLength), 0,
       input.size() - first.size()));
-  CPPUNIT_ASSERT(!inflater.active());
-  CPPUNIT_ASSERT_EQUAL(input, first + second);
+  REQUIRE(!inflater.active());
+  REQUIRE_EQ(input, first + second);
 }
 
 void Ed2kHelperTest::testInflatePackedPacketPayload()
@@ -1169,24 +1166,24 @@ void Ed2kHelperTest::testInflatePackedPacketPayload()
 
   z_stream strm;
   memset(&strm, 0, sizeof(strm));
-  CPPUNIT_ASSERT_EQUAL(Z_OK, deflateInit(&strm, Z_DEFAULT_COMPRESSION));
+  REQUIRE_EQ(Z_OK, deflateInit(&strm, Z_DEFAULT_COMPRESSION));
   strm.avail_in = input.size();
   strm.next_in = reinterpret_cast<unsigned char*>(&input[0]);
   std::string compressed(compressBound(input.size()), '\0');
   strm.avail_out = compressed.size();
   strm.next_out = reinterpret_cast<unsigned char*>(&compressed[0]);
-  CPPUNIT_ASSERT_EQUAL(Z_STREAM_END, deflate(&strm, Z_FINISH));
+  REQUIRE_EQ(Z_STREAM_END, deflate(&strm, Z_FINISH));
   compressed.resize(compressed.size() - strm.avail_out);
-  CPPUNIT_ASSERT_EQUAL(Z_OK, deflateEnd(&strm));
+  REQUIRE_EQ(Z_OK, deflateEnd(&strm));
 
   std::string inflated;
-  CPPUNIT_ASSERT(inflatePackedPacketPayload(inflated, compressed,
+  REQUIRE(inflatePackedPacketPayload(inflated, compressed,
                                             input.size() + 100));
-  CPPUNIT_ASSERT_EQUAL(input, inflated);
+  REQUIRE_EQ(input, inflated);
 
-  CPPUNIT_ASSERT(!inflatePackedPacketPayload(inflated, compressed,
+  REQUIRE(!inflatePackedPacketPayload(inflated, compressed,
                                             input.size() - 1));
-  CPPUNIT_ASSERT(!inflatePackedPacketPayload(inflated, "not zlib", input.size()));
+  REQUIRE(!inflatePackedPacketPayload(inflated, "not zlib", input.size()));
 }
 
 void Ed2kHelperTest::testEmuleInfoPayload()
@@ -1207,7 +1204,7 @@ void Ed2kHelperTest::testEmuleInfoPayload()
 
   auto payload = createEmuleInfoPayload(info);
   std::vector<Tag> muleTags;
-  CPPUNIT_ASSERT(parseTagList(muleTags, payload.substr(2)));
+  REQUIRE(parseTagList(muleTags, payload.substr(2)));
   auto hasUintTag = [&](uint8_t id) {
     return std::find_if(muleTags.begin(), muleTags.end(),
                         [&](const Tag& tag) {
@@ -1222,32 +1219,32 @@ void Ed2kHelperTest::testEmuleInfoPayload()
                                  tag.valueType == TagValueType::STRING;
                         }) != muleTags.end();
   };
-  CPPUNIT_ASSERT(hasUintTag(0x20));
-  CPPUNIT_ASSERT(hasUintTag(0x21));
-  CPPUNIT_ASSERT(hasUintTag(0x22));
-  CPPUNIT_ASSERT(hasUintTag(0x23));
-  CPPUNIT_ASSERT(hasUintTag(0x24));
-  CPPUNIT_ASSERT(hasUintTag(0x25));
-  CPPUNIT_ASSERT(hasUintTag(0x26));
-  CPPUNIT_ASSERT(hasUintTag(0x27));
-  CPPUNIT_ASSERT(hasStringTag(0x55));
-  CPPUNIT_ASSERT(!hasUintTag(0xfb));
-  CPPUNIT_ASSERT(!hasUintTag(0xfa));
-  CPPUNIT_ASSERT(!hasUintTag(0xfe));
+  REQUIRE(hasUintTag(0x20));
+  REQUIRE(hasUintTag(0x21));
+  REQUIRE(hasUintTag(0x22));
+  REQUIRE(hasUintTag(0x23));
+  REQUIRE(hasUintTag(0x24));
+  REQUIRE(hasUintTag(0x25));
+  REQUIRE(hasUintTag(0x26));
+  REQUIRE(hasUintTag(0x27));
+  REQUIRE(hasStringTag(0x55));
+  REQUIRE(!hasUintTag(0xfb));
+  REQUIRE(!hasUintTag(0xfa));
+  REQUIRE(!hasUintTag(0xfe));
 
   EmulePeerInfo parsed;
-  CPPUNIT_ASSERT(parseEmuleInfoPayload(parsed, payload));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0x3c, parsed.version);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0x01, parsed.protocolVersion);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, parsed.udpPort);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0, parsed.miscOptions.aichVersion);
-  CPPUNIT_ASSERT(!parsed.miscOptions.unicode);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, parsed.miscOptions.dataCompressionVersion);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)3, parsed.miscOptions.sourceExchange1Version);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)2, parsed.miscOptions.extendedRequestsVersion);
-  CPPUNIT_ASSERT(!parsed.miscOptions.multiPacket);
-  CPPUNIT_ASSERT(!parsed.miscOptions2.supportsSourceExchange2);
-  CPPUNIT_ASSERT(!parsed.miscOptions2.supportsLargeFiles);
+  REQUIRE(parseEmuleInfoPayload(parsed, payload));
+  REQUIRE_EQ((uint8_t)0x3c, parsed.version);
+  REQUIRE_EQ((uint8_t)0x01, parsed.protocolVersion);
+  REQUIRE_EQ((uint16_t)4672, parsed.udpPort);
+  REQUIRE_EQ((uint8_t)0, parsed.miscOptions.aichVersion);
+  REQUIRE(!parsed.miscOptions.unicode);
+  REQUIRE_EQ((uint8_t)1, parsed.miscOptions.dataCompressionVersion);
+  REQUIRE_EQ((uint8_t)3, parsed.miscOptions.sourceExchange1Version);
+  REQUIRE_EQ((uint8_t)2, parsed.miscOptions.extendedRequestsVersion);
+  REQUIRE(!parsed.miscOptions.multiPacket);
+  REQUIRE(!parsed.miscOptions2.supportsSourceExchange2);
+  REQUIRE(!parsed.miscOptions2.supportsLargeFiles);
 
   std::string remotePayload;
   remotePayload.push_back(static_cast<char>(0x3c));
@@ -1255,28 +1252,28 @@ void Ed2kHelperTest::testEmuleInfoPayload()
   remotePayload += packUInt32(2);
   remotePayload += createUInt32Tag(0x21, 4672);
   remotePayload += createUInt32Tag(0x22, 4);
-  CPPUNIT_ASSERT(parseEmuleInfoPayload(parsed, remotePayload));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, parsed.udpPort);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)4, parsed.miscOptions.udpVersion);
+  REQUIRE(parseEmuleInfoPayload(parsed, remotePayload));
+  REQUIRE_EQ((uint16_t)4672, parsed.udpPort);
+  REQUIRE_EQ((uint8_t)4, parsed.miscOptions.udpVersion);
 }
 
 void Ed2kHelperTest::testLocalEmulePeerInfoCapabilities()
 {
   auto info = createLocalEmulePeerInfo();
 
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, info.miscOptions.aichVersion);
-  CPPUNIT_ASSERT(info.miscOptions.unicode);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1,
+  REQUIRE_EQ((uint8_t)1, info.miscOptions.aichVersion);
+  REQUIRE(info.miscOptions.unicode);
+  REQUIRE_EQ((uint8_t)1,
                        info.miscOptions.dataCompressionVersion);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)3,
+  REQUIRE_EQ((uint8_t)3,
                        info.miscOptions.sourceExchange1Version);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)2,
+  REQUIRE_EQ((uint8_t)2,
                        info.miscOptions.extendedRequestsVersion);
-  CPPUNIT_ASSERT(info.miscOptions2.supportsLargeFiles);
-  CPPUNIT_ASSERT(info.miscOptions2.supportsSourceExchange2);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0, info.miscOptions.secureIdentVersion);
-  CPPUNIT_ASSERT(info.miscOptions.multiPacket);
-  CPPUNIT_ASSERT(info.miscOptions2.supportsExtendedMultipacket);
+  REQUIRE(info.miscOptions2.supportsLargeFiles);
+  REQUIRE(info.miscOptions2.supportsSourceExchange2);
+  REQUIRE_EQ((uint8_t)0, info.miscOptions.secureIdentVersion);
+  REQUIRE(info.miscOptions.multiPacket);
+  REQUIRE(info.miscOptions2.supportsExtendedMultipacket);
 }
 
 void Ed2kHelperTest::testPeerHelloPayload()
@@ -1302,17 +1299,17 @@ void Ed2kHelperTest::testPeerHelloPayload()
   server.port = 4661;
   auto payload = createPeerHelloPayload(clientHash, 0x0a000001, 4662,
                                         server, "aria2-next", info, true);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)HASH_LENGTH,
+  REQUIRE_EQ((uint8_t)HASH_LENGTH,
                        static_cast<uint8_t>(payload[0]));
-  CPPUNIT_ASSERT_EQUAL(clientHash, payload.substr(1, HASH_LENGTH));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x0a000001,
+  REQUIRE_EQ(clientHash, payload.substr(1, HASH_LENGTH));
+  REQUIRE_EQ((uint32_t)0x0a000001,
                        readUInt32(payload.data() + 1 + HASH_LENGTH));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662,
+  REQUIRE_EQ((uint16_t)4662,
                        readUInt16(payload.data() + 1 + HASH_LENGTH + 4));
 
   const auto tagOffset = 1 + HASH_LENGTH + 4 + 2;
   std::vector<Tag> tags;
-  CPPUNIT_ASSERT(parseTagList(tags, payload.substr(
+  REQUIRE(parseTagList(tags, payload.substr(
                                         tagOffset,
                                         payload.size() - tagOffset - 6)));
   auto hasUintTag = [&](uint8_t id) {
@@ -1320,29 +1317,29 @@ void Ed2kHelperTest::testPeerHelloPayload()
              return tag.id == id && tag.valueType == TagValueType::UINT;
            }) != tags.end();
   };
-  CPPUNIT_ASSERT(hasUintTag(0x11));
-  CPPUNIT_ASSERT(hasUintTag(0xef));
-  CPPUNIT_ASSERT(hasUintTag(0xf9));
-  CPPUNIT_ASSERT(hasUintTag(0xfa));
-  CPPUNIT_ASSERT(hasUintTag(0xfb));
-  CPPUNIT_ASSERT(hasUintTag(0xfe));
-  CPPUNIT_ASSERT_EQUAL(std::string("010203043512"),
+  REQUIRE(hasUintTag(0x11));
+  REQUIRE(hasUintTag(0xef));
+  REQUIRE(hasUintTag(0xf9));
+  REQUIRE(hasUintTag(0xfa));
+  REQUIRE(hasUintTag(0xfb));
+  REQUIRE(hasUintTag(0xfe));
+  REQUIRE_EQ(std::string("010203043512"),
                        util::toHex(payload.substr(payload.size() - 6)));
 
   EmulePeerInfo parsed;
-  CPPUNIT_ASSERT(parsePeerHelloPayload(parsed, payload, true));
-  CPPUNIT_ASSERT_EQUAL(clientHash, parsed.userHash);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, parsed.udpPort);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)4, parsed.miscOptions.udpVersion);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, parsed.miscOptions.aichVersion);
-  CPPUNIT_ASSERT(parsed.miscOptions.unicode);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, parsed.miscOptions.dataCompressionVersion);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)3, parsed.miscOptions.sourceExchange1Version);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)2, parsed.miscOptions.extendedRequestsVersion);
-  CPPUNIT_ASSERT(parsed.miscOptions.multiPacket);
-  CPPUNIT_ASSERT(parsed.miscOptions2.supportsLargeFiles);
-  CPPUNIT_ASSERT(parsed.miscOptions2.supportsExtendedMultipacket);
-  CPPUNIT_ASSERT(parsed.miscOptions2.supportsSourceExchange2);
+  REQUIRE(parsePeerHelloPayload(parsed, payload, true));
+  REQUIRE_EQ(clientHash, parsed.userHash);
+  REQUIRE_EQ((uint16_t)4672, parsed.udpPort);
+  REQUIRE_EQ((uint8_t)4, parsed.miscOptions.udpVersion);
+  REQUIRE_EQ((uint8_t)1, parsed.miscOptions.aichVersion);
+  REQUIRE(parsed.miscOptions.unicode);
+  REQUIRE_EQ((uint8_t)1, parsed.miscOptions.dataCompressionVersion);
+  REQUIRE_EQ((uint8_t)3, parsed.miscOptions.sourceExchange1Version);
+  REQUIRE_EQ((uint8_t)2, parsed.miscOptions.extendedRequestsVersion);
+  REQUIRE(parsed.miscOptions.multiPacket);
+  REQUIRE(parsed.miscOptions2.supportsLargeFiles);
+  REQUIRE(parsed.miscOptions2.supportsExtendedMultipacket);
+  REQUIRE(parsed.miscOptions2.supportsSourceExchange2);
 }
 
 void Ed2kHelperTest::testUdpReaskPayloads()
@@ -1351,26 +1348,26 @@ void Ed2kHelperTest::testUdpReaskPayloads()
   auto fileHash = util::fromHex(fileHashHex.begin(), fileHashHex.end());
   auto ping = createUdpReaskFilePingPayload(fileHash, 7);
   UdpReask reask;
-  CPPUNIT_ASSERT(parseUdpReaskFilePingPayload(reask, ping));
-  CPPUNIT_ASSERT_EQUAL(fileHash, reask.fileHash);
-  CPPUNIT_ASSERT(reask.hasCompleteSources);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)7, reask.completeSources);
-  CPPUNIT_ASSERT(parseUdpReaskFilePingPayload(reask, fileHash));
-  CPPUNIT_ASSERT(!reask.hasCompleteSources);
+  REQUIRE(parseUdpReaskFilePingPayload(reask, ping));
+  REQUIRE_EQ(fileHash, reask.fileHash);
+  REQUIRE(reask.hasCompleteSources);
+  REQUIRE_EQ((uint16_t)7, reask.completeSources);
+  REQUIRE(parseUdpReaskFilePingPayload(reask, fileHash));
+  REQUIRE(!reask.hasCompleteSources);
 
   auto ackPayload =
       createUdpReaskAckPayload(std::vector<bool>{true, false, true}, 42);
   UdpReaskAck ack;
-  CPPUNIT_ASSERT(parseUdpReaskAckPayload(ack, ackPayload));
-  CPPUNIT_ASSERT_EQUAL((size_t)3, ack.bitfield.size());
-  CPPUNIT_ASSERT(ack.bitfield[0]);
-  CPPUNIT_ASSERT(!ack.bitfield[1]);
-  CPPUNIT_ASSERT(ack.bitfield[2]);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)42, ack.rank);
-  CPPUNIT_ASSERT(parseUdpReaskAckPayload(ack, createUdpReaskAckPayload(3)));
-  CPPUNIT_ASSERT(ack.bitfield.empty());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)3, ack.rank);
-  CPPUNIT_ASSERT(!parseUdpReaskAckPayload(ack, std::string(3, '\0')));
+  REQUIRE(parseUdpReaskAckPayload(ack, ackPayload));
+  REQUIRE_EQ((size_t)3, ack.bitfield.size());
+  REQUIRE(ack.bitfield[0]);
+  REQUIRE(!ack.bitfield[1]);
+  REQUIRE(ack.bitfield[2]);
+  REQUIRE_EQ((uint16_t)42, ack.rank);
+  REQUIRE(parseUdpReaskAckPayload(ack, createUdpReaskAckPayload(3)));
+  REQUIRE(ack.bitfield.empty());
+  REQUIRE_EQ((uint16_t)3, ack.rank);
+  REQUIRE(!parseUdpReaskAckPayload(ack, std::string(3, '\0')));
 }
 
 void Ed2kHelperTest::testAichPayloads()
@@ -1381,41 +1378,41 @@ void Ed2kHelperTest::testAichPayloads()
   auto aichRoot = util::fromHex(aichRootHex.begin(), aichRootHex.end());
 
   auto fileHashRequest = createAichFileHashRequestPayload(fileHash);
-  CPPUNIT_ASSERT_EQUAL(fileHash, fileHashRequest);
+  REQUIRE_EQ(fileHash, fileHashRequest);
 
   AichFileHashAnswer fileHashAnswer;
-  CPPUNIT_ASSERT(parseAichFileHashAnswerPayload(
+  REQUIRE(parseAichFileHashAnswerPayload(
       fileHashAnswer, createAichFileHashAnswerPayload(fileHash, aichRoot),
       fileHash));
-  CPPUNIT_ASSERT_EQUAL(fileHash, fileHashAnswer.fileHash);
-  CPPUNIT_ASSERT_EQUAL(aichRoot, fileHashAnswer.rootHash);
+  REQUIRE_EQ(fileHash, fileHashAnswer.fileHash);
+  REQUIRE_EQ(aichRoot, fileHashAnswer.rootHash);
 
   auto request = createAichRequestPayload(fileHash, 7, aichRoot);
   AichRequest parsedRequest;
-  CPPUNIT_ASSERT(parseAichRequestPayload(parsedRequest, request, fileHash));
-  CPPUNIT_ASSERT_EQUAL(fileHash, parsedRequest.fileHash);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)7, parsedRequest.partIndex);
-  CPPUNIT_ASSERT_EQUAL(aichRoot, parsedRequest.rootHash);
+  REQUIRE(parseAichRequestPayload(parsedRequest, request, fileHash));
+  REQUIRE_EQ(fileHash, parsedRequest.fileHash);
+  REQUIRE_EQ((uint16_t)7, parsedRequest.partIndex);
+  REQUIRE_EQ(aichRoot, parsedRequest.rootHash);
 
   std::string recovery;
   recovery += packUInt16(3);
   recovery += std::string(20, '\x22');
   auto answer = createAichAnswerPayload(fileHash, 7, aichRoot, recovery);
   AichAnswer parsedAnswer;
-  CPPUNIT_ASSERT(parseAichAnswerPayload(parsedAnswer, answer, fileHash));
-  CPPUNIT_ASSERT(!parsedAnswer.failed);
-  CPPUNIT_ASSERT_EQUAL(fileHash, parsedAnswer.fileHash);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)7, parsedAnswer.partIndex);
-  CPPUNIT_ASSERT_EQUAL(aichRoot, parsedAnswer.rootHash);
-  CPPUNIT_ASSERT_EQUAL(recovery, parsedAnswer.recoveryData);
+  REQUIRE(parseAichAnswerPayload(parsedAnswer, answer, fileHash));
+  REQUIRE(!parsedAnswer.failed);
+  REQUIRE_EQ(fileHash, parsedAnswer.fileHash);
+  REQUIRE_EQ((uint16_t)7, parsedAnswer.partIndex);
+  REQUIRE_EQ(aichRoot, parsedAnswer.rootHash);
+  REQUIRE_EQ(recovery, parsedAnswer.recoveryData);
 
-  CPPUNIT_ASSERT(parseAichAnswerPayload(parsedAnswer, fileHash, fileHash));
-  CPPUNIT_ASSERT(parsedAnswer.failed);
-  CPPUNIT_ASSERT_EQUAL(fileHash, parsedAnswer.fileHash);
-  CPPUNIT_ASSERT(parsedAnswer.rootHash.empty());
-  CPPUNIT_ASSERT(parsedAnswer.recoveryData.empty());
+  REQUIRE(parseAichAnswerPayload(parsedAnswer, fileHash, fileHash));
+  REQUIRE(parsedAnswer.failed);
+  REQUIRE_EQ(fileHash, parsedAnswer.fileHash);
+  REQUIRE(parsedAnswer.rootHash.empty());
+  REQUIRE(parsedAnswer.recoveryData.empty());
 
-  CPPUNIT_ASSERT(!parseAichRequestPayload(parsedRequest, request,
+  REQUIRE(!parseAichRequestPayload(parsedRequest, request,
                                           std::string(16, '\0')));
 }
 
@@ -1440,24 +1437,24 @@ void Ed2kHelperTest::testAichRecoveryData()
   recovery += packUInt16(0);
 
   AichRecoveryData parsed;
-  CPPUNIT_ASSERT(parseAichRecoveryData(parsed, recovery,
+  REQUIRE(parseAichRecoveryData(parsed, recovery,
                                        block0.size() + block1.size() +
                                            block2.size(),
                                        false));
-  CPPUNIT_ASSERT(verifyAichRecoveryData(
+  REQUIRE(verifyAichRecoveryData(
       parsed, root, block0.size() + block1.size() + block2.size(), 0));
   AichRecoverySet recoverySet;
-  CPPUNIT_ASSERT(buildAichRecoverySet(
+  REQUIRE(buildAichRecoverySet(
       recoverySet, parsed, root,
       block0.size() + block1.size() + block2.size(), 0));
-  CPPUNIT_ASSERT_EQUAL((size_t)3, recoverySet.blocks.size());
-  CPPUNIT_ASSERT_EQUAL(hash1, recoverySet.blocks[1].hash);
+  REQUIRE_EQ((size_t)3, recoverySet.blocks.size());
+  REQUIRE_EQ(hash1, recoverySet.blocks[1].hash);
   recovery[4] ^= 0x01;
-  CPPUNIT_ASSERT(parseAichRecoveryData(parsed, recovery,
+  REQUIRE(parseAichRecoveryData(parsed, recovery,
                                        block0.size() + block1.size() +
                                            block2.size(),
                                        false));
-  CPPUNIT_ASSERT(!verifyAichRecoveryData(
+  REQUIRE(!verifyAichRecoveryData(
       parsed, root, block0.size() + block1.size() + block2.size(), 0));
 }
 
@@ -1474,16 +1471,16 @@ void Ed2kHelperTest::testAichHashTree()
   auto thirdBlock =
       aichHash(data.data() + EMBLOCK_LENGTH * 2,
                data.size() - EMBLOCK_LENGTH * 2);
-  CPPUNIT_ASSERT_EQUAL((size_t)40, util::toHex(firstBlock).size());
-  CPPUNIT_ASSERT_EQUAL(firstBlock, aichRootHash(data.data(), EMBLOCK_LENGTH));
+  REQUIRE_EQ((size_t)40, util::toHex(firstBlock).size());
+  REQUIRE_EQ(firstBlock, aichRootHash(data.data(), EMBLOCK_LENGTH));
   auto left = aichHash(firstBlock + secondBlock);
-  CPPUNIT_ASSERT_EQUAL(aichHash(left + thirdBlock),
+  REQUIRE_EQ(aichHash(left + thirdBlock),
                        aichRootHash(data.data(), data.size()));
 
   std::vector<std::string> leaves{firstBlock, secondBlock, thirdBlock};
-  CPPUNIT_ASSERT_EQUAL(aichHash(left + thirdBlock), aichRootHash(leaves));
+  REQUIRE_EQ(aichHash(left + thirdBlock), aichRootHash(leaves));
 
-  CPPUNIT_ASSERT_THROW(aichRootHash(std::vector<std::string>{std::string(19, '\0')}),
+  REQUIRE_THROWS_AS(aichRootHash(std::vector<std::string>{std::string(19, '\0')}),
                        RecoverableException);
 }
 
@@ -1497,7 +1494,7 @@ void Ed2kHelperTest::testAichHashTreeKeepsPartLevel()
   const auto data = firstPart + secondPart;
   const auto flatRoot = aichRootHash(data.data(), data.size());
 
-  CPPUNIT_ASSERT_EQUAL(expected, flatRoot);
+  REQUIRE_EQ(expected, flatRoot);
 }
 
 void Ed2kHelperTest::testKadPacketPayloads()
@@ -1513,44 +1510,44 @@ void Ed2kHelperTest::testKadPacketPayloads()
 
   auto hello = createKadHelloPayload(nodeId, 4662, 5);
   KadHello parsedHello;
-  CPPUNIT_ASSERT(parseKadHelloPayload(parsedHello, hello));
-  CPPUNIT_ASSERT_EQUAL(nodeId, parsedHello.id);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, parsedHello.tcpPort);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)5, parsedHello.version);
+  REQUIRE(parseKadHelloPayload(parsedHello, hello));
+  REQUIRE_EQ(nodeId, parsedHello.id);
+  REQUIRE_EQ((uint16_t)4662, parsedHello.tcpPort);
+  REQUIRE_EQ((uint8_t)5, parsedHello.version);
 
   auto bootstrap = createKadBootstrapResponsePayload(nodeId, 4662, 5,
                                                      std::vector<KadContact>{contact});
   KadBootstrapResponse parsedBootstrap;
-  CPPUNIT_ASSERT(parseKadBootstrapResponsePayload(parsedBootstrap, bootstrap));
-  CPPUNIT_ASSERT_EQUAL(nodeId, parsedBootstrap.id);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, parsedBootstrap.tcpPort);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)5, parsedBootstrap.version);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, parsedBootstrap.contacts.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("0123456789abcdef0123456789abcdef097100cb"
+  REQUIRE(parseKadBootstrapResponsePayload(parsedBootstrap, bootstrap));
+  REQUIRE_EQ(nodeId, parsedBootstrap.id);
+  REQUIRE_EQ((uint16_t)4662, parsedBootstrap.tcpPort);
+  REQUIRE_EQ((uint8_t)5, parsedBootstrap.version);
+  REQUIRE_EQ((size_t)1, parsedBootstrap.contacts.size());
+  REQUIRE_EQ(std::string("0123456789abcdef0123456789abcdef097100cb"
                                    "4012361205"),
                        util::toHex(bootstrap.substr(HASH_LENGTH + 5)));
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"),
+  REQUIRE_EQ(std::string("203.0.113.9"),
                        parsedBootstrap.contacts[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, parsedBootstrap.contacts[0].udpPort);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, parsedBootstrap.contacts[0].tcpPort);
+  REQUIRE_EQ((uint16_t)4672, parsedBootstrap.contacts[0].udpPort);
+  REQUIRE_EQ((uint16_t)4662, parsedBootstrap.contacts[0].tcpPort);
 
   auto req = createKadRequestPayload(KAD_FIND_NODE, nodeId, nodeId);
   KadRequest parsedReq;
-  CPPUNIT_ASSERT(parseKadRequestPayload(parsedReq, req));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)KAD_FIND_NODE, parsedReq.searchType);
-  CPPUNIT_ASSERT_EQUAL(nodeId, parsedReq.targetId);
-  CPPUNIT_ASSERT_EQUAL(nodeId, parsedReq.receiverId);
+  REQUIRE(parseKadRequestPayload(parsedReq, req));
+  REQUIRE_EQ((uint8_t)KAD_FIND_NODE, parsedReq.searchType);
+  REQUIRE_EQ(nodeId, parsedReq.targetId);
+  REQUIRE_EQ(nodeId, parsedReq.receiverId);
 
   auto res = createKadResponsePayload(nodeId, std::vector<KadContact>{contact});
   KadResponse parsedRes;
-  CPPUNIT_ASSERT(parseKadResponsePayload(parsedRes, res));
-  CPPUNIT_ASSERT_EQUAL(nodeId, parsedRes.targetId);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, parsedRes.contacts.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("0123456789abcdef0123456789abcdef01"
+  REQUIRE(parseKadResponsePayload(parsedRes, res));
+  REQUIRE_EQ(nodeId, parsedRes.targetId);
+  REQUIRE_EQ((size_t)1, parsedRes.contacts.size());
+  REQUIRE_EQ(std::string("0123456789abcdef0123456789abcdef01"
                                    "0123456789abcdef0123456789abcdef097100cb"
                                    "4012361205"),
                        util::toHex(res));
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"), parsedRes.contacts[0].host);
+  REQUIRE_EQ(std::string("203.0.113.9"), parsedRes.contacts[0].host);
 }
 
 void Ed2kHelperTest::testKadUInt128ConversionMatchesAMule()
@@ -1560,10 +1557,10 @@ void Ed2kHelperTest::testKadUInt128ConversionMatchesAMule()
       std::end("2aab7f0cd4be378d9113557b1d24d8d0") - 1);
   const auto kadId = ed2kHashToKadId(fileHash);
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("0c7fab2a8d37bed47b551391d0d8241d"),
       util::toHex(kadId));
-  CPPUNIT_ASSERT_EQUAL(fileHash, kadIdToEd2kHash(kadId));
+  REQUIRE_EQ(fileHash, kadIdToEd2kHash(kadId));
 }
 
 void Ed2kHelperTest::testKadDirectCallbackPayload()
@@ -1572,18 +1569,18 @@ void Ed2kHelperTest::testKadDirectCallbackPayload()
 
   auto payload = createDirectCallbackRequestPayload(4662, userHash, 0x03);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)19, payload.size());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, readUInt16(payload.data()));
-  CPPUNIT_ASSERT_EQUAL(userHash, payload.substr(2, HASH_LENGTH));
-  CPPUNIT_ASSERT_EQUAL(static_cast<char>(0x03), payload[18]);
+  REQUIRE_EQ((size_t)19, payload.size());
+  REQUIRE_EQ((uint16_t)4662, readUInt16(payload.data()));
+  REQUIRE_EQ(userHash, payload.substr(2, HASH_LENGTH));
+  REQUIRE_EQ(static_cast<char>(0x03), payload[18]);
 
   DirectCallbackRequest request;
-  CPPUNIT_ASSERT(parseDirectCallbackRequestPayload(request, payload));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, request.tcpPort);
-  CPPUNIT_ASSERT_EQUAL(userHash, request.userHash);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0x03, request.connectOptions);
+  REQUIRE(parseDirectCallbackRequestPayload(request, payload));
+  REQUIRE_EQ((uint16_t)4662, request.tcpPort);
+  REQUIRE_EQ(userHash, request.userHash);
+  REQUIRE_EQ((uint8_t)0x03, request.connectOptions);
 
-  CPPUNIT_ASSERT(!parseDirectCallbackRequestPayload(request,
+  REQUIRE(!parseDirectCallbackRequestPayload(request,
                                                    payload.substr(0, 18)));
 }
 
@@ -1597,19 +1594,19 @@ void Ed2kHelperTest::testKadBuddyCallbackPayload()
 
   auto payload = createBuddyCallbackPayload(buddyId, fileId, source);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)38, payload.size());
-  CPPUNIT_ASSERT_EQUAL(buddyId, payload.substr(0, HASH_LENGTH));
-  CPPUNIT_ASSERT_EQUAL(fileId, payload.substr(HASH_LENGTH, HASH_LENGTH));
-  CPPUNIT_ASSERT_EQUAL(std::string("cb00712c3612"),
+  REQUIRE_EQ((size_t)38, payload.size());
+  REQUIRE_EQ(buddyId, payload.substr(0, HASH_LENGTH));
+  REQUIRE_EQ(fileId, payload.substr(HASH_LENGTH, HASH_LENGTH));
+  REQUIRE_EQ(std::string("cb00712c3612"),
                        util::toHex(payload.substr(HASH_LENGTH * 2)));
 
   BuddyCallback callback;
-  CPPUNIT_ASSERT(parseBuddyCallbackPayload(callback, payload));
-  CPPUNIT_ASSERT_EQUAL(buddyId, callback.buddyId);
-  CPPUNIT_ASSERT_EQUAL(fileId, callback.fileId);
-  CPPUNIT_ASSERT_EQUAL(source.host, callback.endpoint.host);
-  CPPUNIT_ASSERT_EQUAL(source.port, callback.endpoint.port);
-  CPPUNIT_ASSERT(!parseBuddyCallbackPayload(callback, payload.substr(0, 37)));
+  REQUIRE(parseBuddyCallbackPayload(callback, payload));
+  REQUIRE_EQ(buddyId, callback.buddyId);
+  REQUIRE_EQ(fileId, callback.fileId);
+  REQUIRE_EQ(source.host, callback.endpoint.host);
+  REQUIRE_EQ(source.port, callback.endpoint.port);
+  REQUIRE(!parseBuddyCallbackPayload(callback, payload.substr(0, 37)));
 }
 
 void Ed2kHelperTest::testKadObfuscatedPacketRoundTrip()
@@ -1620,18 +1617,18 @@ void Ed2kHelperTest::testKadObfuscatedPacketRoundTrip()
 
   auto obfuscated = createKadObfuscatedDatagram(datagram, nodeId, 0x1234);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)18, obfuscated.size());
-  CPPUNIT_ASSERT(static_cast<uint8_t>(obfuscated[0]) != KAD_PROTOCOL);
-  CPPUNIT_ASSERT_EQUAL(std::string("3412"),
+  REQUIRE_EQ((size_t)18, obfuscated.size());
+  REQUIRE(static_cast<uint8_t>(obfuscated[0]) != KAD_PROTOCOL);
+  REQUIRE_EQ(std::string("3412"),
                        util::toHex(obfuscated.substr(1, 2)));
-  CPPUNIT_ASSERT_EQUAL(std::string("0834123bfb9093bc2416f3250b68702029b8"),
+  REQUIRE_EQ(std::string("0834123bfb9093bc2416f3250b68702029b8"),
                        util::toHex(obfuscated));
 
   KadObfuscatedDatagram parsed;
-  CPPUNIT_ASSERT(parseKadObfuscatedDatagram(parsed, obfuscated, nodeId));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, parsed.receiverVerifyKey);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, parsed.senderVerifyKey);
-  CPPUNIT_ASSERT_EQUAL(datagram, parsed.datagram);
+  REQUIRE(parseKadObfuscatedDatagram(parsed, obfuscated, nodeId));
+  REQUIRE_EQ((uint32_t)0, parsed.receiverVerifyKey);
+  REQUIRE_EQ((uint32_t)0, parsed.senderVerifyKey);
+  REQUIRE_EQ(datagram, parsed.datagram);
 
   const auto amuleNodeKeyPacket = util::fromHex(
       std::begin("00fce06eda509dbfe1b8784806755e29e169"),
@@ -1639,23 +1636,23 @@ void Ed2kHelperTest::testKadObfuscatedPacketRoundTrip()
   const auto amuleNodeId = util::fromHex(
       std::begin("4115b891e3b4fafa7e5116332d508752"),
       std::end("4115b891e3b4fafa7e5116332d508752") - 1);
-  CPPUNIT_ASSERT(parseKadObfuscatedDatagram(parsed, amuleNodeKeyPacket,
+  REQUIRE(parseKadObfuscatedDatagram(parsed, amuleNodeKeyPacket,
                                            amuleNodeId));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, parsed.receiverVerifyKey);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x0c2bca82, parsed.senderVerifyKey);
-  CPPUNIT_ASSERT_EQUAL(createDatagram(KAD_PROTOCOL, 0x60, std::string()),
+  REQUIRE_EQ((uint32_t)0, parsed.receiverVerifyKey);
+  REQUIRE_EQ((uint32_t)0x0c2bca82, parsed.senderVerifyKey);
+  REQUIRE_EQ(createDatagram(KAD_PROTOCOL, 0x60, std::string()),
                        parsed.datagram);
 
   auto verifyKeyPacket =
       createKadObfuscatedDatagram(datagram, 0x11223344, 0x55667788, 0x1234);
-  CPPUNIT_ASSERT_EQUAL(std::string("0a34124907d4afead3f790b245955cf96823"),
+  REQUIRE_EQ(std::string("0a34124907d4afead3f790b245955cf96823"),
                        util::toHex(verifyKeyPacket));
-  CPPUNIT_ASSERT(parseKadObfuscatedDatagram(parsed, verifyKeyPacket,
+  REQUIRE(parseKadObfuscatedDatagram(parsed, verifyKeyPacket,
                                            (uint32_t)0x11223344));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x11223344, parsed.receiverVerifyKey);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55667788, parsed.senderVerifyKey);
-  CPPUNIT_ASSERT_EQUAL(datagram, parsed.datagram);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0xc43989ee,
+  REQUIRE_EQ((uint32_t)0x11223344, parsed.receiverVerifyKey);
+  REQUIRE_EQ((uint32_t)0x55667788, parsed.senderVerifyKey);
+  REQUIRE_EQ(datagram, parsed.datagram);
+  REQUIRE_EQ((uint32_t)0xc43989ee,
                        createKadUdpVerifyKey(0x61726961, "203.0.113.9"));
 }
 
@@ -1668,83 +1665,83 @@ void Ed2kHelperTest::testKadSearchPublishAndFirewallPayloads()
 
   auto sourceReq = createKadSearchSourcesRequestPayload(fileId, 3, 123456789);
   KadSearchSourcesRequest parsedSourceReq;
-  CPPUNIT_ASSERT(parseKadSearchSourcesRequestPayload(parsedSourceReq,
+  REQUIRE(parseKadSearchSourcesRequestPayload(parsedSourceReq,
                                                     sourceReq));
-  CPPUNIT_ASSERT_EQUAL(fileId, parsedSourceReq.targetId);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)3, parsedSourceReq.startPosition);
-  CPPUNIT_ASSERT_EQUAL((uint64_t)123456789, parsedSourceReq.size);
+  REQUIRE_EQ(fileId, parsedSourceReq.targetId);
+  REQUIRE_EQ((uint16_t)3, parsedSourceReq.startPosition);
+  REQUIRE_EQ((uint64_t)123456789, parsedSourceReq.size);
 
   auto keyReq = createKadSearchKeysRequestPayload(fileId, 7);
-  CPPUNIT_ASSERT_EQUAL((size_t)18, keyReq.size());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)7, readUInt16(keyReq.data() + HASH_LENGTH));
+  REQUIRE_EQ((size_t)18, keyReq.size());
+  REQUIRE_EQ((uint16_t)7, readUInt16(keyReq.data() + HASH_LENGTH));
 
   Endpoint source;
   source.host = "203.0.113.9";
   source.port = 4662;
   auto publish = createKadPublishSourceRequestPayload(fileId, source, sourceId);
   KadPublishSourceRequest parsedPublish;
-  CPPUNIT_ASSERT(parseKadPublishSourceRequestPayload(parsedPublish, publish));
-  CPPUNIT_ASSERT_EQUAL(fileId, parsedPublish.fileId);
+  REQUIRE(parseKadPublishSourceRequestPayload(parsedPublish, publish));
+  REQUIRE_EQ(fileId, parsedPublish.fileId);
   auto largePublish = createKadPublishSourceRequestPayload(
       fileId, source, sourceId, 0x100000001ULL);
-  CPPUNIT_ASSERT(parseKadPublishSourceRequestPayload(parsedPublish,
+  REQUIRE(parseKadPublishSourceRequestPayload(parsedPublish,
                                                      largePublish));
   auto sizeTag = std::find_if(parsedPublish.source.tags.begin(),
                               parsedPublish.source.tags.end(),
                               [](const Tag& tag) { return tag.id == 0xd3; });
-  CPPUNIT_ASSERT(sizeTag != parsedPublish.source.tags.end());
-  CPPUNIT_ASSERT_EQUAL((uint64_t)0x100000001ULL, sizeTag->intValue);
+  REQUIRE(sizeTag != parsedPublish.source.tags.end());
+  REQUIRE_EQ((uint64_t)0x100000001ULL, sizeTag->intValue);
   auto sourceTypeTag = std::find_if(parsedPublish.source.tags.begin(),
                                     parsedPublish.source.tags.end(),
                                     [](const Tag& tag) {
                                       return tag.id == 0xff;
                                     });
-  CPPUNIT_ASSERT(sourceTypeTag != parsedPublish.source.tags.end());
-  CPPUNIT_ASSERT_EQUAL((uint64_t)4, sourceTypeTag->intValue);
+  REQUIRE(sourceTypeTag != parsedPublish.source.tags.end());
+  REQUIRE_EQ((uint64_t)4, sourceTypeTag->intValue);
 
   auto searchRes = createKadSearchResultPayload(
       sourceId, fileId,
       std::vector<KadSearchEntry>{parsedPublish.source});
   KadSearchResult result;
-  CPPUNIT_ASSERT(parseKadSearchResultPayload(result, searchRes));
-  CPPUNIT_ASSERT_EQUAL(sourceId, result.sourceId);
-  CPPUNIT_ASSERT_EQUAL(fileId, result.targetId);
+  REQUIRE(parseKadSearchResultPayload(result, searchRes));
+  REQUIRE_EQ(sourceId, result.sourceId);
+  REQUIRE_EQ(fileId, result.targetId);
   auto endpoints = extractKadSourceEndpoints(result);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, endpoints.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"), endpoints[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, endpoints[0].port);
+  REQUIRE_EQ((size_t)1, endpoints.size());
+  REQUIRE_EQ(std::string("203.0.113.9"), endpoints[0].host);
+  REQUIRE_EQ((uint16_t)4662, endpoints[0].port);
 
   KadPublishResult publishResult;
-  CPPUNIT_ASSERT(parseKadPublishResultPayload(
+  REQUIRE(parseKadPublishResultPayload(
       publishResult, createKadPublishResultPayload(fileId, 1)));
-  CPPUNIT_ASSERT_EQUAL(fileId, publishResult.fileId);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, publishResult.count);
+  REQUIRE_EQ(fileId, publishResult.fileId);
+  REQUIRE_EQ((uint8_t)1, publishResult.count);
 
   KadFirewalledRequest fwReq;
-  CPPUNIT_ASSERT(parseKadFirewalledRequestPayload(
+  REQUIRE(parseKadFirewalledRequestPayload(
       fwReq, createKadFirewalledRequestPayload(4662, sourceId, 2)));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, fwReq.tcpPort);
-  CPPUNIT_ASSERT_EQUAL(sourceId, fwReq.id);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)2, fwReq.options);
+  REQUIRE_EQ((uint16_t)4662, fwReq.tcpPort);
+  REQUIRE_EQ(sourceId, fwReq.id);
+  REQUIRE_EQ((uint8_t)2, fwReq.options);
 
   KadFirewalledResponse fwRes;
-  CPPUNIT_ASSERT(parseKadFirewalledResponsePayload(
+  REQUIRE(parseKadFirewalledResponsePayload(
       fwRes, createKadFirewalledResponsePayload("203.0.113.9")));
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.9"), fwRes.ipAddress);
+  REQUIRE_EQ(std::string("203.0.113.9"), fwRes.ipAddress);
 
   KadCallbackRequest callbackReq;
-  CPPUNIT_ASSERT(parseKadCallbackRequestPayload(
+  REQUIRE(parseKadCallbackRequestPayload(
       callbackReq,
       createKadCallbackRequestPayload(sourceId, fileId, 4662)));
-  CPPUNIT_ASSERT_EQUAL(sourceId, callbackReq.buddyId);
-  CPPUNIT_ASSERT_EQUAL(fileId, callbackReq.fileId);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, callbackReq.tcpPort);
+  REQUIRE_EQ(sourceId, callbackReq.buddyId);
+  REQUIRE_EQ(fileId, callbackReq.fileId);
+  REQUIRE_EQ((uint16_t)4662, callbackReq.tcpPort);
 
   KadFirewalledUdp fwUdp;
-  CPPUNIT_ASSERT(parseKadFirewalledUdpPayload(
+  REQUIRE(parseKadFirewalledUdpPayload(
       fwUdp, createKadFirewalledUdpPayload(1, 4662)));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, fwUdp.errorCode);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, fwUdp.tcpPort);
+  REQUIRE_EQ((uint8_t)1, fwUdp.errorCode);
+  REQUIRE_EQ((uint16_t)4662, fwUdp.tcpPort);
 }
 
 void Ed2kHelperTest::testKadRoutingStatePayload()
@@ -1798,46 +1795,46 @@ void Ed2kHelperTest::testKadRoutingStatePayload()
 
   auto payload = createKadRoutingStatePayload(snapshot);
   KadRoutingSnapshot parsed;
-  CPPUNIT_ASSERT(parseKadRoutingStatePayload(parsed, payload));
-  CPPUNIT_ASSERT_EQUAL(selfId, parsed.selfId);
-  CPPUNIT_ASSERT_EQUAL((int64_t)100, parsed.lastBootstrap);
-  CPPUNIT_ASSERT_EQUAL((int64_t)200, parsed.lastRefresh);
-  CPPUNIT_ASSERT_EQUAL((int64_t)300, parsed.lastSelfRefresh);
-  CPPUNIT_ASSERT_EQUAL((int64_t)500, parsed.lastFirewalledCheck);
-  CPPUNIT_ASSERT_EQUAL((int64_t)600, parsed.lastSourcePublish);
-  CPPUNIT_ASSERT_EQUAL((int64_t)700, parsed.lastSourceSearch);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)3, parsed.sourceSearchCount);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x61726961, parsed.udpVerifyKey);
-  CPPUNIT_ASSERT(!parsed.firewalled);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.observedAddresses.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.55"),
+  REQUIRE(parseKadRoutingStatePayload(parsed, payload));
+  REQUIRE_EQ(selfId, parsed.selfId);
+  REQUIRE_EQ((int64_t)100, parsed.lastBootstrap);
+  REQUIRE_EQ((int64_t)200, parsed.lastRefresh);
+  REQUIRE_EQ((int64_t)300, parsed.lastSelfRefresh);
+  REQUIRE_EQ((int64_t)500, parsed.lastFirewalledCheck);
+  REQUIRE_EQ((int64_t)600, parsed.lastSourcePublish);
+  REQUIRE_EQ((int64_t)700, parsed.lastSourceSearch);
+  REQUIRE_EQ((uint32_t)3, parsed.sourceSearchCount);
+  REQUIRE_EQ((uint32_t)0x61726961, parsed.udpVerifyKey);
+  REQUIRE(!parsed.firewalled);
+  REQUIRE_EQ((size_t)1, parsed.observedAddresses.size());
+  REQUIRE_EQ(std::string("203.0.113.55"),
                        parsed.observedAddresses[0]);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.routerNodes.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.1"), parsed.routerNodes[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, parsed.routerNodes[0].port);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.routerContacts.size());
-  CPPUNIT_ASSERT_EQUAL(routerContact.id, parsed.routerContacts[0].id);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.2"),
+  REQUIRE_EQ((size_t)1, parsed.routerNodes.size());
+  REQUIRE_EQ(std::string("203.0.113.1"), parsed.routerNodes[0].host);
+  REQUIRE_EQ((uint16_t)4672, parsed.routerNodes[0].port);
+  REQUIRE_EQ((size_t)1, parsed.routerContacts.size());
+  REQUIRE_EQ(routerContact.id, parsed.routerContacts[0].id);
+  REQUIRE_EQ(std::string("203.0.113.2"),
                        parsed.routerContacts[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)8, parsed.routerContacts[0].version);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55667788,
+  REQUIRE_EQ((uint8_t)8, parsed.routerContacts[0].version);
+  REQUIRE_EQ((uint32_t)0x55667788,
                        parsed.routerContacts[0].udpKey);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, parsed.buckets.size());
-  CPPUNIT_ASSERT_EQUAL((int64_t)400, parsed.buckets[1].lastActive);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.buckets[1].live.size());
-  CPPUNIT_ASSERT(parsed.buckets[1].live[0].confirmed);
-  CPPUNIT_ASSERT(parsed.buckets[1].live[0].seed);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)3, parsed.buckets[1].live[0].failCount);
-  CPPUNIT_ASSERT_EQUAL((int64_t)50, parsed.buckets[1].live[0].firstSeen);
-  CPPUNIT_ASSERT_EQUAL((int64_t)75, parsed.buckets[1].live[0].lastSeen);
-  CPPUNIT_ASSERT_EQUAL(std::string("198.51.100.2"),
+  REQUIRE_EQ((size_t)2, parsed.buckets.size());
+  REQUIRE_EQ((int64_t)400, parsed.buckets[1].lastActive);
+  REQUIRE_EQ((size_t)1, parsed.buckets[1].live.size());
+  REQUIRE(parsed.buckets[1].live[0].confirmed);
+  REQUIRE(parsed.buckets[1].live[0].seed);
+  REQUIRE_EQ((uint32_t)3, parsed.buckets[1].live[0].failCount);
+  REQUIRE_EQ((int64_t)50, parsed.buckets[1].live[0].firstSeen);
+  REQUIRE_EQ((int64_t)75, parsed.buckets[1].live[0].lastSeen);
+  REQUIRE_EQ(std::string("198.51.100.2"),
                        parsed.buckets[1].live[0].contact.host);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, parsed.buckets[1].replacements.size());
-  CPPUNIT_ASSERT(!parsed.buckets[1].replacements[0].confirmed);
-  CPPUNIT_ASSERT_EQUAL(std::string("198.51.100.3"),
+  REQUIRE_EQ((size_t)1, parsed.buckets[1].replacements.size());
+  REQUIRE(!parsed.buckets[1].replacements[0].confirmed);
+  REQUIRE_EQ(std::string("198.51.100.3"),
                        parsed.buckets[1].replacements[0].contact.host);
 
-  CPPUNIT_ASSERT(!parseKadRoutingStatePayload(
+  REQUIRE(!parseKadRoutingStatePayload(
       parsed, payload.substr(0, payload.size() - 1)));
 }
 
@@ -1879,38 +1876,38 @@ void Ed2kHelperTest::testServerStatePayload()
 
   auto payload = createServerStatePayload(state);
   ServerState parsed;
-  CPPUNIT_ASSERT(parseServerStatePayload(parsed, payload));
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), parsed.endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, parsed.endpoint.port);
-  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"), parsed.name);
-  CPPUNIT_ASSERT_EQUAL(std::string("Primary ED2K server"),
+  REQUIRE(parseServerStatePayload(parsed, payload));
+  REQUIRE_EQ(std::string("203.0.113.10"), parsed.endpoint.host);
+  REQUIRE_EQ((uint16_t)4661, parsed.endpoint.port);
+  REQUIRE_EQ(std::string("Peer Server"), parsed.name);
+  REQUIRE_EQ(std::string("Primary ED2K server"),
                        parsed.description);
-  CPPUNIT_ASSERT(parsed.connected);
-  CPPUNIT_ASSERT(parsed.handshakeCompleted);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x0a000001, parsed.clientId);
-  CPPUNIT_ASSERT(parsed.highId);
-  CPPUNIT_ASSERT_EQUAL(std::string("1.0.0.10"), parsed.ipAddress);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa, parsed.tcpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1234, parsed.users);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)5678, parsed.files);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)9000, parsed.maxUsers);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)100, parsed.softFiles);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)200, parsed.hardFiles);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x01020304, parsed.udpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)77, parsed.lowIdUsers);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4665, parsed.udpObfuscationPort);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4666, parsed.tcpObfuscationPort);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x11223344, parsed.udpKey);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa0011, parsed.udpStatusChallenge);
-  CPPUNIT_ASSERT_EQUAL((int64_t)120, parsed.lastUdpStatusTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)180, parsed.nextSourceRequestTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)200, parsed.lastSourceResponseTime);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)3, parsed.lastSourceCount);
-  CPPUNIT_ASSERT_EQUAL((int64_t)210, parsed.lastUdpSourceRequestTime);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)2, parsed.failCount);
-  CPPUNIT_ASSERT_EQUAL((int64_t)100, parsed.lastFailureTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)160, parsed.nextRetryTime);
-  CPPUNIT_ASSERT_EQUAL(std::string("hello"), parsed.lastMessage);
+  REQUIRE(parsed.connected);
+  REQUIRE(parsed.handshakeCompleted);
+  REQUIRE_EQ((uint32_t)0x0a000001, parsed.clientId);
+  REQUIRE(parsed.highId);
+  REQUIRE_EQ(std::string("1.0.0.10"), parsed.ipAddress);
+  REQUIRE_EQ((uint32_t)0x55aa, parsed.tcpFlags);
+  REQUIRE_EQ((uint32_t)1234, parsed.users);
+  REQUIRE_EQ((uint32_t)5678, parsed.files);
+  REQUIRE_EQ((uint32_t)9000, parsed.maxUsers);
+  REQUIRE_EQ((uint32_t)100, parsed.softFiles);
+  REQUIRE_EQ((uint32_t)200, parsed.hardFiles);
+  REQUIRE_EQ((uint32_t)0x01020304, parsed.udpFlags);
+  REQUIRE_EQ((uint32_t)77, parsed.lowIdUsers);
+  REQUIRE_EQ((uint16_t)4665, parsed.udpObfuscationPort);
+  REQUIRE_EQ((uint16_t)4666, parsed.tcpObfuscationPort);
+  REQUIRE_EQ((uint32_t)0x11223344, parsed.udpKey);
+  REQUIRE_EQ((uint32_t)0x55aa0011, parsed.udpStatusChallenge);
+  REQUIRE_EQ((int64_t)120, parsed.lastUdpStatusTime);
+  REQUIRE_EQ((int64_t)180, parsed.nextSourceRequestTime);
+  REQUIRE_EQ((int64_t)200, parsed.lastSourceResponseTime);
+  REQUIRE_EQ((uint32_t)3, parsed.lastSourceCount);
+  REQUIRE_EQ((int64_t)210, parsed.lastUdpSourceRequestTime);
+  REQUIRE_EQ((uint32_t)2, parsed.failCount);
+  REQUIRE_EQ((int64_t)100, parsed.lastFailureTime);
+  REQUIRE_EQ((int64_t)160, parsed.nextRetryTime);
+  REQUIRE_EQ(std::string("hello"), parsed.lastMessage);
 
   std::string v1Payload = payload;
   v1Payload.replace(sizeof("A2ED2KSRV") - 1, 4, packUInt32(1));
@@ -1920,15 +1917,15 @@ void Ed2kHelperTest::testServerStatePayload()
                   2 + 4 + 1 + 2 + state.ipAddress.size() + 4 + 4 + 4 + 4 +
                   4 + 4 + 4 + 4 + 2 + 2 + 4 + 4 + 8,
                   8 + 4 + 8 + 8);
-  CPPUNIT_ASSERT(parseServerStatePayload(parsed, v1Payload));
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, parsed.nextSourceRequestTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, parsed.lastSourceResponseTime);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, parsed.lastSourceCount);
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, parsed.lastUdpSourceRequestTime);
-  CPPUNIT_ASSERT(parsed.name.empty());
-  CPPUNIT_ASSERT(parsed.description.empty());
+  REQUIRE(parseServerStatePayload(parsed, v1Payload));
+  REQUIRE_EQ((int64_t)0, parsed.nextSourceRequestTime);
+  REQUIRE_EQ((int64_t)0, parsed.lastSourceResponseTime);
+  REQUIRE_EQ((uint32_t)0, parsed.lastSourceCount);
+  REQUIRE_EQ((int64_t)0, parsed.lastUdpSourceRequestTime);
+  REQUIRE(parsed.name.empty());
+  REQUIRE(parsed.description.empty());
 
-  CPPUNIT_ASSERT(!parseServerStatePayload(parsed,
+  REQUIRE(!parseServerStatePayload(parsed,
                                           payload.substr(0, payload.size() - 1)));
 }
 
@@ -1954,14 +1951,14 @@ void Ed2kHelperTest::testNodesDatParser()
                  .substr(HASH_LENGTH + 1);
 
   NodesDat nodes;
-  CPPUNIT_ASSERT(parseNodesDat(nodes, payload));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)3, nodes.version);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1, nodes.bootstrapEdition);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, nodes.contacts.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.1"), nodes.contacts[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, nodes.contacts[0].udpPort);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, nodes.verified.size());
-  CPPUNIT_ASSERT(nodes.verified[0]);
+  REQUIRE(parseNodesDat(nodes, payload));
+  REQUIRE_EQ((uint32_t)3, nodes.version);
+  REQUIRE_EQ((uint32_t)1, nodes.bootstrapEdition);
+  REQUIRE_EQ((size_t)1, nodes.contacts.size());
+  REQUIRE_EQ(std::string("203.0.113.1"), nodes.contacts[0].host);
+  REQUIRE_EQ((uint16_t)4672, nodes.contacts[0].udpPort);
+  REQUIRE_EQ((size_t)1, nodes.verified.size());
+  REQUIRE(nodes.verified[0]);
 
   std::string amuleV2;
   amuleV2 += packUInt32(0);
@@ -1974,9 +1971,9 @@ void Ed2kHelperTest::testNodesDatParser()
   amuleV2.push_back('\x08');
   amuleV2 += packUInt64(0);
   amuleV2.push_back('\0');
-  CPPUNIT_ASSERT(parseNodesDat(nodes, amuleV2));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, nodes.contacts.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("1.159.24.5"), nodes.contacts[0].host);
+  REQUIRE(parseNodesDat(nodes, amuleV2));
+  REQUIRE_EQ((size_t)1, nodes.contacts.size());
+  REQUIRE_EQ(std::string("1.159.24.5"), nodes.contacts[0].host);
 
   std::string normal;
   normal += packUInt32(0);
@@ -1989,12 +1986,12 @@ void Ed2kHelperTest::testNodesDatParser()
   normal.push_back('\0');
   normal += packUInt64(0);
   normal.push_back('\x01');
-  CPPUNIT_ASSERT(parseNodesDat(nodes, normal));
-  CPPUNIT_ASSERT_EQUAL((uint32_t)2, nodes.version);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, nodes.verified.size());
-  CPPUNIT_ASSERT(nodes.verified[0]);
+  REQUIRE(parseNodesDat(nodes, normal));
+  REQUIRE_EQ((uint32_t)2, nodes.version);
+  REQUIRE_EQ((size_t)1, nodes.verified.size());
+  REQUIRE(nodes.verified[0]);
 
-  CPPUNIT_ASSERT(!parseNodesDat(nodes, packUInt32(0) + packUInt32(2) +
+  REQUIRE(!parseNodesDat(nodes, packUInt32(0) + packUInt32(2) +
                                            packUInt32(0xffffffffu)));
 }
 
@@ -2023,32 +2020,32 @@ void Ed2kHelperTest::testServerMetParser()
 
   auto servers = parseServerMet(data);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, servers.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), servers[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, servers[0].port);
+  REQUIRE_EQ((size_t)1, servers.size());
+  REQUIRE_EQ(std::string("1.2.3.4"), servers[0].host);
+  REQUIRE_EQ((uint16_t)4661, servers[0].port);
 
   auto entries = parseServerMetEntries(data);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, entries.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), entries[0].endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, entries[0].endpoint.port);
-  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"), entries[0].name);
-  CPPUNIT_ASSERT_EQUAL(std::string("Primary ED2K server"),
+  REQUIRE_EQ((size_t)1, entries.size());
+  REQUIRE_EQ(std::string("1.2.3.4"), entries[0].endpoint.host);
+  REQUIRE_EQ((uint16_t)4661, entries[0].endpoint.port);
+  REQUIRE_EQ(std::string("Peer Server"), entries[0].name);
+  REQUIRE_EQ(std::string("Primary ED2K server"),
                        entries[0].description);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)9000, entries[0].maxUsers);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)100, entries[0].softFiles);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)200, entries[0].hardFiles);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x01020304, entries[0].udpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)77, entries[0].lowIdUsers);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x11223344, entries[0].udpKey);
+  REQUIRE_EQ((uint32_t)9000, entries[0].maxUsers);
+  REQUIRE_EQ((uint32_t)100, entries[0].softFiles);
+  REQUIRE_EQ((uint32_t)200, entries[0].hardFiles);
+  REQUIRE_EQ((uint32_t)0x01020304, entries[0].udpFlags);
+  REQUIRE_EQ((uint32_t)77, entries[0].lowIdUsers);
+  REQUIRE_EQ((uint32_t)0x11223344, entries[0].udpKey);
 
   data[0] = static_cast<char>(0xe0);
   entries = parseServerMetEntries(data);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, entries.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), entries[0].endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, entries[0].endpoint.port);
-  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"), entries[0].name);
+  REQUIRE_EQ((size_t)1, entries.size());
+  REQUIRE_EQ(std::string("1.2.3.4"), entries[0].endpoint.host);
+  REQUIRE_EQ((uint16_t)4661, entries[0].endpoint.port);
+  REQUIRE_EQ(std::string("Peer Server"), entries[0].name);
 
   std::string hostnameEntry;
   hostnameEntry.push_back('\x0e');
@@ -2061,25 +2058,25 @@ void Ed2kHelperTest::testServerMetParser()
 
   entries = parseServerMetEntries(hostnameEntry);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, entries.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("peer.example.org"),
+  REQUIRE_EQ((size_t)1, entries.size());
+  REQUIRE_EQ(std::string("peer.example.org"),
                        entries[0].endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, entries[0].endpoint.port);
-  CPPUNIT_ASSERT_EQUAL(std::string("Hostname Server"), entries[0].name);
+  REQUIRE_EQ((uint16_t)4661, entries[0].endpoint.port);
+  REQUIRE_EQ(std::string("Hostname Server"), entries[0].name);
 }
 
 void Ed2kHelperTest::testMd4Digest()
 {
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("31d6cfe0d16ae931b73c59d7e0c089c0"),
       util::toHex(md4Digest("")));
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("bde52cb31de33e46245e05fbdbd6fb24"),
       util::toHex(md4Digest("a")));
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("a448017aaf21d8525fc10ae87aa6729d"),
       util::toHex(md4Digest("abc")));
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("d9130a8164549fe818874806e1c7014b"),
       util::toHex(md4Digest("message digest")));
 }
@@ -2087,32 +2084,32 @@ void Ed2kHelperTest::testMd4Digest()
 void Ed2kHelperTest::testRootHash()
 {
   std::vector<std::string> empty;
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("31d6cfe0d16ae931b73c59d7e0c089c0"),
       util::toHex(rootHash(empty)));
 
   std::vector<std::string> single{md4Digest("abc")};
-  CPPUNIT_ASSERT_EQUAL(util::toHex(md4Digest("abc")), util::toHex(rootHash(single)));
+  REQUIRE_EQ(util::toHex(md4Digest("abc")), util::toHex(rootHash(single)));
 
   std::vector<std::string> multiple{md4Digest("first part"),
                                     md4Digest("second part")};
   std::string concat = multiple[0] + multiple[1];
-  CPPUNIT_ASSERT_EQUAL(util::toHex(md4Digest(concat)),
+  REQUIRE_EQ(util::toHex(md4Digest(concat)),
                        util::toHex(rootHash(multiple)));
 }
 
 void Ed2kHelperTest::testHashSetPartCount()
 {
-  CPPUNIT_ASSERT_EQUAL((size_t)0, hashSetPartCount(1));
-  CPPUNIT_ASSERT_EQUAL((size_t)0,
+  REQUIRE_EQ((size_t)0, hashSetPartCount(1));
+  REQUIRE_EQ((size_t)0,
                        hashSetPartCount(static_cast<int64_t>(PIECE_LENGTH) -
                                         1));
-  CPPUNIT_ASSERT_EQUAL((size_t)2,
+  REQUIRE_EQ((size_t)2,
                        hashSetPartCount(static_cast<int64_t>(PIECE_LENGTH)));
-  CPPUNIT_ASSERT_EQUAL((size_t)2,
+  REQUIRE_EQ((size_t)2,
                        hashSetPartCount(static_cast<int64_t>(PIECE_LENGTH) +
                                         1));
-  CPPUNIT_ASSERT_EQUAL((size_t)3,
+  REQUIRE_EQ((size_t)3,
                        hashSetPartCount(static_cast<int64_t>(PIECE_LENGTH) *
                                         2));
 }

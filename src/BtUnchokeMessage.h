@@ -41,12 +41,12 @@ namespace aria2 {
 
 class BtUnchokeMessage : public ZeroBtMessage {
 private:
-  static const size_t MESSAGE_LENGTH = 5;
+  static constexpr size_t MESSAGE_LENGTH = 5;
 
 public:
   BtUnchokeMessage();
 
-  static const uint8_t ID = 1;
+  static constexpr uint8_t ID = 1;
 
   static const char NAME[];
 

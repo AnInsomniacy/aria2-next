@@ -1,14 +1,11 @@
 #include "SpeedCalc.h"
 #include <string>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class SpeedCalcTest : public CppUnit::TestFixture {
+class SpeedCalcTest {
 
-  CPPUNIT_TEST_SUITE(SpeedCalcTest);
-  CPPUNIT_TEST(testUpdate);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -17,7 +14,7 @@ public:
   void testUpdate();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(SpeedCalcTest);
+A2_TEST(SpeedCalcTest, testUpdate)
 
 void SpeedCalcTest::testUpdate()
 {

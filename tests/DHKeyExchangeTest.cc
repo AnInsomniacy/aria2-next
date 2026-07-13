@@ -1,15 +1,12 @@
 #include "DHKeyExchange.h"
 #include "Exception.h"
 #include "util.h"
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class DHKeyExchangeTest : public CppUnit::TestFixture {
+class DHKeyExchangeTest {
 
-  CPPUNIT_TEST_SUITE(DHKeyExchangeTest);
-  CPPUNIT_TEST(testHandshake);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -19,7 +16,7 @@ public:
   void testHandshake();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHKeyExchangeTest);
+A2_TEST(DHKeyExchangeTest, testHandshake)
 
 void DHKeyExchangeTest::testHandshake()
 {
@@ -51,7 +48,7 @@ void DHKeyExchangeTest::testHandshake()
   dhA.computeSecret(secretA, sizeof(secretA), publicKeyB, sizeof(publicKeyB));
   dhB.computeSecret(secretB, sizeof(secretB), publicKeyA, sizeof(publicKeyA));
 
-  CPPUNIT_ASSERT_EQUAL(util::toHex(secretA, sizeof(secretA)),
+  REQUIRE_EQ(util::toHex(secretA, sizeof(secretA)),
                        util::toHex(secretB, sizeof(secretB)));
 }
 

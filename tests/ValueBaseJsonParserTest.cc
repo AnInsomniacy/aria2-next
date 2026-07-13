@@ -1,6 +1,6 @@
 #include "ValueBaseJsonParser.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "RecoverableException.h"
 #include "array_fun.h"
@@ -8,12 +8,8 @@
 
 namespace aria2 {
 
-class ValueBaseJsonParserTest : public CppUnit::TestFixture {
+class ValueBaseJsonParserTest {
 
-  CPPUNIT_TEST_SUITE(ValueBaseJsonParserTest);
-  CPPUNIT_TEST(testParseUpdate);
-  CPPUNIT_TEST(testParseUpdate_error);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -21,7 +17,8 @@ public:
   void testParseUpdate_error();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(ValueBaseJsonParserTest);
+A2_TEST(ValueBaseJsonParserTest, testParseUpdate)
+A2_TEST(ValueBaseJsonParserTest, testParseUpdate_error)
 
 void ValueBaseJsonParserTest::testParseUpdate()
 {
@@ -32,116 +29,116 @@ void ValueBaseJsonParserTest::testParseUpdate()
     std::string src = "{}";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto dict = downcast<Dict>(r);
-    CPPUNIT_ASSERT(dict);
+    REQUIRE(dict);
   }
   {
     // empty object
     std::string src = "{  }";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto dict = downcast<Dict>(r);
-    CPPUNIT_ASSERT(dict);
+    REQUIRE(dict);
   }
   {
     // empty array
     std::string src = "[]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
   }
   {
     // empty array
     std::string src = "[ ]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
   }
   {
     // empty string
     std::string src = "[\"\"]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     auto s = downcast<String>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL(std::string(), s->s());
+    REQUIRE_EQ(std::string(), s->s());
   }
   {
     // string
     std::string src = "[\"foobar\"]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     auto s = downcast<String>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL(std::string("foobar"), s->s());
+    REQUIRE_EQ(std::string("foobar"), s->s());
   }
   {
     // string with escape
     std::string src = "[\"\\\\foo\\\"\\\"bar\"]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     auto s = downcast<String>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL(std::string("\\foo\"\"bar"), s->s());
+    REQUIRE_EQ(std::string("\\foo\"\"bar"), s->s());
   }
   {
     // string with escape
     std::string src = "[\"foo\\\"\"]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     auto s = downcast<String>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL(std::string("foo\""), s->s());
+    REQUIRE_EQ(std::string("foo\""), s->s());
   }
   {
     // string: utf-8 1 to 3 bytes.
     std::string src = "[\"\\u0024\\u00A2\\u20AC\"]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     auto s = downcast<String>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL(std::string("$¢€"), s->s());
+    REQUIRE_EQ(std::string("$¢€"), s->s());
   }
   {
     // string: utf-8 4 bytes
     std::string src = "[\"\\uD852\\uDF62\"]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     auto s = downcast<String>(list->get(0));
     const unsigned char arr[] = {0xF0u, 0xA4u, 0xADu, 0xA2u};
-    CPPUNIT_ASSERT_EQUAL(std::string(std::begin(arr), std::end(arr)), s->s());
+    REQUIRE_EQ(std::string(std::begin(arr), std::end(arr)), s->s());
   }
   {
     // null
     std::string src = "[null]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     const Null* s = downcast<Null>(list->get(0));
-    CPPUNIT_ASSERT(s);
+    REQUIRE(s);
   }
   {
     // true, false
     std::string src = "[true, false]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     const Bool* trueValue = downcast<Bool>(list->get(0));
-    CPPUNIT_ASSERT(trueValue);
-    CPPUNIT_ASSERT(trueValue->val());
+    REQUIRE(trueValue);
+    REQUIRE(trueValue->val());
     const Bool* falseValue = downcast<Bool>(list->get(1));
-    CPPUNIT_ASSERT(falseValue);
-    CPPUNIT_ASSERT(!falseValue->val());
+    REQUIRE(falseValue);
+    REQUIRE(!falseValue->val());
   }
   {
     // object: 1 member
     std::string src = "{\"foo\":[\"bar\"]}";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     const Dict* dict = downcast<Dict>(r);
-    CPPUNIT_ASSERT(dict);
+    REQUIRE(dict);
     auto list = downcast<List>(dict->get("foo"));
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     auto s = downcast<String>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL(std::string("bar"), s->s());
+    REQUIRE_EQ(std::string("bar"), s->s());
   }
   {
     // object: 2 members
@@ -149,41 +146,41 @@ void ValueBaseJsonParserTest::testParseUpdate()
     std::string src = "{\"foo\":[\"bar\"], \"alpha\" : \"bravo\"}";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     const Dict* dict = downcast<Dict>(r);
-    CPPUNIT_ASSERT(dict);
+    REQUIRE(dict);
     auto list = downcast<List>(dict->get("foo"));
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     auto s = downcast<String>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL(std::string("bar"), s->s());
+    REQUIRE_EQ(std::string("bar"), s->s());
     auto str = downcast<String>(dict->get("alpha"));
-    CPPUNIT_ASSERT_EQUAL(std::string("bravo"), str->s());
+    REQUIRE_EQ(std::string("bravo"), str->s());
   }
   {
     // array: 2 values
     std::string src = "[\"foo\", {}]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     auto s = downcast<String>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL(std::string("foo"), s->s());
+    REQUIRE_EQ(std::string("foo"), s->s());
     const Dict* dict = downcast<Dict>(list->get(1));
-    CPPUNIT_ASSERT(dict);
+    REQUIRE(dict);
   }
   {
     // Number: currently we ignore frac and exp
     std::string src = "[0,-1,1.2,-1.2e-10,-1e10]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     const Integer* i = downcast<Integer>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL((Integer::ValueType)0, i->i());
+    REQUIRE_EQ((Integer::ValueType)0, i->i());
     const Integer* i1 = downcast<Integer>(list->get(1));
-    CPPUNIT_ASSERT_EQUAL((Integer::ValueType)-1, i1->i());
+    REQUIRE_EQ((Integer::ValueType)-1, i1->i());
     const Integer* i2 = downcast<Integer>(list->get(2));
-    CPPUNIT_ASSERT_EQUAL((Integer::ValueType)1, i2->i());
+    REQUIRE_EQ((Integer::ValueType)1, i2->i());
     const Integer* i3 = downcast<Integer>(list->get(3));
-    CPPUNIT_ASSERT_EQUAL((Integer::ValueType)-1, i3->i());
+    REQUIRE_EQ((Integer::ValueType)-1, i3->i());
     const Integer* i4 = downcast<Integer>(list->get(4));
-    CPPUNIT_ASSERT_EQUAL((Integer::ValueType)-1, i4->i());
+    REQUIRE_EQ((Integer::ValueType)-1, i4->i());
   }
   {
     // escape chars: ", \, /, \b, \f, \n, \r, \t
@@ -191,24 +188,24 @@ void ValueBaseJsonParserTest::testParseUpdate()
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
     auto s = downcast<String>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL(std::string("\"\\/\b\f\n\r\t"), s->s());
+    REQUIRE_EQ(std::string("\"\\/\b\f\n\r\t"), s->s());
   }
   {
     // string: literal + escaped chars.
     std::string src = "[\"foo\\u0024b\\u00A2\\u20ACbaz\"]";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
+    REQUIRE(list);
     auto s = downcast<String>(list->get(0));
-    CPPUNIT_ASSERT_EQUAL(std::string("foo$b¢€baz"), s->s());
+    REQUIRE_EQ(std::string("foo$b¢€baz"), s->s());
   }
   {
     // ignore garbage at the end of the input.
     std::string src = "[]trail";
     auto r = parser.parseFinal(src.c_str(), src.size(), error);
     auto list = downcast<List>(r);
-    CPPUNIT_ASSERT(list);
-    CPPUNIT_ASSERT_EQUAL((ssize_t)2, error);
+    REQUIRE(list);
+    REQUIRE_EQ((ssize_t)2, error);
   }
 }
 
@@ -218,8 +215,8 @@ void checkDecodeError(const std::string& src)
   json::ValueBaseJsonParser parser;
   ssize_t error;
   auto r = parser.parseFinal(src.c_str(), src.size(), error);
-  CPPUNIT_ASSERT(!r);
-  CPPUNIT_ASSERT(error < 0);
+  REQUIRE(!r);
+  REQUIRE(error < 0);
 }
 } // namespace
 

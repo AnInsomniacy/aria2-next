@@ -43,7 +43,7 @@ class BtHaveMessage : public IndexBtMessage {
 public:
   BtHaveMessage(size_t index = 0);
 
-  static const uint8_t ID = 4;
+  static constexpr uint8_t ID = 4;
 
   static const char NAME[];
 

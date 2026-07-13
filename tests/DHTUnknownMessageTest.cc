@@ -1,15 +1,12 @@
 #include "DHTUnknownMessage.h"
 #include "DHTNode.h"
 #include "Exception.h"
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class DHTUnknownMessageTest : public CppUnit::TestFixture {
+class DHTUnknownMessageTest {
 
-  CPPUNIT_TEST_SUITE(DHTUnknownMessageTest);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -19,7 +16,7 @@ public:
   void testToString();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTUnknownMessageTest);
+A2_TEST(DHTUnknownMessageTest, testToString)
 
 void DHTUnknownMessageTest::testToString()
 {
@@ -34,7 +31,7 @@ void DHTUnknownMessageTest::testToString()
                           reinterpret_cast<const unsigned char*>(data.c_str()),
                           data.size(), ipaddr, port);
 
-    CPPUNIT_ASSERT_EQUAL(
+    REQUIRE_EQ(
         std::string("dht unknown Remote:192.168.0.1(6881) length=9, first 8 "
                     "bytes(hex)=63686f636f6c6174"),
         msg.toString());
@@ -46,7 +43,7 @@ void DHTUnknownMessageTest::testToString()
                           reinterpret_cast<const unsigned char*>(data.c_str()),
                           data.size(), ipaddr, port);
 
-    CPPUNIT_ASSERT_EQUAL(std::string("dht unknown Remote:192.168.0.1(6881) "
+    REQUIRE_EQ(std::string("dht unknown Remote:192.168.0.1(6881) "
                                      "length=3, first 8 bytes(hex)=666f6f"),
                          msg.toString());
   }

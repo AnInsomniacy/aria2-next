@@ -3,7 +3,7 @@
 #include <cstring>
 #include <algorithm>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTNode.h"
 #include "Exception.h"
@@ -11,21 +11,8 @@
 
 namespace aria2 {
 
-class DHTBucketTest : public CppUnit::TestFixture {
+class DHTBucketTest {
 
-  CPPUNIT_TEST_SUITE(DHTBucketTest);
-  CPPUNIT_TEST(testGetRandomNodeID);
-  CPPUNIT_TEST(testIsInRange);
-  CPPUNIT_TEST(testSplitAllowed);
-  CPPUNIT_TEST(testSplit);
-  CPPUNIT_TEST(testAddNode);
-  CPPUNIT_TEST(testMoveToHead);
-  CPPUNIT_TEST(testMoveToTail);
-  CPPUNIT_TEST(testGetGoodNodes);
-  CPPUNIT_TEST(testCacheNode);
-  CPPUNIT_TEST(testDropNode);
-  CPPUNIT_TEST(testGetNode);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -45,7 +32,17 @@ public:
   void testGetNode();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTBucketTest);
+A2_TEST(DHTBucketTest, testGetRandomNodeID)
+A2_TEST(DHTBucketTest, testIsInRange)
+A2_TEST(DHTBucketTest, testSplitAllowed)
+A2_TEST(DHTBucketTest, testSplit)
+A2_TEST(DHTBucketTest, testAddNode)
+A2_TEST(DHTBucketTest, testMoveToHead)
+A2_TEST(DHTBucketTest, testMoveToTail)
+A2_TEST(DHTBucketTest, testGetGoodNodes)
+A2_TEST(DHTBucketTest, testCacheNode)
+A2_TEST(DHTBucketTest, testDropNode)
+A2_TEST(DHTBucketTest, testGetNode)
 
 void DHTBucketTest::testGetRandomNodeID()
 {
@@ -68,7 +65,7 @@ void DHTBucketTest::testGetRandomNodeID()
     DHTBucket bucket(16, max, min, localNode);
     unsigned char nodeID[DHT_ID_LENGTH];
     bucket.getRandomNodeID(nodeID);
-    CPPUNIT_ASSERT_EQUAL(std::string("0101"),
+    REQUIRE_EQ(std::string("0101"),
                          util::toHex(nodeID, sizeof(nodeID)).substr(0, 4));
   }
 }
@@ -85,9 +82,9 @@ void DHTBucketTest::testIsInRange()
                               0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     std::shared_ptr<DHTNode> node(new DHTNode(nodeID));
     DHTBucket bucket(localNode);
-    CPPUNIT_ASSERT(bucket.isInRange(node));
+    REQUIRE(bucket.isInRange(node));
     memset(nodeID, 0xff, sizeof(nodeID));
-    CPPUNIT_ASSERT(bucket.isInRange(node));
+    REQUIRE(bucket.isInRange(node));
   }
   {
     unsigned char max[] = {0x01, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -103,7 +100,7 @@ void DHTBucketTest::testIsInRange()
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
       std::shared_ptr<DHTNode> node(new DHTNode(nodeID));
       DHTBucket bucket(16, max, min, localNode);
-      CPPUNIT_ASSERT(bucket.isInRange(node));
+      REQUIRE(bucket.isInRange(node));
     }
     {
       // max
@@ -112,7 +109,7 @@ void DHTBucketTest::testIsInRange()
                                 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
       std::shared_ptr<DHTNode> node(new DHTNode(nodeID));
       DHTBucket bucket(16, max, min, localNode);
-      CPPUNIT_ASSERT(bucket.isInRange(node));
+      REQUIRE(bucket.isInRange(node));
     }
     {
       unsigned char nodeID[] = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -120,7 +117,7 @@ void DHTBucketTest::testIsInRange()
                                 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
       std::shared_ptr<DHTNode> node(new DHTNode(nodeID));
       DHTBucket bucket(16, max, min, localNode);
-      CPPUNIT_ASSERT(bucket.isInRange(node));
+      REQUIRE(bucket.isInRange(node));
     }
     {
       // nodeID is out of range: smaller than this range
@@ -129,7 +126,7 @@ void DHTBucketTest::testIsInRange()
                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
       std::shared_ptr<DHTNode> node(new DHTNode(nodeID));
       DHTBucket bucket(16, max, min, localNode);
-      CPPUNIT_ASSERT(!bucket.isInRange(node));
+      REQUIRE(!bucket.isInRange(node));
     }
     {
       // nodeID is out of range: larger than this range
@@ -138,7 +135,7 @@ void DHTBucketTest::testIsInRange()
                                 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
       std::shared_ptr<DHTNode> node(new DHTNode(nodeID));
       DHTBucket bucket(16, max, min, localNode);
-      CPPUNIT_ASSERT(!bucket.isInRange(node));
+      REQUIRE(!bucket.isInRange(node));
     }
   }
 }
@@ -151,7 +148,7 @@ void DHTBucketTest::testSplitAllowed()
                                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     std::shared_ptr<DHTNode> localNode(new DHTNode(localNodeID));
     DHTBucket bucket(localNode);
-    CPPUNIT_ASSERT(bucket.splitAllowed());
+    REQUIRE(bucket.splitAllowed());
   }
   {
     unsigned char max[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -166,7 +163,7 @@ void DHTBucketTest::testSplitAllowed()
                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
       std::shared_ptr<DHTNode> localNode(new DHTNode(localNodeID));
       DHTBucket bucket(3, max, min, localNode);
-      CPPUNIT_ASSERT(!bucket.splitAllowed());
+      REQUIRE(!bucket.splitAllowed());
     }
     {
       unsigned char localNodeID[] = {0xe0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -174,7 +171,7 @@ void DHTBucketTest::testSplitAllowed()
                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
       std::shared_ptr<DHTNode> localNode(new DHTNode(localNodeID));
       DHTBucket bucket(3, max, min, localNode);
-      CPPUNIT_ASSERT(bucket.splitAllowed());
+      REQUIRE(bucket.splitAllowed());
     }
   }
 }
@@ -194,11 +191,11 @@ void DHTBucketTest::testSplit()
             0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
         unsigned char expectedRMin[DHT_ID_LENGTH];
         memset(expectedRMin, 0, DHT_ID_LENGTH);
-        CPPUNIT_ASSERT_EQUAL(util::toHex(expectedRMax, DHT_ID_LENGTH),
+        REQUIRE_EQ(util::toHex(expectedRMax, DHT_ID_LENGTH),
                              util::toHex(r->getMaxID(), DHT_ID_LENGTH));
-        CPPUNIT_ASSERT_EQUAL(util::toHex(expectedRMin, DHT_ID_LENGTH),
+        REQUIRE_EQ(util::toHex(expectedRMin, DHT_ID_LENGTH),
                              util::toHex(r->getMinID(), DHT_ID_LENGTH));
-        CPPUNIT_ASSERT_EQUAL((size_t)1, r->getPrefixLength());
+        REQUIRE_EQ((size_t)1, r->getPrefixLength());
       }
       {
         unsigned char expectedLMax[DHT_ID_LENGTH];
@@ -206,32 +203,32 @@ void DHTBucketTest::testSplit()
         unsigned char expectedLMin[] = {
             0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-        CPPUNIT_ASSERT_EQUAL(util::toHex(expectedLMax, DHT_ID_LENGTH),
+        REQUIRE_EQ(util::toHex(expectedLMax, DHT_ID_LENGTH),
                              util::toHex(bucket.getMaxID(), DHT_ID_LENGTH));
-        CPPUNIT_ASSERT_EQUAL(util::toHex(expectedLMin, DHT_ID_LENGTH),
+        REQUIRE_EQ(util::toHex(expectedLMin, DHT_ID_LENGTH),
                              util::toHex(bucket.getMinID(), DHT_ID_LENGTH));
-        CPPUNIT_ASSERT_EQUAL((size_t)1, bucket.getPrefixLength());
+        REQUIRE_EQ((size_t)1, bucket.getPrefixLength());
       }
     }
     {
       std::shared_ptr<DHTBucket> bucket(new DHTBucket(localNode));
       for (int i = 0; i < 159; ++i) {
-        CPPUNIT_ASSERT(bucket->splitAllowed());
+        REQUIRE(bucket->splitAllowed());
         std::shared_ptr<DHTBucket> t = bucket;
         bucket = bucket->split();
-        CPPUNIT_ASSERT(!t->splitAllowed());
+        REQUIRE(!t->splitAllowed());
       }
-      CPPUNIT_ASSERT(!bucket->splitAllowed());
+      REQUIRE(!bucket->splitAllowed());
       unsigned char expectedMax[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                      0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
       unsigned char expectedMin[DHT_ID_LENGTH];
       memset(expectedMin, 0, DHT_ID_LENGTH);
-      CPPUNIT_ASSERT_EQUAL(util::toHex(expectedMax, DHT_ID_LENGTH),
+      REQUIRE_EQ(util::toHex(expectedMax, DHT_ID_LENGTH),
                            util::toHex(bucket->getMaxID(), DHT_ID_LENGTH));
-      CPPUNIT_ASSERT_EQUAL(util::toHex(expectedMin, DHT_ID_LENGTH),
+      REQUIRE_EQ(util::toHex(expectedMin, DHT_ID_LENGTH),
                            util::toHex(bucket->getMinID(), DHT_ID_LENGTH));
-      CPPUNIT_ASSERT_EQUAL((size_t)159, bucket->getPrefixLength());
+      REQUIRE_EQ((size_t)159, bucket->getPrefixLength());
     }
   }
   {
@@ -247,11 +244,11 @@ void DHTBucketTest::testSplit()
                                       0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
       unsigned char expectedRMin[DHT_ID_LENGTH];
       memset(expectedRMin, 0, DHT_ID_LENGTH);
-      CPPUNIT_ASSERT_EQUAL(util::toHex(expectedRMax, DHT_ID_LENGTH),
+      REQUIRE_EQ(util::toHex(expectedRMax, DHT_ID_LENGTH),
                            util::toHex(r->getMaxID(), DHT_ID_LENGTH));
-      CPPUNIT_ASSERT_EQUAL(util::toHex(expectedRMin, DHT_ID_LENGTH),
+      REQUIRE_EQ(util::toHex(expectedRMin, DHT_ID_LENGTH),
                            util::toHex(r->getMinID(), DHT_ID_LENGTH));
-      CPPUNIT_ASSERT_EQUAL((size_t)1, r->getPrefixLength());
+      REQUIRE_EQ((size_t)1, r->getPrefixLength());
     }
     {
       unsigned char expectedLMax[DHT_ID_LENGTH];
@@ -259,11 +256,11 @@ void DHTBucketTest::testSplit()
       unsigned char expectedLMin[] = {0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-      CPPUNIT_ASSERT_EQUAL(util::toHex(expectedLMax, DHT_ID_LENGTH),
+      REQUIRE_EQ(util::toHex(expectedLMax, DHT_ID_LENGTH),
                            util::toHex(bucket.getMaxID(), DHT_ID_LENGTH));
-      CPPUNIT_ASSERT_EQUAL(util::toHex(expectedLMin, DHT_ID_LENGTH),
+      REQUIRE_EQ(util::toHex(expectedLMin, DHT_ID_LENGTH),
                            util::toHex(bucket.getMinID(), DHT_ID_LENGTH));
-      CPPUNIT_ASSERT_EQUAL((size_t)1, bucket.getPrefixLength());
+      REQUIRE_EQ((size_t)1, bucket.getPrefixLength());
     }
   }
 }
@@ -290,16 +287,16 @@ void DHTBucketTest::testAddNode()
   for (size_t i = 0; i < DHTBucket::K; ++i) {
     createID(id, 0xf0, i);
     nodes[i].reset(new DHTNode(id));
-    CPPUNIT_ASSERT(bucket.addNode(nodes[i]));
+    REQUIRE(bucket.addNode(nodes[i]));
   }
   createID(id, 0xf0, 0xff);
   std::shared_ptr<DHTNode> newNode(new DHTNode(id));
-  CPPUNIT_ASSERT(!bucket.addNode(newNode));
+  REQUIRE(!bucket.addNode(newNode));
 
   // nodes[0] is located at the tail of the bucket(least recent seen)
   nodes[0]->markBad();
-  CPPUNIT_ASSERT(bucket.addNode(newNode));
-  CPPUNIT_ASSERT(*bucket.getNodes().back() == *newNode);
+  REQUIRE(bucket.addNode(newNode));
+  REQUIRE(*bucket.getNodes().back() == *newNode);
 }
 
 void DHTBucketTest::testMoveToHead()
@@ -314,10 +311,10 @@ void DHTBucketTest::testMoveToHead()
   for (size_t i = 0; i < DHTBucket::K; ++i) {
     createID(id, 0xf0, i);
     nodes[i].reset(new DHTNode(id));
-    CPPUNIT_ASSERT(bucket.addNode(nodes[i]));
+    REQUIRE(bucket.addNode(nodes[i]));
   }
   bucket.moveToHead(nodes[DHTBucket::K - 1]);
-  CPPUNIT_ASSERT(*bucket.getNodes().front() == *nodes[DHTBucket::K - 1]);
+  REQUIRE(*bucket.getNodes().front() == *nodes[DHTBucket::K - 1]);
 }
 
 void DHTBucketTest::testMoveToTail()
@@ -332,10 +329,10 @@ void DHTBucketTest::testMoveToTail()
   for (size_t i = 0; i < DHTBucket::K; ++i) {
     createID(id, 0xf0, i);
     nodes[i].reset(new DHTNode(id));
-    CPPUNIT_ASSERT(bucket.addNode(nodes[i]));
+    REQUIRE(bucket.addNode(nodes[i]));
   }
   bucket.moveToTail(nodes[0]);
-  CPPUNIT_ASSERT(*bucket.getNodes().back() == *nodes[0]);
+  REQUIRE(*bucket.getNodes().back() == *nodes[0]);
 }
 
 void DHTBucketTest::testGetGoodNodes()
@@ -351,19 +348,19 @@ void DHTBucketTest::testGetGoodNodes()
     createID(id, 0xf0, i);
     nodes[i].reset(new DHTNode(id));
     nodes[i]->setPort(6881 + i);
-    CPPUNIT_ASSERT(bucket.addNode(nodes[i]));
+    REQUIRE(bucket.addNode(nodes[i]));
   }
   nodes[3]->markBad();
   nodes[5]->markBad();
   std::vector<std::shared_ptr<DHTNode>> goodNodes;
   bucket.getGoodNodes(goodNodes);
-  CPPUNIT_ASSERT_EQUAL((size_t)6, goodNodes.size());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6881, goodNodes[0]->getPort());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6882, goodNodes[1]->getPort());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6883, goodNodes[2]->getPort());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6885, goodNodes[3]->getPort());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6887, goodNodes[4]->getPort());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)6888, goodNodes[5]->getPort());
+  REQUIRE_EQ((size_t)6, goodNodes.size());
+  REQUIRE_EQ((uint16_t)6881, goodNodes[0]->getPort());
+  REQUIRE_EQ((uint16_t)6882, goodNodes[1]->getPort());
+  REQUIRE_EQ((uint16_t)6883, goodNodes[2]->getPort());
+  REQUIRE_EQ((uint16_t)6885, goodNodes[3]->getPort());
+  REQUIRE_EQ((uint16_t)6887, goodNodes[4]->getPort());
+  REQUIRE_EQ((uint16_t)6888, goodNodes[5]->getPort());
 }
 
 void DHTBucketTest::testCacheNode()
@@ -379,13 +376,13 @@ void DHTBucketTest::testCacheNode()
 
   bucket.cacheNode(n1);
   bucket.cacheNode(n2);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, bucket.getCachedNodes().size());
-  CPPUNIT_ASSERT(*n2 == *bucket.getCachedNodes()[0]);
+  REQUIRE_EQ((size_t)2, bucket.getCachedNodes().size());
+  REQUIRE(*n2 == *bucket.getCachedNodes()[0]);
 
   bucket.cacheNode(n3);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, bucket.getCachedNodes().size());
-  CPPUNIT_ASSERT(*n3 == *bucket.getCachedNodes()[0]);
-  CPPUNIT_ASSERT(*n2 == *bucket.getCachedNodes()[1]);
+  REQUIRE_EQ((size_t)2, bucket.getCachedNodes().size());
+  REQUIRE(*n3 == *bucket.getCachedNodes()[0]);
+  REQUIRE(*n2 == *bucket.getCachedNodes()[1]);
 }
 
 void DHTBucketTest::testDropNode()
@@ -401,7 +398,7 @@ void DHTBucketTest::testDropNode()
     createID(id, 0xf0, i);
     nodes[i].reset(new DHTNode(id));
     nodes[i]->setPort(6881 + i);
-    CPPUNIT_ASSERT(bucket.addNode(nodes[i]));
+    REQUIRE(bucket.addNode(nodes[i]));
   }
 
   std::shared_ptr<DHTNode> cachedNode1(new DHTNode());
@@ -411,8 +408,8 @@ void DHTBucketTest::testDropNode()
   // nothing happens because the replacement cache is empty.
   {
     std::deque<std::shared_ptr<DHTNode>> tnodes = bucket.getNodes();
-    CPPUNIT_ASSERT_EQUAL((size_t)8, tnodes.size());
-    CPPUNIT_ASSERT(*nodes[3] == *tnodes[3]);
+    REQUIRE_EQ((size_t)8, tnodes.size());
+    REQUIRE(*nodes[3] == *tnodes[3]);
   }
 
   bucket.cacheNode(cachedNode1);
@@ -421,13 +418,13 @@ void DHTBucketTest::testDropNode()
   bucket.dropNode(nodes[3]);
   {
     std::deque<std::shared_ptr<DHTNode>> tnodes = bucket.getNodes();
-    CPPUNIT_ASSERT_EQUAL((size_t)8, tnodes.size());
-    CPPUNIT_ASSERT(tnodes.end() == std::find_if(tnodes.begin(), tnodes.end(),
+    REQUIRE_EQ((size_t)8, tnodes.size());
+    REQUIRE(tnodes.end() == std::find_if(tnodes.begin(), tnodes.end(),
                                                 derefEqual(nodes[3])));
-    CPPUNIT_ASSERT(*cachedNode2 == *tnodes[7]);
+    REQUIRE(*cachedNode2 == *tnodes[7]);
   }
-  CPPUNIT_ASSERT_EQUAL((size_t)1, bucket.getCachedNodes().size());
-  CPPUNIT_ASSERT(*cachedNode1 == *bucket.getCachedNodes()[0]);
+  REQUIRE_EQ((size_t)1, bucket.getCachedNodes().size());
+  REQUIRE(*cachedNode1 == *bucket.getCachedNodes()[0]);
 }
 
 void DHTBucketTest::testGetNode()
@@ -442,11 +439,11 @@ void DHTBucketTest::testGetNode()
   std::shared_ptr<DHTNode> node(new DHTNode(id));
   node->setIPAddress("192.168.0.1");
   node->setPort(6881);
-  CPPUNIT_ASSERT(bucket.addNode(node));
-  CPPUNIT_ASSERT(bucket.getNode(id, "192.168.0.1", 6881));
-  CPPUNIT_ASSERT(!bucket.getNode(id, "192.168.0.2", 6881));
-  CPPUNIT_ASSERT(!bucket.getNode(id, "192.168.0.1", 6882));
-  CPPUNIT_ASSERT(!bucket.getNode(localNodeID, "192.168.0.1", 6881));
+  REQUIRE(bucket.addNode(node));
+  REQUIRE(bucket.getNode(id, "192.168.0.1", 6881));
+  REQUIRE(!bucket.getNode(id, "192.168.0.2", 6881));
+  REQUIRE(!bucket.getNode(id, "192.168.0.1", 6882));
+  REQUIRE(!bucket.getNode(localNodeID, "192.168.0.1", 6881));
 }
 
 } // namespace aria2

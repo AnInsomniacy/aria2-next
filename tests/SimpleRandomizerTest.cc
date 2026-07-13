@@ -37,20 +37,17 @@
 #include <set>
 #include <array>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class SimpleRandomizerTest : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(SimpleRandomizerTest);
-  CPPUNIT_TEST(testGetRandomBytes);
-  CPPUNIT_TEST_SUITE_END();
+class SimpleRandomizerTest {
 
 public:
   void testGetRandomBytes();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(SimpleRandomizerTest);
+A2_TEST(SimpleRandomizerTest, testGetRandomBytes)
 
 void SimpleRandomizerTest::testGetRandomBytes()
 {
@@ -64,7 +61,7 @@ void SimpleRandomizerTest::testGetRandomBytes()
     set.emplace(std::begin(buf), std::end(buf));
   }
 
-  CPPUNIT_ASSERT_EQUAL(n, set.size());
+  REQUIRE_EQ(n, set.size());
 }
 
 } // namespace aria2

@@ -43,7 +43,7 @@ class BtChokeMessage : public ZeroBtMessage {
 public:
   BtChokeMessage();
 
-  static const uint8_t ID = 0;
+  static constexpr uint8_t ID = 0;
 
   static const char NAME[];
 

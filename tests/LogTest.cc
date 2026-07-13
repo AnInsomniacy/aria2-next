@@ -1,18 +1,13 @@
 #include "Log.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "BufferedFile.h"
 #include "File.h"
 
 namespace aria2 {
 
-class LogTest : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(LogTest);
-  CPPUNIT_TEST(testRotationKeepsStrictBounds);
-  CPPUNIT_TEST(testStartupConvergesLegacyLogs);
-  CPPUNIT_TEST(testOversizedRecordIsBounded);
-  CPPUNIT_TEST_SUITE_END();
+class LogTest {
 
 public:
   void setUp();
@@ -31,7 +26,9 @@ private:
   void writeFile(const std::string& path, size_t size);
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(LogTest);
+A2_TEST(LogTest, testRotationKeepsStrictBounds)
+A2_TEST(LogTest, testStartupConvergesLegacyLogs)
+A2_TEST(LogTest, testOversizedRecordIsBounded)
 
 void LogTest::setUp()
 {
@@ -72,9 +69,9 @@ void LogTest::removeLogs()
 void LogTest::writeFile(const std::string& path, size_t size)
 {
   BufferedFile file(path.c_str(), BufferedFile::WRITE);
-  CPPUNIT_ASSERT(file);
+  REQUIRE(file);
   const std::string data(size, 'x');
-  CPPUNIT_ASSERT_EQUAL(size, file.write(data.data(), data.size()));
+  REQUIRE_EQ(size, file.write(data.data(), data.size()));
 }
 
 void LogTest::testRotationKeepsStrictBounds()
@@ -86,12 +83,12 @@ void LogTest::testRotationKeepsStrictBounds()
   logging::flush();
 
   const std::string history = A2_TEST_OUT_DIR "/aria2_LogTest.1.log";
-  CPPUNIT_ASSERT(File(path_).exists());
-  CPPUNIT_ASSERT(File(history).exists());
-  CPPUNIT_ASSERT(!File(A2_TEST_OUT_DIR "/aria2_LogTest.2.log").exists());
-  CPPUNIT_ASSERT(File(path_).size() <= 128);
-  CPPUNIT_ASSERT(File(history).size() <= 128);
-  CPPUNIT_ASSERT(File(path_).size() + File(history).size() <= 256);
+  REQUIRE(File(path_).exists());
+  REQUIRE(File(history).exists());
+  REQUIRE(!File(A2_TEST_OUT_DIR "/aria2_LogTest.2.log").exists());
+  REQUIRE(File(path_).size() <= 128);
+  REQUIRE(File(history).size() <= 128);
+  REQUIRE(File(path_).size() + File(history).size() <= 256);
 }
 
 void LogTest::testStartupConvergesLegacyLogs()
@@ -106,11 +103,11 @@ void LogTest::testStartupConvergesLegacyLogs()
   logging::configure(settings(64, 2));
   logging::flush();
 
-  CPPUNIT_ASSERT(File(path_).exists());
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, File(path_).size());
-  CPPUNIT_ASSERT(!File(path_ + ".1").exists());
-  CPPUNIT_ASSERT(!File(nativeHistory).exists());
-  CPPUNIT_ASSERT(!File(A2_TEST_OUT_DIR "/aria2_LogTest.2.log").exists());
+  REQUIRE(File(path_).exists());
+  REQUIRE_EQ((int64_t)0, File(path_).size());
+  REQUIRE(!File(path_ + ".1").exists());
+  REQUIRE(!File(nativeHistory).exists());
+  REQUIRE(!File(A2_TEST_OUT_DIR "/aria2_LogTest.2.log").exists());
 }
 
 void LogTest::testOversizedRecordIsBounded()
@@ -119,9 +116,9 @@ void LogTest::testOversizedRecordIsBounded()
   A2_LOG_ERROR(std::string(4096, 'x'));
   logging::flush();
 
-  CPPUNIT_ASSERT(File(path_).exists());
-  CPPUNIT_ASSERT(File(path_).size() <= 96);
-  CPPUNIT_ASSERT(!File(A2_TEST_OUT_DIR "/aria2_LogTest.1.log").exists());
+  REQUIRE(File(path_).exists());
+  REQUIRE(File(path_).size() <= 96);
+  REQUIRE(!File(A2_TEST_OUT_DIR "/aria2_LogTest.1.log").exists());
 }
 
 } // namespace aria2

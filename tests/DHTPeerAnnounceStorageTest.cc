@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -14,17 +14,14 @@
 
 namespace aria2 {
 
-class DHTPeerAnnounceStorageTest : public CppUnit::TestFixture {
+class DHTPeerAnnounceStorageTest {
 
-  CPPUNIT_TEST_SUITE(DHTPeerAnnounceStorageTest);
-  CPPUNIT_TEST(testAddAnnounce);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testAddAnnounce();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTPeerAnnounceStorageTest);
+A2_TEST(DHTPeerAnnounceStorageTest, testAddAnnounce)
 
 void DHTPeerAnnounceStorageTest::testAddAnnounce()
 {
@@ -42,9 +39,9 @@ void DHTPeerAnnounceStorageTest::testAddAnnounce()
   std::vector<std::shared_ptr<Peer>> peers;
   storage.getPeers(peers, infohash2);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, peers.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.3"), peers[0]->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.4"), peers[1]->getIPAddress());
+  REQUIRE_EQ((size_t)2, peers.size());
+  REQUIRE_EQ(std::string("192.168.0.3"), peers[0]->getIPAddress());
+  REQUIRE_EQ(std::string("192.168.0.4"), peers[1]->getIPAddress());
 }
 
 } // namespace aria2

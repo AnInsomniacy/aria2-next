@@ -1,6 +1,6 @@
 #include "WebSocketSessionMan.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DownloadEngine.h"
 #include "Option.h"
@@ -14,12 +14,8 @@ namespace aria2 {
 
 namespace rpc {
 
-class WebSocketSessionManTest : public CppUnit::TestFixture {
+class WebSocketSessionManTest {
 
-  CPPUNIT_TEST_SUITE(WebSocketSessionManTest);
-  CPPUNIT_TEST(testSessionRequiresAuthorizationWhenRpcSecretIsSet);
-  CPPUNIT_TEST(testNotificationRecipientsExcludeUnauthorizedSessions);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<Option> option_;
@@ -37,7 +33,8 @@ public:
   void testNotificationRecipientsExcludeUnauthorizedSessions();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(WebSocketSessionManTest);
+A2_TEST(WebSocketSessionManTest, testSessionRequiresAuthorizationWhenRpcSecretIsSet)
+A2_TEST(WebSocketSessionManTest, testNotificationRecipientsExcludeUnauthorizedSessions)
 
 void WebSocketSessionManTest::testSessionRequiresAuthorizationWhenRpcSecretIsSet()
 {
@@ -46,7 +43,7 @@ void WebSocketSessionManTest::testSessionRequiresAuthorizationWhenRpcSecretIsSet
   auto session = std::make_shared<WebSocketSession>(
       std::make_shared<SocketCore>(), e_.get());
 
-  CPPUNIT_ASSERT(!session->isAuthorized());
+  REQUIRE(!session->isAuthorized());
 }
 
 void WebSocketSessionManTest::testNotificationRecipientsExcludeUnauthorizedSessions()
@@ -62,7 +59,7 @@ void WebSocketSessionManTest::testNotificationRecipientsExcludeUnauthorizedSessi
   sessionMan.addSession(unauthorizedSession);
   sessionMan.addSession(authorizedSession);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, sessionMan.countNotificationRecipients());
+  REQUIRE_EQ((size_t)1, sessionMan.countNotificationRecipients());
 }
 
 } // namespace rpc

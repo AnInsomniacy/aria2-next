@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "MockBtMessageDispatcher.h"
@@ -13,14 +13,8 @@
 
 namespace aria2 {
 
-class BtChokeMessageTest : public CppUnit::TestFixture {
+class BtChokeMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtChokeMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -73,21 +67,24 @@ public:
   };
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtChokeMessageTest);
+A2_TEST(BtChokeMessageTest, testCreate)
+A2_TEST(BtChokeMessageTest, testCreateMessage)
+A2_TEST(BtChokeMessageTest, testDoReceivedAction)
+A2_TEST(BtChokeMessageTest, testToString)
 
 void BtChokeMessageTest::testCreate()
 {
   unsigned char msg[5];
   bittorrent::createPeerMessageString(msg, sizeof(msg), 1, 0);
   auto pm = BtChokeMessage::create(&msg[4], 1);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)0, pm->getId());
+  REQUIRE_EQ((uint8_t)0, pm->getId());
 
   // case: payload size is wrong
   try {
     unsigned char msg[6];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 2, 0);
     BtChokeMessage::create(&msg[4], 2);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -96,7 +93,7 @@ void BtChokeMessageTest::testCreate()
     unsigned char msg[5];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 1, 1);
     BtChokeMessage::create(&msg[4], 1);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -108,8 +105,8 @@ void BtChokeMessageTest::testCreateMessage()
   unsigned char data[5];
   bittorrent::createPeerMessageString(data, sizeof(data), 1, 0);
   auto rawmsg = msg.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)5, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)5, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtChokeMessageTest::testDoReceivedAction()
@@ -124,14 +121,14 @@ void BtChokeMessageTest::testDoReceivedAction()
 
   msg.doReceivedAction();
 
-  CPPUNIT_ASSERT(dispatcher->doChokedActionCalled);
-  CPPUNIT_ASSERT(peer->peerChoking());
+  REQUIRE(dispatcher->doChokedActionCalled);
+  REQUIRE(peer->peerChoking());
 }
 
 void BtChokeMessageTest::testToString()
 {
   BtChokeMessage msg;
-  CPPUNIT_ASSERT_EQUAL(std::string("choke"), msg.toString());
+  REQUIRE_EQ(std::string("choke"), msg.toString());
 }
 
 } // namespace aria2

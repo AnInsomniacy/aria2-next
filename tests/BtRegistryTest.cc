@@ -1,6 +1,6 @@
 #include "BtRegistry.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "DownloadContext.h"
@@ -15,15 +15,8 @@
 
 namespace aria2 {
 
-class BtRegistryTest : public CppUnit::TestFixture {
+class BtRegistryTest {
 
-  CPPUNIT_TEST_SUITE(BtRegistryTest);
-  CPPUNIT_TEST(testGetDownloadContext);
-  CPPUNIT_TEST(testGetDownloadContext_infoHash);
-  CPPUNIT_TEST(testGetAllDownloadContext);
-  CPPUNIT_TEST(testRemove);
-  CPPUNIT_TEST(testRemoveAll);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -34,17 +27,21 @@ public:
   void testRemoveAll();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtRegistryTest);
+A2_TEST(BtRegistryTest, testGetDownloadContext)
+A2_TEST(BtRegistryTest, testGetDownloadContext_infoHash)
+A2_TEST(BtRegistryTest, testGetAllDownloadContext)
+A2_TEST(BtRegistryTest, testRemove)
+A2_TEST(BtRegistryTest, testRemoveAll)
 
 void BtRegistryTest::testGetDownloadContext()
 {
   BtRegistry btRegistry;
-  CPPUNIT_ASSERT(!btRegistry.getDownloadContext(1));
+  REQUIRE(!btRegistry.getDownloadContext(1));
   auto dctx = std::make_shared<DownloadContext>();
   auto btObject = make_unique<BtObject>();
   btObject->downloadContext = dctx;
   btRegistry.put(1, std::move(btObject));
-  CPPUNIT_ASSERT_EQUAL(dctx.get(), btRegistry.getDownloadContext(1).get());
+  REQUIRE_EQ(dctx.get(), btRegistry.getDownloadContext(1).get());
 }
 
 namespace {
@@ -75,10 +72,10 @@ void BtRegistryTest::testGetDownloadContext_infoHash()
     btRegistry.getDownloadContext(2)->setAttribute(CTX_ATTR_BT,
                                                    std::move(attrs2));
   }
-  CPPUNIT_ASSERT(btRegistry.getDownloadContext("hash1"));
-  CPPUNIT_ASSERT(btRegistry.getDownloadContext("hash1").get() ==
+  REQUIRE(btRegistry.getDownloadContext("hash1"));
+  REQUIRE(btRegistry.getDownloadContext("hash1").get() ==
                  btRegistry.getDownloadContext(1).get());
-  CPPUNIT_ASSERT(!btRegistry.getDownloadContext("not exists"));
+  REQUIRE(!btRegistry.getDownloadContext("not exists"));
 }
 
 void BtRegistryTest::testGetAllDownloadContext()
@@ -88,16 +85,16 @@ void BtRegistryTest::testGetAllDownloadContext()
 
   std::vector<std::shared_ptr<DownloadContext>> result;
   btRegistry.getAllDownloadContext(std::back_inserter(result));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, result.size());
+  REQUIRE_EQ((size_t)2, result.size());
 }
 
 void BtRegistryTest::testRemove()
 {
   BtRegistry btRegistry;
   addTwoDownloadContext(btRegistry);
-  CPPUNIT_ASSERT(btRegistry.remove(1));
-  CPPUNIT_ASSERT(!btRegistry.get(1));
-  CPPUNIT_ASSERT(btRegistry.get(2));
+  REQUIRE(btRegistry.remove(1));
+  REQUIRE(!btRegistry.get(1));
+  REQUIRE(btRegistry.get(2));
 }
 
 void BtRegistryTest::testRemoveAll()
@@ -105,8 +102,8 @@ void BtRegistryTest::testRemoveAll()
   BtRegistry btRegistry;
   addTwoDownloadContext(btRegistry);
   btRegistry.removeAll();
-  CPPUNIT_ASSERT(!btRegistry.get(1));
-  CPPUNIT_ASSERT(!btRegistry.get(2));
+  REQUIRE(!btRegistry.get(1));
+  REQUIRE(!btRegistry.get(2));
 }
 
 } // namespace aria2

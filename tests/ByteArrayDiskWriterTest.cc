@@ -1,15 +1,11 @@
 #include "ByteArrayDiskWriter.h"
 #include <string>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class ByteArrayDiskWriterTest : public CppUnit::TestFixture {
+class ByteArrayDiskWriterTest {
 
-  CPPUNIT_TEST_SUITE(ByteArrayDiskWriterTest);
-  CPPUNIT_TEST(testWriteAndRead);
-  CPPUNIT_TEST(testWriteAndRead2);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -19,7 +15,8 @@ public:
   void testWriteAndRead2();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(ByteArrayDiskWriterTest);
+A2_TEST(ByteArrayDiskWriterTest, testWriteAndRead)
+A2_TEST(ByteArrayDiskWriterTest, testWriteAndRead2)
 
 void ByteArrayDiskWriterTest::testWriteAndRead()
 {
@@ -41,8 +38,8 @@ void ByteArrayDiskWriterTest::testWriteAndRead()
   int32_t c = bw.readData((unsigned char*)buf, sizeof(buf), 1);
   buf[c] = '\0';
 
-  CPPUNIT_ASSERT_EQUAL(std::string("ello World !!"), std::string(buf));
-  CPPUNIT_ASSERT_EQUAL((int64_t)14, bw.size());
+  REQUIRE_EQ(std::string("ello World !!"), std::string(buf));
+  REQUIRE_EQ((int64_t)14, bw.size());
 }
 
 void ByteArrayDiskWriterTest::testWriteAndRead2()
@@ -58,8 +55,8 @@ void ByteArrayDiskWriterTest::testWriteAndRead2()
   int32_t c = bw.readData((unsigned char*)buf, sizeof(buf), 0);
   buf[c] = '\0';
 
-  CPPUNIT_ASSERT_EQUAL(std::string("Hello From Mars"), std::string(buf));
-  CPPUNIT_ASSERT_EQUAL((int64_t)15, bw.size());
+  REQUIRE_EQ(std::string("Hello From Mars"), std::string(buf));
+  REQUIRE_EQ((int64_t)15, bw.size());
 }
 
 } // namespace aria2

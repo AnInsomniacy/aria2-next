@@ -3,7 +3,7 @@
 #include <iostream>
 #include <fstream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "TestUtil.h"
 #include "RequestGroupMan.h"
@@ -24,16 +24,8 @@
 
 namespace aria2 {
 
-class SessionSerializerTest : public CppUnit::TestFixture {
+class SessionSerializerTest {
 
-  CPPUNIT_TEST_SUITE(SessionSerializerTest);
-  CPPUNIT_TEST(testSave);
-  CPPUNIT_TEST(testSaveErrorDownload);
-  CPPUNIT_TEST(testSaveEd2kDownload);
-  CPPUNIT_TEST(testLoadSavedEd2kState);
-  CPPUNIT_TEST(testSaveActiveEd2kSharing);
-  CPPUNIT_TEST(testSaveEd2kPeerCredits);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testSave();
@@ -44,7 +36,12 @@ public:
   void testSaveEd2kPeerCredits();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(SessionSerializerTest);
+A2_TEST(SessionSerializerTest, testSave)
+A2_TEST(SessionSerializerTest, testSaveErrorDownload)
+A2_TEST(SessionSerializerTest, testSaveEd2kDownload)
+A2_TEST(SessionSerializerTest, testLoadSavedEd2kState)
+A2_TEST(SessionSerializerTest, testSaveActiveEd2kSharing)
+A2_TEST(SessionSerializerTest, testSaveEd2kPeerCredits)
 
 void SessionSerializerTest::testSave()
 {
@@ -57,7 +54,7 @@ void SessionSerializerTest::testSave()
   std::shared_ptr<Option> option(new Option());
   option->put(PREF_DIR, "/tmp");
   createRequestGroupForUri(result, option, uris);
-  CPPUNIT_ASSERT_EQUAL((size_t)5, result.size());
+  REQUIRE_EQ((size_t)5, result.size());
   result[4]->getOption()->put(PREF_PAUSE, A2_V_TRUE);
   option->put(PREF_MAX_DOWNLOAD_RESULT, "10");
   RequestGroupMan rgman{result, 1, option.get()};
@@ -92,7 +89,7 @@ void SessionSerializerTest::testSave()
   DownloadEngine e(make_unique<SelectEventPoll>());
   e.setOption(option.get());
   rgman.fillRequestGroupFromReserver(&e);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rgman.getRequestGroups().size());
+  REQUIRE_EQ((size_t)1, rgman.getRequestGroups().size());
 
   std::string filename =
       A2_TEST_OUT_DIR "/aria2_SessionSerializerTest_testSave";
@@ -100,51 +97,51 @@ void SessionSerializerTest::testSave()
   std::ifstream ss(filename.c_str(), std::ios::binary);
   std::string line;
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("http://error\thttp://error3\thttp://error2\t"), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(fmt(" gid=%s", drs[1]->gid->toHex().c_str()), line);
+  REQUIRE_EQ(fmt(" gid=%s", drs[1]->gid->toHex().c_str()), line);
   std::getline(ss, line);
   // finished and force-save option
-  CPPUNIT_ASSERT_EQUAL(std::string("http://force-save\t"), line);
+  REQUIRE_EQ(std::string("http://force-save\t"), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(fmt(" gid=%s", drs[3]->gid->toHex().c_str()), line);
+  REQUIRE_EQ(fmt(" gid=%s", drs[3]->gid->toHex().c_str()), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(std::string(" force-save=true"), line);
+  REQUIRE_EQ(std::string(" force-save=true"), line);
   // Check active download is also saved
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(uris[0] + "\t" + uris[1] + "\t", line);
+  REQUIRE_EQ(uris[0] + "\t" + uris[1] + "\t", line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       fmt(" gid=%s", GroupId::toHex(result[0]->getGID()).c_str()), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(std::string(" dir=/tmp"), line);
+  REQUIRE_EQ(std::string(" dir=/tmp"), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(uris[2], line);
+  REQUIRE_EQ(uris[2], line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       fmt(" gid=%s", GroupId::toHex(result[1]->getGID()).c_str()), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(std::string(" dir=/tmp"), line);
+  REQUIRE_EQ(std::string(" dir=/tmp"), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(uris[3], line);
+  REQUIRE_EQ(uris[3], line);
   std::getline(ss, line);
   // local metalink download does not save meaningful GID
-  CPPUNIT_ASSERT(fmt(" gid=%s", GroupId::toHex(result[2]->getGID()).c_str()) !=
+  REQUIRE(fmt(" gid=%s", GroupId::toHex(result[2]->getGID()).c_str()) !=
                  line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(std::string(" dir=/tmp"), line);
+  REQUIRE_EQ(std::string(" dir=/tmp"), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(uris[4], line);
+  REQUIRE_EQ(uris[4], line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       fmt(" gid=%s", GroupId::toHex(result[4]->getGID()).c_str()), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(std::string(" dir=/tmp"), line);
+  REQUIRE_EQ(std::string(" dir=/tmp"), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(std::string(" pause=true"), line);
+  REQUIRE_EQ(std::string(" pause=true"), line);
   std::getline(ss, line);
-  CPPUNIT_ASSERT(!ss);
+  REQUIRE(!ss);
 #endif // defined(ENABLE_BITTORRENT) && defined(ENABLE_METALINK)
 }
 
@@ -162,11 +159,11 @@ void SessionSerializerTest::testSaveErrorDownload()
   SessionSerializer s(&rgman);
   std::string filename =
       A2_TEST_OUT_DIR "/aria2_SessionSerializerTest_testSaveErrorDownload";
-  CPPUNIT_ASSERT(s.save(filename));
+  REQUIRE(s.save(filename));
   std::ifstream ss(filename.c_str(), std::ios::binary);
   std::string line;
   std::getline(ss, line);
-  CPPUNIT_ASSERT_EQUAL(std::string("http://error\t"), line);
+  REQUIRE_EQ(std::string("http://error\t"), line);
 }
 
 void SessionSerializerTest::testSaveEd2kDownload()
@@ -180,7 +177,7 @@ void SessionSerializerTest::testSaveEd2kDownload()
   option->put(PREF_DIR, "/tmp");
   std::vector<std::shared_ptr<RequestGroup>> result;
   createRequestGroupForUri(result, option, uris);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  REQUIRE_EQ((size_t)1, result.size());
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
   std::string clientHashHex("01020304050e0708090a0b0c0d0e6f10");
   attrs->clientHash =
@@ -230,56 +227,56 @@ void SessionSerializerTest::testSaveEd2kDownload()
   SessionSerializer serializer(&rgman);
   std::string filename =
       A2_TEST_OUT_DIR "/aria2_SessionSerializerTest_testSaveEd2kDownload";
-  CPPUNIT_ASSERT(serializer.save(filename));
+  REQUIRE(serializer.save(filename));
 
   std::ifstream in(filename.c_str(), std::ios::binary);
   std::string line;
   std::getline(in, line);
-  CPPUNIT_ASSERT(util::startsWith(line, "ed2k://|file|aria2%20next.bin|"));
-  CPPUNIT_ASSERT(line.find("0123456789abcdef0123456789abcdef") !=
+  REQUIRE(util::startsWith(line, "ed2k://|file|aria2%20next.bin|"));
+  REQUIRE(line.find("0123456789abcdef0123456789abcdef") !=
                  std::string::npos);
-  CPPUNIT_ASSERT(line.find("33333333333333333333333333333333:"
+  REQUIRE(line.find("33333333333333333333333333333333:"
                            "44444444444444444444444444444444") !=
                  std::string::npos);
-  CPPUNIT_ASSERT(line.find("sources,203.0.113.20:4662") !=
+  REQUIRE(line.find("sources,203.0.113.20:4662") !=
                  std::string::npos);
   std::getline(in, line);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       fmt(" gid=%s", GroupId::toHex(result[0]->getGID()).c_str()), line);
   std::getline(in, line);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string(" ed2k-client-hash=01020304050e0708090a0b0c0d0e6f10"),
       line);
   std::getline(in, line);
-  CPPUNIT_ASSERT(util::startsWith(line, " ed2k-kad-routing-state="));
+  REQUIRE(util::startsWith(line, " ed2k-kad-routing-state="));
   ed2k::KadRoutingSnapshot restoredKad;
   auto kadValue = line.substr(
       std::string(" ed2k-kad-routing-state=").size());
-  CPPUNIT_ASSERT(ed2k::parseKadRoutingStatePayload(
+  REQUIRE(ed2k::parseKadRoutingStatePayload(
       restoredKad, util::fromHex(kadValue.begin(), kadValue.end())));
-  CPPUNIT_ASSERT_EQUAL((int64_t)500, restoredKad.lastFirewalledCheck);
-  CPPUNIT_ASSERT_EQUAL((int64_t)600, restoredKad.lastSourcePublish);
-  CPPUNIT_ASSERT_EQUAL((int64_t)700, restoredKad.lastSourceSearch);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)3, restoredKad.sourceSearchCount);
-  CPPUNIT_ASSERT(!restoredKad.firewalled);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, restoredKad.observedAddresses.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.55"),
+  REQUIRE_EQ((int64_t)500, restoredKad.lastFirewalledCheck);
+  REQUIRE_EQ((int64_t)600, restoredKad.lastSourcePublish);
+  REQUIRE_EQ((int64_t)700, restoredKad.lastSourceSearch);
+  REQUIRE_EQ((uint32_t)3, restoredKad.sourceSearchCount);
+  REQUIRE(!restoredKad.firewalled);
+  REQUIRE_EQ((size_t)1, restoredKad.observedAddresses.size());
+  REQUIRE_EQ(std::string("203.0.113.55"),
                        restoredKad.observedAddresses[0]);
   std::getline(in, line);
-  CPPUNIT_ASSERT(util::startsWith(line, " ed2k-server-state="));
+  REQUIRE(util::startsWith(line, " ed2k-server-state="));
   ed2k::ServerState restored;
   auto value = line.substr(std::string(" ed2k-server-state=").size());
-  CPPUNIT_ASSERT(ed2k::parseServerStatePayload(
+  REQUIRE(ed2k::parseServerStatePayload(
       restored, util::fromHex(value.begin(), value.end())));
-  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"), restored.name);
-  CPPUNIT_ASSERT_EQUAL(std::string("Primary ED2K server"),
+  REQUIRE_EQ(std::string("Peer Server"), restored.name);
+  REQUIRE_EQ(std::string("Primary ED2K server"),
                        restored.description);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa, restored.tcpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1234, restored.users);
+  REQUIRE_EQ((uint32_t)0x55aa, restored.tcpFlags);
+  REQUIRE_EQ((uint32_t)1234, restored.users);
   std::getline(in, line);
-  CPPUNIT_ASSERT_EQUAL(std::string(" dir=/tmp"), line);
+  REQUIRE_EQ(std::string(" dir=/tmp"), line);
   std::getline(in, line);
-  CPPUNIT_ASSERT(!in);
+  REQUIRE(!in);
 }
 
 void SessionSerializerTest::testLoadSavedEd2kState()
@@ -299,11 +296,11 @@ void SessionSerializerTest::testLoadSavedEd2kState()
   Option option;
   parser.parseNext(uris, option);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, uris.size());
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ((size_t)1, uris.size());
+  REQUIRE_EQ(
       std::string("1112131415161718191a1b1c1d1e1f20"),
       option.get(PREF_ED2K_CLIENT_HASH));
-  CPPUNIT_ASSERT(option.defined(PREF_ED2K_SERVER_STATE));
+  REQUIRE(option.defined(PREF_ED2K_SERVER_STATE));
 }
 
 void SessionSerializerTest::testSaveActiveEd2kSharing()
@@ -318,7 +315,7 @@ void SessionSerializerTest::testSaveActiveEd2kSharing()
   option->put(PREF_MAX_DOWNLOAD_RESULT, "10");
   std::vector<std::shared_ptr<RequestGroup>> result;
   createRequestGroupForUri(result, option, uris);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  REQUIRE_EQ((size_t)1, result.size());
 
   RequestGroupMan rgman{std::vector<std::shared_ptr<RequestGroup>>(), 1,
                         option.get()};
@@ -333,17 +330,17 @@ void SessionSerializerTest::testSaveActiveEd2kSharing()
   SessionSerializer serializer(&rgman);
   std::string filename =
       A2_TEST_OUT_DIR "/aria2_SessionSerializerTest_testSaveActiveEd2kSharing";
-  CPPUNIT_ASSERT(serializer.save(filename));
+  REQUIRE(serializer.save(filename));
 
   std::ifstream in(filename.c_str(), std::ios::binary);
   std::string line;
   std::getline(in, line);
-  CPPUNIT_ASSERT(util::startsWith(line, "ed2k://|file|aria2%20sharing.bin|"));
+  REQUIRE(util::startsWith(line, "ed2k://|file|aria2%20sharing.bin|"));
   std::getline(in, line);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       fmt(" gid=%s", GroupId::toHex(group->getGID()).c_str()), line);
   std::getline(in, line);
-  CPPUNIT_ASSERT_EQUAL(std::string(" pause=true"), line);
+  REQUIRE_EQ(std::string(" pause=true"), line);
 }
 
 void SessionSerializerTest::testSaveEd2kPeerCredits()
@@ -361,19 +358,19 @@ void SessionSerializerTest::testSaveEd2kPeerCredits()
   SessionSerializer serializer(&rgman);
   std::string filename =
       A2_TEST_OUT_DIR "/aria2_SessionSerializerTest_testSaveEd2kPeerCredits";
-  CPPUNIT_ASSERT(serializer.save(filename));
+  REQUIRE(serializer.save(filename));
 
   std::ifstream in(filename.c_str(), std::ios::binary);
   std::string line;
   std::getline(in, line);
-  CPPUNIT_ASSERT(util::startsWith(line, " ed2k-peer-credit-state="));
+  REQUIRE(util::startsWith(line, " ed2k-peer-credit-state="));
   auto value = line.substr(std::string(" ed2k-peer-credit-state=").size());
   ed2k::PeerCreditState restored;
-  CPPUNIT_ASSERT(ed2k::parsePeerCreditStatePayload(
+  REQUIRE(ed2k::parsePeerCreditStatePayload(
       restored, util::fromHex(value.begin(), value.end())));
-  CPPUNIT_ASSERT_EQUAL(userHash, restored.userHash);
-  CPPUNIT_ASSERT_EQUAL((uint64_t)1234, restored.uploaded);
-  CPPUNIT_ASSERT_EQUAL((uint64_t)5678, restored.downloaded);
+  REQUIRE_EQ(userHash, restored.userHash);
+  REQUIRE_EQ((uint64_t)1234, restored.uploaded);
+  REQUIRE_EQ((uint64_t)5678, restored.downloaded);
 }
 
 } // namespace aria2

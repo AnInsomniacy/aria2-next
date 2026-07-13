@@ -1,6 +1,6 @@
 #include "InorderURISelector.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -9,11 +9,8 @@
 
 namespace aria2 {
 
-class InorderURISelectorTest : public CppUnit::TestFixture {
+class InorderURISelectorTest {
 
-  CPPUNIT_TEST_SUITE(InorderURISelectorTest);
-  CPPUNIT_TEST(testSelect);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   FileEntry fileEntry_;
@@ -34,18 +31,18 @@ public:
   void testSelect();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(InorderURISelectorTest);
+A2_TEST(InorderURISelectorTest, testSelect)
 
 void InorderURISelectorTest::testSelect()
 {
   std::vector<std::pair<size_t, std::string>> usedHosts;
-  CPPUNIT_ASSERT_EQUAL(std::string("http://alpha/file"),
+  REQUIRE_EQ(std::string("http://alpha/file"),
                        sel->select(&fileEntry_, usedHosts));
-  CPPUNIT_ASSERT_EQUAL(std::string("ftp://alpha/file"),
+  REQUIRE_EQ(std::string("ftp://alpha/file"),
                        sel->select(&fileEntry_, usedHosts));
-  CPPUNIT_ASSERT_EQUAL(std::string("http://bravo/file"),
+  REQUIRE_EQ(std::string("http://bravo/file"),
                        sel->select(&fileEntry_, usedHosts));
-  CPPUNIT_ASSERT_EQUAL(std::string(""), sel->select(&fileEntry_, usedHosts));
+  REQUIRE_EQ(std::string(""), sel->select(&fileEntry_, usedHosts));
 }
 
 } // namespace aria2

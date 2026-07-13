@@ -1,6 +1,6 @@
 #include "RequestGroup.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Option.h"
 #include "DownloadContext.h"
@@ -13,14 +13,8 @@
 
 namespace aria2 {
 
-class RequestGroupTest : public CppUnit::TestFixture {
+class RequestGroupTest {
 
-  CPPUNIT_TEST_SUITE(RequestGroupTest);
-  CPPUNIT_TEST(testGetFirstFilePath);
-  CPPUNIT_TEST(testTryAutoFileRenaming);
-  CPPUNIT_TEST(testCreateDownloadResult);
-  CPPUNIT_TEST(testLoadAndOpenFileRestartFromScratch);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<Option> option_;
@@ -34,7 +28,10 @@ public:
   void testLoadAndOpenFileRestartFromScratch();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(RequestGroupTest);
+A2_TEST(RequestGroupTest, testGetFirstFilePath)
+A2_TEST(RequestGroupTest, testTryAutoFileRenaming)
+A2_TEST(RequestGroupTest, testCreateDownloadResult)
+A2_TEST(RequestGroupTest, testLoadAndOpenFileRestartFromScratch)
 
 void RequestGroupTest::testGetFirstFilePath()
 {
@@ -44,11 +41,11 @@ void RequestGroupTest::testGetFirstFilePath()
   RequestGroup group(GroupId::create(), option_);
   group.setDownloadContext(ctx);
 
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp/myfile"), group.getFirstFilePath());
+  REQUIRE_EQ(std::string("/tmp/myfile"), group.getFirstFilePath());
 
   group.markInMemoryDownload();
 
-  CPPUNIT_ASSERT_EQUAL(std::string("[MEMORY]myfile"), group.getFirstFilePath());
+  REQUIRE_EQ(std::string("[MEMORY]myfile"), group.getFirstFilePath());
 }
 
 void RequestGroupTest::testTryAutoFileRenaming()
@@ -64,44 +61,44 @@ void RequestGroupTest::testTryAutoFileRenaming()
     group.tryAutoFileRenaming();
   }
   catch (const Exception& ex) {
-    CPPUNIT_ASSERT_EQUAL(error_code::FILE_ALREADY_EXISTS, ex.getErrorCode());
+    REQUIRE_EQ(error_code::FILE_ALREADY_EXISTS, ex.getErrorCode());
   }
 
   option_->put(PREF_AUTO_FILE_RENAMING, "true");
   group.tryAutoFileRenaming();
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp/myfile.1"), group.getFirstFilePath());
+  REQUIRE_EQ(std::string("/tmp/myfile.1"), group.getFirstFilePath());
 
   ctx->getFirstFileEntry()->setPath("/tmp/myfile.txt");
   group.tryAutoFileRenaming();
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp/myfile.1.txt"),
+  REQUIRE_EQ(std::string("/tmp/myfile.1.txt"),
                        group.getFirstFilePath());
 
   ctx->getFirstFileEntry()->setPath("/tmp.txt/myfile");
   group.tryAutoFileRenaming();
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp.txt/myfile.1"),
+  REQUIRE_EQ(std::string("/tmp.txt/myfile.1"),
                        group.getFirstFilePath());
 
   ctx->getFirstFileEntry()->setPath("/tmp.txt/myfile.txt");
   group.tryAutoFileRenaming();
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp.txt/myfile.1.txt"),
+  REQUIRE_EQ(std::string("/tmp.txt/myfile.1.txt"),
                        group.getFirstFilePath());
 
   ctx->getFirstFileEntry()->setPath(".bashrc");
   group.tryAutoFileRenaming();
-  CPPUNIT_ASSERT_EQUAL(std::string(".bashrc.1"), group.getFirstFilePath());
+  REQUIRE_EQ(std::string(".bashrc.1"), group.getFirstFilePath());
 
   ctx->getFirstFileEntry()->setPath(".bashrc.txt");
   group.tryAutoFileRenaming();
-  CPPUNIT_ASSERT_EQUAL(std::string(".bashrc.1.txt"), group.getFirstFilePath());
+  REQUIRE_EQ(std::string(".bashrc.1.txt"), group.getFirstFilePath());
 
   ctx->getFirstFileEntry()->setPath("/tmp.txt/.bashrc");
   group.tryAutoFileRenaming();
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp.txt/.bashrc.1"),
+  REQUIRE_EQ(std::string("/tmp.txt/.bashrc.1"),
                        group.getFirstFilePath());
 
   ctx->getFirstFileEntry()->setPath("/tmp.txt/.bashrc.txt");
   group.tryAutoFileRenaming();
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp.txt/.bashrc.1.txt"),
+  REQUIRE_EQ(std::string("/tmp.txt/.bashrc.1.txt"),
                        group.getFirstFilePath());
 }
 
@@ -115,40 +112,40 @@ void RequestGroupTest::testCreateDownloadResult()
   {
     std::shared_ptr<DownloadResult> result = group.createDownloadResult();
 
-    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/myfile"),
+    REQUIRE_EQ(std::string("/tmp/myfile"),
                          result->fileEntries[0]->getPath());
-    CPPUNIT_ASSERT_EQUAL((int64_t)1_m,
+    REQUIRE_EQ((int64_t)1_m,
                          result->fileEntries.back()->getLastOffset());
-    CPPUNIT_ASSERT_EQUAL((uint64_t)0, result->sessionDownloadLength);
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, result->sessionTime.count());
+    REQUIRE_EQ((uint64_t)0, result->sessionDownloadLength);
+    REQUIRE_EQ((int64_t)0, result->sessionTime.count());
     // result is UNKNOWN_ERROR if download has not completed and no specific
     // error has been reported
-    CPPUNIT_ASSERT_EQUAL(error_code::UNKNOWN_ERROR, result->result);
+    REQUIRE_EQ(error_code::UNKNOWN_ERROR, result->result);
 
     // if haltReason is set to RequestGroup::USER_REQUEST, download
     // result will become REMOVED.
     group.setHaltRequested(true, RequestGroup::USER_REQUEST);
     result = group.createDownloadResult();
-    CPPUNIT_ASSERT_EQUAL(error_code::REMOVED, result->result);
+    REQUIRE_EQ(error_code::REMOVED, result->result);
     // if haltReason is set to RequestGroup::SHUTDOWN_SIGNAL, download
     // result will become IN_PROGRESS.
     group.setHaltRequested(true, RequestGroup::SHUTDOWN_SIGNAL);
     result = group.createDownloadResult();
-    CPPUNIT_ASSERT_EQUAL(error_code::IN_PROGRESS, result->result);
+    REQUIRE_EQ(error_code::IN_PROGRESS, result->result);
   }
   {
     group.setLastErrorCode(error_code::RESOURCE_NOT_FOUND);
 
     std::shared_ptr<DownloadResult> result = group.createDownloadResult();
 
-    CPPUNIT_ASSERT_EQUAL(error_code::RESOURCE_NOT_FOUND, result->result);
+    REQUIRE_EQ(error_code::RESOURCE_NOT_FOUND, result->result);
   }
   {
     group.getPieceStorage()->markAllPiecesDone();
 
     std::shared_ptr<DownloadResult> result = group.createDownloadResult();
 
-    CPPUNIT_ASSERT_EQUAL(error_code::FINISHED, result->result);
+    REQUIRE_EQ(error_code::FINISHED, result->result);
   }
 }
 
@@ -173,8 +170,8 @@ void RequestGroupTest::testLoadAndOpenFileRestartFromScratch()
                                                   option_.get());
   group.loadAndOpenFile(infoFile, RequestGroup::RESTART_FROM_SCRATCH);
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, group.getCompletedLength());
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, File(path).size());
+  REQUIRE_EQ((int64_t)0, group.getCompletedLength());
+  REQUIRE_EQ((int64_t)0, File(path).size());
 }
 
 } // namespace aria2

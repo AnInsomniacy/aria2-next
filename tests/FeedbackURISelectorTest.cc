@@ -1,6 +1,6 @@
 #include "FeedbackURISelector.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -11,14 +11,8 @@
 
 namespace aria2 {
 
-class FeedbackURISelectorTest : public CppUnit::TestFixture {
+class FeedbackURISelectorTest {
 
-  CPPUNIT_TEST_SUITE(FeedbackURISelectorTest);
-  CPPUNIT_TEST(testSelect_withoutServerStat);
-  CPPUNIT_TEST(testSelect);
-  CPPUNIT_TEST(testSelect_withUsedHosts);
-  CPPUNIT_TEST(testSelect_skipErrorHost);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   FileEntry fileEntry_;
@@ -48,15 +42,18 @@ public:
   void testSelect_skipErrorHost();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(FeedbackURISelectorTest);
+A2_TEST(FeedbackURISelectorTest, testSelect_withoutServerStat)
+A2_TEST(FeedbackURISelectorTest, testSelect)
+A2_TEST(FeedbackURISelectorTest, testSelect_withUsedHosts)
+A2_TEST(FeedbackURISelectorTest, testSelect_skipErrorHost)
 
 void FeedbackURISelectorTest::testSelect_withoutServerStat()
 {
   std::vector<std::pair<size_t, std::string>> usedHosts;
   // Without ServerStat and usedHosts, selector returns first URI
   std::string uri = sel->select(&fileEntry_, usedHosts);
-  CPPUNIT_ASSERT_EQUAL(std::string("http://alpha/file"), uri);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, fileEntry_.getRemainingUris().size());
+  REQUIRE_EQ(std::string("http://alpha/file"), uri);
+  REQUIRE_EQ((size_t)2, fileEntry_.getRemainingUris().size());
 }
 
 void FeedbackURISelectorTest::testSelect()
@@ -74,13 +71,13 @@ void FeedbackURISelectorTest::testSelect()
   ssm->add(alphaFTP);
   ssm->add(alphaHTTP);
 
-  CPPUNIT_ASSERT_EQUAL(std::string("http://bravo/file"),
+  REQUIRE_EQ(std::string("http://bravo/file"),
                        sel->select(&fileEntry_, usedHosts));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, fileEntry_.getRemainingUris().size());
+  REQUIRE_EQ((size_t)2, fileEntry_.getRemainingUris().size());
 
-  CPPUNIT_ASSERT_EQUAL(std::string("ftp://alpha/file"),
+  REQUIRE_EQ(std::string("ftp://alpha/file"),
                        sel->select(&fileEntry_, usedHosts));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, fileEntry_.getRemainingUris().size());
+  REQUIRE_EQ((size_t)1, fileEntry_.getRemainingUris().size());
 }
 
 void FeedbackURISelectorTest::testSelect_withUsedHosts()
@@ -89,17 +86,17 @@ void FeedbackURISelectorTest::testSelect_withUsedHosts()
   usedHosts.push_back(std::make_pair(1, "bravo"));
   usedHosts.push_back(std::make_pair(2, "alpha"));
 
-  CPPUNIT_ASSERT_EQUAL(std::string("http://bravo/file"),
+  REQUIRE_EQ(std::string("http://bravo/file"),
                        sel->select(&fileEntry_, usedHosts));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, fileEntry_.getRemainingUris().size());
+  REQUIRE_EQ((size_t)2, fileEntry_.getRemainingUris().size());
 
-  CPPUNIT_ASSERT_EQUAL(std::string("http://alpha/file"),
+  REQUIRE_EQ(std::string("http://alpha/file"),
                        sel->select(&fileEntry_, usedHosts));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, fileEntry_.getRemainingUris().size());
+  REQUIRE_EQ((size_t)1, fileEntry_.getRemainingUris().size());
 
-  CPPUNIT_ASSERT_EQUAL(std::string("ftp://alpha/file"),
+  REQUIRE_EQ(std::string("ftp://alpha/file"),
                        sel->select(&fileEntry_, usedHosts));
-  CPPUNIT_ASSERT_EQUAL((size_t)0, fileEntry_.getRemainingUris().size());
+  REQUIRE_EQ((size_t)0, fileEntry_.getRemainingUris().size());
 }
 
 void FeedbackURISelectorTest::testSelect_skipErrorHost()
@@ -113,9 +110,9 @@ void FeedbackURISelectorTest::testSelect_skipErrorHost()
   ssm->add(alphaHTTP);
   ssm->add(alphaFTP);
 
-  CPPUNIT_ASSERT_EQUAL(std::string("http://bravo/file"),
+  REQUIRE_EQ(std::string("http://bravo/file"),
                        sel->select(&fileEntry_, usedHosts));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, fileEntry_.getRemainingUris().size());
+  REQUIRE_EQ((size_t)2, fileEntry_.getRemainingUris().size());
 }
 
 } // namespace aria2

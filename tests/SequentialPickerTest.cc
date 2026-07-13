@@ -1,51 +1,48 @@
 #include "SequentialPicker.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "a2functional.h"
 
 namespace aria2 {
 
-class SequentialPickerTest : public CppUnit::TestFixture {
+class SequentialPickerTest {
 
-  CPPUNIT_TEST_SUITE(SequentialPickerTest);
-  CPPUNIT_TEST(testPick);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testPick();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(SequentialPickerTest);
+A2_TEST(SequentialPickerTest, testPick)
 
 void SequentialPickerTest::testPick()
 {
   SequentialPicker<int> picker;
 
-  CPPUNIT_ASSERT(!picker.isPicked());
-  CPPUNIT_ASSERT(!picker.hasNext());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, picker.countEntryInQueue());
+  REQUIRE(!picker.isPicked());
+  REQUIRE(!picker.hasNext());
+  REQUIRE_EQ((size_t)0, picker.countEntryInQueue());
 
   picker.pushEntry(make_unique<int>(1));
   picker.pushEntry(make_unique<int>(2));
 
-  CPPUNIT_ASSERT(picker.hasNext());
-  CPPUNIT_ASSERT_EQUAL((size_t)2, picker.countEntryInQueue());
+  REQUIRE(picker.hasNext());
+  REQUIRE_EQ((size_t)2, picker.countEntryInQueue());
 
   picker.pickNext();
 
-  CPPUNIT_ASSERT(picker.isPicked());
-  CPPUNIT_ASSERT_EQUAL(1, *picker.getPickedEntry());
+  REQUIRE(picker.isPicked());
+  REQUIRE_EQ(1, *picker.getPickedEntry());
 
   picker.dropPickedEntry();
 
-  CPPUNIT_ASSERT(!picker.isPicked());
-  CPPUNIT_ASSERT(picker.hasNext());
+  REQUIRE(!picker.isPicked());
+  REQUIRE(picker.hasNext());
 
   picker.pickNext();
 
-  CPPUNIT_ASSERT_EQUAL(2, *picker.getPickedEntry());
-  CPPUNIT_ASSERT(!picker.hasNext());
+  REQUIRE_EQ(2, *picker.getPickedEntry());
+  REQUIRE(!picker.hasNext());
 }
 
 } // namespace aria2

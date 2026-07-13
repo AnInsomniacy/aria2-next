@@ -4,7 +4,7 @@
 
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Peer.h"
 #include "bittorrent_helper.h"
@@ -17,12 +17,8 @@
 
 namespace aria2 {
 
-class DefaultBtMessageFactoryTest : public CppUnit::TestFixture {
+class DefaultBtMessageFactoryTest {
 
-  CPPUNIT_TEST_SUITE(DefaultBtMessageFactoryTest);
-  CPPUNIT_TEST(testCreateBtMessage_BtExtendedMessage);
-  CPPUNIT_TEST(testCreatePortMessage);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::unique_ptr<DownloadContext> dctx_;
@@ -51,7 +47,8 @@ public:
   void testCreatePortMessage();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DefaultBtMessageFactoryTest);
+A2_TEST(DefaultBtMessageFactoryTest, testCreateBtMessage_BtExtendedMessage)
+A2_TEST(DefaultBtMessageFactoryTest, testCreatePortMessage)
 
 void DefaultBtMessageFactoryTest::testCreateBtMessage_BtExtendedMessage()
 {
@@ -64,12 +61,12 @@ void DefaultBtMessageFactoryTest::testCreateBtMessage_BtExtendedMessage()
 
   auto m =
       factory_->createBtMessage((const unsigned char*)msg + 4, sizeof(msg) - 4);
-  CPPUNIT_ASSERT(BtExtendedMessage::ID == m->getId());
+  REQUIRE(BtExtendedMessage::ID == m->getId());
   try {
     // disable extended messaging
     peer_->setExtendedMessagingEnabled(false);
     factory_->createBtMessage((const unsigned char*)msg + 4, sizeof(msg) - 4);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (Exception& e) {
     std::cerr << e.stackTrace() << std::endl;
@@ -84,17 +81,17 @@ void DefaultBtMessageFactoryTest::testCreatePortMessage()
     bittorrent::setShortIntParam(&data[5], 6881);
     try {
       auto r = factory_->createBtMessage(&data[4], sizeof(data) - 4);
-      CPPUNIT_ASSERT(BtPortMessage::ID == r->getId());
+      REQUIRE(BtPortMessage::ID == r->getId());
       auto m = static_cast<const BtPortMessage*>(r.get());
-      CPPUNIT_ASSERT_EQUAL((uint16_t)6881, m->getPort());
+      REQUIRE_EQ((uint16_t)6881, m->getPort());
     }
     catch (Exception& e) {
-      CPPUNIT_FAIL(e.stackTrace());
+      FAIL(e.stackTrace());
     }
   }
   {
     auto m = factory_->createPortMessage(6881);
-    CPPUNIT_ASSERT_EQUAL((uint16_t)6881, m->getPort());
+    REQUIRE_EQ((uint16_t)6881, m->getPort());
   }
 }
 

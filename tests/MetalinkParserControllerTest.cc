@@ -1,6 +1,6 @@
 #include "MetalinkParserController.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Metalinker.h"
 #include "MetalinkEntry.h"
@@ -13,19 +13,8 @@
 
 namespace aria2 {
 
-class MetalinkParserControllerTest : public CppUnit::TestFixture {
+class MetalinkParserControllerTest {
 
-  CPPUNIT_TEST_SUITE(MetalinkParserControllerTest);
-  CPPUNIT_TEST(testEntryTransaction);
-  CPPUNIT_TEST(testResourceTransaction);
-  CPPUNIT_TEST(testResourceTransaction_withBaseUri);
-  CPPUNIT_TEST(testMetaurlTransaction);
-  CPPUNIT_TEST(testChecksumTransaction);
-  CPPUNIT_TEST(testChunkChecksumTransaction);
-  CPPUNIT_TEST(testChunkChecksumTransactionV4);
-  CPPUNIT_TEST(testSignatureTransaction);
-
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -43,7 +32,14 @@ public:
   void testSignatureTransaction();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(MetalinkParserControllerTest);
+A2_TEST(MetalinkParserControllerTest, testEntryTransaction)
+A2_TEST(MetalinkParserControllerTest, testResourceTransaction)
+A2_TEST(MetalinkParserControllerTest, testResourceTransaction_withBaseUri)
+A2_TEST(MetalinkParserControllerTest, testMetaurlTransaction)
+A2_TEST(MetalinkParserControllerTest, testChecksumTransaction)
+A2_TEST(MetalinkParserControllerTest, testChunkChecksumTransaction)
+A2_TEST(MetalinkParserControllerTest, testChunkChecksumTransactionV4)
+A2_TEST(MetalinkParserControllerTest, testSignatureTransaction)
 
 void MetalinkParserControllerTest::testEntryTransaction()
 {
@@ -60,14 +56,14 @@ void MetalinkParserControllerTest::testEntryTransaction()
   ctrl.cancelEntryTransaction();
   {
     auto m = ctrl.getResult();
-    CPPUNIT_ASSERT_EQUAL((size_t)1, m->getEntries().size());
+    REQUIRE_EQ((size_t)1, m->getEntries().size());
     auto& e = m->getEntries()[0];
-    CPPUNIT_ASSERT_EQUAL(std::string("aria2.tar.bz2"), e->file->getPath());
-    CPPUNIT_ASSERT_EQUAL((int64_t)1_m, e->file->getLength());
-    CPPUNIT_ASSERT_EQUAL((int64_t)0, e->file->getOffset());
-    CPPUNIT_ASSERT_EQUAL(std::string("1.0"), e->version);
-    CPPUNIT_ASSERT_EQUAL(std::string("ja_JP"), e->languages[0]);
-    CPPUNIT_ASSERT_EQUAL(std::string("Linux"), e->oses[0]);
+    REQUIRE_EQ(std::string("aria2.tar.bz2"), e->file->getPath());
+    REQUIRE_EQ((int64_t)1_m, e->file->getLength());
+    REQUIRE_EQ((int64_t)0, e->file->getOffset());
+    REQUIRE_EQ(std::string("1.0"), e->version);
+    REQUIRE_EQ(std::string("ja_JP"), e->languages[0]);
+    REQUIRE_EQ(std::string("Linux"), e->oses[0]);
   }
 }
 
@@ -88,16 +84,16 @@ void MetalinkParserControllerTest::testResourceTransaction()
   ctrl.commitEntryTransaction();
   {
     auto m = ctrl.getResult();
-    CPPUNIT_ASSERT_EQUAL((size_t)2, m->getEntries().size());
-    CPPUNIT_ASSERT_EQUAL((size_t)1, m->getEntries()[0]->resources.size());
-    CPPUNIT_ASSERT_EQUAL((size_t)0, m->getEntries()[1]->resources.size());
+    REQUIRE_EQ((size_t)2, m->getEntries().size());
+    REQUIRE_EQ((size_t)1, m->getEntries()[0]->resources.size());
+    REQUIRE_EQ((size_t)0, m->getEntries()[1]->resources.size());
 
     auto& res = m->getEntries()[0]->resources[0];
-    CPPUNIT_ASSERT_EQUAL(std::string("http://mirror/aria2.tar.bz2"), res->url);
-    CPPUNIT_ASSERT_EQUAL(MetalinkResource::TYPE_HTTP, res->type);
-    CPPUNIT_ASSERT_EQUAL(std::string("US"), res->location);
-    CPPUNIT_ASSERT_EQUAL(100, res->priority);
-    CPPUNIT_ASSERT_EQUAL(1, res->maxConnections);
+    REQUIRE_EQ(std::string("http://mirror/aria2.tar.bz2"), res->url);
+    REQUIRE_EQ(MetalinkResource::TYPE_HTTP, res->type);
+    REQUIRE_EQ(std::string("US"), res->location);
+    REQUIRE_EQ(100, res->priority);
+    REQUIRE_EQ(1, res->maxConnections);
   }
 }
 
@@ -123,18 +119,18 @@ void MetalinkParserControllerTest::testResourceTransaction_withBaseUri()
   ctrl.commitEntryTransaction();
   {
     auto m = ctrl.getResult();
-    CPPUNIT_ASSERT_EQUAL((size_t)1, m->getEntries()[0]->resources.size());
+    REQUIRE_EQ((size_t)1, m->getEntries()[0]->resources.size());
     auto& res = m->getEntries()[0]->resources[0];
-    CPPUNIT_ASSERT_EQUAL(std::string("http://base/dir/aria2.tar.bz2"),
+    REQUIRE_EQ(std::string("http://base/dir/aria2.tar.bz2"),
                          res->url);
-    CPPUNIT_ASSERT_EQUAL(MetalinkResource::TYPE_HTTP, res->type);
+    REQUIRE_EQ(MetalinkResource::TYPE_HTTP, res->type);
 
 #ifdef ENABLE_BITTORRENT
-    CPPUNIT_ASSERT_EQUAL((size_t)2, m->getEntries()[0]->metaurls.size());
-    CPPUNIT_ASSERT_EQUAL(std::string("http://base/meta/aria2.tar.bz2.torrent"),
+    REQUIRE_EQ((size_t)2, m->getEntries()[0]->metaurls.size());
+    REQUIRE_EQ(std::string("http://base/meta/aria2.tar.bz2.torrent"),
                          m->getEntries()[0]->metaurls[0]->url);
 
-    CPPUNIT_ASSERT_EQUAL(
+    REQUIRE_EQ(
         std::string(
             "magnet:?xt=urn:btih:248d0a1cd08284299de78d5c1ed359bb46717d8c"),
         m->getEntries()[0]->metaurls[1]->url);
@@ -159,22 +155,22 @@ void MetalinkParserControllerTest::testMetaurlTransaction()
   ctrl.commitEntryTransaction();
   {
     auto m = ctrl.getResult();
-    CPPUNIT_ASSERT_EQUAL((size_t)2, m->getEntries().size());
-    CPPUNIT_ASSERT_EQUAL((size_t)1, m->getEntries()[0]->metaurls.size());
-    CPPUNIT_ASSERT_EQUAL((size_t)0, m->getEntries()[1]->metaurls.size());
+    REQUIRE_EQ((size_t)2, m->getEntries().size());
+    REQUIRE_EQ((size_t)1, m->getEntries()[0]->metaurls.size());
+    REQUIRE_EQ((size_t)0, m->getEntries()[1]->metaurls.size());
 
     auto& metaurl = m->getEntries()[0]->metaurls[0];
-    CPPUNIT_ASSERT_EQUAL(std::string("http://example.org/chocolate.torrent"),
+    REQUIRE_EQ(std::string("http://example.org/chocolate.torrent"),
                          metaurl->url);
-    CPPUNIT_ASSERT_EQUAL(std::string("torrent"), metaurl->mediatype);
-    CPPUNIT_ASSERT_EQUAL(std::string("mybirthdaycake"), metaurl->name);
-    CPPUNIT_ASSERT_EQUAL(999, metaurl->priority);
+    REQUIRE_EQ(std::string("torrent"), metaurl->mediatype);
+    REQUIRE_EQ(std::string("mybirthdaycake"), metaurl->name);
+    REQUIRE_EQ(999, metaurl->priority);
   }
 #else  // !ENABLE_BITTORRENT
   {
     auto m = ctrl.getResult();
-    CPPUNIT_ASSERT_EQUAL((size_t)1, m->getEntries().size());
-    CPPUNIT_ASSERT_EQUAL((size_t)0, m->getEntries()[0]->metaurls.size());
+    REQUIRE_EQ((size_t)1, m->getEntries().size());
+    REQUIRE_EQ((size_t)0, m->getEntries()[0]->metaurls.size());
   }
 #endif // !ENABLE_BITTORRENT
 }
@@ -201,13 +197,13 @@ void MetalinkParserControllerTest::testChecksumTransaction()
   {
     auto m = ctrl.getResult();
     auto& md = m->getEntries()[0]->checksum;
-    CPPUNIT_ASSERT_EQUAL(std::string("md5"), md->getHashType());
-    CPPUNIT_ASSERT_EQUAL(std::string("acbd18db4cc2f85cedef654fccc4a4d8"),
+    REQUIRE_EQ(std::string("md5"), md->getHashType());
+    REQUIRE_EQ(std::string("acbd18db4cc2f85cedef654fccc4a4d8"),
                          util::toHex(md->getDigest()));
 
-    CPPUNIT_ASSERT(!m->getEntries()[1]->checksum);
+    REQUIRE(!m->getEntries()[1]->checksum);
 
-    CPPUNIT_ASSERT(!m->getEntries()[2]->checksum);
+    REQUIRE(!m->getEntries()[2]->checksum);
   }
 }
 
@@ -239,23 +235,23 @@ void MetalinkParserControllerTest::testChunkChecksumTransaction()
   {
     auto m = ctrl.getResult();
     auto& md = m->getEntries()[0]->chunkChecksum;
-    CPPUNIT_ASSERT_EQUAL(std::string("md5"), md->getHashType());
-    CPPUNIT_ASSERT_EQUAL((int32_t)256_k, md->getPieceLength());
-    CPPUNIT_ASSERT_EQUAL((size_t)5, md->countPieceHash());
-    CPPUNIT_ASSERT_EQUAL(std::string("1cbd18db4cc2f85cedef654fccc4a4d8"),
+    REQUIRE_EQ(std::string("md5"), md->getHashType());
+    REQUIRE_EQ((int32_t)256_k, md->getPieceLength());
+    REQUIRE_EQ((size_t)5, md->countPieceHash());
+    REQUIRE_EQ(std::string("1cbd18db4cc2f85cedef654fccc4a4d8"),
                          md->getPieceHashes()[0]);
-    CPPUNIT_ASSERT_EQUAL(std::string("2cbd18db4cc2f85cedef654fccc4a4d8"),
+    REQUIRE_EQ(std::string("2cbd18db4cc2f85cedef654fccc4a4d8"),
                          md->getPieceHashes()[1]);
-    CPPUNIT_ASSERT_EQUAL(std::string("3cbd18db4cc2f85cedef654fccc4a4d8"),
+    REQUIRE_EQ(std::string("3cbd18db4cc2f85cedef654fccc4a4d8"),
                          md->getPieceHashes()[2]);
-    CPPUNIT_ASSERT_EQUAL(std::string("4cbd18db4cc2f85cedef654fccc4a4d8"),
+    REQUIRE_EQ(std::string("4cbd18db4cc2f85cedef654fccc4a4d8"),
                          md->getPieceHashes()[3]);
-    CPPUNIT_ASSERT_EQUAL(std::string("5cbd18db4cc2f85cedef654fccc4a4d8"),
+    REQUIRE_EQ(std::string("5cbd18db4cc2f85cedef654fccc4a4d8"),
                          md->getPieceHashes()[4]);
 
-    CPPUNIT_ASSERT(!m->getEntries()[1]->chunkChecksum);
+    REQUIRE(!m->getEntries()[1]->chunkChecksum);
 
-    CPPUNIT_ASSERT(!m->getEntries()[2]->chunkChecksum);
+    REQUIRE(!m->getEntries()[2]->chunkChecksum);
   }
 }
 
@@ -287,22 +283,22 @@ void MetalinkParserControllerTest::testChunkChecksumTransactionV4()
   {
     auto m = ctrl.getResult();
     auto& md = m->getEntries()[0]->chunkChecksum;
-    CPPUNIT_ASSERT_EQUAL(std::string("sha-1"), md->getHashType());
-    CPPUNIT_ASSERT_EQUAL((int32_t)256_k, md->getPieceLength());
-    CPPUNIT_ASSERT_EQUAL((size_t)3, md->countPieceHash());
-    CPPUNIT_ASSERT_EQUAL(
+    REQUIRE_EQ(std::string("sha-1"), md->getHashType());
+    REQUIRE_EQ((int32_t)256_k, md->getPieceLength());
+    REQUIRE_EQ((size_t)3, md->countPieceHash());
+    REQUIRE_EQ(
         std::string("5bd9f7248df0f3a6a86ab6c95f48787d546efa14"),
         util::toHex(md->getPieceHashes()[0]));
-    CPPUNIT_ASSERT_EQUAL(
+    REQUIRE_EQ(
         std::string("9413ee70957a09d55704123687478e07f18c7b29"),
         util::toHex(md->getPieceHashes()[1]));
-    CPPUNIT_ASSERT_EQUAL(
+    REQUIRE_EQ(
         std::string("44213f9f4d59b557314fadcd233232eebcac8012"),
         util::toHex(md->getPieceHashes()[2]));
 
-    CPPUNIT_ASSERT(!m->getEntries()[1]->chunkChecksum);
+    REQUIRE(!m->getEntries()[1]->chunkChecksum);
 
-    CPPUNIT_ASSERT(!m->getEntries()[2]->chunkChecksum);
+    REQUIRE(!m->getEntries()[2]->chunkChecksum);
   }
 }
 
@@ -334,13 +330,13 @@ void MetalinkParserControllerTest::testSignatureTransaction()
   ctrl.commitEntryTransaction();
 
   auto m = ctrl.getResult();
-  CPPUNIT_ASSERT_EQUAL((size_t)2, m->getEntries().size());
+  REQUIRE_EQ((size_t)2, m->getEntries().size());
   auto& sig = m->getEntries()[0]->getSignature();
-  CPPUNIT_ASSERT_EQUAL(std::string("pgp"), sig->getType());
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2.sig"), sig->getFile());
-  CPPUNIT_ASSERT_EQUAL(pgpSignature, sig->getBody());
+  REQUIRE_EQ(std::string("pgp"), sig->getType());
+  REQUIRE_EQ(std::string("aria2.sig"), sig->getFile());
+  REQUIRE_EQ(pgpSignature, sig->getBody());
 
-  CPPUNIT_ASSERT(!m->getEntries()[1]->getSignature());
+  REQUIRE(!m->getEntries()[1]->getSignature());
 }
 
 } // namespace aria2

@@ -1,17 +1,11 @@
 #include "PieceStatMan.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class PieceStatManTest : public CppUnit::TestFixture {
+class PieceStatManTest {
 
-  CPPUNIT_TEST_SUITE(PieceStatManTest);
-  CPPUNIT_TEST(testAddPieceStats_index);
-  CPPUNIT_TEST(testAddPieceStats_bitfield);
-  CPPUNIT_TEST(testUpdatePieceStats);
-  CPPUNIT_TEST(testSubtractPieceStats);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -24,7 +18,10 @@ public:
   void testSubtractPieceStats();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(PieceStatManTest);
+A2_TEST(PieceStatManTest, testAddPieceStats_index)
+A2_TEST(PieceStatManTest, testAddPieceStats_bitfield)
+A2_TEST(PieceStatManTest, testUpdatePieceStats)
+A2_TEST(PieceStatManTest, testSubtractPieceStats)
 
 void PieceStatManTest::testAddPieceStats_index()
 {
@@ -35,8 +32,8 @@ void PieceStatManTest::testAddPieceStats_index()
     const std::vector<size_t>& order(pieceStatMan.getOrder());
     const std::vector<int>& counts(pieceStatMan.getCounts());
     for (size_t i = 0; i < 10; ++i) {
-      CPPUNIT_ASSERT_EQUAL(i, order[i]);
-      CPPUNIT_ASSERT_EQUAL(ans[i], counts[i]);
+      REQUIRE_EQ(i, order[i]);
+      REQUIRE_EQ(ans[i], counts[i]);
     }
   }
   pieceStatMan.addPieceStats(1);
@@ -44,7 +41,7 @@ void PieceStatManTest::testAddPieceStats_index()
     int ans[] = {0, 2, 0, 0, 0, 0, 0, 0, 0, 0};
     const std::vector<int>& counts(pieceStatMan.getCounts());
     for (size_t i = 0; i < 10; ++i) {
-      CPPUNIT_ASSERT_EQUAL(ans[i], counts[i]);
+      REQUIRE_EQ(ans[i], counts[i]);
     }
   }
   pieceStatMan.addPieceStats(3);
@@ -55,7 +52,7 @@ void PieceStatManTest::testAddPieceStats_index()
     int ans[] = {1, 2, 0, 2, 0, 0, 0, 0, 0, 1};
     const std::vector<int>& counts(pieceStatMan.getCounts());
     for (size_t i = 0; i < 10; ++i) {
-      CPPUNIT_ASSERT_EQUAL(ans[i], counts[i]);
+      REQUIRE_EQ(ans[i], counts[i]);
     }
   }
 }
@@ -69,7 +66,7 @@ void PieceStatManTest::testAddPieceStats_bitfield()
     int ans[] = {1, 0, 1, 0, 1, 0, 1, 0, 1, 0};
     const std::vector<int>& counts(pieceStatMan.getCounts());
     for (size_t i = 0; i < 10; ++i) {
-      CPPUNIT_ASSERT_EQUAL(ans[i], counts[i]);
+      REQUIRE_EQ(ans[i], counts[i]);
     }
   }
   pieceStatMan.addPieceStats(bitfield, sizeof(bitfield));
@@ -77,7 +74,7 @@ void PieceStatManTest::testAddPieceStats_bitfield()
     int ans[] = {2, 0, 2, 0, 2, 0, 2, 0, 2, 0};
     const std::vector<int>& counts(pieceStatMan.getCounts());
     for (size_t i = 0; i < 10; ++i) {
-      CPPUNIT_ASSERT_EQUAL(ans[i], counts[i]);
+      REQUIRE_EQ(ans[i], counts[i]);
     }
   }
 }
@@ -100,7 +97,7 @@ void PieceStatManTest::testUpdatePieceStats()
     int ans[] = {0, 0, 0, 1, 2, 2, 2, 2, 1, 1};
     const std::vector<int>& counts(pieceStatMan.getCounts());
     for (size_t i = 0; i < 10; ++i) {
-      CPPUNIT_ASSERT_EQUAL(ans[i], counts[i]);
+      REQUIRE_EQ(ans[i], counts[i]);
     }
   }
 }
@@ -121,7 +118,7 @@ void PieceStatManTest::testSubtractPieceStats()
     int ans[] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0};
     const std::vector<int>& counts(pieceStatMan.getCounts());
     for (size_t i = 0; i < 10; ++i) {
-      CPPUNIT_ASSERT_EQUAL(ans[i], counts[i]);
+      REQUIRE_EQ(ans[i], counts[i]);
     }
   }
 }

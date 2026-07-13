@@ -1,7 +1,7 @@
 #include "FallocFileAllocationIterator.h"
 
 #include <fstream>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "a2functional.h"
 #include "File.h"
@@ -9,11 +9,8 @@
 
 namespace aria2 {
 
-class FallocFileAllocationIteratorTest : public CppUnit::TestFixture {
+class FallocFileAllocationIteratorTest {
 
-  CPPUNIT_TEST_SUITE(FallocFileAllocationIteratorTest);
-  CPPUNIT_TEST(testAllocate);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -22,7 +19,7 @@ public:
   void testAllocate();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(FallocFileAllocationIteratorTest);
+A2_TEST(FallocFileAllocationIteratorTest, testAllocate)
 
 void FallocFileAllocationIteratorTest::testAllocate()
 {
@@ -36,7 +33,7 @@ void FallocFileAllocationIteratorTest::testAllocate()
   of.close();
 
   File f(fn);
-  CPPUNIT_ASSERT_EQUAL((int64_t)10, f.size());
+  REQUIRE_EQ((int64_t)10, f.size());
 
   DefaultDiskWriter writer(fn);
   int64_t offset = 10;
@@ -47,9 +44,9 @@ void FallocFileAllocationIteratorTest::testAllocate()
   FallocFileAllocationIterator itr(&writer, offset, totalLength);
 
   itr.allocateChunk();
-  CPPUNIT_ASSERT(itr.finished());
+  REQUIRE(itr.finished());
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)40_k, f.size());
+  REQUIRE_EQ((int64_t)40_k, f.size());
 #endif // !HAVE_FALLOCATE
 }
 

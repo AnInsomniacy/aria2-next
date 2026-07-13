@@ -1,21 +1,14 @@
 #include "ProtocolDetector.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
 
 namespace aria2 {
 
-class ProtocolDetectorTest : public CppUnit::TestFixture {
+class ProtocolDetectorTest {
 
-  CPPUNIT_TEST_SUITE(ProtocolDetectorTest);
-  CPPUNIT_TEST(testIsStreamProtocol);
-  CPPUNIT_TEST(testGuessEd2kLink);
-  CPPUNIT_TEST(testGuessTorrentFile);
-  CPPUNIT_TEST(testGuessTorrentMagnet);
-  CPPUNIT_TEST(testGuessMetalinkFile);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -29,48 +22,52 @@ public:
   void testGuessMetalinkFile();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(ProtocolDetectorTest);
+A2_TEST(ProtocolDetectorTest, testIsStreamProtocol)
+A2_TEST(ProtocolDetectorTest, testGuessEd2kLink)
+A2_TEST(ProtocolDetectorTest, testGuessTorrentFile)
+A2_TEST(ProtocolDetectorTest, testGuessTorrentMagnet)
+A2_TEST(ProtocolDetectorTest, testGuessMetalinkFile)
 
 void ProtocolDetectorTest::testIsStreamProtocol()
 {
   ProtocolDetector detector;
-  CPPUNIT_ASSERT(detector.isStreamProtocol("http://localhost/index.html"));
-  CPPUNIT_ASSERT(detector.isStreamProtocol("https://localhost/index.html"));
-  CPPUNIT_ASSERT(detector.isStreamProtocol("ftp://localhost/index.html"));
-  CPPUNIT_ASSERT(detector.isStreamProtocol("sftp://localhost/index.html"));
-  CPPUNIT_ASSERT(!detector.isStreamProtocol("magnet:?xt=urn:btih:abc"));
-  CPPUNIT_ASSERT(!detector.isStreamProtocol("E://downloads/file.torrent"));
-  CPPUNIT_ASSERT(!detector.isStreamProtocol("/home/web/localhost/index.html"));
+  REQUIRE(detector.isStreamProtocol("http://localhost/index.html"));
+  REQUIRE(detector.isStreamProtocol("https://localhost/index.html"));
+  REQUIRE(detector.isStreamProtocol("ftp://localhost/index.html"));
+  REQUIRE(detector.isStreamProtocol("sftp://localhost/index.html"));
+  REQUIRE(!detector.isStreamProtocol("magnet:?xt=urn:btih:abc"));
+  REQUIRE(!detector.isStreamProtocol("E://downloads/file.torrent"));
+  REQUIRE(!detector.isStreamProtocol("/home/web/localhost/index.html"));
 }
 
 void ProtocolDetectorTest::testGuessEd2kLink()
 {
   ProtocolDetector detector;
-  CPPUNIT_ASSERT(detector.guessEd2kLink(
+  REQUIRE(detector.guessEd2kLink(
       "ed2k://|file|aria2-next.bin|1|0123456789abcdef0123456789abcdef|/"));
-  CPPUNIT_ASSERT(detector.guessEd2kLink("ed2k://|server|127.0.0.1|4661|/"));
-  CPPUNIT_ASSERT(detector.guessEd2kLink("ed2k://|search|linux%20iso|/"));
-  CPPUNIT_ASSERT(!detector.guessEd2kLink("ed2k://|file|bad.bin|x|bad|/"));
-  CPPUNIT_ASSERT(!detector.guessEd2kLink("magnet:?xt=urn:btih:abc"));
+  REQUIRE(detector.guessEd2kLink("ed2k://|server|127.0.0.1|4661|/"));
+  REQUIRE(detector.guessEd2kLink("ed2k://|search|linux%20iso|/"));
+  REQUIRE(!detector.guessEd2kLink("ed2k://|file|bad.bin|x|bad|/"));
+  REQUIRE(!detector.guessEd2kLink("magnet:?xt=urn:btih:abc"));
 }
 
 void ProtocolDetectorTest::testGuessTorrentFile()
 {
   ProtocolDetector detector;
-  CPPUNIT_ASSERT(detector.guessTorrentFile(A2_TEST_DIR "/test.torrent"));
-  CPPUNIT_ASSERT(!detector.guessTorrentFile("http://localhost/test.torrent"));
-  CPPUNIT_ASSERT(!detector.guessTorrentFile(A2_TEST_DIR "/test.xml"));
+  REQUIRE(detector.guessTorrentFile(A2_TEST_DIR "/test.torrent"));
+  REQUIRE(!detector.guessTorrentFile("http://localhost/test.torrent"));
+  REQUIRE(!detector.guessTorrentFile(A2_TEST_DIR "/test.xml"));
 }
 
 void ProtocolDetectorTest::testGuessTorrentMagnet()
 {
   ProtocolDetector detector;
 #ifdef ENABLE_BITTORRENT
-  CPPUNIT_ASSERT(detector.guessTorrentMagnet(
+  REQUIRE(detector.guessTorrentMagnet(
       "magnet:?xt=urn:btih:248d0a1cd08284299de78d5c1ed359bb46717d8c"));
-  CPPUNIT_ASSERT(!detector.guessTorrentMagnet("magnet:?"));
+  REQUIRE(!detector.guessTorrentMagnet("magnet:?"));
 #else  // !ENABLE_BITTORRENT
-  CPPUNIT_ASSERT(!detector.guessTorrentMagnet(
+  REQUIRE(!detector.guessTorrentMagnet(
       "magnet:?xt=urn:btih:248d0a1cd08284299de78d5c1ed359bb46717d8c"));
 #endif // !ENABLE_BITTORRENT
 }
@@ -78,9 +75,9 @@ void ProtocolDetectorTest::testGuessTorrentMagnet()
 void ProtocolDetectorTest::testGuessMetalinkFile()
 {
   ProtocolDetector detector;
-  CPPUNIT_ASSERT(detector.guessMetalinkFile(A2_TEST_DIR "/test.xml"));
-  CPPUNIT_ASSERT(!detector.guessMetalinkFile("http://localhost/test.xml"));
-  CPPUNIT_ASSERT(!detector.guessMetalinkFile(A2_TEST_DIR "/test.torrent"));
+  REQUIRE(detector.guessMetalinkFile(A2_TEST_DIR "/test.xml"));
+  REQUIRE(!detector.guessMetalinkFile("http://localhost/test.xml"));
+  REQUIRE(!detector.guessMetalinkFile(A2_TEST_DIR "/test.torrent"));
 }
 
 } // namespace aria2

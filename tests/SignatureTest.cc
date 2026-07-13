@@ -2,18 +2,15 @@
 
 #include <fstream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "File.h"
 
 namespace aria2 {
 
-class SignatureTest : public CppUnit::TestFixture {
+class SignatureTest {
 
-  CPPUNIT_TEST_SUITE(SignatureTest);
-  CPPUNIT_TEST(testSave);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -23,7 +20,7 @@ public:
   void testSave();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(SignatureTest);
+A2_TEST(SignatureTest, testSave)
 
 void SignatureTest::testSave()
 {
@@ -34,15 +31,15 @@ void SignatureTest::testSave()
   if (outfile.exists()) {
     outfile.remove();
   }
-  CPPUNIT_ASSERT(sig.save(filepath));
+  REQUIRE(sig.save(filepath));
   {
     std::ifstream in(filepath.c_str(), std::ios::binary);
     std::string fileContent;
     in >> fileContent;
-    CPPUNIT_ASSERT_EQUAL(sig.getBody(), fileContent);
+    REQUIRE_EQ(sig.getBody(), fileContent);
   }
   // second attempt to save will fail because file already exists.
-  CPPUNIT_ASSERT(!sig.save(filepath));
+  REQUIRE(!sig.save(filepath));
 }
 
 } // namespace aria2

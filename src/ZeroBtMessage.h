@@ -42,7 +42,7 @@ namespace aria2 {
 
 class ZeroBtMessage : public SimpleBtMessage {
 private:
-  static const size_t MESSAGE_LENGTH = 5;
+  static constexpr size_t MESSAGE_LENGTH = 5;
 
 protected:
   template <typename T>

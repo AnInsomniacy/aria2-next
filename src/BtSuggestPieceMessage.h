@@ -43,7 +43,7 @@ class BtSuggestPieceMessage : public IndexBtMessage {
 public:
   BtSuggestPieceMessage(size_t index = 0);
 
-  static const uint8_t ID = 13;
+  static constexpr uint8_t ID = 13;
 
   static const char NAME[];
 

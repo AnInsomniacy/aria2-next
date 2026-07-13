@@ -1,6 +1,6 @@
 #include "DHTPingMessage.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTNode.h"
 #include "Exception.h"
@@ -12,12 +12,8 @@
 
 namespace aria2 {
 
-class DHTPingMessageTest : public CppUnit::TestFixture {
+class DHTPingMessageTest {
 
-  CPPUNIT_TEST_SUITE(DHTPingMessageTest);
-  CPPUNIT_TEST(testGetBencodedMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   std::shared_ptr<DHTNode> localNode_;
@@ -49,7 +45,8 @@ public:
   };
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTPingMessageTest);
+A2_TEST(DHTPingMessageTest, testGetBencodedMessage)
+A2_TEST(DHTPingMessageTest, testDoReceivedAction)
 
 void DHTPingMessageTest::testGetBencodedMessage()
 {
@@ -71,7 +68,7 @@ void DHTPingMessageTest::testGetBencodedMessage()
   aDict->put("id", String::g(localNode_->getID(), DHT_ID_LENGTH));
   dict.put("a", std::move(aDict));
 
-  CPPUNIT_ASSERT_EQUAL(bencode2::encode(&dict), msgbody);
+  REQUIRE_EQ(bencode2::encode(&dict), msgbody);
 }
 
 void DHTPingMessageTest::testDoReceivedAction()
@@ -90,13 +87,13 @@ void DHTPingMessageTest::testDoReceivedAction()
 
   msg.doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, dispatcher.messageQueue_.size());
+  REQUIRE_EQ((size_t)1, dispatcher.messageQueue_.size());
   auto m = dynamic_cast<DHTPingReplyMessage*>(
       dispatcher.messageQueue_[0].message_.get());
-  CPPUNIT_ASSERT(*localNode_ == *m->getLocalNode());
-  CPPUNIT_ASSERT(*remoteNode_ == *m->getRemoteNode());
-  CPPUNIT_ASSERT_EQUAL(std::string("ping"), m->getMessageType());
-  CPPUNIT_ASSERT_EQUAL(msg.getTransactionID(), m->getTransactionID());
+  REQUIRE(*localNode_ == *m->getLocalNode());
+  REQUIRE(*remoteNode_ == *m->getRemoteNode());
+  REQUIRE_EQ(std::string("ping"), m->getMessageType());
+  REQUIRE_EQ(msg.getTransactionID(), m->getTransactionID());
 }
 
 } // namespace aria2

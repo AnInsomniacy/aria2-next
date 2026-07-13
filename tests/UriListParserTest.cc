@@ -5,7 +5,7 @@
 #include <iostream>
 #include <iterator>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -14,11 +14,8 @@
 
 namespace aria2 {
 
-class UriListParserTest : public CppUnit::TestFixture {
+class UriListParserTest {
 
-  CPPUNIT_TEST_SUITE(UriListParserTest);
-  CPPUNIT_TEST(testHasNext);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::string list2String(const std::vector<std::string>& src);
@@ -29,7 +26,7 @@ public:
   void testHasNext();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(UriListParserTest);
+A2_TEST(UriListParserTest, testHasNext)
 
 std::string UriListParserTest::list2String(const std::vector<std::string>& src)
 {
@@ -48,33 +45,33 @@ void UriListParserTest::testHasNext()
   std::vector<std::string> uris;
   Option reqOp;
 
-  CPPUNIT_ASSERT(flp.hasNext());
+  REQUIRE(flp.hasNext());
 
   flp.parseNext(uris, reqOp);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("http://localhost/index.html http://localhost2/index.html"),
       list2String(uris));
 
   uris.clear();
   reqOp.clear();
 
-  CPPUNIT_ASSERT(flp.hasNext());
+  REQUIRE(flp.hasNext());
 
   flp.parseNext(uris, reqOp);
-  CPPUNIT_ASSERT_EQUAL(std::string("ftp://localhost/aria2.tar.bz2"),
+  REQUIRE_EQ(std::string("ftp://localhost/aria2.tar.bz2"),
                        list2String(uris));
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp"), reqOp.get(PREF_DIR));
-  CPPUNIT_ASSERT_EQUAL(std::string("chunky_chocolate"), reqOp.get(PREF_OUT));
+  REQUIRE_EQ(std::string("/tmp"), reqOp.get(PREF_DIR));
+  REQUIRE_EQ(std::string("chunky_chocolate"), reqOp.get(PREF_OUT));
 
   uris.clear();
   reqOp.clear();
 
-  CPPUNIT_ASSERT(!flp.hasNext());
+  REQUIRE(!flp.hasNext());
 
   flp.parseNext(uris, reqOp);
-  CPPUNIT_ASSERT_EQUAL(std::string(""), list2String(uris));
+  REQUIRE_EQ(std::string(""), list2String(uris));
 
-  CPPUNIT_ASSERT(!flp.hasNext());
+  REQUIRE(!flp.hasNext());
 }
 
 } // namespace aria2

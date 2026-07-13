@@ -1,6 +1,8 @@
 #include "Ed2kShareIndex.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include <fstream>
+
+#include "a2doctest.h"
 
 #include "DefaultPieceStorage.h"
 #include "DiskAdaptor.h"
@@ -20,13 +22,7 @@ namespace aria2 {
 
 namespace ed2k {
 
-class Ed2kShareIndexTest : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(Ed2kShareIndexTest);
-  CPPUNIT_TEST(testActiveSourceExposesVerifiedPiecesOnly);
-  CPPUNIT_TEST(testActiveSourceRejectsUnverifiedRange);
-  CPPUNIT_TEST(testRequestGroupManFindsActiveSource);
-  CPPUNIT_TEST(testOfferFilesPayloadSkipsLargeFilesWithoutServerSupport);
-  CPPUNIT_TEST_SUITE_END();
+class Ed2kShareIndexTest {
 
 public:
   void testActiveSourceExposesVerifiedPiecesOnly();
@@ -35,7 +31,10 @@ public:
   void testOfferFilesPayloadSkipsLargeFilesWithoutServerSupport();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(Ed2kShareIndexTest);
+A2_TEST(Ed2kShareIndexTest, testActiveSourceExposesVerifiedPiecesOnly)
+A2_TEST(Ed2kShareIndexTest, testActiveSourceRejectsUnverifiedRange)
+A2_TEST(Ed2kShareIndexTest, testRequestGroupManFindsActiveSource)
+A2_TEST(Ed2kShareIndexTest, testOfferFilesPayloadSkipsLargeFilesWithoutServerSupport)
 
 namespace {
 
@@ -117,14 +116,14 @@ void Ed2kShareIndexTest::testActiveSourceExposesVerifiedPiecesOnly()
 
   auto source = createActiveSharedSource(dctx.get(), pieceStorage.get(), path);
 
-  CPPUNIT_ASSERT(source);
-  CPPUNIT_ASSERT(!source->complete());
-  CPPUNIT_ASSERT_EQUAL(std::string("active.bin"), source->name());
-  CPPUNIT_ASSERT_EQUAL((int64_t)8, source->size());
+  REQUIRE(source);
+  REQUIRE(!source->complete());
+  REQUIRE_EQ(std::string("active.bin"), source->name());
+  REQUIRE_EQ((int64_t)8, source->size());
   auto bitfield = source->bitfield();
-  CPPUNIT_ASSERT_EQUAL((size_t)2, bitfield.size());
-  CPPUNIT_ASSERT(bitfield[0]);
-  CPPUNIT_ASSERT(!bitfield[1]);
+  REQUIRE_EQ((size_t)2, bitfield.size());
+  REQUIRE(bitfield[0]);
+  REQUIRE(!bitfield[1]);
 }
 
 void Ed2kShareIndexTest::testActiveSourceRejectsUnverifiedRange()
@@ -143,10 +142,10 @@ void Ed2kShareIndexTest::testActiveSourceRejectsUnverifiedRange()
   auto source = createActiveSharedSource(dctx.get(), pieceStorage.get(), path);
 
   std::string data;
-  CPPUNIT_ASSERT(source->readRange(data, 0, 4));
-  CPPUNIT_ASSERT_EQUAL(std::string("abcd"), data);
-  CPPUNIT_ASSERT(!source->readRange(data, 4, 8));
-  CPPUNIT_ASSERT(!source->readRange(data, 2, 6));
+  REQUIRE(source->readRange(data, 0, 4));
+  REQUIRE_EQ(std::string("abcd"), data);
+  REQUIRE(!source->readRange(data, 4, 8));
+  REQUIRE(!source->readRange(data, 2, 6));
 }
 
 void Ed2kShareIndexTest::testRequestGroupManFindsActiveSource()
@@ -167,9 +166,9 @@ void Ed2kShareIndexTest::testRequestGroupManFindsActiveSource()
 
   auto attrs = getEd2kAttrs(dctx);
   auto source = findSharedSource(&rgman, attrs->link.hash);
-  CPPUNIT_ASSERT(source);
-  CPPUNIT_ASSERT(!source->complete());
-  CPPUNIT_ASSERT_EQUAL(std::string("active.bin"), source->name());
+  REQUIRE(source);
+  REQUIRE(!source->complete());
+  REQUIRE_EQ(std::string("active.bin"), source->name());
 }
 
 void Ed2kShareIndexTest::testOfferFilesPayloadSkipsLargeFilesWithoutServerSupport()
@@ -182,16 +181,16 @@ void Ed2kShareIndexTest::testOfferFilesPayloadSkipsLargeFilesWithoutServerSuppor
       (int64_t)5 * 1024 * 1024 * 1024));
 
   std::string payload;
-  CPPUNIT_ASSERT(createOfferFilesPayload(payload, sources, false, 10, 0, 0));
+  REQUIRE(createOfferFilesPayload(payload, sources, false, 10, 0, 0));
   size_t offset = 0;
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1,
+  REQUIRE_EQ((uint32_t)1,
                        readUInt32(readBytes(payload, offset, 4).data()));
-  CPPUNIT_ASSERT_EQUAL(std::string(HASH_LENGTH, '\x40'),
+  REQUIRE_EQ(std::string(HASH_LENGTH, '\x40'),
                        readBytes(payload, offset, HASH_LENGTH));
 
-  CPPUNIT_ASSERT(createOfferFilesPayload(payload, sources, true, 10, 0, 0));
+  REQUIRE(createOfferFilesPayload(payload, sources, true, 10, 0, 0));
   offset = 0;
-  CPPUNIT_ASSERT_EQUAL((uint32_t)2,
+  REQUIRE_EQ((uint32_t)2,
                        readUInt32(readBytes(payload, offset, 4).data()));
 }
 

@@ -1,33 +1,30 @@
 #include "TimeSeedCriteria.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "util.h"
 #include "wallclock.h"
 
 namespace aria2 {
 
-class TimeSeedCriteriaTest : public CppUnit::TestFixture {
+class TimeSeedCriteriaTest {
 
-  CPPUNIT_TEST_SUITE(TimeSeedCriteriaTest);
-  CPPUNIT_TEST(testEvaluate);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testEvaluate();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(TimeSeedCriteriaTest);
+A2_TEST(TimeSeedCriteriaTest, testEvaluate)
 
 void TimeSeedCriteriaTest::testEvaluate()
 {
   TimeSeedCriteria cri(1_s);
   global::wallclock().reset();
   global::wallclock().advance(2_s);
-  CPPUNIT_ASSERT(cri.evaluate());
+  REQUIRE(cri.evaluate());
   cri.reset();
   cri.setDuration(10_s);
-  CPPUNIT_ASSERT(!cri.evaluate());
+  REQUIRE(!cri.evaluate());
 }
 
 } // namespace aria2

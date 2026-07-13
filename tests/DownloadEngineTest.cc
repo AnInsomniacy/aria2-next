@@ -1,23 +1,20 @@
 #include "DownloadEngine.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "SelectEventPoll.h"
 #include "SocketCore.h"
 
 namespace aria2 {
 
-class DownloadEngineTest : public CppUnit::TestFixture {
+class DownloadEngineTest {
 
-  CPPUNIT_TEST_SUITE(DownloadEngineTest);
-  CPPUNIT_TEST(testHttpsSocketPoolRequiresSameHostname);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testHttpsSocketPoolRequiresSameHostname();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DownloadEngineTest);
+A2_TEST(DownloadEngineTest, testHttpsSocketPoolRequiresSameHostname)
 
 void DownloadEngineTest::testHttpsSocketPoolRequiresSameHostname()
 {
@@ -26,9 +23,9 @@ void DownloadEngineTest::testHttpsSocketPoolRequiresSameHostname()
 
   e.poolSocketForHostname("192.0.2.1", 443, "origin.example", socket);
 
-  CPPUNIT_ASSERT(!e.popPooledSocketForHostname("192.0.2.1", 443,
+  REQUIRE(!e.popPooledSocketForHostname("192.0.2.1", 443,
                                                "redirect.example"));
-  CPPUNIT_ASSERT_EQUAL(socket, e.popPooledSocketForHostname("192.0.2.1", 443,
+  REQUIRE_EQ(socket, e.popPooledSocketForHostname("192.0.2.1", 443,
                                                            "origin.example"));
 }
 

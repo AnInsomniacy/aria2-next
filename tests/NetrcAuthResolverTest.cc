@@ -1,6 +1,6 @@
 #include "NetrcAuthResolver.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "prefs.h"
 #include "Netrc.h"
@@ -9,13 +9,8 @@
 
 namespace aria2 {
 
-class NetrcAuthResolverTest : public CppUnit::TestFixture {
+class NetrcAuthResolverTest {
 
-  CPPUNIT_TEST_SUITE(NetrcAuthResolverTest);
-  CPPUNIT_TEST(testResolveAuthConfig_without_userDefined);
-  CPPUNIT_TEST(testResolveAuthConfig_with_userDefined);
-  CPPUNIT_TEST(testResolveAuthConfig_ignoreDefault);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::unique_ptr<Netrc> netrc_;
@@ -40,36 +35,38 @@ public:
   void testResolveAuthConfig_ignoreDefault();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(NetrcAuthResolverTest);
+A2_TEST(NetrcAuthResolverTest, testResolveAuthConfig_without_userDefined)
+A2_TEST(NetrcAuthResolverTest, testResolveAuthConfig_with_userDefined)
+A2_TEST(NetrcAuthResolverTest, testResolveAuthConfig_ignoreDefault)
 
 void NetrcAuthResolverTest::testResolveAuthConfig_without_userDefined()
 {
   auto authConfig = resolver_->resolveAuthConfig("localhost");
-  CPPUNIT_ASSERT_EQUAL(std::string("name:passwd"), authConfig->getAuthText());
+  REQUIRE_EQ(std::string("name:passwd"), authConfig->getAuthText());
 
   authConfig = resolver_->resolveAuthConfig("mymachine");
-  CPPUNIT_ASSERT_EQUAL(std::string("default:defaultpasswd"),
+  REQUIRE_EQ(std::string("default:defaultpasswd"),
                        authConfig->getAuthText());
 
   resolver_->setNetrc(nullptr);
   authConfig = resolver_->resolveAuthConfig("localhost");
-  CPPUNIT_ASSERT_EQUAL(std::string("foo:bar"), authConfig->getAuthText());
+  REQUIRE_EQ(std::string("foo:bar"), authConfig->getAuthText());
 }
 
 void NetrcAuthResolverTest::testResolveAuthConfig_with_userDefined()
 {
   resolver_->setUserDefinedCred("myname", "mypasswd");
   auto authConfig = resolver_->resolveAuthConfig("localhost");
-  CPPUNIT_ASSERT_EQUAL(std::string("myname:mypasswd"),
+  REQUIRE_EQ(std::string("myname:mypasswd"),
                        authConfig->getAuthText());
 
   authConfig = resolver_->resolveAuthConfig("mymachine");
-  CPPUNIT_ASSERT_EQUAL(std::string("myname:mypasswd"),
+  REQUIRE_EQ(std::string("myname:mypasswd"),
                        authConfig->getAuthText());
 
   resolver_->setNetrc(nullptr);
   authConfig = resolver_->resolveAuthConfig("mymachine");
-  CPPUNIT_ASSERT_EQUAL(std::string("myname:mypasswd"),
+  REQUIRE_EQ(std::string("myname:mypasswd"),
                        authConfig->getAuthText());
 }
 
@@ -77,11 +74,11 @@ void NetrcAuthResolverTest::testResolveAuthConfig_ignoreDefault()
 {
   resolver_->ignoreDefault();
   auto authConfig = resolver_->resolveAuthConfig("mirror");
-  CPPUNIT_ASSERT_EQUAL(std::string("foo:bar"), authConfig->getAuthText());
+  REQUIRE_EQ(std::string("foo:bar"), authConfig->getAuthText());
 
   resolver_->useDefault();
   auto defAuthConfig = resolver_->resolveAuthConfig("mirror");
-  CPPUNIT_ASSERT_EQUAL(std::string("default:defaultpasswd"),
+  REQUIRE_EQ(std::string("default:defaultpasswd"),
                        defAuthConfig->getAuthText());
 }
 

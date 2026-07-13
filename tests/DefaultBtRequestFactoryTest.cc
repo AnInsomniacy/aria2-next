@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "MockBtMessage.h"
 #include "MockBtMessageFactory.h"
@@ -16,16 +16,8 @@
 
 namespace aria2 {
 
-class DefaultBtRequestFactoryTest : public CppUnit::TestFixture {
+class DefaultBtRequestFactoryTest {
 
-  CPPUNIT_TEST_SUITE(DefaultBtRequestFactoryTest);
-  CPPUNIT_TEST(testAddTargetPiece);
-  CPPUNIT_TEST(testRemoveCompletedPiece);
-  CPPUNIT_TEST(testCreateRequestMessages);
-  CPPUNIT_TEST(testCreateRequestMessages_onEndGame);
-  CPPUNIT_TEST(testRemoveTargetPiece);
-  CPPUNIT_TEST(testGetTargetPieceIndexes);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<Peer> peer_;
@@ -97,22 +89,27 @@ public:
   }
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DefaultBtRequestFactoryTest);
+A2_TEST(DefaultBtRequestFactoryTest, testAddTargetPiece)
+A2_TEST(DefaultBtRequestFactoryTest, testRemoveCompletedPiece)
+A2_TEST(DefaultBtRequestFactoryTest, testCreateRequestMessages)
+A2_TEST(DefaultBtRequestFactoryTest, testCreateRequestMessages_onEndGame)
+A2_TEST(DefaultBtRequestFactoryTest, testRemoveTargetPiece)
+A2_TEST(DefaultBtRequestFactoryTest, testGetTargetPieceIndexes)
 
 void DefaultBtRequestFactoryTest::testAddTargetPiece()
 {
   {
     auto piece = std::make_shared<Piece>(0, 160_k);
     requestFactory_->addTargetPiece(piece);
-    CPPUNIT_ASSERT_EQUAL((size_t)1, requestFactory_->countTargetPiece());
+    REQUIRE_EQ((size_t)1, requestFactory_->countTargetPiece());
   }
   {
     auto piece = std::make_shared<Piece>(1, 16_k * 9);
     piece->completeBlock(0);
     requestFactory_->addTargetPiece(piece);
-    CPPUNIT_ASSERT_EQUAL((size_t)2, requestFactory_->countTargetPiece());
+    REQUIRE_EQ((size_t)2, requestFactory_->countTargetPiece());
   }
-  CPPUNIT_ASSERT_EQUAL((size_t)18, requestFactory_->countMissingBlock());
+  REQUIRE_EQ((size_t)18, requestFactory_->countMissingBlock());
 }
 
 void DefaultBtRequestFactoryTest::testRemoveCompletedPiece()
@@ -122,10 +119,10 @@ void DefaultBtRequestFactoryTest::testRemoveCompletedPiece()
   piece2->setAllBlock();
   requestFactory_->addTargetPiece(piece1);
   requestFactory_->addTargetPiece(piece2);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, requestFactory_->countTargetPiece());
+  REQUIRE_EQ((size_t)2, requestFactory_->countTargetPiece());
   requestFactory_->removeCompletedPiece();
-  CPPUNIT_ASSERT_EQUAL((size_t)1, requestFactory_->countTargetPiece());
-  CPPUNIT_ASSERT_EQUAL((size_t)0,
+  REQUIRE_EQ((size_t)1, requestFactory_->countTargetPiece());
+  REQUIRE_EQ((size_t)0,
                        requestFactory_->getTargetPieces().front()->getIndex());
 }
 
@@ -139,20 +136,20 @@ void DefaultBtRequestFactoryTest::testCreateRequestMessages()
 
   auto msgs = requestFactory_->createRequestMessages(3, false);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)3, msgs.size());
+  REQUIRE_EQ((size_t)3, msgs.size());
   auto msg = msgs[0].get();
-  CPPUNIT_ASSERT_EQUAL((size_t)0, msg->getIndex());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, msg->getBlockIndex());
+  REQUIRE_EQ((size_t)0, msg->getIndex());
+  REQUIRE_EQ((size_t)0, msg->getBlockIndex());
   msg = msgs[1].get();
-  CPPUNIT_ASSERT_EQUAL((size_t)0, msg->getIndex());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, msg->getBlockIndex());
+  REQUIRE_EQ((size_t)0, msg->getIndex());
+  REQUIRE_EQ((size_t)1, msg->getBlockIndex());
   msg = msgs[2].get();
-  CPPUNIT_ASSERT_EQUAL((size_t)1, msg->getIndex());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, msg->getBlockIndex());
+  REQUIRE_EQ((size_t)1, msg->getIndex());
+  REQUIRE_EQ((size_t)0, msg->getBlockIndex());
 
   {
     auto msgs = requestFactory_->createRequestMessages(3, false);
-    CPPUNIT_ASSERT_EQUAL((size_t)1, msgs.size());
+    REQUIRE_EQ((size_t)1, msgs.size());
   }
 }
 
@@ -171,16 +168,16 @@ void DefaultBtRequestFactoryTest::testCreateRequestMessages_onEndGame()
   auto msgs = requestFactory_->createRequestMessages(3, true);
   std::sort(std::begin(msgs), std::end(msgs), BtRequestMessageSorter());
 
-  CPPUNIT_ASSERT_EQUAL((size_t)3, msgs.size());
+  REQUIRE_EQ((size_t)3, msgs.size());
   auto msg = msgs[0].get();
-  CPPUNIT_ASSERT_EQUAL((size_t)0, msg->getIndex());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, msg->getBlockIndex());
+  REQUIRE_EQ((size_t)0, msg->getIndex());
+  REQUIRE_EQ((size_t)1, msg->getBlockIndex());
   msg = msgs[1].get();
-  CPPUNIT_ASSERT_EQUAL((size_t)1, msg->getIndex());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, msg->getBlockIndex());
+  REQUIRE_EQ((size_t)1, msg->getIndex());
+  REQUIRE_EQ((size_t)0, msg->getBlockIndex());
   msg = msgs[2].get();
-  CPPUNIT_ASSERT_EQUAL((size_t)1, msg->getIndex());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, msg->getBlockIndex());
+  REQUIRE_EQ((size_t)1, msg->getIndex());
+  REQUIRE_EQ((size_t)1, msg->getBlockIndex());
 }
 
 void DefaultBtRequestFactoryTest::testRemoveTargetPiece()
@@ -189,14 +186,14 @@ void DefaultBtRequestFactoryTest::testRemoveTargetPiece()
 
   requestFactory_->addTargetPiece(piece1);
 
-  CPPUNIT_ASSERT(std::find_if(requestFactory_->getTargetPieces().begin(),
+  REQUIRE(std::find_if(requestFactory_->getTargetPieces().begin(),
                               requestFactory_->getTargetPieces().end(),
                               derefEqual(piece1)) !=
                  requestFactory_->getTargetPieces().end());
 
   requestFactory_->removeTargetPiece(piece1);
 
-  CPPUNIT_ASSERT(std::find_if(requestFactory_->getTargetPieces().begin(),
+  REQUIRE(std::find_if(requestFactory_->getTargetPieces().begin(),
                               requestFactory_->getTargetPieces().end(),
                               derefEqual(piece1)) ==
                  requestFactory_->getTargetPieces().end());
@@ -213,10 +210,10 @@ void DefaultBtRequestFactoryTest::testGetTargetPieceIndexes()
   requestFactory_->addTargetPiece(piece5);
 
   auto indexes = requestFactory_->getTargetPieceIndexes();
-  CPPUNIT_ASSERT_EQUAL((size_t)3, indexes.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)3, indexes[0]);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, indexes[1]);
-  CPPUNIT_ASSERT_EQUAL((size_t)5, indexes[2]);
+  REQUIRE_EQ((size_t)3, indexes.size());
+  REQUIRE_EQ((size_t)3, indexes[0]);
+  REQUIRE_EQ((size_t)1, indexes[1]);
+  REQUIRE_EQ((size_t)5, indexes[2]);
 }
 
 } // namespace aria2

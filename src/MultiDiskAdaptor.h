@@ -112,7 +112,7 @@ private:
   ssize_t readData(unsigned char* data, size_t len, int64_t offset,
                    bool dropCache);
 
-  static const int DEFAULT_MAX_OPEN_FILES = 100;
+  static constexpr int DEFAULT_MAX_OPEN_FILES = 100;
 
 public:
   MultiDiskAdaptor();

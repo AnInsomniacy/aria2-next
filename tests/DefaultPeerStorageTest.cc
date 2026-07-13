@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <sstream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "util.h"
 #include "Exception.h"
@@ -15,20 +15,8 @@
 
 namespace aria2 {
 
-class DefaultPeerStorageTest : public CppUnit::TestFixture {
+class DefaultPeerStorageTest {
 
-  CPPUNIT_TEST_SUITE(DefaultPeerStorageTest);
-  CPPUNIT_TEST(testCountAllPeer);
-  CPPUNIT_TEST(testDeleteUnusedPeer);
-  CPPUNIT_TEST(testAddPeer);
-  CPPUNIT_TEST(testAddAndCheckoutPeer);
-  CPPUNIT_TEST(testIsPeerAvailable);
-  CPPUNIT_TEST(testCheckoutPeer);
-  CPPUNIT_TEST(testReturnPeer);
-  CPPUNIT_TEST(testOnErasingPeer);
-  CPPUNIT_TEST(testTemporarilyRejectPeer);
-  CPPUNIT_TEST(testRejectBlocklistedPeer);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<BtRuntime> btRuntime;
@@ -55,23 +43,32 @@ public:
   void testRejectBlocklistedPeer();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DefaultPeerStorageTest);
+A2_TEST(DefaultPeerStorageTest, testCountAllPeer)
+A2_TEST(DefaultPeerStorageTest, testDeleteUnusedPeer)
+A2_TEST(DefaultPeerStorageTest, testAddPeer)
+A2_TEST(DefaultPeerStorageTest, testAddAndCheckoutPeer)
+A2_TEST(DefaultPeerStorageTest, testIsPeerAvailable)
+A2_TEST(DefaultPeerStorageTest, testCheckoutPeer)
+A2_TEST(DefaultPeerStorageTest, testReturnPeer)
+A2_TEST(DefaultPeerStorageTest, testOnErasingPeer)
+A2_TEST(DefaultPeerStorageTest, testTemporarilyRejectPeer)
+A2_TEST(DefaultPeerStorageTest, testRejectBlocklistedPeer)
 
 void DefaultPeerStorageTest::testCountAllPeer()
 {
   DefaultPeerStorage ps(std::make_shared<BtPeerBlocklist>());
 
-  CPPUNIT_ASSERT_EQUAL((size_t)0, ps.countAllPeer());
+  REQUIRE_EQ((size_t)0, ps.countAllPeer());
   for (int i = 0; i < 2; ++i) {
     std::shared_ptr<Peer> peer(new Peer("192.168.0.1", 6889 + i));
     ps.addPeer(peer);
   }
-  CPPUNIT_ASSERT_EQUAL((size_t)2, ps.countAllPeer());
+  REQUIRE_EQ((size_t)2, ps.countAllPeer());
   std::shared_ptr<Peer> peer = ps.checkoutPeer(1);
-  CPPUNIT_ASSERT(peer);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, ps.countAllPeer());
+  REQUIRE(peer);
+  REQUIRE_EQ((size_t)2, ps.countAllPeer());
   ps.returnPeer(peer);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, ps.countAllPeer());
+  REQUIRE_EQ((size_t)1, ps.countAllPeer());
 }
 
 void DefaultPeerStorageTest::testDeleteUnusedPeer()
@@ -82,18 +79,18 @@ void DefaultPeerStorageTest::testDeleteUnusedPeer()
   auto peer2 = std::make_shared<Peer>("192.168.0.2", 6889);
   auto peer3 = std::make_shared<Peer>("192.168.0.3", 6889);
 
-  CPPUNIT_ASSERT(ps.addPeer(peer1));
-  CPPUNIT_ASSERT(ps.addPeer(peer2));
-  CPPUNIT_ASSERT(ps.addPeer(peer3));
+  REQUIRE(ps.addPeer(peer1));
+  REQUIRE(ps.addPeer(peer2));
+  REQUIRE(ps.addPeer(peer3));
 
   ps.deleteUnusedPeer(2);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, ps.getUnusedPeers().size());
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"),
+  REQUIRE_EQ((size_t)1, ps.getUnusedPeers().size());
+  REQUIRE_EQ(std::string("192.168.0.1"),
                        ps.getUnusedPeers()[0]->getIPAddress());
 
   ps.deleteUnusedPeer(100);
-  CPPUNIT_ASSERT(ps.getUnusedPeers().empty());
+  REQUIRE(ps.getUnusedPeers().empty());
 }
 
 void DefaultPeerStorageTest::testAddPeer()
@@ -107,24 +104,24 @@ void DefaultPeerStorageTest::testAddPeer()
   auto peer2 = std::make_shared<Peer>("192.168.0.2", 6889);
   auto peer3 = std::make_shared<Peer>("192.168.0.3", 6889);
 
-  CPPUNIT_ASSERT(ps.addPeer(peer1));
-  CPPUNIT_ASSERT(ps.addPeer(peer2));
-  CPPUNIT_ASSERT(!ps.addPeer(peer3));
+  REQUIRE(ps.addPeer(peer1));
+  REQUIRE(ps.addPeer(peer2));
+  REQUIRE(!ps.addPeer(peer3));
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, ps.getUnusedPeers().size());
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"),
+  REQUIRE_EQ((size_t)2, ps.getUnusedPeers().size());
+  REQUIRE_EQ(std::string("192.168.0.1"),
                        ps.getUnusedPeers()[0]->getIPAddress());
 
-  CPPUNIT_ASSERT(!ps.addPeer(peer2));
-  CPPUNIT_ASSERT(!ps.addPeer(peer3));
+  REQUIRE(!ps.addPeer(peer2));
+  REQUIRE(!ps.addPeer(peer3));
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, ps.getUnusedPeers().size());
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"),
+  REQUIRE_EQ((size_t)2, ps.getUnusedPeers().size());
+  REQUIRE_EQ(std::string("192.168.0.1"),
                        ps.getUnusedPeers()[0]->getIPAddress());
 
-  CPPUNIT_ASSERT_EQUAL(peer1->getIPAddress(),
+  REQUIRE_EQ(peer1->getIPAddress(),
                        ps.checkoutPeer(1)->getIPAddress());
-  CPPUNIT_ASSERT(!ps.addPeer(peer1));
+  REQUIRE(!ps.addPeer(peer1));
 }
 
 void DefaultPeerStorageTest::testAddAndCheckoutPeer()
@@ -139,24 +136,24 @@ void DefaultPeerStorageTest::testAddAndCheckoutPeer()
   auto peer2 = std::make_shared<Peer>("192.168.0.2", 6889);
   auto peer3 = std::make_shared<Peer>("192.168.0.2", 6889);
 
-  CPPUNIT_ASSERT(ps.addPeer(peer1));
-  CPPUNIT_ASSERT(ps.addPeer(peer2));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, ps.getUnusedPeers().size());
+  REQUIRE(ps.addPeer(peer1));
+  REQUIRE(ps.addPeer(peer2));
+  REQUIRE_EQ((size_t)2, ps.getUnusedPeers().size());
 
   auto usedPeer = ps.checkoutPeer(1);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, ps.getUnusedPeers().size());
-  CPPUNIT_ASSERT_EQUAL(peer1->getIPAddress(), usedPeer->getIPAddress());
+  REQUIRE_EQ((size_t)1, ps.getUnusedPeers().size());
+  REQUIRE_EQ(peer1->getIPAddress(), usedPeer->getIPAddress());
   // Since peer1 is already used, this fails.
-  CPPUNIT_ASSERT(!ps.addAndCheckoutPeer(peer1, 2));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, ps.getUnusedPeers().size());
+  REQUIRE(!ps.addAndCheckoutPeer(peer1, 2));
+  REQUIRE_EQ((size_t)1, ps.getUnusedPeers().size());
 
   // Since peer2 is not used yet, this succeeds.
   usedPeer = ps.addAndCheckoutPeer(peer3, 2);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)0, ps.getUnusedPeers().size());
-  CPPUNIT_ASSERT_EQUAL(peer2->getIPAddress(), usedPeer->getIPAddress());
-  CPPUNIT_ASSERT_EQUAL(peer3.get(), usedPeer.get());
+  REQUIRE_EQ((size_t)0, ps.getUnusedPeers().size());
+  REQUIRE_EQ(peer2->getIPAddress(), usedPeer->getIPAddress());
+  REQUIRE_EQ(peer3.get(), usedPeer.get());
 }
 
 void DefaultPeerStorageTest::testIsPeerAvailable()
@@ -165,11 +162,11 @@ void DefaultPeerStorageTest::testIsPeerAvailable()
   ps.setBtRuntime(btRuntime);
   std::shared_ptr<Peer> peer1(new Peer("192.168.0.1", 6889));
 
-  CPPUNIT_ASSERT(!ps.isPeerAvailable());
+  REQUIRE(!ps.isPeerAvailable());
   ps.addPeer(peer1);
-  CPPUNIT_ASSERT(ps.isPeerAvailable());
-  CPPUNIT_ASSERT(ps.checkoutPeer(1));
-  CPPUNIT_ASSERT(!ps.isPeerAvailable());
+  REQUIRE(ps.isPeerAvailable());
+  REQUIRE(ps.checkoutPeer(1));
+  REQUIRE(!ps.isPeerAvailable());
 }
 
 void DefaultPeerStorageTest::testCheckoutPeer()
@@ -190,9 +187,9 @@ void DefaultPeerStorageTest::testCheckoutPeer()
   for (auto& peer : peers) {
     auto p = ps.checkoutPeer(i + 1);
     ++i;
-    CPPUNIT_ASSERT_EQUAL(peer->getIPAddress(), p->getIPAddress());
+    REQUIRE_EQ(peer->getIPAddress(), p->getIPAddress());
   }
-  CPPUNIT_ASSERT(!ps.checkoutPeer(peers.size() + 1));
+  REQUIRE(!ps.checkoutPeer(peers.size() + 1));
 }
 
 void DefaultPeerStorageTest::testReturnPeer()
@@ -209,19 +206,19 @@ void DefaultPeerStorageTest::testReturnPeer()
   ps.addPeer(peer2);
   ps.addPeer(peer3);
   for (int i = 1; i <= 3; ++i) {
-    CPPUNIT_ASSERT(ps.checkoutPeer(i));
+    REQUIRE(ps.checkoutPeer(i));
   }
-  CPPUNIT_ASSERT_EQUAL((size_t)3, ps.getUsedPeers().size());
+  REQUIRE_EQ((size_t)3, ps.getUsedPeers().size());
 
   ps.returnPeer(peer2); // peer2 removed from the container
-  CPPUNIT_ASSERT_EQUAL((size_t)2, ps.getUsedPeers().size());
-  CPPUNIT_ASSERT(ps.getUsedPeers().count(peer2) == 0);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, ps.getDroppedPeers().size());
+  REQUIRE_EQ((size_t)2, ps.getUsedPeers().size());
+  REQUIRE(ps.getUsedPeers().count(peer2) == 0);
+  REQUIRE_EQ((size_t)1, ps.getDroppedPeers().size());
 
   ps.returnPeer(peer1); // peer1 is removed from the container
-  CPPUNIT_ASSERT_EQUAL((size_t)1, ps.getUsedPeers().size());
-  CPPUNIT_ASSERT(ps.getUsedPeers().count(peer1) == 0);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, ps.getDroppedPeers().size());
+  REQUIRE_EQ((size_t)1, ps.getUsedPeers().size());
+  REQUIRE(ps.getUsedPeers().count(peer1) == 0);
+  REQUIRE_EQ((size_t)1, ps.getDroppedPeers().size());
 }
 
 void DefaultPeerStorageTest::testOnErasingPeer()
@@ -233,8 +230,8 @@ void DefaultPeerStorageTest::testTemporarilyRejectPeer()
 {
   DefaultPeerStorage ps(std::make_shared<BtPeerBlocklist>());
   ps.rejectPeerTemporarily("192.168.0.1");
-  CPPUNIT_ASSERT(ps.isTemporarilyRejectedPeer("192.168.0.1"));
-  CPPUNIT_ASSERT(!ps.isTemporarilyRejectedPeer("192.168.0.2"));
+  REQUIRE(ps.isTemporarilyRejectedPeer("192.168.0.1"));
+  REQUIRE(!ps.isTemporarilyRejectedPeer("192.168.0.2"));
 }
 
 void DefaultPeerStorageTest::testRejectBlocklistedPeer()
@@ -244,10 +241,10 @@ void DefaultPeerStorageTest::testRejectBlocklistedPeer()
   blocklist->load(input, "memory");
   DefaultPeerStorage ps(blocklist);
 
-  CPPUNIT_ASSERT(!ps.addPeer(std::make_shared<Peer>("192.168.0.1", 6881)));
-  CPPUNIT_ASSERT(!ps.addAndCheckoutPeer(
+  REQUIRE(!ps.addPeer(std::make_shared<Peer>("192.168.0.1", 6881)));
+  REQUIRE(!ps.addAndCheckoutPeer(
       std::make_shared<Peer>("192.168.0.2", 6881, true), 1));
-  CPPUNIT_ASSERT(ps.addPeer(std::make_shared<Peer>("192.168.1.1", 6881)));
+  REQUIRE(ps.addPeer(std::make_shared<Peer>("192.168.1.1", 6881)));
 }
 
 } // namespace aria2

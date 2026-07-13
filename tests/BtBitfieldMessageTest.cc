@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "util.h"
@@ -13,15 +13,8 @@
 
 namespace aria2 {
 
-class BtBitfieldMessageTest : public CppUnit::TestFixture {
+class BtBitfieldMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtBitfieldMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST(testDoReceivedAction_goodByeSeeder);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -34,7 +27,11 @@ public:
   void testToString();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtBitfieldMessageTest);
+A2_TEST(BtBitfieldMessageTest, testCreate)
+A2_TEST(BtBitfieldMessageTest, testCreateMessage)
+A2_TEST(BtBitfieldMessageTest, testDoReceivedAction)
+A2_TEST(BtBitfieldMessageTest, testDoReceivedAction_goodByeSeeder)
+A2_TEST(BtBitfieldMessageTest, testToString)
 
 void BtBitfieldMessageTest::testCreate()
 {
@@ -44,15 +41,15 @@ void BtBitfieldMessageTest::testCreate()
   memset(bitfield, 0xff, sizeof(bitfield));
   memcpy(&msg[5], bitfield, sizeof(bitfield));
   std::shared_ptr<BtBitfieldMessage> pm(BtBitfieldMessage::create(&msg[4], 3));
-  CPPUNIT_ASSERT_EQUAL((uint8_t)5, pm->getId());
-  CPPUNIT_ASSERT(memcmp(bitfield, pm->getBitfield(), sizeof(bitfield)) == 0);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, pm->getBitfieldLength());
+  REQUIRE_EQ((uint8_t)5, pm->getId());
+  REQUIRE(memcmp(bitfield, pm->getBitfield(), sizeof(bitfield)) == 0);
+  REQUIRE_EQ((size_t)2, pm->getBitfieldLength());
   // case: payload size is wrong
   try {
     unsigned char msg[5];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 1, 5);
     BtBitfieldMessage::create(&msg[4], 1);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -61,7 +58,7 @@ void BtBitfieldMessageTest::testCreate()
     unsigned char msg[5 + 2];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 3, 6);
     BtBitfieldMessage::create(&msg[4], 3);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -77,8 +74,8 @@ void BtBitfieldMessageTest::testCreateMessage()
   bittorrent::createPeerMessageString(data, sizeof(data), 3, 5);
   memcpy(&data[5], bitfield, sizeof(bitfield));
   auto rawmsg = msg.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)7, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)7, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtBitfieldMessageTest::testDoReceivedAction()
@@ -92,11 +89,11 @@ void BtBitfieldMessageTest::testDoReceivedAction()
   unsigned char bitfield[] = {0xff, 0xff};
   msg.setBitfield(bitfield, sizeof(bitfield));
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("0000"),
       util::toHex(peer->getBitfield(), peer->getBitfieldLength()));
   msg.doReceivedAction();
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       std::string("ffff"),
       util::toHex(peer->getBitfield(), peer->getBitfieldLength()));
 }
@@ -130,7 +127,7 @@ void BtBitfieldMessageTest::testDoReceivedAction_goodByeSeeder()
   pieceStorage->setDownloadFinished(true);
   try {
     msg.doReceivedAction();
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (DlAbortEx& e) {
     // success
@@ -143,7 +140,7 @@ void BtBitfieldMessageTest::testToString()
   unsigned char bitfield[] = {0xff, 0xff};
   msg.setBitfield(bitfield, sizeof(bitfield));
 
-  CPPUNIT_ASSERT_EQUAL(std::string("bitfield ffff"), msg.toString());
+  REQUIRE_EQ(std::string("bitfield ffff"), msg.toString());
 }
 
 } // namespace aria2

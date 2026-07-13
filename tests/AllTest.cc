@@ -1,35 +1,15 @@
+#define DOCTEST_CONFIG_IMPLEMENT
+#include <doctest/doctest.h>
+
 #include "common.h"
 
 #include <signal.h>
-
-#include <iostream>
-#include <string>
-
-#include <cppunit/CompilerOutputter.h>
-#include <cppunit/extensions/TestFactoryRegistry.h>
-#include <cppunit/ui/text/TestRunner.h>
 
 #include "Platform.h"
 #include "SocketCore.h"
 #include "util.h"
 #include "console.h"
 #include "Log.h"
-#include "prefs.h"
-
-namespace {
-void listTests(CppUnit::Test* test, const std::string& prefix = "")
-{
-  const auto name = test->getName();
-  const auto path = prefix.empty() ? name : prefix + "/" + name;
-  if (test->getChildTestCount() == 0) {
-    std::cout << path << "\n";
-    return;
-  }
-  for (int i = 0; i < test->getChildTestCount(); ++i) {
-    listTests(test->getChildTestAt(i), path);
-  }
-}
-} // namespace
 
 int main(int argc, char* argv[])
 {
@@ -62,21 +42,7 @@ int main(int argc, char* argv[])
   logSettings.consoleOutput = false;
   aria2::logging::configure(logSettings);
 
-  CppUnit::Test* suite = CppUnit::TestFactoryRegistry::getRegistry().makeTest();
-  if (argc > 1 && std::string(argv[1]) == "--list") {
-    listTests(suite);
-    delete suite;
-    return 0;
-  }
-  CppUnit::TextUi::TestRunner runner;
-  runner.addTest(suite);
-
-  runner.setOutputter(
-      new CppUnit::CompilerOutputter(&runner.result(), std::cerr));
-
-  const std::string testPath = argc > 1 ? argv[1] : "";
-  // Run all tests by default, or a single CppUnit test path when supplied.
-  bool successfull = runner.run(testPath);
-
-  return successfull ? 0 : 1;
+  // doctest owns the command line: use --list-test-cases,
+  // --test-case=<pattern>, etc.
+  return doctest::Context(argc, argv).run();
 }

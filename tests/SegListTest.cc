@@ -1,17 +1,11 @@
 #include "SegList.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class SegListTest : public CppUnit::TestFixture {
+class SegListTest {
 
-  CPPUNIT_TEST_SUITE(SegListTest);
-  CPPUNIT_TEST(testNext);
-  CPPUNIT_TEST(testPeek);
-  CPPUNIT_TEST(testClear);
-  CPPUNIT_TEST(testNormalize);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testNext();
@@ -20,7 +14,10 @@ public:
   void testNormalize();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(SegListTest);
+A2_TEST(SegListTest, testNext)
+A2_TEST(SegListTest, testPeek)
+A2_TEST(SegListTest, testClear)
+A2_TEST(SegListTest, testNormalize)
 
 void SegListTest::testNext()
 {
@@ -29,19 +26,19 @@ void SegListTest::testNext()
   sgl.add(5, 10);
   sgl.add(1, 5);
   for (int i = -500; i < -498; ++i) {
-    CPPUNIT_ASSERT(sgl.hasNext());
-    CPPUNIT_ASSERT_EQUAL(i, sgl.next());
+    REQUIRE(sgl.hasNext());
+    REQUIRE_EQ(i, sgl.next());
   }
   for (int i = 5; i < 10; ++i) {
-    CPPUNIT_ASSERT(sgl.hasNext());
-    CPPUNIT_ASSERT_EQUAL(i, sgl.next());
+    REQUIRE(sgl.hasNext());
+    REQUIRE_EQ(i, sgl.next());
   }
   for (int i = 1; i < 5; ++i) {
-    CPPUNIT_ASSERT(sgl.hasNext());
-    CPPUNIT_ASSERT_EQUAL(i, sgl.next());
+    REQUIRE(sgl.hasNext());
+    REQUIRE_EQ(i, sgl.next());
   }
-  CPPUNIT_ASSERT(!sgl.hasNext());
-  CPPUNIT_ASSERT_EQUAL(0, sgl.next());
+  REQUIRE(!sgl.hasNext());
+  REQUIRE_EQ(0, sgl.next());
 }
 
 void SegListTest::testPeek()
@@ -49,25 +46,25 @@ void SegListTest::testPeek()
   SegList<int> sgl;
   sgl.add(1, 3);
   sgl.add(4, 5);
-  CPPUNIT_ASSERT_EQUAL(1, sgl.peek());
-  CPPUNIT_ASSERT_EQUAL(1, sgl.peek());
-  CPPUNIT_ASSERT_EQUAL(1, sgl.next());
-  CPPUNIT_ASSERT_EQUAL(2, sgl.peek());
-  CPPUNIT_ASSERT_EQUAL(2, sgl.next());
-  CPPUNIT_ASSERT_EQUAL(4, sgl.peek());
-  CPPUNIT_ASSERT_EQUAL(4, sgl.next());
-  CPPUNIT_ASSERT(!sgl.hasNext());
+  REQUIRE_EQ(1, sgl.peek());
+  REQUIRE_EQ(1, sgl.peek());
+  REQUIRE_EQ(1, sgl.next());
+  REQUIRE_EQ(2, sgl.peek());
+  REQUIRE_EQ(2, sgl.next());
+  REQUIRE_EQ(4, sgl.peek());
+  REQUIRE_EQ(4, sgl.next());
+  REQUIRE(!sgl.hasNext());
 }
 
 void SegListTest::testClear()
 {
   SegList<int> sgl;
   sgl.add(1, 3);
-  CPPUNIT_ASSERT_EQUAL(1, sgl.next());
+  REQUIRE_EQ(1, sgl.next());
   sgl.clear();
-  CPPUNIT_ASSERT(!sgl.hasNext());
+  REQUIRE(!sgl.hasNext());
   sgl.add(2, 3);
-  CPPUNIT_ASSERT_EQUAL(2, sgl.next());
+  REQUIRE_EQ(2, sgl.next());
 }
 
 void SegListTest::testNormalize()
@@ -81,16 +78,16 @@ void SegListTest::testNormalize()
   sgl.add(20, 21);
   sgl.normalize();
   for (int i = 0; i < 5; ++i) {
-    CPPUNIT_ASSERT(sgl.hasNext());
-    CPPUNIT_ASSERT_EQUAL(i, sgl.next());
+    REQUIRE(sgl.hasNext());
+    REQUIRE_EQ(i, sgl.next());
   }
   for (int i = 10; i < 16; ++i) {
-    CPPUNIT_ASSERT(sgl.hasNext());
-    CPPUNIT_ASSERT_EQUAL(i, sgl.next());
+    REQUIRE(sgl.hasNext());
+    REQUIRE_EQ(i, sgl.next());
   }
-  CPPUNIT_ASSERT(sgl.hasNext());
-  CPPUNIT_ASSERT_EQUAL(20, sgl.next());
-  CPPUNIT_ASSERT(!sgl.hasNext());
+  REQUIRE(sgl.hasNext());
+  REQUIRE_EQ(20, sgl.next());
+  REQUIRE(!sgl.hasNext());
 }
 
 } // namespace aria2

@@ -1,22 +1,19 @@
 #include "HttpServer.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "SocketCore.h"
 #include "a2functional.h"
 
 namespace aria2 {
 
-class HttpServerTest : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(HttpServerTest);
-  CPPUNIT_TEST(testHttpBasicAuth);
-  CPPUNIT_TEST_SUITE_END();
+class HttpServerTest {
 
 public:
   void testHttpBasicAuth();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(HttpServerTest);
+A2_TEST(HttpServerTest, testHttpBasicAuth)
 
 namespace {
 std::unique_ptr<HttpServer> performHttpRequest(SocketCore& server,
@@ -51,7 +48,7 @@ void HttpServerTest::testHttpBasicAuth()
     // Default is no auth
     auto req = performHttpRequest(
         server, "GET / HTTP/1.1\r\nUser-Agent: aria2-test\r\n\r\n");
-    CPPUNIT_ASSERT(req->authenticate());
+    REQUIRE(req->authenticate());
   }
 
   {
@@ -59,7 +56,7 @@ void HttpServerTest::testHttpBasicAuth()
     auto req = performHttpRequest(
         server, "GET / HTTP/1.1\r\nUser-Agent: aria2-test\r\n\r\n");
     req->setUsernamePassword("", "");
-    CPPUNIT_ASSERT(req->authenticate());
+    REQUIRE(req->authenticate());
   }
 
   {
@@ -67,7 +64,7 @@ void HttpServerTest::testHttpBasicAuth()
     auto req = performHttpRequest(
         server, "GET / HTTP/1.1\r\nUser-Agent: aria2-test\r\n\r\n");
     req->setUsernamePassword("", "pass");
-    CPPUNIT_ASSERT(req->authenticate());
+    REQUIRE(req->authenticate());
   }
 
   {
@@ -76,7 +73,7 @@ void HttpServerTest::testHttpBasicAuth()
                                           "aria2-test\r\nAuthorization: Basic "
                                           "dXNlcjpwYXNz\r\n\r\n");
     req->setUsernamePassword("", "pass");
-    CPPUNIT_ASSERT(req->authenticate());
+    REQUIRE(req->authenticate());
   }
 
   {
@@ -85,7 +82,7 @@ void HttpServerTest::testHttpBasicAuth()
                                           "aria2-test\r\nAuthorization: Basic "
                                           "dXNlcjpwYXNz\r\n\r\n");
     req->setUsernamePassword("user", "pass");
-    CPPUNIT_ASSERT(req->authenticate());
+    REQUIRE(req->authenticate());
   }
 
   {
@@ -96,7 +93,7 @@ void HttpServerTest::testHttpBasicAuth()
                 "Basic dXNlcgBudWxsOnBhc3MAbnVsbA==\r\n\r\n");
     req->setUsernamePassword(std::string("user\0null", 9),
                              std::string("pass\0null", 9));
-    CPPUNIT_ASSERT(req->authenticate());
+    REQUIRE(req->authenticate());
   }
 
   {
@@ -107,7 +104,7 @@ void HttpServerTest::testHttpBasicAuth()
                                           "AHVzZXI6AHBhc3M=\r\n\r\n");
     req->setUsernamePassword(std::string("\0user", 5),
                              std::string("\0pass", 5));
-    CPPUNIT_ASSERT(req->authenticate());
+    REQUIRE(req->authenticate());
   }
 
   {
@@ -117,7 +114,7 @@ void HttpServerTest::testHttpBasicAuth()
                                           "aria2-test\r\nAuthorization: Basic "
                                           "IHVzZXIJOgpwYXNzDQ==\r\n\r\n");
     req->setUsernamePassword(" user\t", "\npass\r");
-    CPPUNIT_ASSERT(req->authenticate());
+    REQUIRE(req->authenticate());
   }
 
   {
@@ -126,7 +123,7 @@ void HttpServerTest::testHttpBasicAuth()
                                           "aria2-test\r\nAuthorization: Basic "
                                           "dXNlcjpwYXNz\r\n\r\n");
     req->setUsernamePassword("user", "pass2");
-    CPPUNIT_ASSERT(!req->authenticate());
+    REQUIRE(!req->authenticate());
   }
 
   {
@@ -135,7 +132,7 @@ void HttpServerTest::testHttpBasicAuth()
                                           "aria2-test\r\nAuthorization: Basic "
                                           "dXNlcjpwYXNz\r\n\r\n");
     req->setUsernamePassword("user2", "pass");
-    CPPUNIT_ASSERT(!req->authenticate());
+    REQUIRE(!req->authenticate());
   }
 
   {
@@ -145,7 +142,7 @@ void HttpServerTest::testHttpBasicAuth()
                                           "aria2-test\r\nAuthorization: Basic "
                                           "dXNlcjpwYXNz\r\n\r\n");
     req->setUsernamePassword("user", std::string("pass\0three", 10));
-    CPPUNIT_ASSERT(!req->authenticate());
+    REQUIRE(!req->authenticate());
   }
 
   {
@@ -155,7 +152,7 @@ void HttpServerTest::testHttpBasicAuth()
                                           "aria2-test\r\nAuthorization: Basic "
                                           "dXNlcjpwYXNz\r\n\r\n");
     req->setUsernamePassword(std::string("user\0four", 9), "pass");
-    CPPUNIT_ASSERT(!req->authenticate());
+    REQUIRE(!req->authenticate());
   }
 
   {
@@ -165,7 +162,7 @@ void HttpServerTest::testHttpBasicAuth()
                                           "aria2-test\r\nAuthorization: Basic "
                                           "dXNlcjpwYXNzAHRocmVl\r\n\r\n");
     req->setUsernamePassword("user", "pass");
-    CPPUNIT_ASSERT(!req->authenticate());
+    REQUIRE(!req->authenticate());
   }
 
   {
@@ -177,7 +174,7 @@ void HttpServerTest::testHttpBasicAuth()
                                           "AHVzZXI6AHBhc3M=\r\n\r\n");
     req->setUsernamePassword(std::string("\0user5", 6),
                              std::string("\0pass", 5));
-    CPPUNIT_ASSERT(!req->authenticate());
+    REQUIRE(!req->authenticate());
   }
 
   {
@@ -185,7 +182,7 @@ void HttpServerTest::testHttpBasicAuth()
     auto req = performHttpRequest(
         server, "GET / HTTP/1.1\r\nUser-Agent: aria2-test\r\n\r\n");
     req->setUsernamePassword("user", "pass");
-    CPPUNIT_ASSERT(!req->authenticate());
+    REQUIRE(!req->authenticate());
   }
 }
 

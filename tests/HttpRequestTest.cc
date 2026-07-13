@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "prefs.h"
 #include "AuthConfigFactory.h"
@@ -20,28 +20,8 @@
 
 namespace aria2 {
 
-class HttpRequestTest : public CppUnit::TestFixture {
+class HttpRequestTest {
 
-  CPPUNIT_TEST_SUITE(HttpRequestTest);
-  CPPUNIT_TEST(testGetStartByte);
-  CPPUNIT_TEST(testGetEndByte);
-  CPPUNIT_TEST(testCreateRequest);
-  CPPUNIT_TEST(testCreateRequest_ftp);
-  CPPUNIT_TEST(testCreateRequest_with_cookie);
-  CPPUNIT_TEST(testCreateRequest_query);
-  CPPUNIT_TEST(testCreateRequest_head);
-  CPPUNIT_TEST(testCreateRequest_ipv6LiteralAddr);
-  CPPUNIT_TEST(testCreateRequest_endOffsetOverride);
-  CPPUNIT_TEST(testCreateRequest_wantDigest);
-  CPPUNIT_TEST(testCreateProxyRequest);
-  CPPUNIT_TEST(testIsRangeSatisfied);
-  CPPUNIT_TEST(testUserAgent);
-  CPPUNIT_TEST(testUserAgentHeaderOrder);
-  CPPUNIT_TEST(testAddHeader);
-  CPPUNIT_TEST(testAcceptMetalink);
-  CPPUNIT_TEST(testEnableAcceptEncoding);
-  CPPUNIT_TEST(testConditionalRequest);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::unique_ptr<Option> option_;
@@ -75,7 +55,24 @@ public:
   void testConditionalRequest();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(HttpRequestTest);
+A2_TEST(HttpRequestTest, testGetStartByte)
+A2_TEST(HttpRequestTest, testGetEndByte)
+A2_TEST(HttpRequestTest, testCreateRequest)
+A2_TEST(HttpRequestTest, testCreateRequest_ftp)
+A2_TEST(HttpRequestTest, testCreateRequest_with_cookie)
+A2_TEST(HttpRequestTest, testCreateRequest_query)
+A2_TEST(HttpRequestTest, testCreateRequest_head)
+A2_TEST(HttpRequestTest, testCreateRequest_ipv6LiteralAddr)
+A2_TEST(HttpRequestTest, testCreateRequest_endOffsetOverride)
+A2_TEST(HttpRequestTest, testCreateRequest_wantDigest)
+A2_TEST(HttpRequestTest, testCreateProxyRequest)
+A2_TEST(HttpRequestTest, testIsRangeSatisfied)
+A2_TEST(HttpRequestTest, testUserAgent)
+A2_TEST(HttpRequestTest, testUserAgentHeaderOrder)
+A2_TEST(HttpRequestTest, testAddHeader)
+A2_TEST(HttpRequestTest, testAcceptMetalink)
+A2_TEST(HttpRequestTest, testEnableAcceptEncoding)
+A2_TEST(HttpRequestTest, testConditionalRequest)
 
 void HttpRequestTest::testGetStartByte()
 {
@@ -84,12 +81,12 @@ void HttpRequestTest::testGetStartByte()
   auto segment = std::make_shared<PiecedSegment>(1_k, p);
   auto fileEntry = std::make_shared<FileEntry>("file", 10_k, 0);
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)0LL, httpRequest.getStartByte());
+  REQUIRE_EQ((int64_t)0LL, httpRequest.getStartByte());
 
   httpRequest.setSegment(segment);
   httpRequest.setFileEntry(fileEntry);
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)1_k, httpRequest.getStartByte());
+  REQUIRE_EQ((int64_t)1_k, httpRequest.getStartByte());
 }
 
 void HttpRequestTest::testGetEndByte()
@@ -103,11 +100,11 @@ void HttpRequestTest::testGetEndByte()
   auto segment = std::make_shared<PiecedSegment>(segmentLength, piece);
   auto fileEntry = std::make_shared<FileEntry>("file", segmentLength * 10, 0);
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)0LL, httpRequest.getEndByte());
+  REQUIRE_EQ((int64_t)0LL, httpRequest.getEndByte());
 
   httpRequest.setSegment(segment);
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)0LL, httpRequest.getEndByte());
+  REQUIRE_EQ((int64_t)0LL, httpRequest.getEndByte());
 
   auto request = std::make_shared<Request>();
   request->supportsPersistentConnection(true);
@@ -116,18 +113,18 @@ void HttpRequestTest::testGetEndByte()
   httpRequest.setRequest(request);
   httpRequest.setFileEntry(fileEntry);
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)(segmentLength * index + length - 1),
+  REQUIRE_EQ((int64_t)(segmentLength * index + length - 1),
                        httpRequest.getEndByte());
 
   // The end byte of FileEntry are placed inside segment
   fileEntry->setLength(segmentLength + 100);
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)(segmentLength * index + 100 - 1),
+  REQUIRE_EQ((int64_t)(segmentLength * index + 100 - 1),
                        httpRequest.getEndByte());
 
   request->setPipeliningHint(false);
 
-  CPPUNIT_ASSERT_EQUAL((int64_t)0LL, httpRequest.getEndByte());
+  REQUIRE_EQ((int64_t)0LL, httpRequest.getEndByte());
 }
 
 void HttpRequestTest::testCreateRequest()
@@ -161,7 +158,7 @@ void HttpRequestTest::testCreateRequest()
                              "Range: bytes=0-1023\r\n"
                              "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   request->setPipeliningHint(false);
 
@@ -174,7 +171,7 @@ void HttpRequestTest::testCreateRequest()
                  "Connection: close\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   p.reset(new Piece(1, 1_m));
   segment.reset(new PiecedSegment(1_m, p));
@@ -190,7 +187,7 @@ void HttpRequestTest::testCreateRequest()
                  "Range: bytes=1048576-\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   request->setPipeliningHint(true);
 
@@ -203,7 +200,7 @@ void HttpRequestTest::testCreateRequest()
                  "Range: bytes=1048576-2097151\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   // redirection set persistent connection flag to true
   request->redirectUri(
@@ -218,7 +215,7 @@ void HttpRequestTest::testCreateRequest()
                  "Range: bytes=1048576-2097151\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   request->supportsPersistentConnection(true);
   request->setPipeliningHint(false);
@@ -235,7 +232,7 @@ void HttpRequestTest::testCreateRequest()
                  "Range: bytes=1048576-\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   request->setKeepAliveHint(false);
 
@@ -249,7 +246,7 @@ void HttpRequestTest::testCreateRequest()
   option_->put(PREF_HTTP_USER, "aria2user");
   option_->put(PREF_HTTP_PASSWD, "aria2passwd");
 
-  CPPUNIT_ASSERT(authConfigFactory_->activateBasicCred("localhost", 8080, "/",
+  REQUIRE(authConfigFactory_->activateBasicCred("localhost", 8080, "/",
                                                        option_.get()));
 
   expectedText = "GET /archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
@@ -262,11 +259,11 @@ void HttpRequestTest::testCreateRequest()
                  "Authorization: Basic YXJpYTJ1c2VyOmFyaWEycGFzc3dk\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   // enable http proxy auth
   auto proxyRequest = std::make_shared<Request>();
-  CPPUNIT_ASSERT(proxyRequest->setUri(
+  REQUIRE(proxyRequest->setUri(
       "http://aria2proxyuser:aria2proxypasswd@localhost:9000"));
   httpRequest.setProxyRequest(proxyRequest);
 
@@ -283,7 +280,7 @@ void HttpRequestTest::testCreateRequest()
       "Authorization: Basic YXJpYTJ1c2VyOmFyaWEycGFzc3dk\r\n"
       "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   request->setPipeliningHint(true);
 
@@ -301,12 +298,12 @@ void HttpRequestTest::testCreateRequest()
       "Authorization: Basic YXJpYTJ1c2VyOmFyaWEycGFzc3dk\r\n"
       "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   request->setPipeliningHint(false);
 
   // turn off proxy auth
-  CPPUNIT_ASSERT(proxyRequest->setUri("http://localhost:9000"));
+  REQUIRE(proxyRequest->setUri("http://localhost:9000"));
 
   expectedText =
       "GET http://localhost:8080/archives/aria2-1.0.0.tar.bz2 HTTP/1.1\r\n"
@@ -319,7 +316,7 @@ void HttpRequestTest::testCreateRequest()
       "Authorization: Basic YXJpYTJ1c2VyOmFyaWEycGFzc3dk\r\n"
       "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 }
 
 void HttpRequestTest::testCreateRequest_ftp()
@@ -331,7 +328,7 @@ void HttpRequestTest::testCreateRequest_ftp()
   request->setUri("ftp://localhost:8080/archives/aria2-1.0.0.tar.bz2");
 
   auto proxyRequest = std::make_shared<Request>();
-  CPPUNIT_ASSERT(proxyRequest->setUri("http://localhost:9000"));
+  REQUIRE(proxyRequest->setUri("http://localhost:9000"));
 
   HttpRequest httpRequest;
   auto p = std::make_shared<Piece>(0, 1_m);
@@ -359,10 +356,10 @@ void HttpRequestTest::testCreateRequest_ftp()
       "Authorization: Basic YXJpYTJ1c2VyOmFyaWEycGFzc3dk\r\n"
       "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   // test proxy authorization
-  CPPUNIT_ASSERT(proxyRequest->setUri(
+  REQUIRE(proxyRequest->setUri(
       "http://aria2proxyuser:aria2proxypasswd@localhost:9000"));
 
   expectedText =
@@ -379,7 +376,7 @@ void HttpRequestTest::testCreateRequest_ftp()
       "Authorization: Basic YXJpYTJ1c2VyOmFyaWEycGFzc3dk\r\n"
       "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 }
 
 template <typename InputIterator>
@@ -398,19 +395,19 @@ void HttpRequestTest::testCreateRequest_with_cookie()
   auto fileEntry = std::make_shared<FileEntry>("file", 10_m, 0);
 
   auto st = CookieStorage{};
-  CPPUNIT_ASSERT(st.store(
+  REQUIRE(st.store(
       createCookie("name1", "value1", "localhost", true, "/archives", false),
       0));
-  CPPUNIT_ASSERT(st.store(createCookie("name2", "value2", "localhost", true,
+  REQUIRE(st.store(createCookie("name2", "value2", "localhost", true,
                                        "/archives/download", false),
                           0));
-  CPPUNIT_ASSERT(st.store(createCookie("name3", "value3", "aria2.org", false,
+  REQUIRE(st.store(createCookie("name3", "value3", "aria2.org", false,
                                        "/archives/download", false),
                           0));
-  CPPUNIT_ASSERT(st.store(
+  REQUIRE(st.store(
       createCookie("name4", "value4", "aria2.org", false, "/archives/", true),
       0));
-  CPPUNIT_ASSERT(st.store(
+  REQUIRE(st.store(
       createCookie("name5", "value5", "example.org", false, "/", false), 0));
 
   HttpRequest httpRequest;
@@ -434,7 +431,7 @@ void HttpRequestTest::testCreateRequest_with_cookie()
                              "Cookie: name1=value1;\r\n"
                              "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   request->setUri("http://localhost/archives/download/aria2-1.0.0.tar.bz2");
 
@@ -448,7 +445,7 @@ void HttpRequestTest::testCreateRequest_with_cookie()
                  "Cookie: name2=value2;name1=value1;\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   request->setUri("http://www.aria2.org/archives/download/aria2-1.0.0.tar.bz2");
 
@@ -462,7 +459,7 @@ void HttpRequestTest::testCreateRequest_with_cookie()
                  "Cookie: name3=value3;\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   request->setUri("https://www.aria2.org/archives/download/"
                   "aria2-1.0.0.tar.bz2");
@@ -477,7 +474,7 @@ void HttpRequestTest::testCreateRequest_with_cookie()
                  "Cookie: name3=value3;name4=value4;\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   // The path of cookie4 ends with '/'
   request->setUri("https://www.aria2.org/archives/aria2-1.0.0.tar.bz2");
@@ -492,7 +489,7 @@ void HttpRequestTest::testCreateRequest_with_cookie()
                  "Cookie: name4=value4;\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   request->setUri("http://example.org/aria2-1.0.0.tar.bz2");
 
@@ -506,7 +503,7 @@ void HttpRequestTest::testCreateRequest_with_cookie()
                  "Cookie: name5=value5;\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 }
 
 void HttpRequestTest::testCreateRequest_query()
@@ -531,7 +528,7 @@ void HttpRequestTest::testCreateRequest_query()
       "Connection: close\r\n"
       "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 }
 
 void HttpRequestTest::testCreateRequest_head()
@@ -547,9 +544,9 @@ void HttpRequestTest::testCreateRequest_head()
 
   std::stringstream result(httpRequest.createRequest());
   std::string line;
-  CPPUNIT_ASSERT(getline(result, line));
+  REQUIRE(getline(result, line));
   line = util::strip(line);
-  CPPUNIT_ASSERT_EQUAL(std::string("HEAD /aria2-1.0.0.tar.bz2 HTTP/1.1"), line);
+  REQUIRE_EQ(std::string("HEAD /aria2-1.0.0.tar.bz2 HTTP/1.1"), line);
 }
 
 void HttpRequestTest::testCreateRequest_endOffsetOverride()
@@ -579,7 +576,7 @@ void HttpRequestTest::testCreateRequest_endOffsetOverride()
                              "Range: bytes=0-1073741823\r\n"
                              "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   segment->updateWrittenLength(1);
 
@@ -593,7 +590,7 @@ void HttpRequestTest::testCreateRequest_endOffsetOverride()
                  "Range: bytes=1-1073741823\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 }
 
 void HttpRequestTest::testCreateRequest_wantDigest()
@@ -631,7 +628,7 @@ void HttpRequestTest::testCreateRequest_wantDigest()
                              "\r\n"
                              "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 }
 
 void HttpRequestTest::testCreateProxyRequest()
@@ -642,7 +639,7 @@ void HttpRequestTest::testCreateProxyRequest()
   auto segment = std::make_shared<PiecedSegment>(1_m, p);
 
   auto proxyRequest = std::make_shared<Request>();
-  CPPUNIT_ASSERT(proxyRequest->setUri("http://localhost:9000"));
+  REQUIRE(proxyRequest->setUri("http://localhost:9000"));
 
   HttpRequest httpRequest;
 
@@ -658,7 +655,7 @@ void HttpRequestTest::testCreateProxyRequest()
                              //"Proxy-Connection: close\r\n"
                              "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createProxyRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createProxyRequest());
 
   // adds Keep-Alive header.
   request->setKeepAliveHint(true);
@@ -669,7 +666,7 @@ void HttpRequestTest::testCreateProxyRequest()
                  //"Proxy-Connection: Keep-Alive\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createProxyRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createProxyRequest());
 
   request->setKeepAliveHint(false);
   // pipelining also adds Keep-Alive header.
@@ -681,10 +678,10 @@ void HttpRequestTest::testCreateProxyRequest()
                  //"Proxy-Connection: Keep-Alive\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createProxyRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createProxyRequest());
 
   // test proxy authorization
-  CPPUNIT_ASSERT(proxyRequest->setUri(
+  REQUIRE(proxyRequest->setUri(
       "http://aria2proxyuser:aria2proxypasswd@localhost:9000"));
 
   expectedText = "CONNECT localhost:80 HTTP/1.1\r\n"
@@ -695,7 +692,7 @@ void HttpRequestTest::testCreateProxyRequest()
                  "YXJpYTJwcm94eXVzZXI6YXJpYTJwcm94eXBhc3N3ZA==\r\n"
                  "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createProxyRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createProxyRequest());
 }
 
 void HttpRequestTest::testIsRangeSatisfied()
@@ -716,53 +713,53 @@ void HttpRequestTest::testIsRangeSatisfied()
 
   Range range;
 
-  CPPUNIT_ASSERT(httpRequest.isRangeSatisfied(range));
+  REQUIRE(httpRequest.isRangeSatisfied(range));
 
   p.reset(new Piece(1, 1_m));
   segment.reset(new PiecedSegment(1_m, p));
   httpRequest.setSegment(segment);
 
-  CPPUNIT_ASSERT(!httpRequest.isRangeSatisfied(range));
+  REQUIRE(!httpRequest.isRangeSatisfied(range));
 
   uint64_t entityLength = segment->getSegmentLength() * 10;
 
   range = Range(segment->getPosition(), 0, entityLength);
 
-  CPPUNIT_ASSERT(httpRequest.isRangeSatisfied(range));
+  REQUIRE(httpRequest.isRangeSatisfied(range));
 
   fileEntry->setLength(entityLength - 1);
 
-  CPPUNIT_ASSERT(!httpRequest.isRangeSatisfied(range));
+  REQUIRE(!httpRequest.isRangeSatisfied(range));
 
   fileEntry->setLength(entityLength);
 
-  CPPUNIT_ASSERT(httpRequest.isRangeSatisfied(range));
+  REQUIRE(httpRequest.isRangeSatisfied(range));
 
   request->setPipeliningHint(true);
 
-  CPPUNIT_ASSERT(!httpRequest.isRangeSatisfied(range));
+  REQUIRE(!httpRequest.isRangeSatisfied(range));
 
   range =
       Range(segment->getPosition(),
             segment->getPosition() + segment->getLength() - 1, entityLength);
 
-  CPPUNIT_ASSERT(httpRequest.isRangeSatisfied(range));
+  REQUIRE(httpRequest.isRangeSatisfied(range));
 
   range = Range(segment->getPosition(),
                 segment->getPosition() + segment->getLength() - 1, 0);
 
-  CPPUNIT_ASSERT(!httpRequest.isRangeSatisfied(range));
+  REQUIRE(!httpRequest.isRangeSatisfied(range));
 
   range =
       Range(0, segment->getPosition() + segment->getLength() - 1, entityLength);
 
-  CPPUNIT_ASSERT(!httpRequest.isRangeSatisfied(range));
+  REQUIRE(!httpRequest.isRangeSatisfied(range));
 
   range = Range(segment->getPosition(),
                 segment->getPosition() + segment->getLength() - 1,
                 entityLength + 1);
 
-  CPPUNIT_ASSERT(httpRequest.isRangeSatisfied(range));
+  REQUIRE(httpRequest.isRangeSatisfied(range));
 }
 
 void HttpRequestTest::testUserAgent()
@@ -791,10 +788,10 @@ void HttpRequestTest::testUserAgent()
                              "Connection: close\r\n"
                              "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   auto proxyRequest = std::make_shared<Request>();
-  CPPUNIT_ASSERT(proxyRequest->setUri("http://localhost:9000"));
+  REQUIRE(proxyRequest->setUri("http://localhost:9000"));
 
   httpRequest.setProxyRequest(proxyRequest);
 
@@ -804,7 +801,7 @@ void HttpRequestTest::testUserAgent()
                                      //"Proxy-Connection: close\r\n"
                                      "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedTextForProxy, httpRequest.createProxyRequest());
+  REQUIRE_EQ(expectedTextForProxy, httpRequest.createProxyRequest());
 }
 
 void HttpRequestTest::testUserAgentHeaderOrder()
@@ -829,11 +826,11 @@ void HttpRequestTest::testUserAgentHeaderOrder()
                              "Connection: close\r\n"
                              "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   httpRequest.addHeader("User-Agent: CustomAgent");
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 }
 
 void HttpRequestTest::testAddHeader()
@@ -860,7 +857,7 @@ void HttpRequestTest::testAddHeader()
                              "Accept: text/html\r\n"
                              "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 }
 
 void HttpRequestTest::testAcceptMetalink()
@@ -886,7 +883,7 @@ void HttpRequestTest::testAcceptMetalink()
       "Connection: close\r\n"
       "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 }
 
 void HttpRequestTest::testEnableAcceptEncoding()
@@ -917,14 +914,14 @@ void HttpRequestTest::testEnableAcceptEncoding()
   std::string expectedText = expectedTextHead;
   expectedText += "Host: localhost\r\n";
   expectedText += expectedTextTail;
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 
   expectedText = expectedTextHead;
   expectedText += "Host: localhost\r\n";
   expectedText += expectedTextTail;
   httpRequest.enableAcceptGZip();
   if (acceptEncodings.empty()) {
-    CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+    REQUIRE_EQ(expectedText, httpRequest.createRequest());
     return;
   }
 
@@ -941,7 +938,7 @@ void HttpRequestTest::testEnableAcceptEncoding()
                   "Connection: close\r\n"
                   "\r\n";
 
-  CPPUNIT_ASSERT_EQUAL(expectedText, httpRequest.createRequest());
+  REQUIRE_EQ(expectedText, httpRequest.createRequest());
 }
 
 void HttpRequestTest::testCreateRequest_ipv6LiteralAddr()
@@ -954,30 +951,30 @@ void HttpRequestTest::testCreateRequest_ipv6LiteralAddr()
   httpRequest.setAuthConfigFactory(authConfigFactory_.get());
   httpRequest.setOption(option_.get());
 
-  CPPUNIT_ASSERT(httpRequest.createRequest().find("Host: [::1]") !=
+  REQUIRE(httpRequest.createRequest().find("Host: [::1]") !=
                  std::string::npos);
 
   auto proxy = std::make_shared<Request>();
   proxy->setUri("http://proxy");
   httpRequest.setProxyRequest(proxy);
   std::string proxyRequest = httpRequest.createProxyRequest();
-  CPPUNIT_ASSERT(proxyRequest.find("Host: [::1]:80") != std::string::npos);
-  CPPUNIT_ASSERT(proxyRequest.find("CONNECT [::1]:80 ") != std::string::npos);
+  REQUIRE(proxyRequest.find("Host: [::1]:80") != std::string::npos);
+  REQUIRE(proxyRequest.find("CONNECT [::1]:80 ") != std::string::npos);
 }
 
 void HttpRequestTest::testConditionalRequest()
 {
   HttpRequest httpRequest;
-  CPPUNIT_ASSERT(!httpRequest.conditionalRequest());
+  REQUIRE(!httpRequest.conditionalRequest());
   httpRequest.setIfModifiedSinceHeader("dummy");
-  CPPUNIT_ASSERT(httpRequest.conditionalRequest());
+  REQUIRE(httpRequest.conditionalRequest());
   httpRequest.setIfModifiedSinceHeader("");
-  CPPUNIT_ASSERT(!httpRequest.conditionalRequest());
+  REQUIRE(!httpRequest.conditionalRequest());
   httpRequest.addHeader("If-None-Match: *");
-  CPPUNIT_ASSERT(httpRequest.conditionalRequest());
+  REQUIRE(httpRequest.conditionalRequest());
   httpRequest.clearHeader();
   httpRequest.addHeader("If-Modified-Since: dummy");
-  CPPUNIT_ASSERT(httpRequest.conditionalRequest());
+  REQUIRE(httpRequest.conditionalRequest());
 }
 
 } // namespace aria2

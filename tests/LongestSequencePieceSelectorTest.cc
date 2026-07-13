@@ -1,6 +1,6 @@
 #include "LongestSequencePieceSelector.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "array_fun.h"
 #include "BitfieldMan.h"
@@ -8,11 +8,8 @@
 
 namespace aria2 {
 
-class LongestSequencePieceSelectorTest : public CppUnit::TestFixture {
+class LongestSequencePieceSelectorTest {
 
-  CPPUNIT_TEST_SUITE(LongestSequencePieceSelectorTest);
-  CPPUNIT_TEST(testSelect);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -22,7 +19,7 @@ public:
   void testSelect();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(LongestSequencePieceSelectorTest);
+A2_TEST(LongestSequencePieceSelectorTest, testSelect)
 
 void LongestSequencePieceSelectorTest::testSelect()
 {
@@ -35,16 +32,16 @@ void LongestSequencePieceSelectorTest::testSelect()
   LongestSequencePieceSelector selector;
   size_t index;
 
-  CPPUNIT_ASSERT(selector.select(index, bf.getBitfield(), bf.countBlock()));
-  CPPUNIT_ASSERT_EQUAL((size_t)15, index);
+  REQUIRE(selector.select(index, bf.getBitfield(), bf.countBlock()));
+  REQUIRE_EQ((size_t)15, index);
 
   bf.clearAllBit();
-  CPPUNIT_ASSERT(!selector.select(index, bf.getBitfield(), bf.countBlock()));
+  REQUIRE(!selector.select(index, bf.getBitfield(), bf.countBlock()));
 
   // See it works in just one range
   bf.setBitRange(1, 4);
-  CPPUNIT_ASSERT(selector.select(index, bf.getBitfield(), bf.countBlock()));
-  CPPUNIT_ASSERT_EQUAL((size_t)4, index);
+  REQUIRE(selector.select(index, bf.getBitfield(), bf.countBlock()));
+  REQUIRE_EQ((size_t)4, index);
 }
 
 } // namespace aria2

@@ -2,17 +2,14 @@
 
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "a2functional.h"
 
 namespace aria2 {
 
-class SingletonHolderTest : public CppUnit::TestFixture {
+class SingletonHolderTest {
 
-  CPPUNIT_TEST_SUITE(SingletonHolderTest);
-  CPPUNIT_TEST(testInstance);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -21,7 +18,7 @@ public:
   void testInstance();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(SingletonHolderTest);
+A2_TEST(SingletonHolderTest, testInstance)
 
 class M {
 private:
@@ -38,11 +35,11 @@ public:
 void SingletonHolderTest::testInstance()
 {
   SingletonHolder<M>::instance(make_unique<M>("Hello world."));
-  CPPUNIT_ASSERT_EQUAL(std::string("Hello world."),
+  REQUIRE_EQ(std::string("Hello world."),
                        SingletonHolder<M>::instance()->greeting());
 
   SingletonHolder<M>::instance()->greeting("Yes, it worked!");
-  CPPUNIT_ASSERT_EQUAL(std::string("Yes, it worked!"),
+  REQUIRE_EQ(std::string("Yes, it worked!"),
                        SingletonHolder<M>::instance()->greeting());
 }
 

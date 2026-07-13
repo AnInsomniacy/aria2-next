@@ -5,15 +5,12 @@
 #include "DHTNode.h"
 #include <cstring>
 #include <algorithm>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class XORCloserTest : public CppUnit::TestFixture {
+class XORCloserTest {
 
-  CPPUNIT_TEST_SUITE(XORCloserTest);
-  CPPUNIT_TEST(testOperator);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -23,7 +20,7 @@ public:
   void testOperator();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(XORCloserTest);
+A2_TEST(XORCloserTest, testOperator)
 
 void XORCloserTest::testOperator()
 {
@@ -43,12 +40,12 @@ void XORCloserTest::testOperator()
 
   std::sort(l.begin(), l.end(), XORCloser(keys[2], DHT_ID_LENGTH));
 
-  CPPUNIT_ASSERT(memcmp(keys[2], l[0], DHT_ID_LENGTH) == 0);
-  CPPUNIT_ASSERT(memcmp(keys[1], l[1], DHT_ID_LENGTH) == 0);
-  CPPUNIT_ASSERT(memcmp(keys[3], l[2], DHT_ID_LENGTH) == 0);
-  CPPUNIT_ASSERT(memcmp(keys[0], l[3], DHT_ID_LENGTH) == 0);
-  CPPUNIT_ASSERT(memcmp(keys[5], l[4], DHT_ID_LENGTH) == 0);
-  CPPUNIT_ASSERT(memcmp(keys[4], l[5], DHT_ID_LENGTH) == 0);
+  REQUIRE(memcmp(keys[2], l[0], DHT_ID_LENGTH) == 0);
+  REQUIRE(memcmp(keys[1], l[1], DHT_ID_LENGTH) == 0);
+  REQUIRE(memcmp(keys[3], l[2], DHT_ID_LENGTH) == 0);
+  REQUIRE(memcmp(keys[0], l[3], DHT_ID_LENGTH) == 0);
+  REQUIRE(memcmp(keys[5], l[4], DHT_ID_LENGTH) == 0);
+  REQUIRE(memcmp(keys[4], l[5], DHT_ID_LENGTH) == 0);
 }
 
 } // namespace aria2

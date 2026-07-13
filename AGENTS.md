@@ -11,7 +11,7 @@ This file defines repository rules for AI coding agents. Human contributors shou
 | --- | --- |
 | Core | C11 and C++17 aria2 command-line client and core implementation |
 | Build | CMake 3.25+ with Ninja as the default generator |
-| Tests | CTest plus the CppUnit test suite |
+| Tests | CTest plus the doctest unit test suite (vendored in third_party/doctest) |
 | Packaging | Cross-platform release automation under `packaging/` and `.github/workflows/release.yml` |
 | Third-party source | Vendored `third_party/wslay` with local ownership rules |
 
@@ -26,7 +26,7 @@ This file defines repository rules for AI coding agents. Human contributors shou
 | `cmake/TestSources.cmake` | Test source inventory |
 | `src/` | aria2 core, CLI, protocol, disk, RPC, and platform code |
 | `src/includes/aria2/` | Public libaria2 headers |
-| `tests/` | CppUnit tests and fixtures |
+| `tests/` | doctest unit tests and fixtures |
 | `docs/` | Manual sources, completion tooling, and maintenance records |
 | `packaging/` | Release dependencies, cross-build scripts, and package assets |
 | `packaging/dependencies.env` | Release dependency version source |

@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "MockBtMessageDispatcher.h"
@@ -12,13 +12,8 @@
 
 namespace aria2 {
 
-class BtCancelMessageTest : public CppUnit::TestFixture {
+class BtCancelMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtCancelMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<Peer> peer;
@@ -49,7 +44,9 @@ public:
   };
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtCancelMessageTest);
+A2_TEST(BtCancelMessageTest, testCreate)
+A2_TEST(BtCancelMessageTest, testCreateMessage)
+A2_TEST(BtCancelMessageTest, testDoReceivedAction)
 
 void BtCancelMessageTest::testCreate()
 {
@@ -59,17 +56,17 @@ void BtCancelMessageTest::testCreate()
   bittorrent::setIntParam(&msg[9], 256);
   bittorrent::setIntParam(&msg[13], 1_k);
   auto pm = BtCancelMessage::create(&msg[4], 13);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)8, pm->getId());
-  CPPUNIT_ASSERT_EQUAL((size_t)12345, pm->getIndex());
-  CPPUNIT_ASSERT_EQUAL(256, pm->getBegin());
-  CPPUNIT_ASSERT_EQUAL((int32_t)1_k, pm->getLength());
+  REQUIRE_EQ((uint8_t)8, pm->getId());
+  REQUIRE_EQ((size_t)12345, pm->getIndex());
+  REQUIRE_EQ(256, pm->getBegin());
+  REQUIRE_EQ((int32_t)1_k, pm->getLength());
 
   // case: payload size is wrong
   try {
     unsigned char msg[18];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 14, 8);
     BtCancelMessage::create(&msg[4], 14);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -78,7 +75,7 @@ void BtCancelMessageTest::testCreate()
     unsigned char msg[17];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 13, 9);
     BtCancelMessage::create(&msg[4], 13);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -96,8 +93,8 @@ void BtCancelMessageTest::testCreateMessage()
   bittorrent::setIntParam(&data[9], 256);
   bittorrent::setIntParam(&data[13], 1_k);
   auto rawmsg = msg.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)17, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)17, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtCancelMessageTest::testDoReceivedAction()
@@ -111,9 +108,9 @@ void BtCancelMessageTest::testDoReceivedAction()
   msg.setBtMessageDispatcher(dispatcher.get());
 
   msg.doReceivedAction();
-  CPPUNIT_ASSERT_EQUAL(msg.getIndex(), dispatcher->index);
-  CPPUNIT_ASSERT_EQUAL(msg.getBegin(), dispatcher->begin);
-  CPPUNIT_ASSERT_EQUAL(msg.getLength(), dispatcher->length);
+  REQUIRE_EQ(msg.getIndex(), dispatcher->index);
+  REQUIRE_EQ(msg.getBegin(), dispatcher->begin);
+  REQUIRE_EQ(msg.getLength(), dispatcher->length);
 }
 
 } // namespace aria2

@@ -1,6 +1,6 @@
 #include "common.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include <iostream>
 #include <sstream>
@@ -10,17 +10,14 @@ namespace aria2 {
 
 void showVersion();
 
-class VersionUsageTest : public CppUnit::TestFixture {
+class VersionUsageTest {
 
-  CPPUNIT_TEST_SUITE(VersionUsageTest);
-  CPPUNIT_TEST(testShowVersionDisplaysMaintainedForkIdentity);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testShowVersionDisplaysMaintainedForkIdentity();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(VersionUsageTest);
+A2_TEST(VersionUsageTest, testShowVersionDisplaysMaintainedForkIdentity)
 
 void VersionUsageTest::testShowVersionDisplaysMaintainedForkIdentity()
 {
@@ -30,14 +27,14 @@ void VersionUsageTest::testShowVersionDisplaysMaintainedForkIdentity()
   std::cout.rdbuf(old);
 
   const auto version = out.str();
-  CPPUNIT_ASSERT(version.find("Aria2 Next version " PACKAGE_VERSION) !=
+  REQUIRE(version.find("Aria2 Next version " PACKAGE_VERSION) !=
                  std::string::npos);
-  CPPUNIT_ASSERT(version.find("Maintained since 2026 by AnInsomniacy") !=
+  REQUIRE(version.find("Maintained since 2026 by AnInsomniacy") !=
                  std::string::npos);
-  CPPUNIT_ASSERT(version.find(
+  REQUIRE(version.find(
                      "Original aria2 copyright: 2006, 2019 Tatsuhiro "
                      "Tsujikawa.") != std::string::npos);
-  CPPUNIT_ASSERT(version.find("Report bugs to "
+  REQUIRE(version.find("Report bugs to "
                               "https://github.com/AnInsomniacy/aria2-next/"
                               "issues") != std::string::npos);
 }

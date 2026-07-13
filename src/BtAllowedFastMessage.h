@@ -43,7 +43,7 @@ class BtAllowedFastMessage : public IndexBtMessage {
 public:
   BtAllowedFastMessage(size_t index = 0);
 
-  static const uint8_t ID = 17;
+  static constexpr uint8_t ID = 17;
 
   static const char NAME[];
 

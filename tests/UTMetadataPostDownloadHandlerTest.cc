@@ -1,6 +1,6 @@
 #include "UTMetadataPostDownloadHandler.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DownloadContext.h"
 #include "RequestGroup.h"
@@ -18,12 +18,8 @@
 
 namespace aria2 {
 
-class UTMetadataPostDownloadHandlerTest : public CppUnit::TestFixture {
+class UTMetadataPostDownloadHandlerTest {
 
-  CPPUNIT_TEST_SUITE(UTMetadataPostDownloadHandlerTest);
-  CPPUNIT_TEST(testCanHandle);
-  CPPUNIT_TEST(testGetNextRequestGroups);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<Option> option_;
@@ -44,23 +40,24 @@ public:
   void testGetNextRequestGroups();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(UTMetadataPostDownloadHandlerTest);
+A2_TEST(UTMetadataPostDownloadHandlerTest, testCanHandle)
+A2_TEST(UTMetadataPostDownloadHandlerTest, testGetNextRequestGroups)
 
 void UTMetadataPostDownloadHandlerTest::testCanHandle()
 {
   UTMetadataPostDownloadHandler handler;
 
-  CPPUNIT_ASSERT(!handler.canHandle(requestGroup_.get()));
+  REQUIRE(!handler.canHandle(requestGroup_.get()));
 
   dctx_->setAttribute(CTX_ATTR_BT, make_unique<TorrentAttribute>());
 
-  CPPUNIT_ASSERT(handler.canHandle(requestGroup_.get()));
+  REQUIRE(handler.canHandle(requestGroup_.get()));
 
   auto attrs = bittorrent::getTorrentAttrs(dctx_);
   // Only checks whether metadata is empty or not
   attrs->metadata = "metadata";
 
-  CPPUNIT_ASSERT(!handler.canHandle(requestGroup_.get()));
+  REQUIRE(!handler.canHandle(requestGroup_.get()));
 }
 
 void UTMetadataPostDownloadHandlerTest::testGetNextRequestGroups()
@@ -100,30 +97,30 @@ void UTMetadataPostDownloadHandlerTest::testGetNextRequestGroups()
   std::vector<std::shared_ptr<RequestGroup>> results;
   handler.getNextRequestGroups(results, requestGroup_.get());
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, results.size());
+  REQUIRE_EQ((size_t)1, results.size());
   std::shared_ptr<RequestGroup> newRg = results.front();
   std::shared_ptr<DownloadContext> newDctx = newRg->getDownloadContext();
   auto newAttrs = bittorrent::getTorrentAttrs(newDctx);
-  CPPUNIT_ASSERT_EQUAL(bittorrent::getInfoHashString(dctx_),
+  REQUIRE_EQ(bittorrent::getInfoHashString(dctx_),
                        bittorrent::getInfoHashString(newDctx));
   const std::vector<std::vector<std::string>>& newAnnounceList =
       newAttrs->announceList;
-  CPPUNIT_ASSERT_EQUAL((size_t)1, newAnnounceList.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("http://tracker"), newAnnounceList[0][0]);
-  CPPUNIT_ASSERT_EQUAL(option_->get(PREF_DIR),
+  REQUIRE_EQ((size_t)1, newAnnounceList.size());
+  REQUIRE_EQ(std::string("http://tracker"), newAnnounceList[0][0]);
+  REQUIRE_EQ(option_->get(PREF_DIR),
                        newRg->getOption()->get(PREF_DIR));
-  CPPUNIT_ASSERT(std::find(requestGroup_->followedBy().begin(),
+  REQUIRE(std::find(requestGroup_->followedBy().begin(),
                            requestGroup_->followedBy().end(),
                            newRg->getGID()) !=
                  requestGroup_->followedBy().end());
-  CPPUNIT_ASSERT_EQUAL(requestGroup_->getGID(), newRg->following());
-  CPPUNIT_ASSERT(!trfile.exists());
+  REQUIRE_EQ(requestGroup_->getGID(), newRg->following());
+  REQUIRE(!trfile.exists());
 
   results.clear();
 
   requestGroup_->getOption()->put(PREF_BT_SAVE_METADATA, A2_V_TRUE);
   handler.getNextRequestGroups(results, requestGroup_.get());
-  CPPUNIT_ASSERT(trfile.exists());
+  REQUIRE(trfile.exists());
 
   results.clear();
 
@@ -135,7 +132,7 @@ void UTMetadataPostDownloadHandlerTest::testGetNextRequestGroups()
       0);
   try {
     handler.getNextRequestGroups(results, requestGroup_.get());
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (RecoverableException& e) {
     // success

@@ -3,7 +3,7 @@
 #include <cstring>
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "MockExtensionMessageFactory.h"
@@ -12,14 +12,8 @@
 
 namespace aria2 {
 
-class BtExtendedMessageTest : public CppUnit::TestFixture {
+class BtExtendedMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtExtendedMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -29,7 +23,10 @@ public:
   void testToString();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtExtendedMessageTest);
+A2_TEST(BtExtendedMessageTest, testCreate)
+A2_TEST(BtExtendedMessageTest, testCreateMessage)
+A2_TEST(BtExtendedMessageTest, testDoReceivedAction)
+A2_TEST(BtExtendedMessageTest, testToString)
 
 void BtExtendedMessageTest::testCreate()
 {
@@ -44,14 +41,14 @@ void BtExtendedMessageTest::testCreate()
   msg[5] = 1; // Set dummy extended message ID 1
   memcpy(msg + 6, payload.c_str(), payload.size());
   auto pm = BtExtendedMessage::create(&exmsgFactory, peer, &msg[4], 13);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)20, pm->getId());
+  REQUIRE_EQ((uint8_t)20, pm->getId());
 
   // case: payload size is wrong
   try {
     unsigned char msg[5];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 1, 20);
     BtExtendedMessage::create(&exmsgFactory, peer, &msg[4], 1);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (Exception& e) {
     std::cerr << e.stackTrace() << std::endl;
@@ -61,7 +58,7 @@ void BtExtendedMessageTest::testCreate()
     unsigned char msg[6];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 2, 21);
     BtExtendedMessage::create(&exmsgFactory, peer, &msg[4], 2);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (Exception& e) {
     std::cerr << e.stackTrace() << std::endl;
@@ -79,8 +76,8 @@ void BtExtendedMessageTest::testCreateMessage()
   *(data + 5) = extendedMessageID;
   memcpy(data + 6, payload.c_str(), payload.size());
   auto rawmsg = msg.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)17, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)17, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtExtendedMessageTest::testDoReceivedAction()
@@ -89,7 +86,7 @@ void BtExtendedMessageTest::testDoReceivedAction()
   BtExtendedMessage msg{
       make_unique<MockExtensionMessage>("charlie", 1, "", &evcheck)};
   msg.doReceivedAction();
-  CPPUNIT_ASSERT(evcheck.doReceivedActionCalled);
+  REQUIRE(evcheck.doReceivedActionCalled);
 }
 
 void BtExtendedMessageTest::testToString()
@@ -98,7 +95,7 @@ void BtExtendedMessageTest::testToString()
   uint8_t extendedMessageID = 1;
   BtExtendedMessage msg{make_unique<MockExtensionMessage>(
       "charlie", extendedMessageID, payload, nullptr)};
-  CPPUNIT_ASSERT_EQUAL(std::string("extended charlie"), msg.toString());
+  REQUIRE_EQ(std::string("extended charlie"), msg.toString());
 }
 
 } // namespace aria2

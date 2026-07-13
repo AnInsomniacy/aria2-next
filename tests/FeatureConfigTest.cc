@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "a2functional.h"
 #include "array_fun.h"
@@ -10,13 +10,8 @@
 
 namespace aria2 {
 
-class FeatureConfigTest : public CppUnit::TestFixture {
+class FeatureConfigTest {
 
-  CPPUNIT_TEST_SUITE(FeatureConfigTest);
-  CPPUNIT_TEST(testGetDefaultPort);
-  CPPUNIT_TEST(testStrSupportedFeature);
-  CPPUNIT_TEST(testFeatureSummary);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testGetDefaultPort();
@@ -24,31 +19,33 @@ public:
   void testFeatureSummary();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(FeatureConfigTest);
+A2_TEST(FeatureConfigTest, testGetDefaultPort)
+A2_TEST(FeatureConfigTest, testStrSupportedFeature)
+A2_TEST(FeatureConfigTest, testFeatureSummary)
 
 void FeatureConfigTest::testGetDefaultPort()
 {
-  CPPUNIT_ASSERT_EQUAL((uint16_t)80, getDefaultPort("http"));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)443, getDefaultPort("https"));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)21, getDefaultPort("ftp"));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)22, getDefaultPort("sftp"));
+  REQUIRE_EQ((uint16_t)80, getDefaultPort("http"));
+  REQUIRE_EQ((uint16_t)443, getDefaultPort("https"));
+  REQUIRE_EQ((uint16_t)21, getDefaultPort("ftp"));
+  REQUIRE_EQ((uint16_t)22, getDefaultPort("sftp"));
 }
 
 void FeatureConfigTest::testStrSupportedFeature()
 {
   const char* https = strSupportedFeature(FEATURE_HTTPS);
 #ifdef ENABLE_SSL
-  CPPUNIT_ASSERT(https);
+  REQUIRE(https);
 #else
-  CPPUNIT_ASSERT(!https);
+  REQUIRE(!https);
 #endif // ENABLE_SSL
-  CPPUNIT_ASSERT(!strSupportedFeature(MAX_FEATURE));
+  REQUIRE(!strSupportedFeature(MAX_FEATURE));
 
   auto sftp = strSupportedFeature(FEATURE_SFTP);
 #ifdef HAVE_LIBSSH2
-  CPPUNIT_ASSERT(sftp);
+  REQUIRE(sftp);
 #else  // !HAVE_LIBSSH2
-  CPPUNIT_ASSERT(!sftp);
+  REQUIRE(!sftp);
 #endif // !HAVE_LIBSSH2
 }
 
@@ -95,7 +92,7 @@ void FeatureConfigTest::testFeatureSummary()
 
   std::string featuresString =
       strjoin(std::begin(features), std::end(features), ", ");
-  CPPUNIT_ASSERT_EQUAL(featuresString, featureSummary());
+  REQUIRE_EQ(featuresString, featureSummary());
 }
 
 } // namespace aria2

@@ -65,7 +65,7 @@ public:
 
   virtual ~BtPieceMessage();
 
-  static const uint8_t ID = 7;
+  static constexpr uint8_t ID = 7;
 
   static const char NAME[];
 

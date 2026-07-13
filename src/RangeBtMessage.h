@@ -46,7 +46,7 @@ private:
   int32_t begin_;
   int32_t length_;
 
-  static const size_t MESSAGE_LENGTH = 17;
+  static constexpr size_t MESSAGE_LENGTH = 17;
 
 protected:
   template <typename T>

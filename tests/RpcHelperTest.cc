@@ -1,6 +1,6 @@
 #include "rpc_helper.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "RpcRequest.h"
 #include "RecoverableException.h"
@@ -12,15 +12,8 @@ namespace aria2 {
 
 namespace rpc {
 
-class RpcHelperTest : public CppUnit::TestFixture {
+class RpcHelperTest {
 
-  CPPUNIT_TEST_SUITE(RpcHelperTest);
-#ifdef ENABLE_XML_RPC
-  CPPUNIT_TEST(testParseMemory);
-  CPPUNIT_TEST(testParseMemory_shouldFail);
-  CPPUNIT_TEST(testParseMemory_withoutStringTag);
-#endif // ENABLE_XML_RPC
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -35,7 +28,11 @@ public:
 #endif // ENABLE_XML_RPC
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(RpcHelperTest);
+#ifdef ENABLE_XML_RPC
+A2_TEST(RpcHelperTest, testParseMemory)
+A2_TEST(RpcHelperTest, testParseMemory_shouldFail)
+A2_TEST(RpcHelperTest, testParseMemory_withoutStringTag)
+#endif // ENABLE_XML_RPC
 
 #ifdef ENABLE_XML_RPC
 
@@ -77,20 +74,20 @@ void RpcHelperTest::testParseMemory()
       "</methodCall>";
   RpcRequest req = xmlParseMemory(s.c_str(), s.size());
 
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2.addURI"), req.methodName);
-  CPPUNIT_ASSERT_EQUAL((size_t)3, req.params->size());
-  CPPUNIT_ASSERT_EQUAL((Integer::ValueType)100,
+  REQUIRE_EQ(std::string("aria2.addURI"), req.methodName);
+  REQUIRE_EQ((size_t)3, req.params->size());
+  REQUIRE_EQ((Integer::ValueType)100,
                        downcast<Integer>(req.params->get(0))->i());
   const Dict* dict = downcast<Dict>(req.params->get(1));
-  CPPUNIT_ASSERT_EQUAL((Integer::ValueType)65535,
+  REQUIRE_EQ((Integer::ValueType)65535,
                        downcast<Integer>(dict->get("max-count"))->i());
   // Current implementation handles double as string.
-  CPPUNIT_ASSERT_EQUAL(std::string("0.99"),
+  REQUIRE_EQ(std::string("0.99"),
                        downcast<String>(dict->get("seed-ratio"))->s());
   const List* list = downcast<List>(req.params->get(2));
-  CPPUNIT_ASSERT_EQUAL(std::string("pudding"),
+  REQUIRE_EQ(std::string("pudding"),
                        downcast<String>(list->get(0))->s());
-  CPPUNIT_ASSERT_EQUAL(std::string("hello world"),
+  REQUIRE_EQ(std::string("hello world"),
                        downcast<String>(list->get(1))->s());
 }
 
@@ -104,7 +101,7 @@ void RpcHelperTest::testParseMemory_shouldFail()
                     "        <value><i4>100</i4></value>"
                     "      </param>";
     xmlParseMemory(s.c_str(), s.size());
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (RecoverableException& e) {
     // success
@@ -120,14 +117,14 @@ void RpcHelperTest::testParseMemory_withoutParams()
                     "    </params>"
                     "</methodCall>";
     RpcRequest req = xmlParseMemory(s.c_str(), s.size());
-    CPPUNIT_ASSERT(req.params);
+    REQUIRE(req.params);
   }
   {
     std::string s = "<methodCall>"
                     "  <methodName>aria2.addURI</methodName>"
                     "</methodCall>";
     RpcRequest req = xmlParseMemory(s.c_str(), s.size());
-    CPPUNIT_ASSERT(req.params->size());
+    REQUIRE(req.params->size());
   }
 }
 
@@ -168,20 +165,20 @@ void RpcHelperTest::testParseMemory_withoutStringTag()
                   "</methodCall>";
   RpcRequest req = xmlParseMemory(s.c_str(), s.size());
 
-  CPPUNIT_ASSERT_EQUAL((size_t)4, req.params->size());
-  CPPUNIT_ASSERT_EQUAL(std::string("http://aria2.sourceforge.net"),
+  REQUIRE_EQ((size_t)4, req.params->size());
+  REQUIRE_EQ(std::string("http://aria2.sourceforge.net"),
                        downcast<String>(req.params->get(0))->s());
-  CPPUNIT_ASSERT_EQUAL(std::string("http://aria2.sourceforge.net"),
+  REQUIRE_EQ(std::string("http://aria2.sourceforge.net"),
                        downcast<String>(req.params->get(1))->s());
   const Dict* dict = downcast<Dict>(req.params->get(2));
-  CPPUNIT_ASSERT_EQUAL(std::string("world"),
+  REQUIRE_EQ(std::string("world"),
                        downcast<String>(dict->get("hello"))->s());
   const List* list = downcast<List>(req.params->get(3));
-  CPPUNIT_ASSERT_EQUAL(std::string("apple"),
+  REQUIRE_EQ(std::string("apple"),
                        downcast<String>(list->get(0))->s());
-  CPPUNIT_ASSERT_EQUAL(std::string("banana"),
+  REQUIRE_EQ(std::string("banana"),
                        downcast<String>(list->get(1))->s());
-  CPPUNIT_ASSERT_EQUAL(std::string("lemon"),
+  REQUIRE_EQ(std::string("lemon"),
                        downcast<String>(list->get(2))->s());
 }
 

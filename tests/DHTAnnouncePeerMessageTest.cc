@@ -1,6 +1,6 @@
 #include "DHTAnnouncePeerMessage.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTNode.h"
 #include "Exception.h"
@@ -13,12 +13,8 @@
 
 namespace aria2 {
 
-class DHTAnnouncePeerMessageTest : public CppUnit::TestFixture {
+class DHTAnnouncePeerMessageTest {
 
-  CPPUNIT_TEST_SUITE(DHTAnnouncePeerMessageTest);
-  CPPUNIT_TEST(testGetBencodedMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   std::shared_ptr<DHTNode> localNode_;
@@ -47,7 +43,8 @@ public:
   };
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTAnnouncePeerMessageTest);
+A2_TEST(DHTAnnouncePeerMessageTest, testGetBencodedMessage)
+A2_TEST(DHTAnnouncePeerMessageTest, testDoReceivedAction)
 
 void DHTAnnouncePeerMessageTest::testGetBencodedMessage()
 {
@@ -78,7 +75,7 @@ void DHTAnnouncePeerMessageTest::testGetBencodedMessage()
   aDict->put("token", token);
   dict.put("a", std::move(aDict));
 
-  CPPUNIT_ASSERT_EQUAL(util::percentEncode(bencode2::encode(&dict)),
+  REQUIRE_EQ(util::percentEncode(bencode2::encode(&dict)),
                        util::percentEncode(msgbody));
 }
 
@@ -110,20 +107,20 @@ void DHTAnnouncePeerMessageTest::testDoReceivedAction()
 
   msg.doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, dispatcher.messageQueue_.size());
+  REQUIRE_EQ((size_t)1, dispatcher.messageQueue_.size());
   auto m = dynamic_cast<DHTAnnouncePeerReplyMessage*>(
       dispatcher.messageQueue_[0].message_.get());
-  CPPUNIT_ASSERT(*localNode_ == *m->getLocalNode());
-  CPPUNIT_ASSERT(*remoteNode_ == *m->getRemoteNode());
-  CPPUNIT_ASSERT_EQUAL(std::string("announce_peer"), m->getMessageType());
-  CPPUNIT_ASSERT_EQUAL(transactionID, m->getTransactionID());
+  REQUIRE(*localNode_ == *m->getLocalNode());
+  REQUIRE(*remoteNode_ == *m->getRemoteNode());
+  REQUIRE_EQ(std::string("announce_peer"), m->getMessageType());
+  REQUIRE_EQ(transactionID, m->getTransactionID());
   std::vector<std::shared_ptr<Peer>> peers;
   peerAnnounceStorage.getPeers(peers, infoHash);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, peers.size());
+  REQUIRE_EQ((size_t)1, peers.size());
   {
     std::shared_ptr<Peer> peer = peers[0];
-    CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"), peer->getIPAddress());
-    CPPUNIT_ASSERT_EQUAL((uint16_t)6882, peer->getPort());
+    REQUIRE_EQ(std::string("192.168.0.1"), peer->getIPAddress());
+    REQUIRE_EQ((uint16_t)6882, peer->getPort());
   }
 }
 

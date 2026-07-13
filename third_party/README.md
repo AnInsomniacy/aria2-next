@@ -19,3 +19,9 @@ Future work may add system wslay support so distributions can link against a sys
 The bundled copy keeps public headers, license material, and the upstream README. Library sources, CMake packaging, examples, benchmarks, tests, CI configuration, and package-manager metadata are not retained because the header-only integration does not build or maintain them.
 
 The bundled fmt `format.h` uses its native `max_value<size_t>()` helper instead of the non-portable `SIZE_MAX` macro so GCC-based MinGW and llvm-mingw builds compile consistently.
+
+## doctest
+
+`third_party/doctest` contains the single-header doctest 2.4.12 test framework used by the aria2-next unit test suite. Vendoring the header means the tests always build: a missing system test-framework package can never silently reduce `ctest` to a green no-op.
+
+The bundled copy keeps the single header and license material only. The test adapter lives in `tests/a2doctest.h`; each former CppUnit fixture registers its methods through the `A2_TEST` macro, which preserves per-test `setUp()`/`tearDown()` semantics.

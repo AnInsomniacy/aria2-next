@@ -2,7 +2,7 @@
 
 #include <cstdlib>
 #include <iostream>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Segment.h"
 #include "ByteArrayDiskWriter.h"
@@ -11,12 +11,8 @@
 
 namespace aria2 {
 
-class SinkStreamFilterTest : public CppUnit::TestFixture {
+class SinkStreamFilterTest {
 
-  CPPUNIT_TEST_SUITE(SinkStreamFilterTest);
-  CPPUNIT_TEST(testTransform_with_length);
-  CPPUNIT_TEST(testTransform_without_length);
-  CPPUNIT_TEST_SUITE_END();
 
   class MockSegment2 : public MockSegment {
   public:
@@ -57,7 +53,8 @@ public:
   void testTransform_without_length();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(SinkStreamFilterTest);
+A2_TEST(SinkStreamFilterTest, testTransform_with_length)
+A2_TEST(SinkStreamFilterTest, testTransform_without_length)
 
 void SinkStreamFilterTest::testTransform_with_length()
 {
@@ -68,7 +65,7 @@ void SinkStreamFilterTest::testTransform_with_length()
   ssize_t r = filter_->transform(
       writer_, segment_, reinterpret_cast<const unsigned char*>(msg.c_str()),
       msg.size());
-  CPPUNIT_ASSERT_EQUAL((ssize_t)16, r);
+  REQUIRE_EQ((ssize_t)16, r);
 }
 
 void SinkStreamFilterTest::testTransform_without_length()
@@ -79,7 +76,7 @@ void SinkStreamFilterTest::testTransform_without_length()
   ssize_t r = filter_->transform(
       writer_, segment_, reinterpret_cast<const unsigned char*>(msg.c_str()),
       msg.size());
-  CPPUNIT_ASSERT_EQUAL((ssize_t)17, r);
+  REQUIRE_EQ((ssize_t)17, r);
 }
 
 } // namespace aria2

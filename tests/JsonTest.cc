@@ -1,6 +1,6 @@
 #include "json.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "RecoverableException.h"
 #include "util.h"
@@ -9,12 +9,8 @@
 
 namespace aria2 {
 
-class JsonTest : public CppUnit::TestFixture {
+class JsonTest {
 
-  CPPUNIT_TEST_SUITE(JsonTest);
-  CPPUNIT_TEST(testEncode);
-  CPPUNIT_TEST(testDecodeGetParams);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -22,7 +18,8 @@ public:
   void testDecodeGetParams();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(JsonTest);
+A2_TEST(JsonTest, testEncode)
+A2_TEST(JsonTest, testDecodeGetParams)
 
 void JsonTest::testEncode()
 {
@@ -37,7 +34,7 @@ void JsonTest::testEncode()
     attrs->put("license", String::g("GPL"));
     dict->put("attrs", std::move(attrs));
 
-    CPPUNIT_ASSERT_EQUAL(std::string("{\"attrs\":{\"license\":\"GPL\"},"
+    REQUIRE_EQ(std::string("{\"attrs\":{\"license\":\"GPL\"},"
                                      "\"files\":[\"aria2c\"],"
                                      "\"loc\":80000,"
                                      "\"name\":\"aria2\"}"),
@@ -46,7 +43,7 @@ void JsonTest::testEncode()
   {
     auto list = List::g();
     list->append("\"\\/\b\f\n\r\t");
-    CPPUNIT_ASSERT_EQUAL(std::string("[\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"]"),
+    REQUIRE_EQ(std::string("[\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"]"),
                          json::encode(list.get()));
   }
   {
@@ -54,7 +51,7 @@ void JsonTest::testEncode()
     std::string s;
     s += 0x1Fu;
     list->append(s);
-    CPPUNIT_ASSERT_EQUAL(std::string("[\"\\u001F\"]"),
+    REQUIRE_EQ(std::string("[\"\\u001F\"]"),
                          json::encode(list.get()));
   }
   {
@@ -62,7 +59,7 @@ void JsonTest::testEncode()
     list->append(Bool::gTrue());
     list->append(Bool::gFalse());
     list->append(Null::g());
-    CPPUNIT_ASSERT_EQUAL(std::string("[true,false,null]"),
+    REQUIRE_EQ(std::string("[true,false,null]"),
                          json::encode(list.get()));
   }
 }
@@ -79,11 +76,11 @@ void JsonTest::testDecodeGetParams()
     query += "id=300&";
     query += "jsoncallback=cb";
     json::JsonGetParam gparam = json::decodeGetParams(query);
-    CPPUNIT_ASSERT_EQUAL(std::string("{\"method\":\"sum\","
+    REQUIRE_EQ(std::string("{\"method\":\"sum\","
                                      "\"id\":\"300\","
                                      "\"params\":[1,2,3]}"),
                          gparam.request);
-    CPPUNIT_ASSERT_EQUAL(std::string("cb"), gparam.callback);
+    REQUIRE_EQ(std::string("cb"), gparam.callback);
   }
   {
     std::string s = "[{}]";
@@ -92,16 +89,16 @@ void JsonTest::testDecodeGetParams()
     query += '&';
     query += "jsoncallback=cb";
     json::JsonGetParam gparam = json::decodeGetParams(query);
-    CPPUNIT_ASSERT_EQUAL(std::string("[{}]"), gparam.request);
-    CPPUNIT_ASSERT_EQUAL(std::string("cb"), gparam.callback);
+    REQUIRE_EQ(std::string("[{}]"), gparam.request);
+    REQUIRE_EQ(std::string("cb"), gparam.callback);
   }
   {
     std::string query = "?method=sum&id=300";
     json::JsonGetParam gparam = json::decodeGetParams(query);
-    CPPUNIT_ASSERT_EQUAL(std::string("{\"method\":\"sum\","
+    REQUIRE_EQ(std::string("{\"method\":\"sum\","
                                      "\"id\":\"300\"}"),
                          gparam.request);
-    CPPUNIT_ASSERT_EQUAL(std::string(), gparam.callback);
+    REQUIRE_EQ(std::string(), gparam.callback);
   }
 }
 

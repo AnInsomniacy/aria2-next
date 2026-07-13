@@ -1,36 +1,34 @@
 #include "BufferedFile.h"
 
 #include <iostream>
+#include <sstream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "File.h"
 
 namespace aria2 {
 
-class BufferedFileTest : public CppUnit::TestFixture {
+class BufferedFileTest {
 
-  CPPUNIT_TEST_SUITE(BufferedFileTest);
-  CPPUNIT_TEST(testOpen);
-  CPPUNIT_TEST(testTransferWithClosedFile);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testOpen();
   void testTransferWithClosedFile();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BufferedFileTest);
+A2_TEST(BufferedFileTest, testOpen)
+A2_TEST(BufferedFileTest, testTransferWithClosedFile)
 
 void BufferedFileTest::testOpen()
 {
   File f(A2_TEST_OUT_DIR "/aria2_BufferedFileTest_testOpen");
   f.remove();
   BufferedFile fail(f.getPath().c_str(), IOFile::READ);
-  CPPUNIT_ASSERT(!fail);
+  REQUIRE(!fail);
 
   BufferedFile wr(f.getPath().c_str(), IOFile::WRITE);
-  CPPUNIT_ASSERT(wr);
+  REQUIRE(wr);
   std::string msg = "aria2 rules\nalpha\nbravo\ncharlie";
   wr.write(msg.data(), msg.size());
   wr.close();
@@ -38,23 +36,23 @@ void BufferedFileTest::testOpen()
   BufferedFile rd(f.getPath().c_str(), IOFile::READ);
   char buf[256];
   size_t len = rd.read(buf, 11);
-  CPPUNIT_ASSERT_EQUAL((size_t)11, len);
+  REQUIRE_EQ((size_t)11, len);
   buf[len] = '\0';
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2 rules"), std::string(buf));
+  REQUIRE_EQ(std::string("aria2 rules"), std::string(buf));
 
-  CPPUNIT_ASSERT(rd.gets(buf, sizeof(buf)));
-  CPPUNIT_ASSERT_EQUAL(std::string("\n"), std::string(buf));
+  REQUIRE(rd.gets(buf, sizeof(buf)));
+  REQUIRE_EQ(std::string("\n"), std::string(buf));
 
-  CPPUNIT_ASSERT(rd.gets(buf, sizeof(buf)));
-  CPPUNIT_ASSERT_EQUAL(std::string("alpha\n"), std::string(buf));
+  REQUIRE(rd.gets(buf, sizeof(buf)));
+  REQUIRE_EQ(std::string("alpha\n"), std::string(buf));
 
-  CPPUNIT_ASSERT(rd.getsn(buf, sizeof(buf)));
-  CPPUNIT_ASSERT_EQUAL(std::string("bravo"), std::string(buf));
+  REQUIRE(rd.getsn(buf, sizeof(buf)));
+  REQUIRE_EQ(std::string("bravo"), std::string(buf));
 
-  CPPUNIT_ASSERT(rd.getsn(buf, sizeof(buf)));
-  CPPUNIT_ASSERT_EQUAL(std::string("charlie"), std::string(buf));
+  REQUIRE(rd.getsn(buf, sizeof(buf)));
+  REQUIRE_EQ(std::string("charlie"), std::string(buf));
 
-  CPPUNIT_ASSERT(rd.eof());
+  REQUIRE(rd.eof());
 }
 
 void BufferedFileTest::testTransferWithClosedFile()
@@ -62,11 +60,11 @@ void BufferedFileTest::testTransferWithClosedFile()
   File f(A2_TEST_OUT_DIR "/aria2_BufferedFileTest_testTransferWithClosedFile");
   f.remove();
   BufferedFile fail(f.getPath().c_str(), IOFile::READ);
-  CPPUNIT_ASSERT(!fail);
+  REQUIRE(!fail);
 
   std::stringstream out;
-  CPPUNIT_ASSERT_EQUAL((size_t)0, fail.transfer(out));
-  CPPUNIT_ASSERT(out.str().empty());
+  REQUIRE_EQ((size_t)0, fail.transfer(out));
+  REQUIRE(out.str().empty());
 }
 
 } // namespace aria2

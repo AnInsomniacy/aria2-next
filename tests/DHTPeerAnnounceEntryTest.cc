@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -11,14 +11,8 @@
 
 namespace aria2 {
 
-class DHTPeerAnnounceEntryTest : public CppUnit::TestFixture {
+class DHTPeerAnnounceEntryTest {
 
-  CPPUNIT_TEST_SUITE(DHTPeerAnnounceEntryTest);
-  CPPUNIT_TEST(testRemoveStalePeerAddrEntry);
-  CPPUNIT_TEST(testEmpty);
-  CPPUNIT_TEST(testAddPeerAddrEntry);
-  CPPUNIT_TEST(testGetPeers);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testRemoveStalePeerAddrEntry();
@@ -27,7 +21,10 @@ public:
   void testGetPeers();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTPeerAnnounceEntryTest);
+A2_TEST(DHTPeerAnnounceEntryTest, testRemoveStalePeerAddrEntry)
+A2_TEST(DHTPeerAnnounceEntryTest, testEmpty)
+A2_TEST(DHTPeerAnnounceEntryTest, testAddPeerAddrEntry)
+A2_TEST(DHTPeerAnnounceEntryTest, testGetPeers)
 
 void DHTPeerAnnounceEntryTest::testRemoveStalePeerAddrEntry()
 {
@@ -42,13 +39,13 @@ void DHTPeerAnnounceEntryTest::testRemoveStalePeerAddrEntry()
 
   entry.removeStalePeerAddrEntry(10_s);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, entry.countPeerAddrEntry());
+  REQUIRE_EQ((size_t)2, entry.countPeerAddrEntry());
 
   const std::vector<PeerAddrEntry>& peerAddrEntries =
       entry.getPeerAddrEntries();
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"),
+  REQUIRE_EQ(std::string("192.168.0.1"),
                        peerAddrEntries[0].getIPAddress());
-  CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.3"),
+  REQUIRE_EQ(std::string("192.168.0.3"),
                        peerAddrEntries[1].getIPAddress());
 }
 
@@ -59,11 +56,11 @@ void DHTPeerAnnounceEntryTest::testEmpty()
   {
     DHTPeerAnnounceEntry entry(infohash);
     entry.addPeerAddrEntry(PeerAddrEntry("192.168.0.1", 6881));
-    CPPUNIT_ASSERT(!entry.empty());
+    REQUIRE(!entry.empty());
   }
   {
     DHTPeerAnnounceEntry entry(infohash);
-    CPPUNIT_ASSERT(entry.empty());
+    REQUIRE(entry.empty());
   }
 }
 
@@ -76,12 +73,12 @@ void DHTPeerAnnounceEntryTest::testAddPeerAddrEntry()
   entry.addPeerAddrEntry(PeerAddrEntry("192.168.0.1", 6881, Timer::zero()));
   entry.addPeerAddrEntry(PeerAddrEntry("192.168.0.1", 6882));
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, entry.countPeerAddrEntry());
+  REQUIRE_EQ((size_t)2, entry.countPeerAddrEntry());
 
   entry.addPeerAddrEntry(PeerAddrEntry("192.168.0.1", 6881));
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, entry.countPeerAddrEntry());
-  CPPUNIT_ASSERT(!entry.getPeerAddrEntries()[0].getLastUpdated().isZero());
+  REQUIRE_EQ((size_t)2, entry.countPeerAddrEntry());
+  REQUIRE(!entry.getPeerAddrEntries()[0].getLastUpdated().isZero());
 }
 
 void DHTPeerAnnounceEntryTest::testGetPeers()
@@ -93,7 +90,7 @@ void DHTPeerAnnounceEntryTest::testGetPeers()
   {
     std::vector<std::shared_ptr<Peer>> peers;
     entry.getPeers(peers);
-    CPPUNIT_ASSERT_EQUAL((size_t)0, peers.size());
+    REQUIRE_EQ((size_t)0, peers.size());
   }
 
   entry.addPeerAddrEntry(PeerAddrEntry("192.168.0.1", 6881, Timer::zero()));
@@ -102,11 +99,11 @@ void DHTPeerAnnounceEntryTest::testGetPeers()
   {
     std::vector<std::shared_ptr<Peer>> peers;
     entry.getPeers(peers);
-    CPPUNIT_ASSERT_EQUAL((size_t)2, peers.size());
-    CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"), peers[0]->getIPAddress());
-    CPPUNIT_ASSERT_EQUAL((uint16_t)6881, peers[0]->getPort());
-    CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.2"), peers[1]->getIPAddress());
-    CPPUNIT_ASSERT_EQUAL((uint16_t)6882, peers[1]->getPort());
+    REQUIRE_EQ((size_t)2, peers.size());
+    REQUIRE_EQ(std::string("192.168.0.1"), peers[0]->getIPAddress());
+    REQUIRE_EQ((uint16_t)6881, peers[0]->getPort());
+    REQUIRE_EQ(std::string("192.168.0.2"), peers[1]->getIPAddress());
+    REQUIRE_EQ((uint16_t)6882, peers[1]->getPort());
   }
 }
 

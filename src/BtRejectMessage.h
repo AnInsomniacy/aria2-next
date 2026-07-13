@@ -43,7 +43,7 @@ class BtRejectMessage : public RangeBtMessage {
 public:
   BtRejectMessage(size_t index = 0, int32_t begin = 0, int32_t length = 0);
 
-  static const uint8_t ID = 16;
+  static constexpr uint8_t ID = 16;
 
   static const char NAME[];
 

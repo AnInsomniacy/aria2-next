@@ -6,7 +6,7 @@
 #include <fstream>
 #include <vector>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "RequestGroup.h"
 #include "DownloadEngine.h"
@@ -50,79 +50,8 @@
 
 namespace aria2 {
 
-class DownloadHelperTest : public CppUnit::TestFixture {
+class DownloadHelperTest {
 
-  CPPUNIT_TEST_SUITE(DownloadHelperTest);
-  CPPUNIT_TEST(testCreateRequestGroupForUri);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_Thunder);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_BadThunder);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2K);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KClientHash);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KDefaultKadBootstrap);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KDefaultMacKadBootstrap);
-  CPPUNIT_TEST(testCreateEd2kSearchRequestGroupClientHash);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KNodesDat);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KServerMetMetadata);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KKadRoutingState);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KServerState);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KMultipleServerStates);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_ED2KDefaultServers);
-  CPPUNIT_TEST(testEd2kPeerDeduplication);
-  CPPUNIT_TEST(testEd2kKadSourcePeerMergePreservesUdpMetadata);
-  CPPUNIT_TEST(testEd2kServerSourceMergeSkipsUnsupportedSources);
-  CPPUNIT_TEST(testEd2kSourceExchangeMergePolicy);
-  CPPUNIT_TEST(testEd2kSourcePolicyRanksSources);
-  CPPUNIT_TEST(testEd2kSourcePolicyClassifiesLifecycle);
-  CPPUNIT_TEST(testEd2kLowIdCallbackStateTransitions);
-  CPPUNIT_TEST(testEd2kPeerActionPolicySelectsConnect);
-  CPPUNIT_TEST(testEd2kPeerActionPolicyReportsQueuedReask);
-  CPPUNIT_TEST(testEd2kPeerActionPolicyHandlesCallbackAndExpiry);
-  CPPUNIT_TEST(testEd2kPeerActionPolicyIsolatesUnreachableLowId);
-  CPPUNIT_TEST(testEd2kConnectPolicyIgnoresNonConnectActions);
-  CPPUNIT_TEST(testEd2kSourcePolicyExpiresDeadSources);
-  CPPUNIT_TEST(testEd2kPeerUdpReaskStateTransitions);
-  CPPUNIT_TEST(testEd2kPeerUdpReaskReplyMatchesUdpPort);
-  CPPUNIT_TEST(testEd2kPeerUdpReaskDueSelection);
-  CPPUNIT_TEST(testEd2kKadCommandQueuesDuePeerReask);
-  CPPUNIT_TEST(testEd2kKadCommandQueuesKadCallback);
-  CPPUNIT_TEST(testEd2kKadCommandQueuesDirectCallback);
-  CPPUNIT_TEST(testEd2kKadCommandUsesRuntimeTcpPortForDirectCallback);
-  CPPUNIT_TEST(testEd2kKadCommandQueueFullForUnknownUploadReask);
-  CPPUNIT_TEST(testEd2kKadCommandAckForUploadingPeerReask);
-  CPPUNIT_TEST(testEd2kSourcePolicyAppliesActiveCap);
-  CPPUNIT_TEST(testEd2kServerSourceCadencePolicy);
-  CPPUNIT_TEST(testEd2kServerSearchCadencePolicy);
-  CPPUNIT_TEST(testEd2kPiecePolicyUsesPeerAvailability);
-  CPPUNIT_TEST(testEd2kPiecePolicyReclaimsIdlePeerSegment);
-  CPPUNIT_TEST(testEd2kPeerTransferRemovesCompletedRequestedRanges);
-  CPPUNIT_TEST(testEd2kPeerTransferExpiresStalledRequests);
-  CPPUNIT_TEST(testEd2kPeerTransferReclaimsStalledEndgameRange);
-  CPPUNIT_TEST(testEd2kPeerTransferActivelyReclaimsStalledRange);
-  CPPUNIT_TEST(testEd2kPeerTransferIgnoresDuplicateData);
-  CPPUNIT_TEST(testEd2kPeerTransferAcceptsParallelPieceBlocks);
-  CPPUNIT_TEST(testEd2kPeerTransferCancelsOwnerAfterParallelHashFailure);
-  CPPUNIT_TEST(testEd2kPeerTransferAppliesAichRecoveryData);
-  CPPUNIT_TEST(testEd2kSchedulingKeepsInlineSourceLabel);
-  CPPUNIT_TEST(testEd2kPeerSchedulingSkipsBackoff);
-  CPPUNIT_TEST(testEd2kPeerSchedulingSkipsConnectingPeer);
-  CPPUNIT_TEST(testEd2kServerStateUpdate);
-  CPPUNIT_TEST(testEd2kSearchResultDeduplication);
-  CPPUNIT_TEST(testEd2kSearchResultMergesNetworks);
-  CPPUNIT_TEST(testEd2kSearchResultAppliesLocalFilters);
-  CPPUNIT_TEST(testCreateRequestGroupForUri_parameterized);
-  CPPUNIT_TEST(testCreateRequestGroupForUriList);
-
-#ifdef ENABLE_BITTORRENT
-  CPPUNIT_TEST(testCreateRequestGroupForUri_BitTorrent);
-  CPPUNIT_TEST(testCreateRequestGroupForBitTorrent);
-#endif // ENABLE_BITTORRENT
-
-#ifdef ENABLE_METALINK
-  CPPUNIT_TEST(testCreateRequestGroupForUri_Metalink);
-  CPPUNIT_TEST(testCreateRequestGroupForMetalink);
-#endif // ENABLE_METALINK
-
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<Option> option_;
@@ -202,7 +131,72 @@ public:
 #endif // ENABLE_METALINK
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DownloadHelperTest);
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_Thunder)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_BadThunder)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2K)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KClientHash)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KDefaultKadBootstrap)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KDefaultMacKadBootstrap)
+A2_TEST(DownloadHelperTest, testCreateEd2kSearchRequestGroupClientHash)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KNodesDat)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KServerMetMetadata)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KKadRoutingState)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KServerState)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KMultipleServerStates)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KDefaultServers)
+A2_TEST(DownloadHelperTest, testEd2kPeerDeduplication)
+A2_TEST(DownloadHelperTest, testEd2kKadSourcePeerMergePreservesUdpMetadata)
+A2_TEST(DownloadHelperTest, testEd2kServerSourceMergeSkipsUnsupportedSources)
+A2_TEST(DownloadHelperTest, testEd2kSourceExchangeMergePolicy)
+A2_TEST(DownloadHelperTest, testEd2kSourcePolicyRanksSources)
+A2_TEST(DownloadHelperTest, testEd2kSourcePolicyClassifiesLifecycle)
+A2_TEST(DownloadHelperTest, testEd2kLowIdCallbackStateTransitions)
+A2_TEST(DownloadHelperTest, testEd2kPeerActionPolicySelectsConnect)
+A2_TEST(DownloadHelperTest, testEd2kPeerActionPolicyReportsQueuedReask)
+A2_TEST(DownloadHelperTest, testEd2kPeerActionPolicyHandlesCallbackAndExpiry)
+A2_TEST(DownloadHelperTest, testEd2kPeerActionPolicyIsolatesUnreachableLowId)
+A2_TEST(DownloadHelperTest, testEd2kConnectPolicyIgnoresNonConnectActions)
+A2_TEST(DownloadHelperTest, testEd2kSourcePolicyExpiresDeadSources)
+A2_TEST(DownloadHelperTest, testEd2kPeerUdpReaskStateTransitions)
+A2_TEST(DownloadHelperTest, testEd2kPeerUdpReaskReplyMatchesUdpPort)
+A2_TEST(DownloadHelperTest, testEd2kPeerUdpReaskDueSelection)
+A2_TEST(DownloadHelperTest, testEd2kKadCommandQueuesDuePeerReask)
+A2_TEST(DownloadHelperTest, testEd2kKadCommandQueuesKadCallback)
+A2_TEST(DownloadHelperTest, testEd2kKadCommandQueuesDirectCallback)
+A2_TEST(DownloadHelperTest, testEd2kKadCommandUsesRuntimeTcpPortForDirectCallback)
+A2_TEST(DownloadHelperTest, testEd2kKadCommandQueueFullForUnknownUploadReask)
+A2_TEST(DownloadHelperTest, testEd2kKadCommandAckForUploadingPeerReask)
+A2_TEST(DownloadHelperTest, testEd2kSourcePolicyAppliesActiveCap)
+A2_TEST(DownloadHelperTest, testEd2kServerSourceCadencePolicy)
+A2_TEST(DownloadHelperTest, testEd2kServerSearchCadencePolicy)
+A2_TEST(DownloadHelperTest, testEd2kPiecePolicyUsesPeerAvailability)
+A2_TEST(DownloadHelperTest, testEd2kPiecePolicyReclaimsIdlePeerSegment)
+A2_TEST(DownloadHelperTest, testEd2kPeerTransferRemovesCompletedRequestedRanges)
+A2_TEST(DownloadHelperTest, testEd2kPeerTransferExpiresStalledRequests)
+A2_TEST(DownloadHelperTest, testEd2kPeerTransferReclaimsStalledEndgameRange)
+A2_TEST(DownloadHelperTest, testEd2kPeerTransferActivelyReclaimsStalledRange)
+A2_TEST(DownloadHelperTest, testEd2kPeerTransferIgnoresDuplicateData)
+A2_TEST(DownloadHelperTest, testEd2kPeerTransferAcceptsParallelPieceBlocks)
+A2_TEST(DownloadHelperTest, testEd2kPeerTransferCancelsOwnerAfterParallelHashFailure)
+A2_TEST(DownloadHelperTest, testEd2kPeerTransferAppliesAichRecoveryData)
+A2_TEST(DownloadHelperTest, testEd2kSchedulingKeepsInlineSourceLabel)
+A2_TEST(DownloadHelperTest, testEd2kPeerSchedulingSkipsBackoff)
+A2_TEST(DownloadHelperTest, testEd2kPeerSchedulingSkipsConnectingPeer)
+A2_TEST(DownloadHelperTest, testEd2kServerStateUpdate)
+A2_TEST(DownloadHelperTest, testEd2kSearchResultDeduplication)
+A2_TEST(DownloadHelperTest, testEd2kSearchResultMergesNetworks)
+A2_TEST(DownloadHelperTest, testEd2kSearchResultAppliesLocalFilters)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_parameterized)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUriList)
+#ifdef ENABLE_BITTORRENT
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_BitTorrent)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForBitTorrent)
+#endif // ENABLE_BITTORRENT
+#ifdef ENABLE_METALINK
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_Metalink)
+A2_TEST(DownloadHelperTest, testCreateRequestGroupForMetalink)
+#endif // ENABLE_METALINK
 
 void DownloadHelperTest::testCreateRequestGroupForUri()
 {
@@ -215,59 +209,59 @@ void DownloadHelperTest::testCreateRequestGroupForUri()
   {
     std::vector<std::shared_ptr<RequestGroup>> result;
     createRequestGroupForUri(result, option_, uris);
-    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+    REQUIRE_EQ((size_t)1, result.size());
     std::shared_ptr<RequestGroup> group = result[0];
     auto xuris = group->getDownloadContext()->getFirstFileEntry()->getUris();
-    CPPUNIT_ASSERT_EQUAL((size_t)6, xuris.size());
+    REQUIRE_EQ((size_t)6, xuris.size());
     for (size_t i = 0; i < 6; ++i) {
-      CPPUNIT_ASSERT_EQUAL(uris[i % 3], xuris[i]);
+      REQUIRE_EQ(uris[i % 3], xuris[i]);
     }
-    CPPUNIT_ASSERT_EQUAL(7, group->getNumConcurrentCommand());
+    REQUIRE_EQ(7, group->getNumConcurrentCommand());
     std::shared_ptr<DownloadContext> ctx = group->getDownloadContext();
-    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/file.out"), ctx->getBasePath());
+    REQUIRE_EQ(std::string("/tmp/file.out"), ctx->getBasePath());
   }
   option_->put(PREF_SPLIT, "5");
   {
     std::vector<std::shared_ptr<RequestGroup>> result;
     createRequestGroupForUri(result, option_, uris);
-    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+    REQUIRE_EQ((size_t)1, result.size());
     std::shared_ptr<RequestGroup> group = result[0];
     auto xuris = group->getDownloadContext()->getFirstFileEntry()->getUris();
-    CPPUNIT_ASSERT_EQUAL((size_t)5, xuris.size());
+    REQUIRE_EQ((size_t)5, xuris.size());
     for (size_t i = 0; i < 5; ++i) {
-      CPPUNIT_ASSERT_EQUAL(uris[i % 3], xuris[i]);
+      REQUIRE_EQ(uris[i % 3], xuris[i]);
     }
   }
   option_->put(PREF_SPLIT, "2");
   {
     std::vector<std::shared_ptr<RequestGroup>> result;
     createRequestGroupForUri(result, option_, uris);
-    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+    REQUIRE_EQ((size_t)1, result.size());
     std::shared_ptr<RequestGroup> group = result[0];
     auto xuris = group->getDownloadContext()->getFirstFileEntry()->getUris();
-    CPPUNIT_ASSERT_EQUAL((size_t)3, xuris.size());
+    REQUIRE_EQ((size_t)3, xuris.size());
     for (size_t i = 0; i < 3; ++i) {
-      CPPUNIT_ASSERT_EQUAL(uris[i % 3], xuris[i]);
+      REQUIRE_EQ(uris[i % 3], xuris[i]);
     }
   }
   option_->put(PREF_FORCE_SEQUENTIAL, A2_V_TRUE);
   {
     std::vector<std::shared_ptr<RequestGroup>> result;
     createRequestGroupForUri(result, option_, uris);
-    CPPUNIT_ASSERT_EQUAL((size_t)3, result.size());
+    REQUIRE_EQ((size_t)3, result.size());
     // for alpha server
     std::shared_ptr<RequestGroup> alphaGroup = result[0];
     auto alphaURIs =
         alphaGroup->getDownloadContext()->getFirstFileEntry()->getUris();
-    CPPUNIT_ASSERT_EQUAL((size_t)2, alphaURIs.size());
+    REQUIRE_EQ((size_t)2, alphaURIs.size());
     for (size_t i = 0; i < 2; ++i) {
-      CPPUNIT_ASSERT_EQUAL(uris[0], alphaURIs[i]);
+      REQUIRE_EQ(uris[0], alphaURIs[i]);
     }
-    CPPUNIT_ASSERT_EQUAL(2, alphaGroup->getNumConcurrentCommand());
+    REQUIRE_EQ(2, alphaGroup->getNumConcurrentCommand());
     std::shared_ptr<DownloadContext> alphaCtx =
         alphaGroup->getDownloadContext();
     // See filename is not assigned yet
-    CPPUNIT_ASSERT_EQUAL(std::string(""), alphaCtx->getBasePath());
+    REQUIRE_EQ(std::string(""), alphaCtx->getBasePath());
   }
 }
 
@@ -286,12 +280,12 @@ void DownloadHelperTest::testCreateRequestGroupForUri_Thunder()
   std::vector<std::shared_ptr<RequestGroup>> result;
   createRequestGroupForUri(result, option_, uris, false, false, true);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  REQUIRE_EQ((size_t)1, result.size());
   const auto xuris =
       result[0]->getDownloadContext()->getFirstFileEntry()->getUris();
-  CPPUNIT_ASSERT_EQUAL((size_t)2, xuris.size());
-  CPPUNIT_ASSERT_EQUAL(url, xuris[0]);
-  CPPUNIT_ASSERT_EQUAL(url, xuris[1]);
+  REQUIRE_EQ((size_t)2, xuris.size());
+  REQUIRE_EQ(url, xuris[0]);
+  REQUIRE_EQ(url, xuris[1]);
 }
 
 void DownloadHelperTest::testCreateRequestGroupForUri_BadThunder()
@@ -299,7 +293,7 @@ void DownloadHelperTest::testCreateRequestGroupForUri_BadThunder()
   std::vector<std::string> uris{"thunder://bad!"};
   std::vector<std::shared_ptr<RequestGroup>> result;
 
-  CPPUNIT_ASSERT_THROW(createRequestGroupForUri(result, option_, uris, false,
+  REQUIRE_THROWS_AS(createRequestGroupForUri(result, option_, uris, false,
                                                 false, true),
                        RecoverableException);
 }
@@ -320,35 +314,35 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2K()
 
   createRequestGroupForUri(result, option_, uris);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  REQUIRE_EQ((size_t)1, result.size());
   auto group = result[0];
   auto ctx = group->getDownloadContext();
-  CPPUNIT_ASSERT(ctx->hasAttribute(CTX_ATTR_ED2K));
-  CPPUNIT_ASSERT_EQUAL(ed2k::PIECE_LENGTH, ctx->getPieceLength());
-  CPPUNIT_ASSERT_EQUAL((int64_t)9728001, ctx->getTotalLength());
-  CPPUNIT_ASSERT_EQUAL(std::string("/tmp/aria2_next.bin"),
+  REQUIRE(ctx->hasAttribute(CTX_ATTR_ED2K));
+  REQUIRE_EQ(ed2k::PIECE_LENGTH, ctx->getPieceLength());
+  REQUIRE_EQ((int64_t)9728001, ctx->getTotalLength());
+  REQUIRE_EQ(std::string("/tmp/aria2_next.bin"),
                        ctx->getBasePath());
-  CPPUNIT_ASSERT(ctx->getFirstFileEntry()->isRequested());
-  CPPUNIT_ASSERT_EQUAL((size_t)0,
+  REQUIRE(ctx->getFirstFileEntry()->isRequested());
+  REQUIRE_EQ((size_t)0,
                        ctx->getFirstFileEntry()->getRemainingUris().size());
-  CPPUNIT_ASSERT(!ctx->isChecksumVerificationAvailable());
-  CPPUNIT_ASSERT(!ctx->isPieceHashVerificationAvailable());
-  CPPUNIT_ASSERT_EQUAL(4, group->getNumConcurrentCommand());
+  REQUIRE(!ctx->isChecksumVerificationAvailable());
+  REQUIRE(!ctx->isPieceHashVerificationAvailable());
+  REQUIRE_EQ(4, group->getNumConcurrentCommand());
 
   auto attrs = getEd2kAttrs(ctx);
-  CPPUNIT_ASSERT_EQUAL(std::string("aria2_next.bin"), attrs->link.name);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(std::string("aria2_next.bin"), attrs->link.name);
+  REQUIRE_EQ(
       std::string("0123456789abcdef0123456789abcdef"),
       util::toHex(attrs->link.hash));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrs->link.pieceHashes.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrs->servers.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), attrs->servers[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, attrs->servers[0].port);
+  REQUIRE_EQ((size_t)2, attrs->link.pieceHashes.size());
+  REQUIRE_EQ((size_t)2, attrs->servers.size());
+  REQUIRE_EQ(std::string("203.0.113.10"), attrs->servers[0].host);
+  REQUIRE_EQ((uint16_t)4661, attrs->servers[0].port);
 
   option_->remove(PREF_SPLIT);
   result.clear();
   createRequestGroupForUri(result, option_, uris);
-  CPPUNIT_ASSERT_EQUAL(ed2k::DEFAULT_PEER_CONNECTIONS,
+  REQUIRE_EQ(ed2k::DEFAULT_PEER_CONNECTIONS,
                        result[0]->getNumConcurrentCommand());
 }
 
@@ -363,9 +357,9 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KClientHash()
   std::vector<std::shared_ptr<RequestGroup>> result;
   createRequestGroupForUri(result, option_, uris);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  REQUIRE_EQ((size_t)1, result.size());
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT_EQUAL(std::string("01020304050e0708090a0b0c0d0e6f10"),
+  REQUIRE_EQ(std::string("01020304050e0708090a0b0c0d0e6f10"),
                        util::toHex(attrs->clientHash));
 }
 
@@ -426,11 +420,11 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KDefaultKadBootstrap()
     unsetenv("HOME");
   }
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  REQUIRE_EQ((size_t)1, result.size());
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT(attrs->kadRoutingTable);
-  CPPUNIT_ASSERT(!attrs->kadRoutingTable->getRouterNodes().empty());
-  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->clientHash),
+  REQUIRE(attrs->kadRoutingTable);
+  REQUIRE(!attrs->kadRoutingTable->getRouterNodes().empty());
+  REQUIRE_EQ(ed2k::ed2kHashToKadId(attrs->clientHash),
                        attrs->kadRoutingTable->snapshot().selfId);
 }
 
@@ -491,15 +485,15 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KDefaultMacKadBootstrap
     unsetenv("HOME");
   }
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+  REQUIRE_EQ((size_t)1, result.size());
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT(!attrs->servers.empty());
-  CPPUNIT_ASSERT(attrs->kadRoutingTable);
-  CPPUNIT_ASSERT_EQUAL((size_t)1,
+  REQUIRE(!attrs->servers.empty());
+  REQUIRE(attrs->kadRoutingTable);
+  REQUIRE_EQ((size_t)1,
                        attrs->kadRoutingTable->getRouterNodes().size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.2"),
+  REQUIRE_EQ(std::string("203.0.113.2"),
                        attrs->kadRoutingTable->getRouterNodes()[0].host);
-  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->clientHash),
+  REQUIRE_EQ(ed2k::ed2kHashToKadId(attrs->clientHash),
                        attrs->kadRoutingTable->snapshot().selfId);
 }
 
@@ -514,10 +508,10 @@ void DownloadHelperTest::testCreateEd2kSearchRequestGroupClientHash()
   auto group = createEd2kSearchRequestGroup(query, option_);
   auto attrs = getEd2kAttrs(group->getDownloadContext());
 
-  CPPUNIT_ASSERT(attrs->searchActive);
-  CPPUNIT_ASSERT_EQUAL(std::string("01020304050e0708090a0b0c0d0e6f10"),
+  REQUIRE(attrs->searchActive);
+  REQUIRE_EQ(std::string("01020304050e0708090a0b0c0d0e6f10"),
                        util::toHex(attrs->clientHash));
-  CPPUNIT_ASSERT(attrs->link.hash.empty());
+  REQUIRE(attrs->link.hash.empty());
 }
 
 void DownloadHelperTest::testCreateRequestGroupForUri_ED2KNodesDat()
@@ -557,15 +551,15 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KNodesDat()
   createRequestGroupForUri(result, option_, uris);
 
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT(!attrs->servers.empty());
-  CPPUNIT_ASSERT(attrs->kadRoutingTable);
-  CPPUNIT_ASSERT_EQUAL((size_t)1,
+  REQUIRE(!attrs->servers.empty());
+  REQUIRE(attrs->kadRoutingTable);
+  REQUIRE_EQ((size_t)1,
                        attrs->kadRoutingTable->getRouterNodes().size());
-  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->clientHash),
+  REQUIRE_EQ(ed2k::ed2kHashToKadId(attrs->clientHash),
                        attrs->kadRoutingTable->snapshot().selfId);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.1"),
+  REQUIRE_EQ(std::string("203.0.113.1"),
                        attrs->kadRoutingTable->getRouterNodes()[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672,
+  REQUIRE_EQ((uint16_t)4672,
                        attrs->kadRoutingTable->getRouterNodes()[0].port);
 }
 
@@ -600,18 +594,18 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KServerMetMetadata()
   createRequestGroupForUri(result, option_, uris);
 
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->servers.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->serverStates.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("1.2.3.4"), attrs->servers[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, attrs->servers[0].port);
-  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"),
+  REQUIRE_EQ((size_t)1, attrs->servers.size());
+  REQUIRE_EQ((size_t)1, attrs->serverStates.size());
+  REQUIRE_EQ(std::string("1.2.3.4"), attrs->servers[0].host);
+  REQUIRE_EQ((uint16_t)4661, attrs->servers[0].port);
+  REQUIRE_EQ(std::string("Peer Server"),
                        attrs->serverStates[0].name);
-  CPPUNIT_ASSERT_EQUAL(std::string("Primary ED2K server"),
+  REQUIRE_EQ(std::string("Primary ED2K server"),
                        attrs->serverStates[0].description);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)9000, attrs->serverStates[0].maxUsers);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x01020304,
+  REQUIRE_EQ((uint32_t)9000, attrs->serverStates[0].maxUsers);
+  REQUIRE_EQ((uint32_t)0x01020304,
                        attrs->serverStates[0].udpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4666,
+  REQUIRE_EQ((uint16_t)4666,
                        attrs->serverStates[0].tcpObfuscationPort);
 }
 
@@ -652,20 +646,20 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KKadRoutingState()
   createRequestGroupForUri(result, option_, uris);
 
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT(attrs->kadRoutingTable);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->kadRoutingTable->liveSize());
-  CPPUNIT_ASSERT_EQUAL((size_t)1,
+  REQUIRE(attrs->kadRoutingTable);
+  REQUIRE_EQ((size_t)1, attrs->kadRoutingTable->liveSize());
+  REQUIRE_EQ((size_t)1,
                        attrs->kadRoutingTable->getRouterNodes().size());
-  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->clientHash),
+  REQUIRE_EQ(ed2k::ed2kHashToKadId(attrs->clientHash),
                        attrs->kadRoutingTable->snapshot().selfId);
   auto closest = attrs->kadRoutingTable->findClosest(self, 1, false);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, closest.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.8"), closest[0].host);
-  CPPUNIT_ASSERT_EQUAL((int64_t)500, attrs->lastKadFirewalledCheck);
-  CPPUNIT_ASSERT_EQUAL((int64_t)600, attrs->lastKadSourcePublish);
-  CPPUNIT_ASSERT(!attrs->kadFirewalled);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->kadObservedAddresses.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.55"),
+  REQUIRE_EQ((size_t)1, closest.size());
+  REQUIRE_EQ(std::string("203.0.113.8"), closest[0].host);
+  REQUIRE_EQ((int64_t)500, attrs->lastKadFirewalledCheck);
+  REQUIRE_EQ((int64_t)600, attrs->lastKadSourcePublish);
+  REQUIRE(!attrs->kadFirewalled);
+  REQUIRE_EQ((size_t)1, attrs->kadObservedAddresses.size());
+  REQUIRE_EQ(std::string("203.0.113.55"),
                        attrs->kadObservedAddresses[0]);
 }
 
@@ -700,22 +694,22 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KServerState()
   createRequestGroupForUri(result, option_, uris);
 
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->serverStates.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->servers.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), attrs->servers[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, attrs->servers[0].port);
+  REQUIRE_EQ((size_t)1, attrs->serverStates.size());
+  REQUIRE_EQ((size_t)1, attrs->servers.size());
+  REQUIRE_EQ(std::string("203.0.113.10"), attrs->servers[0].host);
+  REQUIRE_EQ((uint16_t)4661, attrs->servers[0].port);
   const auto& restored = attrs->serverStates[0];
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), restored.endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, restored.endpoint.port);
-  CPPUNIT_ASSERT_EQUAL(std::string("Peer Server"), restored.name);
-  CPPUNIT_ASSERT_EQUAL(std::string("Primary ED2K server"),
+  REQUIRE_EQ(std::string("203.0.113.10"), restored.endpoint.host);
+  REQUIRE_EQ((uint16_t)4661, restored.endpoint.port);
+  REQUIRE_EQ(std::string("Peer Server"), restored.name);
+  REQUIRE_EQ(std::string("Primary ED2K server"),
                        restored.description);
-  CPPUNIT_ASSERT(restored.handshakeCompleted);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x04030201, restored.clientId);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa, restored.tcpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1234, restored.users);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)5678, restored.files);
-  CPPUNIT_ASSERT_EQUAL(std::string("hello"), restored.lastMessage);
+  REQUIRE(restored.handshakeCompleted);
+  REQUIRE_EQ((uint32_t)0x04030201, restored.clientId);
+  REQUIRE_EQ((uint32_t)0x55aa, restored.tcpFlags);
+  REQUIRE_EQ((uint32_t)1234, restored.users);
+  REQUIRE_EQ((uint32_t)5678, restored.files);
+  REQUIRE_EQ(std::string("hello"), restored.lastMessage);
 }
 
 void DownloadHelperTest::testCreateRequestGroupForUri_ED2KMultipleServerStates()
@@ -742,13 +736,13 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KMultipleServerStates()
   createRequestGroupForUri(result, option_, uris);
 
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrs->serverStates.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"),
+  REQUIRE_EQ((size_t)2, attrs->serverStates.size());
+  REQUIRE_EQ(std::string("203.0.113.10"),
                        attrs->serverStates[0].endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1234, attrs->serverStates[0].users);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.11"),
+  REQUIRE_EQ((uint32_t)1234, attrs->serverStates[0].users);
+  REQUIRE_EQ(std::string("203.0.113.11"),
                        attrs->serverStates[1].endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)5678, attrs->serverStates[1].users);
+  REQUIRE_EQ((uint32_t)5678, attrs->serverStates[1].users);
 }
 
 void DownloadHelperTest::testCreateRequestGroupForUri_ED2KDefaultServers()
@@ -763,9 +757,9 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KDefaultServers()
   createRequestGroupForUri(result, option_, uris);
 
   auto attrs = getEd2kAttrs(result[0]->getDownloadContext());
-  CPPUNIT_ASSERT_EQUAL((size_t)7, attrs->servers.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("45.82.80.155"), attrs->servers[0].host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)5687, attrs->servers[0].port);
+  REQUIRE_EQ((size_t)7, attrs->servers.size());
+  REQUIRE_EQ(std::string("45.82.80.155"), attrs->servers[0].host);
+  REQUIRE_EQ((uint16_t)5687, attrs->servers[0].port);
 }
 
 void DownloadHelperTest::testEd2kPeerDeduplication()
@@ -775,34 +769,34 @@ void DownloadHelperTest::testEd2kPeerDeduplication()
   peer.host = "203.0.113.10";
   peer.port = 4662;
 
-  CPPUNIT_ASSERT(addEd2kPeer(&attrs, peer));
-  CPPUNIT_ASSERT(!addEd2kPeer(&attrs, peer));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.peers.size());
+  REQUIRE(addEd2kPeer(&attrs, peer));
+  REQUIRE(!addEd2kPeer(&attrs, peer));
+  REQUIRE_EQ((size_t)1, attrs.peers.size());
   auto state = getEd2kPeerState(&attrs, peer);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), state->endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, state->endpoint.port);
+  REQUIRE(state);
+  REQUIRE_EQ(std::string("203.0.113.10"), state->endpoint.host);
+  REQUIRE_EQ((uint16_t)4662, state->endpoint.port);
 
   peer.port = 4663;
-  CPPUNIT_ASSERT(addEd2kPeer(&attrs, peer));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrs.peers.size());
+  REQUIRE(addEd2kPeer(&attrs, peer));
+  REQUIRE_EQ((size_t)2, attrs.peers.size());
 
   std::vector<bool> partStatus;
   partStatus.push_back(true);
   partStatus.push_back(false);
-  CPPUNIT_ASSERT(markEd2kPeerQueued(&attrs, peer, 7, partStatus));
+  REQUIRE(markEd2kPeerQueued(&attrs, peer, 7, partStatus));
   state = getEd2kPeerState(&attrs, peer);
-  CPPUNIT_ASSERT(state->queued);
-  CPPUNIT_ASSERT(!state->dead);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)7, state->queueRank);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, state->partStatus.size());
+  REQUIRE(state->queued);
+  REQUIRE(!state->dead);
+  REQUIRE_EQ((uint16_t)7, state->queueRank);
+  REQUIRE_EQ((size_t)2, state->partStatus.size());
 
-  CPPUNIT_ASSERT(markEd2kPeerDead(&attrs, peer, 100, 30));
-  CPPUNIT_ASSERT(!state->queued);
-  CPPUNIT_ASSERT(state->dead);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1, state->failCount);
-  CPPUNIT_ASSERT_EQUAL((int64_t)100, state->lastFailureTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)130, state->nextRetryTime);
+  REQUIRE(markEd2kPeerDead(&attrs, peer, 100, 30));
+  REQUIRE(!state->queued);
+  REQUIRE(state->dead);
+  REQUIRE_EQ((uint32_t)1, state->failCount);
+  REQUIRE_EQ((int64_t)100, state->lastFailureTime);
+  REQUIRE_EQ((int64_t)130, state->nextRetryTime);
 }
 
 void DownloadHelperTest::testEd2kKadSourcePeerMergePreservesUdpMetadata()
@@ -816,40 +810,40 @@ void DownloadHelperTest::testEd2kKadSourcePeerMergePreservesUdpMetadata()
   source.udpPort = 4672;
   source.sourceType = 1;
 
-  CPPUNIT_ASSERT(addEd2kKadSourcePeer(&attrs, source,
+  REQUIRE(addEd2kKadSourcePeer(&attrs, source,
                                       ed2k::PEER_SOURCE_KAD));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.peers.size());
+  REQUIRE_EQ((size_t)1, attrs.peers.size());
   auto state = getEd2kPeerState(&attrs, source.endpoint);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT_EQUAL(std::string(ed2k::HASH_LENGTH, '\x44'),
+  REQUIRE(state);
+  REQUIRE_EQ(std::string(ed2k::HASH_LENGTH, '\x44'),
                        state->endpoint.userHash);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0x03, state->endpoint.cryptOptions);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, state->udpPort);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)4, state->udpVersion);
+  REQUIRE_EQ((uint16_t)0x03, state->endpoint.cryptOptions);
+  REQUIRE_EQ((uint16_t)4672, state->udpPort);
+  REQUIRE_EQ((uint8_t)4, state->udpVersion);
 
   source.udpPort = 4682;
-  CPPUNIT_ASSERT(!addEd2kKadSourcePeer(&attrs, source,
+  REQUIRE(!addEd2kKadSourcePeer(&attrs, source,
                                        ed2k::PEER_SOURCE_KAD));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4682, state->udpPort);
+  REQUIRE_EQ((uint16_t)4682, state->udpPort);
 
   source.endpoint.host = "203.0.113.45";
   source.sourceType = 3;
   source.buddyIp = ed2k::ipv4ToEndpointValue("203.0.113.99");
   source.buddyPort = 4672;
   source.buddyHash = std::string(ed2k::HASH_LENGTH, '\x55');
-  CPPUNIT_ASSERT(!addEd2kKadSourcePeer(&attrs, source,
+  REQUIRE(!addEd2kKadSourcePeer(&attrs, source,
                                        ed2k::PEER_SOURCE_KAD));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.peers.size());
+  REQUIRE_EQ((size_t)1, attrs.peers.size());
   auto callbackState = getEd2kPeerState(&attrs, source.endpoint);
-  CPPUNIT_ASSERT(callbackState);
-  CPPUNIT_ASSERT(callbackState->lowId);
-  CPPUNIT_ASSERT(callbackState->callbackRequested);
-  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::REQUESTED,
+  REQUIRE(callbackState);
+  REQUIRE(callbackState->lowId);
+  REQUIRE(callbackState->callbackRequested);
+  REQUIRE_EQ(ed2k::LowIdCallbackState::REQUESTED,
                        callbackState->lowIdCallbackState);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.99"),
+  REQUIRE_EQ(std::string("203.0.113.99"),
                        callbackState->callbackBuddy.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, callbackState->callbackBuddy.port);
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ((uint16_t)4672, callbackState->callbackBuddy.port);
+  REQUIRE_EQ(
       ed2k::ed2kHashToKadId(std::string(ed2k::HASH_LENGTH, '\x55')),
       callbackState->callbackBuddyId);
 
@@ -860,17 +854,17 @@ void DownloadHelperTest::testEd2kKadSourcePeerMergePreservesUdpMetadata()
   source.buddyPort = 0;
   source.buddyHash.clear();
   source.buddyId.clear();
-  CPPUNIT_ASSERT(!addEd2kKadSourcePeer(&attrs, source,
+  REQUIRE(!addEd2kKadSourcePeer(&attrs, source,
                                        ed2k::PEER_SOURCE_KAD));
   auto directCallbackState = getEd2kPeerState(&attrs, source.endpoint);
-  CPPUNIT_ASSERT(directCallbackState);
-  CPPUNIT_ASSERT(directCallbackState->lowId);
-  CPPUNIT_ASSERT(directCallbackState->callbackRequested);
-  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::REQUESTED,
+  REQUIRE(directCallbackState);
+  REQUIRE(directCallbackState->lowId);
+  REQUIRE(directCallbackState->callbackRequested);
+  REQUIRE_EQ(ed2k::LowIdCallbackState::REQUESTED,
                        directCallbackState->lowIdCallbackState);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4692, directCallbackState->udpPort);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)4, directCallbackState->udpVersion);
-  CPPUNIT_ASSERT_EQUAL(ed2k::CallbackKind::DIRECT,
+  REQUIRE_EQ((uint16_t)4692, directCallbackState->udpPort);
+  REQUIRE_EQ((uint8_t)4, directCallbackState->udpVersion);
+  REQUIRE_EQ(ed2k::CallbackKind::DIRECT,
                        directCallbackState->callbackKind);
 }
 
@@ -890,38 +884,38 @@ void DownloadHelperTest::testEd2kServerSourceMergeSkipsUnsupportedSources()
   cryptRequired.endpoint.port = 4662;
   cryptRequired.endpoint.cryptOptions = ed2k::SOURCE_CRYPT_REQUIRE;
 
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ(
       (size_t)1,
       mergeEd2kServerSources(
           &attrs, std::vector<ed2k::FoundSource>{direct, lowId, cryptRequired},
           ed2k::PEER_SOURCE_SERVER));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.peers.size());
-  CPPUNIT_ASSERT_EQUAL(direct.endpoint.host, attrs.peers[0].host);
+  REQUIRE_EQ((size_t)1, attrs.peers.size());
+  REQUIRE_EQ(direct.endpoint.host, attrs.peers[0].host);
   auto state = getEd2kPeerState(&attrs, direct.endpoint);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT((state->sourceFlags & ed2k::PEER_SOURCE_SERVER) != 0);
+  REQUIRE(state);
+  REQUIRE((state->sourceFlags & ed2k::PEER_SOURCE_SERVER) != 0);
   state = getEd2kPeerState(&attrs, lowId.endpoint);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT(state->lowId);
-  CPPUNIT_ASSERT(state->callbackImpossible);
-  CPPUNIT_ASSERT(!state->callbackRequested);
-  CPPUNIT_ASSERT((state->sourceFlags & ed2k::PEER_SOURCE_SERVER) != 0);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.peers.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrs.peerStates.size());
-  CPPUNIT_ASSERT(!ed2k::selectConnectPeer(attrs.peerStates, 0)->lowId);
+  REQUIRE(state);
+  REQUIRE(state->lowId);
+  REQUIRE(state->callbackImpossible);
+  REQUIRE(!state->callbackRequested);
+  REQUIRE((state->sourceFlags & ed2k::PEER_SOURCE_SERVER) != 0);
+  REQUIRE_EQ((size_t)1, attrs.peers.size());
+  REQUIRE_EQ((size_t)2, attrs.peerStates.size());
+  REQUIRE(!ed2k::selectConnectPeer(attrs.peerStates, 0)->lowId);
 
   Ed2kAttribute callbackAttrs;
-  CPPUNIT_ASSERT(!addEd2kFoundSource(
+  REQUIRE(!addEd2kFoundSource(
       &callbackAttrs, lowId, ed2k::PEER_SOURCE_SERVER, true));
   state = getEd2kPeerState(&callbackAttrs, lowId.endpoint);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT(state->lowId);
-  CPPUNIT_ASSERT(state->callbackRequested);
-  CPPUNIT_ASSERT(!state->callbackImpossible);
-  CPPUNIT_ASSERT(!ed2k::selectConnectPeer(callbackAttrs.peerStates, 0));
-  CPPUNIT_ASSERT(markEd2kCallbackFailed(&callbackAttrs, lowId.clientId));
-  CPPUNIT_ASSERT(!state->callbackRequested);
-  CPPUNIT_ASSERT(state->callbackImpossible);
+  REQUIRE(state);
+  REQUIRE(state->lowId);
+  REQUIRE(state->callbackRequested);
+  REQUIRE(!state->callbackImpossible);
+  REQUIRE(!ed2k::selectConnectPeer(callbackAttrs.peerStates, 0));
+  REQUIRE(markEd2kCallbackFailed(&callbackAttrs, lowId.clientId));
+  REQUIRE(!state->callbackRequested);
+  REQUIRE(state->callbackImpossible);
 }
 
 void DownloadHelperTest::testEd2kSourceExchangeMergePolicy()
@@ -947,14 +941,14 @@ void DownloadHelperTest::testEd2kSourceExchangeMergePolicy()
 
   std::vector<ed2k::SourceExchangeEntry> entries{first, duplicate, self,
                                                  loopback};
-  CPPUNIT_ASSERT_EQUAL((size_t)1,
+  REQUIRE_EQ((size_t)1,
                        mergeEd2kSourceExchangePeers(&attrs, entries, remote));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.peers.size());
+  REQUIRE_EQ((size_t)1, attrs.peers.size());
   auto state = getEd2kPeerState(&attrs, first.endpoint);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT_EQUAL(userHash, state->endpoint.userHash);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0x83, state->endpoint.cryptOptions);
-  CPPUNIT_ASSERT((state->sourceFlags & ed2k::PEER_SOURCE_EXCHANGE) != 0);
+  REQUIRE(state);
+  REQUIRE_EQ(userHash, state->endpoint.userHash);
+  REQUIRE_EQ((uint16_t)0x83, state->endpoint.cryptOptions);
+  REQUIRE((state->sourceFlags & ed2k::PEER_SOURCE_EXCHANGE) != 0);
 }
 
 void DownloadHelperTest::testEd2kSourcePolicyRanksSources()
@@ -977,15 +971,15 @@ void DownloadHelperTest::testEd2kSourcePolicyRanksSources()
 
   auto selected = ed2k::selectConnectPeer(attrs.peerStates, 0);
 
-  CPPUNIT_ASSERT(selected);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.11"), selected->endpoint.host);
+  REQUIRE(selected);
+  REQUIRE_EQ(std::string("203.0.113.11"), selected->endpoint.host);
 
   auto kadState = getEd2kPeerState(&attrs, kad);
-  CPPUNIT_ASSERT(markEd2kPeerDead(&attrs, kad, 10, 30));
+  REQUIRE(markEd2kPeerDead(&attrs, kad, 10, 30));
   selected = ed2k::selectConnectPeer(attrs.peerStates, 20);
 
-  CPPUNIT_ASSERT(selected);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), selected->endpoint.host);
+  REQUIRE(selected);
+  REQUIRE_EQ(std::string("203.0.113.10"), selected->endpoint.host);
 
   ed2k::Endpoint cryptRequired;
   cryptRequired.host = "203.0.113.13";
@@ -996,38 +990,38 @@ void DownloadHelperTest::testEd2kSourcePolicyRanksSources()
   cryptState->failCount = 0;
   selected = ed2k::selectConnectPeer(attrs.peerStates, 40);
 
-  CPPUNIT_ASSERT(selected);
-  CPPUNIT_ASSERT(selected->endpoint.host != cryptRequired.host);
+  REQUIRE(selected);
+  REQUIRE(selected->endpoint.host != cryptRequired.host);
 }
 
 void DownloadHelperTest::testEd2kSourcePolicyClassifiesLifecycle()
 {
   ed2k::PeerState peer;
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::USEFUL,
+  REQUIRE_EQ(ed2k::PeerLifecycle::USEFUL,
                        ed2k::classifyPeerLifecycle(peer, 100));
   peer.connecting = true;
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::CONNECTING,
+  REQUIRE_EQ(ed2k::PeerLifecycle::CONNECTING,
                        ed2k::classifyPeerLifecycle(peer, 100));
   peer.connecting = false;
   peer.queued = true;
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::QUEUED,
+  REQUIRE_EQ(ed2k::PeerLifecycle::QUEUED,
                        ed2k::classifyPeerLifecycle(peer, 100));
   peer.outOfParts = true;
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::NO_NEEDED_PARTS,
+  REQUIRE_EQ(ed2k::PeerLifecycle::NO_NEEDED_PARTS,
                        ed2k::classifyPeerLifecycle(peer, 100));
   peer.outOfParts = false;
   peer.dead = true;
   peer.nextRetryTime = 150;
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::DEAD,
+  REQUIRE_EQ(ed2k::PeerLifecycle::DEAD,
                        ed2k::classifyPeerLifecycle(peer, 100));
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::RETRYING,
+  REQUIRE_EQ(ed2k::PeerLifecycle::RETRYING,
                        ed2k::classifyPeerLifecycle(peer, 160));
   peer.noFile = true;
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::NO_FILE,
+  REQUIRE_EQ(ed2k::PeerLifecycle::NO_FILE,
                        ed2k::classifyPeerLifecycle(peer, 160));
   peer.noFile = false;
   peer.cancelled = true;
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::CANCELLED,
+  REQUIRE_EQ(ed2k::PeerLifecycle::CANCELLED,
                        ed2k::classifyPeerLifecycle(peer, 160));
 }
 
@@ -1040,40 +1034,40 @@ void DownloadHelperTest::testEd2kLowIdCallbackStateTransitions()
   source.clientId = 0x00000120;
   source.lowId = true;
 
-  CPPUNIT_ASSERT(!addEd2kFoundSource(&attrs, source,
+  REQUIRE(!addEd2kFoundSource(&attrs, source,
                                      ed2k::PEER_SOURCE_SERVER, true));
   auto state = getEd2kPeerState(&attrs, source.endpoint);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::REQUESTED,
+  REQUIRE(state);
+  REQUIRE_EQ(ed2k::LowIdCallbackState::REQUESTED,
                        state->lowIdCallbackState);
-  CPPUNIT_ASSERT(state->callbackRequested);
-  CPPUNIT_ASSERT(!state->callbackImpossible);
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::CALLBACK_WAITING,
+  REQUIRE(state->callbackRequested);
+  REQUIRE(!state->callbackImpossible);
+  REQUIRE_EQ(ed2k::PeerLifecycle::CALLBACK_WAITING,
                        ed2k::classifyPeerLifecycle(*state, 100));
-  CPPUNIT_ASSERT(markEd2kCallbackRequestSent(&attrs, source.clientId,
+  REQUIRE(markEd2kCallbackRequestSent(&attrs, source.clientId,
                                              105, 45));
-  CPPUNIT_ASSERT_EQUAL((int64_t)105, state->lastCallbackTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)150, state->callbackDeadline);
+  REQUIRE_EQ((int64_t)105, state->lastCallbackTime);
+  REQUIRE_EQ((int64_t)150, state->callbackDeadline);
 
   ed2k::Endpoint callbackPeer;
   callbackPeer.host = "203.0.113.44";
   callbackPeer.port = 4662;
-  CPPUNIT_ASSERT(markEd2kCallbackAccepted(&attrs, source.clientId,
+  REQUIRE(markEd2kCallbackAccepted(&attrs, source.clientId,
                                           callbackPeer, 120));
   state = getEd2kPeerState(&attrs, callbackPeer);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::ACCEPTED,
+  REQUIRE(state);
+  REQUIRE_EQ(ed2k::LowIdCallbackState::ACCEPTED,
                        state->lowIdCallbackState);
-  CPPUNIT_ASSERT(!state->lowId);
-  CPPUNIT_ASSERT(!state->callbackRequested);
-  CPPUNIT_ASSERT(!state->callbackImpossible);
-  CPPUNIT_ASSERT_EQUAL(source.clientId, state->clientId);
-  CPPUNIT_ASSERT_EQUAL((int64_t)120, state->lastCallbackTime);
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::USEFUL,
+  REQUIRE(!state->lowId);
+  REQUIRE(!state->callbackRequested);
+  REQUIRE(!state->callbackImpossible);
+  REQUIRE_EQ(source.clientId, state->clientId);
+  REQUIRE_EQ((int64_t)120, state->lastCallbackTime);
+  REQUIRE_EQ(ed2k::PeerLifecycle::USEFUL,
                        ed2k::classifyPeerLifecycle(*state, 121));
 
-  CPPUNIT_ASSERT(markEd2kCallbackCompleted(&attrs, callbackPeer));
-  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::COMPLETED,
+  REQUIRE(markEd2kCallbackCompleted(&attrs, callbackPeer));
+  REQUIRE_EQ(ed2k::LowIdCallbackState::COMPLETED,
                        state->lowIdCallbackState);
 
   Ed2kAttribute directAttrs;
@@ -1083,50 +1077,50 @@ void DownloadHelperTest::testEd2kLowIdCallbackStateTransitions()
   direct.endpoint.userHash = std::string(ed2k::HASH_LENGTH, '\x44');
   direct.udpPort = 4672;
   direct.sourceType = 6;
-  CPPUNIT_ASSERT(!addEd2kKadSourcePeer(&directAttrs, direct,
+  REQUIRE(!addEd2kKadSourcePeer(&directAttrs, direct,
                                        ed2k::PEER_SOURCE_KAD));
   auto directState = getEd2kPeerState(&directAttrs, direct.endpoint);
-  CPPUNIT_ASSERT(directState);
+  REQUIRE(directState);
   ed2k::Endpoint directPeer = direct.endpoint;
   directPeer.cryptOptions = ed2k::SOURCE_CRYPT_SUPPORT;
-  CPPUNIT_ASSERT(markEd2kDirectCallbackAccepted(&directAttrs, directPeer,
+  REQUIRE(markEd2kDirectCallbackAccepted(&directAttrs, directPeer,
                                                 130));
-  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::ACCEPTED,
+  REQUIRE_EQ(ed2k::LowIdCallbackState::ACCEPTED,
                        directState->lowIdCallbackState);
-  CPPUNIT_ASSERT(!directState->lowId);
-  CPPUNIT_ASSERT(!directState->callbackRequested);
-  CPPUNIT_ASSERT_EQUAL(ed2k::CallbackKind::NONE,
+  REQUIRE(!directState->lowId);
+  REQUIRE(!directState->callbackRequested);
+  REQUIRE_EQ(ed2k::CallbackKind::NONE,
                        directState->callbackKind);
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerLifecycle::USEFUL,
+  REQUIRE_EQ(ed2k::PeerLifecycle::USEFUL,
                        ed2k::classifyPeerLifecycle(*directState, 131));
 
   Ed2kAttribute failAttrs;
-  CPPUNIT_ASSERT(!addEd2kFoundSource(&failAttrs, source,
+  REQUIRE(!addEd2kFoundSource(&failAttrs, source,
                                      ed2k::PEER_SOURCE_SERVER, true));
   state = getEd2kPeerState(&failAttrs, source.endpoint);
-  CPPUNIT_ASSERT(markEd2kCallbackFailed(&failAttrs, source.clientId, 180, 30));
-  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::FAILED,
+  REQUIRE(markEd2kCallbackFailed(&failAttrs, source.clientId, 180, 30));
+  REQUIRE_EQ(ed2k::LowIdCallbackState::FAILED,
                        state->lowIdCallbackState);
-  CPPUNIT_ASSERT(state->callbackImpossible);
-  CPPUNIT_ASSERT(state->dead);
-  CPPUNIT_ASSERT_EQUAL((int64_t)210, state->nextRetryTime);
+  REQUIRE(state->callbackImpossible);
+  REQUIRE(state->dead);
+  REQUIRE_EQ((int64_t)210, state->nextRetryTime);
 
-  CPPUNIT_ASSERT(expireEd2kCallbackWaits(&failAttrs, 211) == 1);
-  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::IMPOSSIBLE,
+  REQUIRE(expireEd2kCallbackWaits(&failAttrs, 211) == 1);
+  REQUIRE_EQ(ed2k::LowIdCallbackState::IMPOSSIBLE,
                        state->lowIdCallbackState);
-  CPPUNIT_ASSERT(!state->dead);
-  CPPUNIT_ASSERT(state->callbackImpossible);
+  REQUIRE(!state->dead);
+  REQUIRE(state->callbackImpossible);
 
   Ed2kAttribute timeoutAttrs;
-  CPPUNIT_ASSERT(!addEd2kFoundSource(&timeoutAttrs, source,
+  REQUIRE(!addEd2kFoundSource(&timeoutAttrs, source,
                                      ed2k::PEER_SOURCE_SERVER, true));
   state = getEd2kPeerState(&timeoutAttrs, source.endpoint);
-  CPPUNIT_ASSERT(markEd2kCallbackRequestSent(&timeoutAttrs, source.clientId,
+  REQUIRE(markEd2kCallbackRequestSent(&timeoutAttrs, source.clientId,
                                              300, 45));
-  CPPUNIT_ASSERT(expireEd2kCallbackWaits(&timeoutAttrs, 345) == 1);
-  CPPUNIT_ASSERT_EQUAL(ed2k::LowIdCallbackState::TIMED_OUT,
+  REQUIRE(expireEd2kCallbackWaits(&timeoutAttrs, 345) == 1);
+  REQUIRE_EQ(ed2k::LowIdCallbackState::TIMED_OUT,
                        state->lowIdCallbackState);
-  CPPUNIT_ASSERT(state->callbackImpossible);
+  REQUIRE(state->callbackImpossible);
 }
 
 void DownloadHelperTest::testEd2kPeerActionPolicySelectsConnect()
@@ -1142,14 +1136,14 @@ void DownloadHelperTest::testEd2kPeerActionPolicySelectsConnect()
 
   auto action = ed2k::selectPeerAction(peers, 100, 1);
 
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::CONNECT, action.type);
-  CPPUNIT_ASSERT(action.peer);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.11"), action.peer->endpoint.host);
+  REQUIRE_EQ(ed2k::PeerActionType::CONNECT, action.type);
+  REQUIRE(action.peer);
+  REQUIRE_EQ(std::string("203.0.113.11"), action.peer->endpoint.host);
   action.peer->connecting = true;
 
   action = ed2k::selectPeerAction(peers, 100, 1);
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::WAIT, action.type);
-  CPPUNIT_ASSERT(!action.peer);
+  REQUIRE_EQ(ed2k::PeerActionType::WAIT, action.type);
+  REQUIRE(!action.peer);
 }
 
 void DownloadHelperTest::testEd2kPeerActionPolicyReportsQueuedReask()
@@ -1162,9 +1156,9 @@ void DownloadHelperTest::testEd2kPeerActionPolicyReportsQueuedReask()
 
   auto action = ed2k::selectPeerAction(peers, 100, 1);
 
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::REASK, action.type);
-  CPPUNIT_ASSERT(action.peer);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)12, action.peer->queueRank);
+  REQUIRE_EQ(ed2k::PeerActionType::REASK, action.type);
+  REQUIRE(action.peer);
+  REQUIRE_EQ((uint16_t)12, action.peer->queueRank);
 }
 
 void DownloadHelperTest::testEd2kPeerActionPolicyHandlesCallbackAndExpiry()
@@ -1185,17 +1179,17 @@ void DownloadHelperTest::testEd2kPeerActionPolicyHandlesCallbackAndExpiry()
   peers[2].noFile = true;
 
   auto action = ed2k::selectPeerAction(peers, 100, 1);
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::REQUEST_CALLBACK, action.type);
-  CPPUNIT_ASSERT(action.peer);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)42, action.peer->clientId);
+  REQUIRE_EQ(ed2k::PeerActionType::REQUEST_CALLBACK, action.type);
+  REQUIRE(action.peer);
+  REQUIRE_EQ((uint32_t)42, action.peer->clientId);
 
   peers[0].callbackRequested = false;
   peers[0].callbackImpossible = true;
   peers[0].lowIdCallbackState = ed2k::LowIdCallbackState::IMPOSSIBLE;
   action = ed2k::selectPeerAction(peers, 130, 1);
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::RETRY, action.type);
-  CPPUNIT_ASSERT(action.peer);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.11"), action.peer->endpoint.host);
+  REQUIRE_EQ(ed2k::PeerActionType::RETRY, action.type);
+  REQUIRE(action.peer);
+  REQUIRE_EQ(std::string("203.0.113.11"), action.peer->endpoint.host);
 }
 
 void DownloadHelperTest::testEd2kPeerActionPolicyIsolatesUnreachableLowId()
@@ -1212,15 +1206,15 @@ void DownloadHelperTest::testEd2kPeerActionPolicyIsolatesUnreachableLowId()
 
   auto action = ed2k::selectPeerAction(peers, 100, 1);
 
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::CONNECT, action.type);
-  CPPUNIT_ASSERT(action.peer);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.12"), action.peer->endpoint.host);
-  CPPUNIT_ASSERT(!ed2k::selectConnectPeer(peers, 100)->lowId);
+  REQUIRE_EQ(ed2k::PeerActionType::CONNECT, action.type);
+  REQUIRE(action.peer);
+  REQUIRE_EQ(std::string("203.0.113.12"), action.peer->endpoint.host);
+  REQUIRE(!ed2k::selectConnectPeer(peers, 100)->lowId);
 
   peers[1].connecting = true;
   action = ed2k::selectPeerAction(peers, 100, 1);
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::WAIT, action.type);
-  CPPUNIT_ASSERT(!action.peer);
+  REQUIRE_EQ(ed2k::PeerActionType::WAIT, action.type);
+  REQUIRE(!action.peer);
 }
 
 void DownloadHelperTest::testEd2kConnectPolicyIgnoresNonConnectActions()
@@ -1241,8 +1235,8 @@ void DownloadHelperTest::testEd2kConnectPolicyIgnoresNonConnectActions()
 
   auto selected = ed2k::selectConnectPeer(peers, 130, 1);
 
-  CPPUNIT_ASSERT(selected);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.12"), selected->endpoint.host);
+  REQUIRE(selected);
+  REQUIRE_EQ(std::string("203.0.113.12"), selected->endpoint.host);
 }
 
 void DownloadHelperTest::testEd2kSourcePolicyExpiresDeadSources()
@@ -1252,18 +1246,18 @@ void DownloadHelperTest::testEd2kSourcePolicyExpiresDeadSources()
   peer.host = "203.0.113.10";
   peer.port = 4662;
   addEd2kPeer(&attrs, peer, ed2k::PEER_SOURCE_SERVER);
-  CPPUNIT_ASSERT(markEd2kPeerDead(&attrs, peer, 100, 30));
+  REQUIRE(markEd2kPeerDead(&attrs, peer, 100, 30));
   auto state = getEd2kPeerState(&attrs, peer);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT(state->dead);
-  CPPUNIT_ASSERT(state->noFile);
+  REQUIRE(state);
+  REQUIRE(state->dead);
+  REQUIRE(state->noFile);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)0, expireEd2kDeadSources(&attrs, 120));
-  CPPUNIT_ASSERT(state->dead);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, expireEd2kDeadSources(&attrs, 131));
-  CPPUNIT_ASSERT(!state->dead);
-  CPPUNIT_ASSERT(!state->noFile);
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, state->nextRetryTime);
+  REQUIRE_EQ((size_t)0, expireEd2kDeadSources(&attrs, 120));
+  REQUIRE(state->dead);
+  REQUIRE_EQ((size_t)1, expireEd2kDeadSources(&attrs, 131));
+  REQUIRE(!state->dead);
+  REQUIRE(!state->noFile);
+  REQUIRE_EQ((int64_t)0, state->nextRetryTime);
 }
 
 void DownloadHelperTest::testEd2kPeerUdpReaskStateTransitions()
@@ -1273,35 +1267,35 @@ void DownloadHelperTest::testEd2kPeerUdpReaskStateTransitions()
   peer.host = "203.0.113.10";
   peer.port = 4662;
   addEd2kPeer(&attrs, peer, ed2k::PEER_SOURCE_SERVER);
-  CPPUNIT_ASSERT(markEd2kPeerQueued(&attrs, peer, 7,
+  REQUIRE(markEd2kPeerQueued(&attrs, peer, 7,
                                     std::vector<bool>{true, false}));
   auto state = getEd2kPeerState(&attrs, peer);
   state->udpPort = 4672;
   state->udpVersion = 4;
 
-  CPPUNIT_ASSERT(markEd2kPeerUdpReaskSent(&attrs, peer, 100));
-  CPPUNIT_ASSERT(state->udpReaskPending);
-  CPPUNIT_ASSERT_EQUAL((int64_t)100, state->lastUdpReaskTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)1400, state->nextUdpReaskTime);
+  REQUIRE(markEd2kPeerUdpReaskSent(&attrs, peer, 100));
+  REQUIRE(state->udpReaskPending);
+  REQUIRE_EQ((int64_t)100, state->lastUdpReaskTime);
+  REQUIRE_EQ((int64_t)1400, state->nextUdpReaskTime);
 
-  CPPUNIT_ASSERT(markEd2kPeerUdpReaskAck(&attrs, peer, 3,
+  REQUIRE(markEd2kPeerUdpReaskAck(&attrs, peer, 3,
                                          std::vector<bool>{false, true},
                                          120));
-  CPPUNIT_ASSERT(!state->udpReaskPending);
-  CPPUNIT_ASSERT(!state->remoteQueueFull);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)3, state->queueRank);
-  CPPUNIT_ASSERT_EQUAL((int64_t)120, state->lastUdpReaskTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)1420, state->nextUdpReaskTime);
-  CPPUNIT_ASSERT_EQUAL((size_t)2, state->partStatus.size());
-  CPPUNIT_ASSERT(!state->partStatus[0]);
-  CPPUNIT_ASSERT(state->partStatus[1]);
+  REQUIRE(!state->udpReaskPending);
+  REQUIRE(!state->remoteQueueFull);
+  REQUIRE_EQ((uint16_t)3, state->queueRank);
+  REQUIRE_EQ((int64_t)120, state->lastUdpReaskTime);
+  REQUIRE_EQ((int64_t)1420, state->nextUdpReaskTime);
+  REQUIRE_EQ((size_t)2, state->partStatus.size());
+  REQUIRE(!state->partStatus[0]);
+  REQUIRE(state->partStatus[1]);
 
-  CPPUNIT_ASSERT(markEd2kPeerQueueFull(&attrs, peer, 200, 30));
-  CPPUNIT_ASSERT(!state->udpReaskPending);
-  CPPUNIT_ASSERT(state->remoteQueueFull);
-  CPPUNIT_ASSERT(state->dead);
-  CPPUNIT_ASSERT(!state->noFile);
-  CPPUNIT_ASSERT_EQUAL((int64_t)230, state->nextRetryTime);
+  REQUIRE(markEd2kPeerQueueFull(&attrs, peer, 200, 30));
+  REQUIRE(!state->udpReaskPending);
+  REQUIRE(state->remoteQueueFull);
+  REQUIRE(state->dead);
+  REQUIRE(!state->noFile);
+  REQUIRE_EQ((int64_t)230, state->nextRetryTime);
 }
 
 void DownloadHelperTest::testEd2kPeerUdpReaskReplyMatchesUdpPort()
@@ -1320,16 +1314,16 @@ void DownloadHelperTest::testEd2kPeerUdpReaskReplyMatchesUdpPort()
   ed2k::Endpoint udpPeer = peer;
   udpPeer.port = 4672;
 
-  CPPUNIT_ASSERT(markEd2kPeerUdpReaskAck(&attrs, udpPeer, 5,
+  REQUIRE(markEd2kPeerUdpReaskAck(&attrs, udpPeer, 5,
                                          std::vector<bool>{false}, 100));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.peerStates.size());
-  CPPUNIT_ASSERT(!state->udpReaskPending);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)5, state->queueRank);
+  REQUIRE_EQ((size_t)1, attrs.peerStates.size());
+  REQUIRE(!state->udpReaskPending);
+  REQUIRE_EQ((uint16_t)5, state->queueRank);
 
-  CPPUNIT_ASSERT(markEd2kPeerQueueFull(&attrs, udpPeer, 200, 30));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.peerStates.size());
-  CPPUNIT_ASSERT(state->remoteQueueFull);
-  CPPUNIT_ASSERT(state->dead);
+  REQUIRE(markEd2kPeerQueueFull(&attrs, udpPeer, 200, 30));
+  REQUIRE_EQ((size_t)1, attrs.peerStates.size());
+  REQUIRE(state->remoteQueueFull);
+  REQUIRE(state->dead);
 }
 
 void DownloadHelperTest::testEd2kPeerUdpReaskDueSelection()
@@ -1367,8 +1361,8 @@ void DownloadHelperTest::testEd2kPeerUdpReaskDueSelection()
 
   auto selected = selectDueEd2kUdpReaskPeer(&attrs, 400);
 
-  CPPUNIT_ASSERT(selected);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.11"), selected->endpoint.host);
+  REQUIRE(selected);
+  REQUIRE_EQ(std::string("203.0.113.11"), selected->endpoint.host);
 }
 
 void DownloadHelperTest::testEd2kKadCommandQueuesDuePeerReask()
@@ -1403,23 +1397,23 @@ void DownloadHelperTest::testEd2kKadCommandQueuesDuePeerReask()
       std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
   Ed2kKadCommand command(1, group.get(), &engine);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueueDuePeerReasks(200));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueuedPacketCount());
+  REQUIRE_EQ((size_t)1, command.testQueueDuePeerReasks(200));
+  REQUIRE_EQ((size_t)1, command.testQueuedPacketCount());
   const auto& item = command.testQueuedPacketAt(0);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.20"), item.first.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, item.first.port);
+  REQUIRE_EQ(std::string("203.0.113.20"), item.first.host);
+  REQUIRE_EQ((uint16_t)4672, item.first.port);
   ed2k::PacketHeader header;
-  CPPUNIT_ASSERT(ed2k::readDatagramHeader(header, item.second.data(),
+  REQUIRE(ed2k::readDatagramHeader(header, item.second.data(),
                                           item.second.size()));
-  CPPUNIT_ASSERT_EQUAL(ed2k::PROTO_EMULE, header.protocol);
-  CPPUNIT_ASSERT_EQUAL(ed2k::OP_REASKFILEPING, header.opcode);
+  REQUIRE_EQ(ed2k::PROTO_EMULE, header.protocol);
+  REQUIRE_EQ(ed2k::OP_REASKFILEPING, header.opcode);
   ed2k::UdpReask reask;
-  CPPUNIT_ASSERT(ed2k::parseUdpReaskFilePingPayload(
+  REQUIRE(ed2k::parseUdpReaskFilePingPayload(
       reask, item.second.substr(2)));
-  CPPUNIT_ASSERT_EQUAL(attrs->link.hash, reask.fileHash);
-  CPPUNIT_ASSERT(state->udpReaskPending);
-  CPPUNIT_ASSERT_EQUAL((int64_t)200, state->lastUdpReaskTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)1500, state->nextUdpReaskTime);
+  REQUIRE_EQ(attrs->link.hash, reask.fileHash);
+  REQUIRE(state->udpReaskPending);
+  REQUIRE_EQ((int64_t)200, state->lastUdpReaskTime);
+  REQUIRE_EQ((int64_t)1500, state->nextUdpReaskTime);
 }
 
 void DownloadHelperTest::testEd2kKadCommandQueuesKadCallback()
@@ -1457,27 +1451,27 @@ void DownloadHelperTest::testEd2kKadCommandQueuesKadCallback()
       std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
   Ed2kKadCommand command(1, group.get(), &engine);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueueDueKadCallbacks(200));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueuedPacketCount());
+  REQUIRE_EQ((size_t)1, command.testQueueDueKadCallbacks(200));
+  REQUIRE_EQ((size_t)1, command.testQueuedPacketCount());
   const auto& item = command.testQueuedPacketAt(0);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.99"), item.first.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, item.first.port);
+  REQUIRE_EQ(std::string("203.0.113.99"), item.first.host);
+  REQUIRE_EQ((uint16_t)4672, item.first.port);
   ed2k::PacketHeader header;
-  CPPUNIT_ASSERT(ed2k::readDatagramHeader(header, item.second.data(),
+  REQUIRE(ed2k::readDatagramHeader(header, item.second.data(),
                                           item.second.size()));
-  CPPUNIT_ASSERT_EQUAL(ed2k::KAD_PROTOCOL, header.protocol);
-  CPPUNIT_ASSERT_EQUAL(ed2k::KAD_CALLBACK_REQ, header.opcode);
+  REQUIRE_EQ(ed2k::KAD_PROTOCOL, header.protocol);
+  REQUIRE_EQ(ed2k::KAD_CALLBACK_REQ, header.opcode);
   ed2k::KadCallbackRequest request;
-  CPPUNIT_ASSERT(ed2k::parseKadCallbackRequestPayload(
+  REQUIRE(ed2k::parseKadCallbackRequestPayload(
       request, item.second.substr(2)));
-  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(source.buddyHash),
+  REQUIRE_EQ(ed2k::ed2kHashToKadId(source.buddyHash),
                        request.buddyId);
-  CPPUNIT_ASSERT_EQUAL(ed2k::ed2kHashToKadId(attrs->link.hash),
+  REQUIRE_EQ(ed2k::ed2kHashToKadId(attrs->link.hash),
                        request.fileId);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, request.tcpPort);
-  CPPUNIT_ASSERT_EQUAL((int64_t)200, state->lastCallbackTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)245, state->callbackDeadline);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, command.testQueueDueKadCallbacks(210));
+  REQUIRE_EQ((uint16_t)4662, request.tcpPort);
+  REQUIRE_EQ((int64_t)200, state->lastCallbackTime);
+  REQUIRE_EQ((int64_t)245, state->callbackDeadline);
+  REQUIRE_EQ((size_t)0, command.testQueueDueKadCallbacks(210));
 }
 
 void DownloadHelperTest::testEd2kKadCommandQueuesDirectCallback()
@@ -1513,27 +1507,27 @@ void DownloadHelperTest::testEd2kKadCommandQueuesDirectCallback()
       std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
   Ed2kKadCommand command(1, group.get(), &engine);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueueDueKadCallbacks(200));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueuedPacketCount());
+  REQUIRE_EQ((size_t)1, command.testQueueDueKadCallbacks(200));
+  REQUIRE_EQ((size_t)1, command.testQueuedPacketCount());
   const auto& item = command.testQueuedPacketAt(0);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.44"), item.first.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4672, item.first.port);
+  REQUIRE_EQ(std::string("203.0.113.44"), item.first.host);
+  REQUIRE_EQ((uint16_t)4672, item.first.port);
   ed2k::PacketHeader header;
-  CPPUNIT_ASSERT(ed2k::readDatagramHeader(header, item.second.data(),
+  REQUIRE(ed2k::readDatagramHeader(header, item.second.data(),
                                           item.second.size()));
-  CPPUNIT_ASSERT_EQUAL(ed2k::PROTO_EMULE, header.protocol);
-  CPPUNIT_ASSERT_EQUAL(ed2k::OP_DIRECTCALLBACKREQ, header.opcode);
+  REQUIRE_EQ(ed2k::PROTO_EMULE, header.protocol);
+  REQUIRE_EQ(ed2k::OP_DIRECTCALLBACKREQ, header.opcode);
   ed2k::DirectCallbackRequest request;
-  CPPUNIT_ASSERT(ed2k::parseDirectCallbackRequestPayload(
+  REQUIRE(ed2k::parseDirectCallbackRequestPayload(
       request, item.second.substr(2)));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4662, request.tcpPort);
-  CPPUNIT_ASSERT_EQUAL(attrs->clientHash, request.userHash);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)(ed2k::SOURCE_CRYPT_SUPPORT |
+  REQUIRE_EQ((uint16_t)4662, request.tcpPort);
+  REQUIRE_EQ(attrs->clientHash, request.userHash);
+  REQUIRE_EQ((uint8_t)(ed2k::SOURCE_CRYPT_SUPPORT |
                                 ed2k::SOURCE_CRYPT_REQUEST),
                        request.connectOptions);
-  CPPUNIT_ASSERT_EQUAL((int64_t)200, state->lastCallbackTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)245, state->callbackDeadline);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, command.testQueueDueKadCallbacks(210));
+  REQUIRE_EQ((int64_t)200, state->lastCallbackTime);
+  REQUIRE_EQ((int64_t)245, state->callbackDeadline);
+  REQUIRE_EQ((size_t)0, command.testQueueDueKadCallbacks(210));
 }
 
 void DownloadHelperTest::testEd2kKadCommandUsesRuntimeTcpPortForDirectCallback()
@@ -1569,12 +1563,12 @@ void DownloadHelperTest::testEd2kKadCommandUsesRuntimeTcpPortForDirectCallback()
       std::vector<std::shared_ptr<RequestGroup>>{group}, 1, option_.get()));
   Ed2kKadCommand command(1, group.get(), &engine);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueueDueKadCallbacks(200));
+  REQUIRE_EQ((size_t)1, command.testQueueDueKadCallbacks(200));
   const auto& item = command.testQueuedPacketAt(0);
   ed2k::DirectCallbackRequest request;
-  CPPUNIT_ASSERT(ed2k::parseDirectCallbackRequestPayload(
+  REQUIRE(ed2k::parseDirectCallbackRequestPayload(
       request, item.second.substr(2)));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)50265, request.tcpPort);
+  REQUIRE_EQ((uint16_t)50265, request.tcpPort);
 }
 
 void DownloadHelperTest::testEd2kKadCommandQueueFullForUnknownUploadReask()
@@ -1607,16 +1601,16 @@ void DownloadHelperTest::testEd2kKadCommandQueueFullForUnknownUploadReask()
       remote, ed2k::OP_REASKFILEPING,
       ed2k::createUdpReaskFilePingPayload(attrs->link.hash));
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueuedPacketCount());
+  REQUIRE_EQ((size_t)1, command.testQueuedPacketCount());
   const auto& item = command.testQueuedPacketAt(0);
-  CPPUNIT_ASSERT_EQUAL(remote.host, item.first.host);
-  CPPUNIT_ASSERT_EQUAL(remote.port, item.first.port);
+  REQUIRE_EQ(remote.host, item.first.host);
+  REQUIRE_EQ(remote.port, item.first.port);
   ed2k::PacketHeader header;
-  CPPUNIT_ASSERT(ed2k::readDatagramHeader(header, item.second.data(),
+  REQUIRE(ed2k::readDatagramHeader(header, item.second.data(),
                                           item.second.size()));
-  CPPUNIT_ASSERT_EQUAL(ed2k::PROTO_EMULE, header.protocol);
-  CPPUNIT_ASSERT_EQUAL(ed2k::OP_QUEUEFULL, header.opcode);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, header.payloadSize());
+  REQUIRE_EQ(ed2k::PROTO_EMULE, header.protocol);
+  REQUIRE_EQ(ed2k::OP_QUEUEFULL, header.opcode);
+  REQUIRE_EQ((size_t)0, header.payloadSize());
 }
 
 void DownloadHelperTest::testEd2kKadCommandAckForUploadingPeerReask()
@@ -1645,7 +1639,7 @@ void DownloadHelperTest::testEd2kKadCommandAckForUploadingPeerReask()
   ed2k::Endpoint remote;
   remote.host = "203.0.113.31";
   remote.port = 4672;
-  CPPUNIT_ASSERT(uploadQueue->requestUpload(remote,
+  REQUIRE(uploadQueue->requestUpload(remote,
                                             std::string(ed2k::HASH_LENGTH,
                                                         '\x44'),
                                             attrs->link.hash, 1000, nullptr));
@@ -1654,16 +1648,16 @@ void DownloadHelperTest::testEd2kKadCommandAckForUploadingPeerReask()
       remote, ed2k::OP_REASKFILEPING,
       ed2k::createUdpReaskFilePingPayload(attrs->link.hash));
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, command.testQueuedPacketCount());
+  REQUIRE_EQ((size_t)1, command.testQueuedPacketCount());
   const auto& item = command.testQueuedPacketAt(0);
   ed2k::PacketHeader header;
-  CPPUNIT_ASSERT(ed2k::readDatagramHeader(header, item.second.data(),
+  REQUIRE(ed2k::readDatagramHeader(header, item.second.data(),
                                           item.second.size()));
-  CPPUNIT_ASSERT_EQUAL(ed2k::PROTO_EMULE, header.protocol);
-  CPPUNIT_ASSERT_EQUAL(ed2k::OP_REASKACK, header.opcode);
+  REQUIRE_EQ(ed2k::PROTO_EMULE, header.protocol);
+  REQUIRE_EQ(ed2k::OP_REASKACK, header.opcode);
   ed2k::UdpReaskAck ack;
-  CPPUNIT_ASSERT(ed2k::parseUdpReaskAckPayload(ack, item.second.substr(2)));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)0, ack.rank);
+  REQUIRE(ed2k::parseUdpReaskAckPayload(ack, item.second.substr(2)));
+  REQUIRE_EQ((uint16_t)0, ack.rank);
 }
 
 void DownloadHelperTest::testEd2kSourcePolicyAppliesActiveCap()
@@ -1684,20 +1678,20 @@ void DownloadHelperTest::testEd2kSourcePolicyAppliesActiveCap()
   markEd2kPeerQueued(&attrs, queued, 2, std::vector<bool>{true});
 
   auto selected = ed2k::selectConnectPeer(attrs.peerStates, 100, 1);
-  CPPUNIT_ASSERT(selected);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), selected->endpoint.host);
+  REQUIRE(selected);
+  REQUIRE_EQ(std::string("203.0.113.10"), selected->endpoint.host);
   selected->connecting = true;
   selected = ed2k::selectConnectPeer(attrs.peerStates, 100, 1);
-  CPPUNIT_ASSERT(!selected);
+  REQUIRE(!selected);
 
   auto action = ed2k::selectPeerAction(attrs.peerStates, 100, 1);
-  CPPUNIT_ASSERT_EQUAL(ed2k::PeerActionType::REASK, action.type);
-  CPPUNIT_ASSERT(action.peer);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.12"), action.peer->endpoint.host);
+  REQUIRE_EQ(ed2k::PeerActionType::REASK, action.type);
+  REQUIRE(action.peer);
+  REQUIRE_EQ(std::string("203.0.113.12"), action.peer->endpoint.host);
 
   selected = ed2k::selectConnectPeer(attrs.peerStates, 100, 2);
-  CPPUNIT_ASSERT(selected);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.11"), selected->endpoint.host);
+  REQUIRE(selected);
+  REQUIRE_EQ(std::string("203.0.113.11"), selected->endpoint.host);
 }
 
 void DownloadHelperTest::testEd2kServerSourceCadencePolicy()
@@ -1717,43 +1711,43 @@ void DownloadHelperTest::testEd2kServerSourceCadencePolicy()
   ed2k::ServerState unknownLargeServer;
   unknownLargeServer.endpoint.host = "203.0.113.9";
   unknownLargeServer.endpoint.port = 4661;
-  CPPUNIT_ASSERT(ed2k::serverTcpSourceRequestDue(
+  REQUIRE(ed2k::serverTcpSourceRequestDue(
       unknownLargeServer,
       static_cast<int64_t>(std::numeric_limits<uint32_t>::max()) + 1, 950));
 
-  CPPUNIT_ASSERT(!ed2k::serverTcpSourceRequestDue(attrs.serverStates[0],
+  REQUIRE(!ed2k::serverTcpSourceRequestDue(attrs.serverStates[0],
                                                   attrs.link.size, 950));
-  CPPUNIT_ASSERT(!ed2k::serverTcpSourceRequestDue(attrs.serverStates[0],
+  REQUIRE(!ed2k::serverTcpSourceRequestDue(attrs.serverStates[0],
                                                   attrs.link.size, 1000));
 
   attrs.serverStates[0].lastSourceCount = 0;
   attrs.serverStates[0].lastSourceResponseTime = 600;
-  CPPUNIT_ASSERT(ed2k::serverTcpSourceRequestDue(attrs.serverStates[0],
+  REQUIRE(ed2k::serverTcpSourceRequestDue(attrs.serverStates[0],
                                                  attrs.link.size, 1000));
 
   ed2k::ServerState udp = attrs.serverStates[0];
   udp.endpoint.port = 4665;
   udp.udpFlags = ed2k::SRV_UDPFLG_EXT_GETSOURCES;
-  CPPUNIT_ASSERT(ed2k::serverUdpSourceRequestDue(udp, attrs.link.size, 1000));
+  REQUIRE(ed2k::serverUdpSourceRequestDue(udp, attrs.link.size, 1000));
 
   udp.lastUdpSourceRequestTime = 990;
-  CPPUNIT_ASSERT(!ed2k::serverUdpSourceRequestDue(udp, attrs.link.size, 1000));
+  REQUIRE(!ed2k::serverUdpSourceRequestDue(udp, attrs.link.size, 1000));
 
   udp.lastUdpSourceRequestTime = 0;
   udp.udpFlags = 0;
-  CPPUNIT_ASSERT(!ed2k::serverUdpSourceRequestDue(udp, attrs.link.size, 1000));
+  REQUIRE(!ed2k::serverUdpSourceRequestDue(udp, attrs.link.size, 1000));
 
   udp.udpFlags = ed2k::SRV_UDPFLG_EXT_GETSOURCES2;
   attrs.link.size =
       static_cast<int64_t>(std::numeric_limits<uint32_t>::max()) + 1;
-  CPPUNIT_ASSERT(!ed2k::serverUdpSourceRequestDue(udp, attrs.link.size, 1000));
+  REQUIRE(!ed2k::serverUdpSourceRequestDue(udp, attrs.link.size, 1000));
 
   udp.udpFlags |= ed2k::SRV_UDPFLG_LARGEFILES;
-  CPPUNIT_ASSERT(ed2k::serverUdpSourceRequestDue(udp, attrs.link.size, 1000));
+  REQUIRE(ed2k::serverUdpSourceRequestDue(udp, attrs.link.size, 1000));
 
   ed2k::ServerState failed = udp;
   failed.nextRetryTime = 1200;
-  CPPUNIT_ASSERT(!ed2k::serverUdpSourceRequestDue(failed, attrs.link.size,
+  REQUIRE(!ed2k::serverUdpSourceRequestDue(failed, attrs.link.size,
                                                   1000));
 }
 
@@ -1784,7 +1778,7 @@ void DownloadHelperTest::testEd2kServerSearchCadencePolicy()
   std::vector<std::unique_ptr<Command>> commands;
   schedulePendingEd2kServers(commands, group.get(), &engine);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, commands.size());
+  REQUIRE_EQ((size_t)1, commands.size());
 }
 
 void DownloadHelperTest::testEd2kPiecePolicyUsesPeerAvailability()
@@ -1805,12 +1799,12 @@ void DownloadHelperTest::testEd2kPiecePolicyUsesPeerAvailability()
   auto selected = ed2k::selectRequestSegments(segmentMan.get(), 1,
                                               peerAvailability, 3);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, selected.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, selected[0]->getIndex());
+  REQUIRE_EQ((size_t)1, selected.size());
+  REQUIRE_EQ((size_t)1, selected[0]->getIndex());
   std::vector<std::shared_ptr<Segment>> inFlight;
   segmentMan->getInFlightSegment(inFlight, 1);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, inFlight.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, inFlight[0]->getIndex());
+  REQUIRE_EQ((size_t)1, inFlight.size());
+  REQUIRE_EQ((size_t)1, inFlight[0]->getIndex());
 }
 
 void DownloadHelperTest::testEd2kPiecePolicyReclaimsIdlePeerSegment()
@@ -1822,7 +1816,7 @@ void DownloadHelperTest::testEd2kPiecePolicyReclaimsIdlePeerSegment()
   dctx->setAttribute(CTX_ATTR_ED2K, attrs);
   auto pieceStorage = std::make_shared<DefaultPieceStorage>(dctx, option_.get());
   auto segmentMan = std::make_shared<SegmentMan>(dctx, pieceStorage);
-  CPPUNIT_ASSERT(segmentMan->getSegmentWithIndex(1, 0));
+  REQUIRE(segmentMan->getSegmentWithIndex(1, 0));
 
   std::vector<bool> peerAvailability;
   peerAvailability.push_back(true);
@@ -1830,11 +1824,11 @@ void DownloadHelperTest::testEd2kPiecePolicyReclaimsIdlePeerSegment()
   auto selected = ed2k::selectRequestSegments(segmentMan.get(), 2,
                                               peerAvailability, 1);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, selected.size());
-  CPPUNIT_ASSERT_EQUAL((size_t)0, selected[0]->getIndex());
+  REQUIRE_EQ((size_t)1, selected.size());
+  REQUIRE_EQ((size_t)0, selected[0]->getIndex());
   std::vector<std::shared_ptr<Segment>> oldOwner;
   segmentMan->getInFlightSegment(oldOwner, 1);
-  CPPUNIT_ASSERT(oldOwner.empty());
+  REQUIRE(oldOwner.empty());
 }
 
 void DownloadHelperTest::testEd2kPeerTransferRemovesCompletedRequestedRanges()
@@ -1853,23 +1847,23 @@ void DownloadHelperTest::testEd2kPeerTransferRemovesCompletedRequestedRanges()
   range.begin = 10;
   range.end = 20;
   ranges.push_back(range);
-  CPPUNIT_ASSERT(updateEd2kPeerRequestedParts(&attrs, peer, ranges, 100));
+  REQUIRE(updateEd2kPeerRequestedParts(&attrs, peer, ranges, 100));
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1,
+  REQUIRE_EQ((size_t)1,
                        removeEd2kPeerCompletedRequestedRange(&attrs, peer,
                                                              0, 10, 120));
   auto state = getEd2kPeerState(&attrs, peer);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, state->requestedParts.size());
-  CPPUNIT_ASSERT_EQUAL((int64_t)10, state->requestedParts[0].begin);
-  CPPUNIT_ASSERT_EQUAL((int64_t)20, state->requestedParts[0].end);
-  CPPUNIT_ASSERT_EQUAL((int64_t)120, state->lastTransferProgressTime);
+  REQUIRE(state);
+  REQUIRE_EQ((size_t)1, state->requestedParts.size());
+  REQUIRE_EQ((int64_t)10, state->requestedParts[0].begin);
+  REQUIRE_EQ((int64_t)20, state->requestedParts[0].end);
+  REQUIRE_EQ((int64_t)120, state->lastTransferProgressTime);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1,
+  REQUIRE_EQ((size_t)1,
                        removeEd2kPeerCompletedRequestedRange(&attrs, peer,
                                                              10, 20, 125));
-  CPPUNIT_ASSERT(state->requestedParts.empty());
-  CPPUNIT_ASSERT_EQUAL((int64_t)125, state->lastTransferProgressTime);
+  REQUIRE(state->requestedParts.empty());
+  REQUIRE_EQ((int64_t)125, state->lastTransferProgressTime);
 }
 
 void DownloadHelperTest::testEd2kPeerTransferExpiresStalledRequests()
@@ -1882,7 +1876,7 @@ void DownloadHelperTest::testEd2kPeerTransferExpiresStalledRequests()
   auto pieceStorage = std::make_shared<DefaultPieceStorage>(dctx, option_.get());
   auto segmentMan = std::make_shared<SegmentMan>(dctx, pieceStorage);
   auto segment = segmentMan->getSegmentWithIndex(7, 0);
-  CPPUNIT_ASSERT(segment);
+  REQUIRE(segment);
 
   ed2k::Endpoint peer;
   peer.host = "203.0.113.10";
@@ -1893,26 +1887,26 @@ void DownloadHelperTest::testEd2kPeerTransferExpiresStalledRequests()
   range.begin = 0;
   range.end = 10;
   ranges.push_back(range);
-  CPPUNIT_ASSERT(updateEd2kPeerRequestedParts(attrs.get(), peer, ranges, 100));
+  REQUIRE(updateEd2kPeerRequestedParts(attrs.get(), peer, ranges, 100));
   auto state = getEd2kPeerState(attrs.get(), peer);
   state->accepted = true;
 
-  CPPUNIT_ASSERT(!expireEd2kStalledPeerTransfer(
+  REQUIRE(!expireEd2kStalledPeerTransfer(
       attrs.get(), segmentMan.get(), peer, 7, 129, 30, 15));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, state->requestedParts.size());
+  REQUIRE_EQ((size_t)1, state->requestedParts.size());
 
-  CPPUNIT_ASSERT(expireEd2kStalledPeerTransfer(
+  REQUIRE(expireEd2kStalledPeerTransfer(
       attrs.get(), segmentMan.get(), peer, 7, 130, 30, 15));
-  CPPUNIT_ASSERT(state->requestedParts.empty());
-  CPPUNIT_ASSERT(state->queued);
-  CPPUNIT_ASSERT(!state->accepted);
-  CPPUNIT_ASSERT(state->dead);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1, state->failCount);
-  CPPUNIT_ASSERT_EQUAL((int64_t)145, state->nextRetryTime);
+  REQUIRE(state->requestedParts.empty());
+  REQUIRE(state->queued);
+  REQUIRE(!state->accepted);
+  REQUIRE(state->dead);
+  REQUIRE_EQ((uint32_t)1, state->failCount);
+  REQUIRE_EQ((int64_t)145, state->nextRetryTime);
 
   std::vector<std::shared_ptr<Segment>> inFlight;
   segmentMan->getInFlightSegment(inFlight, 7);
-  CPPUNIT_ASSERT(inFlight.empty());
+  REQUIRE(inFlight.empty());
 }
 
 void DownloadHelperTest::testEd2kPeerTransferReclaimsStalledEndgameRange()
@@ -1935,37 +1929,37 @@ void DownloadHelperTest::testEd2kPeerTransferReclaimsStalledEndgameRange()
   range.begin = 0;
   range.end = Piece::BLOCK_LENGTH;
   ranges.push_back(range);
-  CPPUNIT_ASSERT(updateEd2kPeerRequestedParts(&attrs, slowPeer, ranges, 100));
+  REQUIRE(updateEd2kPeerRequestedParts(&attrs, slowPeer, ranges, 100));
 
   auto slowState = getEd2kPeerState(&attrs, slowPeer);
   auto fastState = getEd2kPeerState(&attrs, fastPeer);
-  CPPUNIT_ASSERT(slowState);
-  CPPUNIT_ASSERT(fastState);
+  REQUIRE(slowState);
+  REQUIRE(fastState);
   slowState->accepted = true;
   fastState->accepted = true;
   fastState->partStatus.push_back(true);
   fastState->partStatus.push_back(false);
 
   ed2k::PartRange reclaimed;
-  CPPUNIT_ASSERT(!reclaimEd2kStalledRequestedRange(
+  REQUIRE(!reclaimEd2kStalledRequestedRange(
       &attrs, fastPeer, fastState->partStatus, 109, 10, reclaimed));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, slowState->requestedParts.size());
+  REQUIRE_EQ((size_t)1, slowState->requestedParts.size());
 
-  CPPUNIT_ASSERT(reclaimEd2kStalledRequestedRange(
+  REQUIRE(reclaimEd2kStalledRequestedRange(
       &attrs, fastPeer, fastState->partStatus, 110, 10, reclaimed));
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, reclaimed.begin);
-  CPPUNIT_ASSERT_EQUAL(static_cast<int64_t>(Piece::BLOCK_LENGTH),
+  REQUIRE_EQ((int64_t)0, reclaimed.begin);
+  REQUIRE_EQ(static_cast<int64_t>(Piece::BLOCK_LENGTH),
                        reclaimed.end);
-  CPPUNIT_ASSERT(slowState->requestedParts.empty());
-  CPPUNIT_ASSERT(slowState->cancelTransferSent);
-  CPPUNIT_ASSERT(attrs.requestedPartRanges.empty());
+  REQUIRE(slowState->requestedParts.empty());
+  REQUIRE(slowState->cancelTransferSent);
+  REQUIRE(attrs.requestedPartRanges.empty());
 
-  CPPUNIT_ASSERT(updateEd2kPeerRequestedParts(&attrs, fastPeer,
+  REQUIRE(updateEd2kPeerRequestedParts(&attrs, fastPeer,
                                               std::vector<ed2k::PartRange>{
                                                   reclaimed},
                                               110));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.requestedPartRanges.size());
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, attrs.requestedPartRanges[0].begin);
+  REQUIRE_EQ((size_t)1, attrs.requestedPartRanges.size());
+  REQUIRE_EQ((int64_t)0, attrs.requestedPartRanges[0].begin);
 }
 
 void DownloadHelperTest::testEd2kPeerTransferActivelyReclaimsStalledRange()
@@ -1986,32 +1980,32 @@ void DownloadHelperTest::testEd2kPeerTransferActivelyReclaimsStalledRange()
   ed2k::PartRange range;
   range.begin = 0;
   range.end = Piece::BLOCK_LENGTH;
-  CPPUNIT_ASSERT(updateEd2kPeerRequestedParts(
+  REQUIRE(updateEd2kPeerRequestedParts(
       &attrs, slowPeer, std::vector<ed2k::PartRange>{range}, 100));
 
   auto slowState = getEd2kPeerState(&attrs, slowPeer);
   auto fastState = getEd2kPeerState(&attrs, fastPeer);
-  CPPUNIT_ASSERT(slowState);
-  CPPUNIT_ASSERT(fastState);
+  REQUIRE(slowState);
+  REQUIRE(fastState);
   slowState->accepted = true;
   fastState->accepted = true;
   fastState->partStatus.push_back(true);
   fastState->partStatus.push_back(false);
 
   ed2k::PartRange reclaimed;
-  CPPUNIT_ASSERT(!activelyReclaimEd2kStalledRequestedRange(
+  REQUIRE(!activelyReclaimEd2kStalledRequestedRange(
       &attrs, fastPeer, fastState->partStatus, 159, reclaimed));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, slowState->requestedParts.size());
+  REQUIRE_EQ((size_t)1, slowState->requestedParts.size());
 
-  CPPUNIT_ASSERT(activelyReclaimEd2kStalledRequestedRange(
+  REQUIRE(activelyReclaimEd2kStalledRequestedRange(
       &attrs, fastPeer, fastState->partStatus, 160, reclaimed));
-  CPPUNIT_ASSERT_EQUAL((int64_t)0, reclaimed.begin);
-  CPPUNIT_ASSERT_EQUAL(static_cast<int64_t>(Piece::BLOCK_LENGTH),
+  REQUIRE_EQ((int64_t)0, reclaimed.begin);
+  REQUIRE_EQ(static_cast<int64_t>(Piece::BLOCK_LENGTH),
                        reclaimed.end);
-  CPPUNIT_ASSERT(slowState->requestedParts.empty());
-  CPPUNIT_ASSERT(slowState->cancelTransferSent);
-  CPPUNIT_ASSERT(!slowState->dead);
-  CPPUNIT_ASSERT_EQUAL((size_t)0, attrs.requestedPartRanges.size());
+  REQUIRE(slowState->requestedParts.empty());
+  REQUIRE(slowState->cancelTransferSent);
+  REQUIRE(!slowState->dead);
+  REQUIRE_EQ((size_t)0, attrs.requestedPartRanges.size());
 }
 
 void DownloadHelperTest::testEd2kPeerTransferIgnoresDuplicateData()
@@ -2036,16 +2030,16 @@ void DownloadHelperTest::testEd2kPeerTransferIgnoresDuplicateData()
   pieceStorage->initStorage();
   pieceStorage->getDiskAdaptor()->openFile();
   auto segmentMan = std::make_shared<SegmentMan>(dctx, pieceStorage);
-  CPPUNIT_ASSERT(segmentMan->getSegmentWithIndex(1, 0));
+  REQUIRE(segmentMan->getSegmentWithIndex(1, 0));
 
   ed2k::PeerTransfer transfer(dctx.get(), pieceStorage.get(),
                               segmentMan.get(), 1);
-  CPPUNIT_ASSERT(!transfer.writePartData(0, data.substr(0, 8)));
-  CPPUNIT_ASSERT(!transfer.writePartData(0, data.substr(0, 8)));
+  REQUIRE(!transfer.writePartData(0, data.substr(0, 8)));
+  REQUIRE(!transfer.writePartData(0, data.substr(0, 8)));
   auto completed = transfer.writePartData(0, data);
-  CPPUNIT_ASSERT(completed);
-  CPPUNIT_ASSERT(transfer.completeVerifiedSegment(completed));
-  CPPUNIT_ASSERT(!transfer.writePartData(0, data));
+  REQUIRE(completed);
+  REQUIRE(transfer.completeVerifiedSegment(completed));
+  REQUIRE(!transfer.writePartData(0, data));
 }
 
 void DownloadHelperTest::testEd2kPeerTransferAcceptsParallelPieceBlocks()
@@ -2073,17 +2067,17 @@ void DownloadHelperTest::testEd2kPeerTransferAcceptsParallelPieceBlocks()
   pieceStorage->getDiskAdaptor()->openFile();
   auto segmentMan = std::make_shared<SegmentMan>(dctx, pieceStorage);
 
-  CPPUNIT_ASSERT(segmentMan->getSegmentWithIndex(1, 0));
+  REQUIRE(segmentMan->getSegmentWithIndex(1, 0));
   ed2k::PeerTransfer firstPeer(dctx.get(), pieceStorage.get(),
                                segmentMan.get(), 1);
-  CPPUNIT_ASSERT(!firstPeer.writePartData(0, first));
+  REQUIRE(!firstPeer.writePartData(0, first));
 
   ed2k::PeerTransfer secondPeer(dctx.get(), pieceStorage.get(),
                                 segmentMan.get(), 2);
   auto completed = secondPeer.writePartData(first.size(), second);
-  CPPUNIT_ASSERT(completed);
-  CPPUNIT_ASSERT(secondPeer.completeVerifiedSegment(completed));
-  CPPUNIT_ASSERT(pieceStorage->hasPiece(0));
+  REQUIRE(completed);
+  REQUIRE(secondPeer.completeVerifiedSegment(completed));
+  REQUIRE(pieceStorage->hasPiece(0));
 }
 
 void DownloadHelperTest::testEd2kPeerTransferCancelsOwnerAfterParallelHashFailure()
@@ -2113,16 +2107,16 @@ void DownloadHelperTest::testEd2kPeerTransferCancelsOwnerAfterParallelHashFailur
   pieceStorage->getDiskAdaptor()->openFile();
   auto segmentMan = std::make_shared<SegmentMan>(dctx, pieceStorage);
 
-  CPPUNIT_ASSERT(segmentMan->getSegmentWithIndex(1, 0));
+  REQUIRE(segmentMan->getSegmentWithIndex(1, 0));
   ed2k::PeerTransfer firstPeer(dctx.get(), pieceStorage.get(),
                                segmentMan.get(), 1);
-  CPPUNIT_ASSERT(!firstPeer.writePartData(0, first));
+  REQUIRE(!firstPeer.writePartData(0, first));
 
   ed2k::PeerTransfer secondPeer(dctx.get(), pieceStorage.get(),
                                 segmentMan.get(), 2);
-  CPPUNIT_ASSERT_THROW(secondPeer.writePartData(first.size(), corruptSecond),
+  REQUIRE_THROWS_AS(secondPeer.writePartData(first.size(), corruptSecond),
                        DlRetryEx);
-  CPPUNIT_ASSERT(!pieceStorage->isPieceUsed(0));
+  REQUIRE(!pieceStorage->isPieceUsed(0));
 }
 
 void DownloadHelperTest::testEd2kPeerTransferAppliesAichRecoveryData()
@@ -2172,19 +2166,19 @@ void DownloadHelperTest::testEd2kPeerTransferAppliesAichRecoveryData()
   group->setPieceStorage(pieceStorage);
   auto segmentMan = std::make_shared<SegmentMan>(dctx, pieceStorage);
   auto segment = segmentMan->getSegmentWithIndex(1, 0);
-  CPPUNIT_ASSERT(segment);
+  REQUIRE(segment);
 
   ed2k::PeerTransfer transfer(dctx.get(), pieceStorage.get(),
                               segmentMan.get(), 1);
-  CPPUNIT_ASSERT_THROW(transfer.writePartData(0, corruptData),
+  REQUIRE_THROWS_AS(transfer.writePartData(0, corruptData),
                        DlRetryEx);
 
   auto piece = pieceStorage->getPiece(0);
-  CPPUNIT_ASSERT(piece);
-  CPPUNIT_ASSERT(piece->hasBlock(0));
-  CPPUNIT_ASSERT(!piece->hasBlock(ed2k::EMBLOCK_LENGTH /
+  REQUIRE(piece);
+  REQUIRE(piece->hasBlock(0));
+  REQUIRE(!piece->hasBlock(ed2k::EMBLOCK_LENGTH /
                                   piece->getBlockLength()));
-  CPPUNIT_ASSERT(!piece->pieceComplete());
+  REQUIRE(!piece->pieceComplete());
 }
 
 void DownloadHelperTest::testEd2kSchedulingKeepsInlineSourceLabel()
@@ -2216,11 +2210,11 @@ void DownloadHelperTest::testEd2kSchedulingKeepsInlineSourceLabel()
   std::vector<std::unique_ptr<Command>> commands;
   group->createInitialCommand(commands, &engine);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs->peerStates.size());
+  REQUIRE_EQ((size_t)1, attrs->peerStates.size());
   auto state = getEd2kPeerState(attrs, attrs->link.sources[0]);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT((state->sourceFlags & ed2k::PEER_SOURCE_RESUME) == 0);
-  CPPUNIT_ASSERT((state->sourceFlags & ed2k::PEER_SOURCE_INLINE) != 0);
+  REQUIRE(state);
+  REQUIRE((state->sourceFlags & ed2k::PEER_SOURCE_RESUME) == 0);
+  REQUIRE((state->sourceFlags & ed2k::PEER_SOURCE_INLINE) != 0);
 }
 
 void DownloadHelperTest::testEd2kPeerSchedulingSkipsBackoff()
@@ -2254,7 +2248,7 @@ void DownloadHelperTest::testEd2kPeerSchedulingSkipsBackoff()
 
   schedulePendingEd2kPeers(group.get(), &engine);
 
-  CPPUNIT_ASSERT_EQUAL((int32_t)0, group->getNumCommand());
+  REQUIRE_EQ((int32_t)0, group->getNumCommand());
 }
 
 void DownloadHelperTest::testEd2kPeerSchedulingSkipsConnectingPeer()
@@ -2287,7 +2281,7 @@ void DownloadHelperTest::testEd2kPeerSchedulingSkipsConnectingPeer()
 
   schedulePendingEd2kPeers(group.get(), &engine);
 
-  CPPUNIT_ASSERT_EQUAL((int32_t)0, group->getNumCommand());
+  REQUIRE_EQ((int32_t)0, group->getNumCommand());
 }
 
 void DownloadHelperTest::testEd2kServerStateUpdate()
@@ -2298,10 +2292,10 @@ void DownloadHelperTest::testEd2kServerStateUpdate()
   server.port = 4661;
 
   auto state = updateEd2kServerConnected(&attrs, server);
-  CPPUNIT_ASSERT(state);
-  CPPUNIT_ASSERT(state->connected);
-  CPPUNIT_ASSERT_EQUAL(std::string("203.0.113.10"), state->endpoint.host);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4661, state->endpoint.port);
+  REQUIRE(state);
+  REQUIRE(state->connected);
+  REQUIRE_EQ(std::string("203.0.113.10"), state->endpoint.host);
+  REQUIRE_EQ((uint16_t)4661, state->endpoint.port);
 
   ed2k::ServerIdChange idChange;
   idChange.clientId = 0x0a000001;
@@ -2310,21 +2304,21 @@ void DownloadHelperTest::testEd2kServerStateUpdate()
   idChange.tcpFlags = 0x55aa;
   idChange.tcpObfuscationPort = 4666;
   updateEd2kServerIdChange(&attrs, server, idChange);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x0a000001, state->clientId);
-  CPPUNIT_ASSERT(state->highId);
-  CPPUNIT_ASSERT(state->handshakeCompleted);
-  CPPUNIT_ASSERT_EQUAL(std::string("1.0.0.10"), state->ipAddress);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x55aa, state->tcpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4666, state->tcpObfuscationPort);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, state->failCount);
+  REQUIRE_EQ((uint32_t)0x0a000001, state->clientId);
+  REQUIRE(state->highId);
+  REQUIRE(state->handshakeCompleted);
+  REQUIRE_EQ(std::string("1.0.0.10"), state->ipAddress);
+  REQUIRE_EQ((uint32_t)0x55aa, state->tcpFlags);
+  REQUIRE_EQ((uint16_t)4666, state->tcpObfuscationPort);
+  REQUIRE_EQ((uint32_t)0, state->failCount);
 
   ed2k::ServerStatus status;
   status.users = 1234;
   status.files = 5678;
   updateEd2kServerStatus(&attrs, server, status);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1234, state->users);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)5678, state->files);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4666, state->tcpObfuscationPort);
+  REQUIRE_EQ((uint32_t)1234, state->users);
+  REQUIRE_EQ((uint32_t)5678, state->files);
+  REQUIRE_EQ((uint16_t)4666, state->tcpObfuscationPort);
 
   status.challenge = 0x55aa0011;
   status.users = 2234;
@@ -2338,42 +2332,42 @@ void DownloadHelperTest::testEd2kServerStateUpdate()
   status.tcpObfuscationPort = 4666;
   status.udpKey = 0x11223344;
   updateEd2kServerUdpStatus(&attrs, server, status, 120);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)2234, state->users);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)6678, state->files);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)9000, state->maxUsers);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)100, state->softFiles);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)200, state->hardFiles);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x01020304, state->udpFlags);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)77, state->lowIdUsers);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4665, state->udpObfuscationPort);
-  CPPUNIT_ASSERT_EQUAL((uint16_t)4666, state->tcpObfuscationPort);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0x11223344, state->udpKey);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)0, state->udpStatusChallenge);
-  CPPUNIT_ASSERT_EQUAL((int64_t)120, state->lastUdpStatusTime);
+  REQUIRE_EQ((uint32_t)2234, state->users);
+  REQUIRE_EQ((uint32_t)6678, state->files);
+  REQUIRE_EQ((uint32_t)9000, state->maxUsers);
+  REQUIRE_EQ((uint32_t)100, state->softFiles);
+  REQUIRE_EQ((uint32_t)200, state->hardFiles);
+  REQUIRE_EQ((uint32_t)0x01020304, state->udpFlags);
+  REQUIRE_EQ((uint32_t)77, state->lowIdUsers);
+  REQUIRE_EQ((uint16_t)4665, state->udpObfuscationPort);
+  REQUIRE_EQ((uint16_t)4666, state->tcpObfuscationPort);
+  REQUIRE_EQ((uint32_t)0x11223344, state->udpKey);
+  REQUIRE_EQ((uint32_t)0, state->udpStatusChallenge);
+  REQUIRE_EQ((int64_t)120, state->lastUdpStatusTime);
 
   updateEd2kServerMessage(&attrs, server, "hello");
-  CPPUNIT_ASSERT_EQUAL(std::string("hello"), state->lastMessage);
+  REQUIRE_EQ(std::string("hello"), state->lastMessage);
 
   ed2k::ServerIdent ident;
   ident.name = "server name";
   ident.description = "server description";
   updateEd2kServerIdent(&attrs, server, ident);
-  CPPUNIT_ASSERT_EQUAL(std::string("server name"), state->name);
-  CPPUNIT_ASSERT_EQUAL(std::string("server description"), state->description);
+  REQUIRE_EQ(std::string("server name"), state->name);
+  REQUIRE_EQ(std::string("server description"), state->description);
 
   updateEd2kServerSourceRequestTime(&attrs, server, 90);
-  CPPUNIT_ASSERT(state->connected);
-  CPPUNIT_ASSERT_EQUAL((int64_t)90, state->nextSourceRequestTime);
+  REQUIRE(state->connected);
+  REQUIRE_EQ((int64_t)90, state->nextSourceRequestTime);
   markEd2kServerSourceRequestFinished(&attrs, server);
-  CPPUNIT_ASSERT(!state->connected);
-  CPPUNIT_ASSERT(!state->connecting);
+  REQUIRE(!state->connected);
+  REQUIRE(!state->connecting);
 
   updateEd2kServerFailure(&attrs, server, 100, 30);
-  CPPUNIT_ASSERT(!state->connected);
-  CPPUNIT_ASSERT(!state->handshakeCompleted);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)1, state->failCount);
-  CPPUNIT_ASSERT_EQUAL((int64_t)100, state->lastFailureTime);
-  CPPUNIT_ASSERT_EQUAL((int64_t)130, state->nextRetryTime);
+  REQUIRE(!state->connected);
+  REQUIRE(!state->handshakeCompleted);
+  REQUIRE_EQ((uint32_t)1, state->failCount);
+  REQUIRE_EQ((int64_t)100, state->lastFailureTime);
+  REQUIRE_EQ((int64_t)130, state->nextRetryTime);
 }
 
 void DownloadHelperTest::testEd2kSearchResultDeduplication()
@@ -2386,18 +2380,18 @@ void DownloadHelperTest::testEd2kSearchResultDeduplication()
   entry.size = 12345;
   entry.sourceNetwork = "server";
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1,
+  REQUIRE_EQ((size_t)1,
                        addEd2kSearchResults(&attrs, {entry}, true));
-  CPPUNIT_ASSERT_EQUAL((size_t)0,
+  REQUIRE_EQ((size_t)0,
                        addEd2kSearchResults(&attrs, {entry}, false));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.searchResults.size());
-  CPPUNIT_ASSERT(!attrs.searchMoreResults);
+  REQUIRE_EQ((size_t)1, attrs.searchResults.size());
+  REQUIRE(!attrs.searchMoreResults);
 
   entry.size = 12346;
-  CPPUNIT_ASSERT_EQUAL((size_t)1,
+  REQUIRE_EQ((size_t)1,
                        addEd2kSearchResults(&attrs, {entry}, true));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, attrs.searchResults.size());
-  CPPUNIT_ASSERT(attrs.searchMoreResults);
+  REQUIRE_EQ((size_t)2, attrs.searchResults.size());
+  REQUIRE(attrs.searchMoreResults);
 }
 
 void DownloadHelperTest::testEd2kSearchResultMergesNetworks()
@@ -2417,15 +2411,15 @@ void DownloadHelperTest::testEd2kSearchResultMergesNetworks()
   kad.completeSourceCount = 4;
   kad.sourceNetwork = "kad";
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1,
+  REQUIRE_EQ((size_t)1,
                        addEd2kSearchResults(&attrs, {server}, false));
-  CPPUNIT_ASSERT_EQUAL((size_t)0,
+  REQUIRE_EQ((size_t)0,
                        addEd2kSearchResults(&attrs, {kad}, false));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.searchResults.size());
-  CPPUNIT_ASSERT_EQUAL((uint32_t)7, attrs.searchResults[0].sourceCount);
-  CPPUNIT_ASSERT_EQUAL((uint32_t)4,
+  REQUIRE_EQ((size_t)1, attrs.searchResults.size());
+  REQUIRE_EQ((uint32_t)7, attrs.searchResults[0].sourceCount);
+  REQUIRE_EQ((uint32_t)4,
                        attrs.searchResults[0].completeSourceCount);
-  CPPUNIT_ASSERT_EQUAL(std::string("server|kad"),
+  REQUIRE_EQ(std::string("server|kad"),
                        attrs.searchResults[0].sourceNetwork);
 }
 
@@ -2456,10 +2450,10 @@ void DownloadHelperTest::testEd2kSearchResultAppliesLocalFilters()
   accepted.ed2kLink =
       "ed2k://|file|movie.iso|150|32323232323232323232323232323232|/";
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, addEd2kSearchResults(
+  REQUIRE_EQ((size_t)1, addEd2kSearchResults(
                                      &attrs, {rejected, accepted}, false));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, attrs.searchResults.size());
-  CPPUNIT_ASSERT_EQUAL(accepted.hash, attrs.searchResults[0].hash);
+  REQUIRE_EQ((size_t)1, attrs.searchResults.size());
+  REQUIRE_EQ(accepted.hash, attrs.searchResults[0].hash);
 }
 
 void DownloadHelperTest::testCreateRequestGroupForUri_parameterized()
@@ -2476,18 +2470,18 @@ void DownloadHelperTest::testCreateRequestGroupForUri_parameterized()
 
     createRequestGroupForUri(result, option_, uris);
 
-    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+    REQUIRE_EQ((size_t)1, result.size());
     std::shared_ptr<RequestGroup> group = result[0];
     auto uris = group->getDownloadContext()->getFirstFileEntry()->getUris();
-    CPPUNIT_ASSERT_EQUAL((size_t)3, uris.size());
+    REQUIRE_EQ((size_t)3, uris.size());
 
-    CPPUNIT_ASSERT_EQUAL(std::string("http://alpha/file"), uris[0]);
-    CPPUNIT_ASSERT_EQUAL(std::string("http://bravo/file"), uris[1]);
-    CPPUNIT_ASSERT_EQUAL(std::string("http://charlie/file"), uris[2]);
+    REQUIRE_EQ(std::string("http://alpha/file"), uris[0]);
+    REQUIRE_EQ(std::string("http://bravo/file"), uris[1]);
+    REQUIRE_EQ(std::string("http://charlie/file"), uris[2]);
 
-    CPPUNIT_ASSERT_EQUAL(3, group->getNumConcurrentCommand());
+    REQUIRE_EQ(3, group->getNumConcurrentCommand());
     std::shared_ptr<DownloadContext> ctx = group->getDownloadContext();
-    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/file.out"), ctx->getBasePath());
+    REQUIRE_EQ(std::string("/tmp/file.out"), ctx->getBasePath());
   }
 }
 
@@ -2506,26 +2500,26 @@ void DownloadHelperTest::testCreateRequestGroupForUri_BitTorrent()
 
     createRequestGroupForUri(result, option_, uris);
 
-    CPPUNIT_ASSERT_EQUAL((size_t)2, result.size());
+    REQUIRE_EQ((size_t)2, result.size());
     std::shared_ptr<RequestGroup> group = result[0];
     auto xuris = group->getDownloadContext()->getFirstFileEntry()->getUris();
-    CPPUNIT_ASSERT_EQUAL((size_t)3, xuris.size());
+    REQUIRE_EQ((size_t)3, xuris.size());
 
-    CPPUNIT_ASSERT_EQUAL(uris[0], xuris[0]);
-    CPPUNIT_ASSERT_EQUAL(uris[2], xuris[1]);
-    CPPUNIT_ASSERT_EQUAL(uris[3], xuris[2]);
+    REQUIRE_EQ(uris[0], xuris[0]);
+    REQUIRE_EQ(uris[2], xuris[1]);
+    REQUIRE_EQ(uris[3], xuris[2]);
 
-    CPPUNIT_ASSERT_EQUAL(3, group->getNumConcurrentCommand());
+    REQUIRE_EQ(3, group->getNumConcurrentCommand());
     std::shared_ptr<DownloadContext> ctx = group->getDownloadContext();
-    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/file.out"), ctx->getBasePath());
+    REQUIRE_EQ(std::string("/tmp/file.out"), ctx->getBasePath());
 
     std::shared_ptr<RequestGroup> torrentGroup = result[1];
     auto auxURIs =
         torrentGroup->getDownloadContext()->getFirstFileEntry()->getUris();
-    CPPUNIT_ASSERT(auxURIs.empty());
-    CPPUNIT_ASSERT_EQUAL(3, torrentGroup->getNumConcurrentCommand());
+    REQUIRE(auxURIs.empty());
+    REQUIRE_EQ(3, torrentGroup->getNumConcurrentCommand());
     std::shared_ptr<DownloadContext> btctx = torrentGroup->getDownloadContext();
-    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/aria2-test"), btctx->getBasePath());
+    REQUIRE_EQ(std::string("/tmp/aria2-test"), btctx->getBasePath());
   }
 }
 #endif // ENABLE_BITTORRENT
@@ -2547,31 +2541,31 @@ void DownloadHelperTest::testCreateRequestGroupForUri_Metalink()
 // group1: http://alpha/file, ...
 // group2-7: 6 file entry in Metalink and 1 torrent file download
 #  ifdef ENABLE_BITTORRENT
-    CPPUNIT_ASSERT_EQUAL((size_t)7, result.size());
+    REQUIRE_EQ((size_t)7, result.size());
 #  else  // !ENABLE_BITTORRENT
-    CPPUNIT_ASSERT_EQUAL((size_t)6, result.size());
+    REQUIRE_EQ((size_t)6, result.size());
 #  endif // !ENABLE_BITTORRENT
 
     std::shared_ptr<RequestGroup> group = result[0];
     auto xuris = group->getDownloadContext()->getFirstFileEntry()->getUris();
-    CPPUNIT_ASSERT_EQUAL((size_t)3, xuris.size());
+    REQUIRE_EQ((size_t)3, xuris.size());
     for (size_t i = 0; i < 3; ++i) {
-      CPPUNIT_ASSERT_EQUAL(uris[i], xuris[i]);
+      REQUIRE_EQ(uris[i], xuris[i]);
     }
-    CPPUNIT_ASSERT_EQUAL(2, group->getNumConcurrentCommand());
+    REQUIRE_EQ(2, group->getNumConcurrentCommand());
     std::shared_ptr<DownloadContext> ctx = group->getDownloadContext();
-    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/file.out"), ctx->getBasePath());
+    REQUIRE_EQ(std::string("/tmp/file.out"), ctx->getBasePath());
 
     std::shared_ptr<RequestGroup> aria2052Group = result[1];
-    CPPUNIT_ASSERT_EQUAL(1, // because of maxconnections attribute
+    REQUIRE_EQ(1, // because of maxconnections attribute
                          aria2052Group->getNumConcurrentCommand());
     std::shared_ptr<DownloadContext> aria2052Ctx =
         aria2052Group->getDownloadContext();
-    CPPUNIT_ASSERT_EQUAL(std::string("/tmp/aria2-0.5.2.tar.bz2"),
+    REQUIRE_EQ(std::string("/tmp/aria2-0.5.2.tar.bz2"),
                          aria2052Ctx->getBasePath());
 
     std::shared_ptr<RequestGroup> aria2051Group = result[2];
-    CPPUNIT_ASSERT_EQUAL(2, aria2051Group->getNumConcurrentCommand());
+    REQUIRE_EQ(2, aria2051Group->getNumConcurrentCommand());
   }
 }
 #endif // ENABLE_METALINK
@@ -2588,24 +2582,24 @@ void DownloadHelperTest::testCreateRequestGroupForUriList()
 
   createRequestGroupForUriList(result, option_);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)2, result.size());
+  REQUIRE_EQ((size_t)2, result.size());
 
   std::shared_ptr<RequestGroup> fileGroup = result[0];
   auto fileURIs =
       fileGroup->getDownloadContext()->getFirstFileEntry()->getUris();
-  CPPUNIT_ASSERT_EQUAL(std::string("http://alpha/file"), fileURIs[0]);
-  CPPUNIT_ASSERT_EQUAL(std::string("http://bravo/file"), fileURIs[1]);
-  CPPUNIT_ASSERT_EQUAL(std::string("http://charlie/file"), fileURIs[2]);
-  CPPUNIT_ASSERT_EQUAL(3, fileGroup->getNumConcurrentCommand());
+  REQUIRE_EQ(std::string("http://alpha/file"), fileURIs[0]);
+  REQUIRE_EQ(std::string("http://bravo/file"), fileURIs[1]);
+  REQUIRE_EQ(std::string("http://charlie/file"), fileURIs[2]);
+  REQUIRE_EQ(3, fileGroup->getNumConcurrentCommand());
   std::shared_ptr<DownloadContext> fileCtx = fileGroup->getDownloadContext();
-  CPPUNIT_ASSERT_EQUAL(std::string("/mydownloads/myfile.out"),
+  REQUIRE_EQ(std::string("/mydownloads/myfile.out"),
                        fileCtx->getBasePath());
 
   std::shared_ptr<RequestGroup> fileISOGroup = result[1];
   std::shared_ptr<DownloadContext> fileISOCtx =
       fileISOGroup->getDownloadContext();
   // PREF_OUT in option_ must be ignored.
-  CPPUNIT_ASSERT_EQUAL(std::string(), fileISOCtx->getBasePath());
+  REQUIRE_EQ(std::string(), fileISOCtx->getBasePath());
 }
 
 #ifdef ENABLE_BITTORRENT
@@ -2626,22 +2620,22 @@ void DownloadHelperTest::testCreateRequestGroupForBitTorrent()
     createRequestGroupForBitTorrent(result, option_, auxURIs,
                                     option_->get(PREF_TORRENT_FILE));
 
-    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+    REQUIRE_EQ((size_t)1, result.size());
 
     std::shared_ptr<RequestGroup> group = result[0];
     auto uris = group->getDownloadContext()->getFirstFileEntry()->getUris();
     std::sort(std::begin(uris), std::end(uris));
     // See -s option is ignored. See processRootDictionary() in
     // bittorrent_helper.cc
-    CPPUNIT_ASSERT_EQUAL((size_t)3, uris.size());
+    REQUIRE_EQ((size_t)3, uris.size());
     for (size_t i = 0; i < auxURIs.size(); ++i) {
-      CPPUNIT_ASSERT_EQUAL(auxURIs[i] + "/aria2-test/aria2/src/aria2c",
+      REQUIRE_EQ(auxURIs[i] + "/aria2-test/aria2/src/aria2c",
                            uris[i]);
     }
-    CPPUNIT_ASSERT_EQUAL(5, group->getNumConcurrentCommand());
+    REQUIRE_EQ(5, group->getNumConcurrentCommand());
     auto attrs = bittorrent::getTorrentAttrs(group->getDownloadContext());
     // http://tracker1 was deleted.
-    CPPUNIT_ASSERT_EQUAL((size_t)2, attrs->announceList.size());
+    REQUIRE_EQ((size_t)2, attrs->announceList.size());
   }
   {
     // no URIs are given
@@ -2650,10 +2644,10 @@ void DownloadHelperTest::testCreateRequestGroupForBitTorrent()
     createRequestGroupForBitTorrent(result, option_, emptyURIs,
                                     option_->get(PREF_TORRENT_FILE));
 
-    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+    REQUIRE_EQ((size_t)1, result.size());
     std::shared_ptr<RequestGroup> group = result[0];
     auto uris = group->getDownloadContext()->getFirstFileEntry()->getUris();
-    CPPUNIT_ASSERT_EQUAL((size_t)0, uris.size());
+    REQUIRE_EQ((size_t)0, uris.size());
   }
   option_->put(PREF_FORCE_SEQUENTIAL, A2_V_TRUE);
   {
@@ -2663,7 +2657,7 @@ void DownloadHelperTest::testCreateRequestGroupForBitTorrent()
                                     option_->get(PREF_TORRENT_FILE));
 
     // See --force-requencial is ignored
-    CPPUNIT_ASSERT_EQUAL((size_t)1, result.size());
+    REQUIRE_EQ((size_t)1, result.size());
   }
 }
 #endif // ENABLE_BITTORRENT
@@ -2681,20 +2675,20 @@ void DownloadHelperTest::testCreateRequestGroupForMetalink()
     createRequestGroupForMetalink(result, option_);
 
 #  ifdef ENABLE_BITTORRENT
-    CPPUNIT_ASSERT_EQUAL((size_t)6, result.size());
+    REQUIRE_EQ((size_t)6, result.size());
 #  else  // !ENABLE_BITTORRENT
-    CPPUNIT_ASSERT_EQUAL((size_t)5, result.size());
+    REQUIRE_EQ((size_t)5, result.size());
 #  endif // !ENABLE_BITTORRENT
     std::shared_ptr<RequestGroup> group = result[0];
     auto uris = group->getDownloadContext()->getFirstFileEntry()->getUris();
     std::sort(uris.begin(), uris.end());
-    CPPUNIT_ASSERT_EQUAL((size_t)2, uris.size());
-    CPPUNIT_ASSERT_EQUAL(std::string("ftp://ftphost/aria2-0.5.2.tar.bz2"),
+    REQUIRE_EQ((size_t)2, uris.size());
+    REQUIRE_EQ(std::string("ftp://ftphost/aria2-0.5.2.tar.bz2"),
                          uris[0]);
-    CPPUNIT_ASSERT_EQUAL(std::string("http://httphost/aria2-0.5.2.tar.bz2"),
+    REQUIRE_EQ(std::string("http://httphost/aria2-0.5.2.tar.bz2"),
                          uris[1]);
     // See numConcurrentCommand is 1 because of maxconnections attribute.
-    CPPUNIT_ASSERT_EQUAL(1, group->getNumConcurrentCommand());
+    REQUIRE_EQ(1, group->getNumConcurrentCommand());
   }
 }
 #endif // ENABLE_METALINK

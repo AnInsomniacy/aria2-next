@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "File.h"
 #include "MultiDiskAdaptor.h"
@@ -15,12 +15,8 @@
 
 namespace aria2 {
 
-class MultiFileAllocationIteratorTest : public CppUnit::TestFixture {
+class MultiFileAllocationIteratorTest {
 
-  CPPUNIT_TEST_SUITE(MultiFileAllocationIteratorTest);
-  CPPUNIT_TEST(testAllocate);
-  CPPUNIT_TEST(testMakeDiskWriterEntries);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -30,7 +26,8 @@ public:
   void testMakeDiskWriterEntries();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(MultiFileAllocationIteratorTest);
+A2_TEST(MultiFileAllocationIteratorTest, testAllocate)
+A2_TEST(MultiFileAllocationIteratorTest, testMakeDiskWriterEntries)
 
 void MultiFileAllocationIteratorTest::testMakeDiskWriterEntries()
 {
@@ -74,63 +71,63 @@ void MultiFileAllocationIteratorTest::testMakeDiskWriterEntries()
   auto itr = dynamic_cast<MultiFileAllocationIterator*>(allocitr.get());
 
   auto& entries = itr->getDiskWriterEntries();
-  CPPUNIT_ASSERT_EQUAL((size_t)11, entries.size());
+  REQUIRE_EQ((size_t)11, entries.size());
 
   // file1
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/file1"),
+  REQUIRE_EQ(storeDir + std::string("/file1"),
                        entries[0]->getFilePath());
-  CPPUNIT_ASSERT(entries[0]->needsFileAllocation());
-  CPPUNIT_ASSERT(entries[0]->getDiskWriter());
+  REQUIRE(entries[0]->needsFileAllocation());
+  REQUIRE(entries[0]->getDiskWriter());
   // file2
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/file2"),
+  REQUIRE_EQ(storeDir + std::string("/file2"),
                        entries[1]->getFilePath());
-  CPPUNIT_ASSERT(entries[1]->needsFileAllocation());
-  CPPUNIT_ASSERT(entries[1]->getDiskWriter());
+  REQUIRE(entries[1]->needsFileAllocation());
+  REQUIRE(entries[1]->getDiskWriter());
   // file3
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/file3"),
+  REQUIRE_EQ(storeDir + std::string("/file3"),
                        entries[2]->getFilePath());
-  CPPUNIT_ASSERT(entries[2]->needsFileAllocation());
-  CPPUNIT_ASSERT(entries[2]->getDiskWriter());
+  REQUIRE(entries[2]->needsFileAllocation());
+  REQUIRE(entries[2]->getDiskWriter());
   // file4, diskWriter is not null, because file exists.
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/file4"),
+  REQUIRE_EQ(storeDir + std::string("/file4"),
                        entries[3]->getFilePath());
-  CPPUNIT_ASSERT(!entries[3]->needsFileAllocation());
-  CPPUNIT_ASSERT(entries[3]->getDiskWriter());
+  REQUIRE(!entries[3]->needsFileAllocation());
+  REQUIRE(entries[3]->getDiskWriter());
   // file5
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/file5"),
+  REQUIRE_EQ(storeDir + std::string("/file5"),
                        entries[4]->getFilePath());
-  CPPUNIT_ASSERT(!entries[4]->needsFileAllocation());
-  CPPUNIT_ASSERT(!entries[4]->getDiskWriter());
+  REQUIRE(!entries[4]->needsFileAllocation());
+  REQUIRE(!entries[4]->getDiskWriter());
   // file6
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/file6"),
+  REQUIRE_EQ(storeDir + std::string("/file6"),
                        entries[5]->getFilePath());
-  CPPUNIT_ASSERT(entries[5]->needsFileAllocation());
-  CPPUNIT_ASSERT(entries[5]->getDiskWriter());
+  REQUIRE(entries[5]->needsFileAllocation());
+  REQUIRE(entries[5]->getDiskWriter());
   // file7
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/file7"),
+  REQUIRE_EQ(storeDir + std::string("/file7"),
                        entries[6]->getFilePath());
-  CPPUNIT_ASSERT(entries[6]->needsFileAllocation());
-  CPPUNIT_ASSERT(entries[6]->getDiskWriter());
+  REQUIRE(entries[6]->needsFileAllocation());
+  REQUIRE(entries[6]->getDiskWriter());
   // file8
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/file8"),
+  REQUIRE_EQ(storeDir + std::string("/file8"),
                        entries[7]->getFilePath());
-  CPPUNIT_ASSERT(entries[7]->needsFileAllocation());
-  CPPUNIT_ASSERT(entries[7]->getDiskWriter());
+  REQUIRE(entries[7]->needsFileAllocation());
+  REQUIRE(entries[7]->getDiskWriter());
   // file9
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/file9"),
+  REQUIRE_EQ(storeDir + std::string("/file9"),
                        entries[8]->getFilePath());
-  CPPUNIT_ASSERT(!entries[8]->needsFileAllocation());
-  CPPUNIT_ASSERT(entries[8]->getDiskWriter());
+  REQUIRE(!entries[8]->needsFileAllocation());
+  REQUIRE(entries[8]->getDiskWriter());
   // fileA
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/fileA"),
+  REQUIRE_EQ(storeDir + std::string("/fileA"),
                        entries[9]->getFilePath());
-  CPPUNIT_ASSERT(!entries[9]->needsFileAllocation());
-  CPPUNIT_ASSERT(!entries[9]->getDiskWriter());
+  REQUIRE(!entries[9]->needsFileAllocation());
+  REQUIRE(!entries[9]->getDiskWriter());
   // fileB
-  CPPUNIT_ASSERT_EQUAL(storeDir + std::string("/fileB"),
+  REQUIRE_EQ(storeDir + std::string("/fileB"),
                        entries[10]->getFilePath());
-  CPPUNIT_ASSERT(entries[10]->needsFileAllocation());
-  CPPUNIT_ASSERT(entries[10]->getDiskWriter());
+  REQUIRE(entries[10]->needsFileAllocation());
+  REQUIRE(entries[10]->getDiskWriter());
 }
 
 void MultiFileAllocationIteratorTest::testAllocate()
@@ -192,15 +189,15 @@ void MultiFileAllocationIteratorTest::testAllocate()
     while (!itr->finished()) {
       itr->allocateChunk();
     }
-    CPPUNIT_ASSERT_EQUAL((int64_t)length1, File(fileEntry1->getPath()).size());
-    CPPUNIT_ASSERT_EQUAL((int64_t)length2, File(fileEntry2->getPath()).size());
-    CPPUNIT_ASSERT_EQUAL((int64_t)length3, File(fileEntry3->getPath()).size());
-    CPPUNIT_ASSERT(!File(fileEntry4->getPath()).isFile());
-    CPPUNIT_ASSERT_EQUAL((int64_t)length5, File(fileEntry5->getPath()).size());
-    CPPUNIT_ASSERT(!File(fileEntry6->getPath()).isFile());
+    REQUIRE_EQ((int64_t)length1, File(fileEntry1->getPath()).size());
+    REQUIRE_EQ((int64_t)length2, File(fileEntry2->getPath()).size());
+    REQUIRE_EQ((int64_t)length3, File(fileEntry3->getPath()).size());
+    REQUIRE(!File(fileEntry4->getPath()).isFile());
+    REQUIRE_EQ((int64_t)length5, File(fileEntry5->getPath()).size());
+    REQUIRE(!File(fileEntry6->getPath()).isFile());
   }
   catch (Exception& e) {
-    CPPUNIT_FAIL(e.stackTrace());
+    FAIL(e.stackTrace());
   }
 }
 

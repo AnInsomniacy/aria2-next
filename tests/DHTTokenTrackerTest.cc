@@ -1,6 +1,6 @@
 #include "DHTTokenTracker.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -8,11 +8,8 @@
 
 namespace aria2 {
 
-class DHTTokenTrackerTest : public CppUnit::TestFixture {
+class DHTTokenTrackerTest {
 
-  CPPUNIT_TEST_SUITE(DHTTokenTrackerTest);
-  CPPUNIT_TEST(testGenerateToken);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -22,7 +19,7 @@ public:
   void testGenerateToken();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTTokenTrackerTest);
+A2_TEST(DHTTokenTrackerTest, testGenerateToken)
 
 void DHTTokenTrackerTest::testGenerateToken()
 {
@@ -33,14 +30,14 @@ void DHTTokenTrackerTest::testGenerateToken()
 
   DHTTokenTracker tracker;
   std::string token = tracker.generateToken(infohash, ipaddr, port);
-  CPPUNIT_ASSERT(tracker.validateToken(token, infohash, ipaddr, port));
+  REQUIRE(tracker.validateToken(token, infohash, ipaddr, port));
 
   tracker.updateTokenSecret();
-  CPPUNIT_ASSERT(tracker.validateToken(token, infohash, ipaddr, port));
+  REQUIRE(tracker.validateToken(token, infohash, ipaddr, port));
   std::string newtoken = tracker.generateToken(infohash, ipaddr, port);
   tracker.updateTokenSecret();
-  CPPUNIT_ASSERT(!tracker.validateToken(token, infohash, ipaddr, port));
-  CPPUNIT_ASSERT(tracker.validateToken(newtoken, infohash, ipaddr, port));
+  REQUIRE(!tracker.validateToken(token, infohash, ipaddr, port));
+  REQUIRE(tracker.validateToken(newtoken, infohash, ipaddr, port));
 }
 
 } // namespace aria2

@@ -1,6 +1,6 @@
 #include "BtPostDownloadHandler.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DownloadContext.h"
 #include "RequestGroup.h"
@@ -24,15 +24,8 @@
 
 namespace aria2 {
 
-class BtPostDownloadHandlerTest : public CppUnit::TestFixture {
+class BtPostDownloadHandlerTest {
 
-  CPPUNIT_TEST_SUITE(BtPostDownloadHandlerTest);
-  CPPUNIT_TEST(testCanHandle_extension);
-  CPPUNIT_TEST(testCanHandle_contentType);
-  CPPUNIT_TEST(testBtIncompleteHashCheckReportPolicy);
-  CPPUNIT_TEST(testBtSchedulesChecksumAfterPieceHash);
-  CPPUNIT_TEST(testGetNextRequestGroups);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<Option> option_;
@@ -47,7 +40,11 @@ public:
   void testGetNextRequestGroups();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtPostDownloadHandlerTest);
+A2_TEST(BtPostDownloadHandlerTest, testCanHandle_extension)
+A2_TEST(BtPostDownloadHandlerTest, testCanHandle_contentType)
+A2_TEST(BtPostDownloadHandlerTest, testBtIncompleteHashCheckReportPolicy)
+A2_TEST(BtPostDownloadHandlerTest, testBtSchedulesChecksumAfterPieceHash)
+A2_TEST(BtPostDownloadHandlerTest, testGetNextRequestGroups)
 
 void BtPostDownloadHandlerTest::testCanHandle_extension()
 {
@@ -58,10 +55,10 @@ void BtPostDownloadHandlerTest::testCanHandle_extension()
 
   BtPostDownloadHandler handler;
 
-  CPPUNIT_ASSERT(handler.canHandle(&rg));
+  REQUIRE(handler.canHandle(&rg));
 
   dctx->getFirstFileEntry()->setPath(A2_TEST_DIR "/test.torrent2");
-  CPPUNIT_ASSERT(!handler.canHandle(&rg));
+  REQUIRE(!handler.canHandle(&rg));
 }
 
 void BtPostDownloadHandlerTest::testCanHandle_contentType()
@@ -73,10 +70,10 @@ void BtPostDownloadHandlerTest::testCanHandle_contentType()
 
   BtPostDownloadHandler handler;
 
-  CPPUNIT_ASSERT(handler.canHandle(&rg));
+  REQUIRE(handler.canHandle(&rg));
 
   dctx->getFirstFileEntry()->setContentType("application/octet-stream");
-  CPPUNIT_ASSERT(!handler.canHandle(&rg));
+  REQUIRE(!handler.canHandle(&rg));
 }
 
 void BtPostDownloadHandlerTest::testBtIncompleteHashCheckReportPolicy()
@@ -84,10 +81,10 @@ void BtPostDownloadHandlerTest::testBtIncompleteHashCheckReportPolicy()
   RequestGroup rg(GroupId::create(), option_);
   BtCheckIntegrityEntry entry(&rg);
 
-  CPPUNIT_ASSERT(!entry.shouldReportIncompleteAsError());
+  REQUIRE(!entry.shouldReportIncompleteAsError());
 
   option_->put(PREF_HASH_CHECK_ONLY, A2_V_TRUE);
-  CPPUNIT_ASSERT(entry.shouldReportIncompleteAsError());
+  REQUIRE(entry.shouldReportIncompleteAsError());
 }
 
 void BtPostDownloadHandlerTest::testBtSchedulesChecksumAfterPieceHash()
@@ -111,15 +108,15 @@ void BtPostDownloadHandlerTest::testBtSchedulesChecksumAfterPieceHash()
   BtCheckIntegrityEntry entry(&rg);
   entry.onDownloadFinished(commands, &e);
 
-  CPPUNIT_ASSERT(e.getCheckIntegrityMan()->hasNext());
+  REQUIRE(e.getCheckIntegrityMan()->hasNext());
   auto checksumEntry = e.getCheckIntegrityMan()->pickNext();
-  CPPUNIT_ASSERT(dynamic_cast<ChecksumCheckIntegrityEntry*>(checksumEntry));
+  REQUIRE(dynamic_cast<ChecksumCheckIntegrityEntry*>(checksumEntry));
 
   std::vector<std::unique_ptr<Command>> nextCommands;
   checksumEntry->onDownloadFinished(nextCommands, &e);
 
   auto btFileAllocationEntry = e.getFileAllocationMan()->pickNext();
-  CPPUNIT_ASSERT(dynamic_cast<BtFileAllocationEntry*>(btFileAllocationEntry));
+  REQUIRE(dynamic_cast<BtFileAllocationEntry*>(btFileAllocationEntry));
 }
 
 void BtPostDownloadHandlerTest::testGetNextRequestGroups()
@@ -134,14 +131,14 @@ void BtPostDownloadHandlerTest::testGetNextRequestGroups()
   BtPostDownloadHandler handler;
   std::vector<std::shared_ptr<RequestGroup>> groups;
   handler.getNextRequestGroups(groups, &rg);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, groups.size());
-  CPPUNIT_ASSERT_EQUAL(
+  REQUIRE_EQ((size_t)1, groups.size());
+  REQUIRE_EQ(
       std::string("248d0a1cd08284299de78d5c1ed359bb46717d8c"),
       bittorrent::getInfoHashString(groups.front()->getDownloadContext()));
-  CPPUNIT_ASSERT(std::find(rg.followedBy().begin(), rg.followedBy().end(),
+  REQUIRE(std::find(rg.followedBy().begin(), rg.followedBy().end(),
                            groups.front()->getGID()) != rg.followedBy().end());
   for (auto& nrg : groups) {
-    CPPUNIT_ASSERT_EQUAL(rg.getGID(), nrg->following());
+    REQUIRE_EQ(rg.getGID(), nrg->following());
   }
 }
 

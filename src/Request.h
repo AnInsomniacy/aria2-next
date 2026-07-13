@@ -177,7 +177,7 @@ public:
   static const std::string METHOD_GET;
   static const std::string METHOD_HEAD;
 
-  static const int MAX_REDIRECT = 20;
+  static constexpr int MAX_REDIRECT = 20;
 
   static const std::string DEFAULT_FILE;
 };

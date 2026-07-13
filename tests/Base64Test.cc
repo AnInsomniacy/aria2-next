@@ -1,15 +1,10 @@
 #include "base64.h"
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class Base64Test : public CppUnit::TestFixture {
+class Base64Test {
 
-  CPPUNIT_TEST_SUITE(Base64Test);
-  CPPUNIT_TEST(testEncode);
-  CPPUNIT_TEST(testDecode);
-  CPPUNIT_TEST(testLongString);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -20,79 +15,81 @@ public:
   void testLongString();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(Base64Test);
+A2_TEST(Base64Test, testEncode)
+A2_TEST(Base64Test, testDecode)
+A2_TEST(Base64Test, testLongString)
 
 void Base64Test::testEncode()
 {
   std::string s = "Hello World!";
-  CPPUNIT_ASSERT_EQUAL(std::string("SGVsbG8gV29ybGQh"),
+  REQUIRE_EQ(std::string("SGVsbG8gV29ybGQh"),
                        base64::encode(s.begin(), s.end()));
 
   s = "Hello World";
-  CPPUNIT_ASSERT_EQUAL(std::string("SGVsbG8gV29ybGQ="),
+  REQUIRE_EQ(std::string("SGVsbG8gV29ybGQ="),
                        base64::encode(s.begin(), s.end()));
 
   s = "Hello Worl";
-  CPPUNIT_ASSERT_EQUAL(std::string("SGVsbG8gV29ybA=="),
+  REQUIRE_EQ(std::string("SGVsbG8gV29ybA=="),
                        base64::encode(s.begin(), s.end()));
 
   s = "Man";
-  CPPUNIT_ASSERT_EQUAL(std::string("TWFu"), base64::encode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string("TWFu"), base64::encode(s.begin(), s.end()));
 
   s = "M";
-  CPPUNIT_ASSERT_EQUAL(std::string("TQ=="), base64::encode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string("TQ=="), base64::encode(s.begin(), s.end()));
 
   s = "";
-  CPPUNIT_ASSERT_EQUAL(std::string(), base64::encode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string(), base64::encode(s.begin(), s.end()));
 
   s.assign(1, (char)-1);
   base64::encode(s.begin(), s.end());
-  CPPUNIT_ASSERT_EQUAL(std::string("/w=="), base64::encode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string("/w=="), base64::encode(s.begin(), s.end()));
 
   s.assign(2, (char)-1);
   base64::encode(s.begin(), s.end());
-  CPPUNIT_ASSERT_EQUAL(std::string("//8="), base64::encode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string("//8="), base64::encode(s.begin(), s.end()));
 
   s.assign(3, (char)-1);
   base64::encode(s.begin(), s.end());
-  CPPUNIT_ASSERT_EQUAL(std::string("////"), base64::encode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string("////"), base64::encode(s.begin(), s.end()));
 }
 
 void Base64Test::testDecode()
 {
   std::string s = "SGVsbG8gV29ybGQh";
-  CPPUNIT_ASSERT_EQUAL(std::string("Hello World!"),
+  REQUIRE_EQ(std::string("Hello World!"),
                        base64::decode(s.begin(), s.end()));
 
   s = "SGVsbG8gV29ybGQ=";
-  CPPUNIT_ASSERT_EQUAL(std::string("Hello World"),
+  REQUIRE_EQ(std::string("Hello World"),
                        base64::decode(s.begin(), s.end()));
 
   s = "SGVsbG8gV29ybA==";
-  CPPUNIT_ASSERT_EQUAL(std::string("Hello Worl"),
+  REQUIRE_EQ(std::string("Hello Worl"),
                        base64::decode(s.begin(), s.end()));
 
   s = "TWFu";
-  CPPUNIT_ASSERT_EQUAL(std::string("Man"), base64::decode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string("Man"), base64::decode(s.begin(), s.end()));
 
   s = "TWFu\n";
-  CPPUNIT_ASSERT_EQUAL(std::string("Man"), base64::decode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string("Man"), base64::decode(s.begin(), s.end()));
 
   s = "TQ==";
-  CPPUNIT_ASSERT_EQUAL(std::string("M"), base64::decode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string("M"), base64::decode(s.begin(), s.end()));
 
   s = "";
-  CPPUNIT_ASSERT_EQUAL(std::string(""), base64::decode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string(""), base64::decode(s.begin(), s.end()));
 
   s = "SGVsbG8\ngV2*9ybGQ=";
-  CPPUNIT_ASSERT_EQUAL(std::string("Hello World"),
+  REQUIRE_EQ(std::string("Hello World"),
                        base64::decode(s.begin(), s.end()));
 
   s = "SGVsbG8\ngV2*9ybGQ";
-  CPPUNIT_ASSERT_EQUAL(std::string(""), base64::decode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string(""), base64::decode(s.begin(), s.end()));
 
   s = "/w==";
-  CPPUNIT_ASSERT_EQUAL(std::string(1, -1), base64::decode(s.begin(), s.end()));
+  REQUIRE_EQ(std::string(1, -1), base64::decode(s.begin(), s.end()));
 }
 
 void Base64Test::testLongString()
@@ -192,8 +189,8 @@ void Base64Test::testLongString()
       " * files in the program, then also delete it here.\n"
       " */\n"
       "/* copyright --> */\n";
-  CPPUNIT_ASSERT_EQUAL(d, base64::decode(s.begin(), s.end()));
-  CPPUNIT_ASSERT_EQUAL(s, base64::encode(d.begin(), d.end()));
+  REQUIRE_EQ(d, base64::decode(s.begin(), s.end()));
+  REQUIRE_EQ(s, base64::encode(d.begin(), d.end()));
 }
 
 } // namespace aria2

@@ -2,21 +2,15 @@
 
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "BtConstants.h"
 #include "DlAbortEx.h"
 
 namespace aria2 {
 
-class UTMetadataRejectExtensionMessageTest : public CppUnit::TestFixture {
+class UTMetadataRejectExtensionMessageTest {
 
-  CPPUNIT_TEST_SUITE(UTMetadataRejectExtensionMessageTest);
-  CPPUNIT_TEST(testGetExtensionMessageID);
-  CPPUNIT_TEST(testGetBencodedReject);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testGetExtensionMessageID();
@@ -25,19 +19,22 @@ public:
   void testDoReceivedAction();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(UTMetadataRejectExtensionMessageTest);
+A2_TEST(UTMetadataRejectExtensionMessageTest, testGetExtensionMessageID)
+A2_TEST(UTMetadataRejectExtensionMessageTest, testGetBencodedReject)
+A2_TEST(UTMetadataRejectExtensionMessageTest, testToString)
+A2_TEST(UTMetadataRejectExtensionMessageTest, testDoReceivedAction)
 
 void UTMetadataRejectExtensionMessageTest::testGetExtensionMessageID()
 {
   UTMetadataRejectExtensionMessage msg(1);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)1, msg.getExtensionMessageID());
+  REQUIRE_EQ((uint8_t)1, msg.getExtensionMessageID());
 }
 
 void UTMetadataRejectExtensionMessageTest::testGetBencodedReject()
 {
   UTMetadataRejectExtensionMessage msg(1);
   msg.setIndex(1);
-  CPPUNIT_ASSERT_EQUAL(std::string("d8:msg_typei2e5:piecei1ee"),
+  REQUIRE_EQ(std::string("d8:msg_typei2e5:piecei1ee"),
                        msg.getPayload());
 }
 
@@ -45,7 +42,7 @@ void UTMetadataRejectExtensionMessageTest::testToString()
 {
   UTMetadataRejectExtensionMessage msg(1);
   msg.setIndex(100);
-  CPPUNIT_ASSERT_EQUAL(std::string("ut_metadata reject piece=100"),
+  REQUIRE_EQ(std::string("ut_metadata reject piece=100"),
                        msg.toString());
 }
 
@@ -55,7 +52,7 @@ void UTMetadataRejectExtensionMessageTest::testDoReceivedAction()
   msg.setIndex(0);
   try {
     msg.doReceivedAction();
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (DlAbortEx& e) {
     // success

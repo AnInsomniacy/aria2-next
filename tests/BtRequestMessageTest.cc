@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "bittorrent_helper.h"
 #include "MockBtMessage.h"
@@ -18,25 +18,8 @@
 
 namespace aria2 {
 
-class BtRequestMessageTest : public CppUnit::TestFixture {
+class BtRequestMessageTest {
 
-  CPPUNIT_TEST_SUITE(BtRequestMessageTest);
-  CPPUNIT_TEST(testCreate);
-  CPPUNIT_TEST(testCreateMessage);
-  CPPUNIT_TEST(testDoReceivedAction_hasPieceAndAmNotChoking);
-  CPPUNIT_TEST(
-      testDoReceivedAction_hasPieceAndAmChokingAndFastExtensionEnabled);
-  CPPUNIT_TEST(
-      testDoReceivedAction_hasPieceAndAmChokingAndFastExtensionDisabled);
-  CPPUNIT_TEST(testDoReceivedAction_doesntHavePieceAndFastExtensionEnabled);
-  CPPUNIT_TEST(testDoReceivedAction_doesntHavePieceAndFastExtensionDisabled);
-  CPPUNIT_TEST(testHandleAbortRequestEvent);
-  CPPUNIT_TEST(testHandleAbortRequestEvent_indexNoMatch);
-  CPPUNIT_TEST(testHandleAbortRequestEvent_alreadyInvalidated);
-  CPPUNIT_TEST(testToString);
-  CPPUNIT_TEST(testValidate);
-  CPPUNIT_TEST(testValidate_lengthTooLong);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
 public:
@@ -105,7 +88,19 @@ public:
   }
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(BtRequestMessageTest);
+A2_TEST(BtRequestMessageTest, testCreate)
+A2_TEST(BtRequestMessageTest, testCreateMessage)
+A2_TEST(BtRequestMessageTest, testDoReceivedAction_hasPieceAndAmNotChoking)
+A2_TEST(BtRequestMessageTest, testDoReceivedAction_hasPieceAndAmChokingAndFastExtensionEnabled)
+A2_TEST(BtRequestMessageTest, testDoReceivedAction_hasPieceAndAmChokingAndFastExtensionDisabled)
+A2_TEST(BtRequestMessageTest, testDoReceivedAction_doesntHavePieceAndFastExtensionEnabled)
+A2_TEST(BtRequestMessageTest, testDoReceivedAction_doesntHavePieceAndFastExtensionDisabled)
+A2_TEST(BtRequestMessageTest, testHandleAbortRequestEvent)
+A2_TEST(BtRequestMessageTest, testHandleAbortRequestEvent_indexNoMatch)
+A2_TEST(BtRequestMessageTest, testHandleAbortRequestEvent_alreadyInvalidated)
+A2_TEST(BtRequestMessageTest, testToString)
+A2_TEST(BtRequestMessageTest, testValidate)
+A2_TEST(BtRequestMessageTest, testValidate_lengthTooLong)
 
 void BtRequestMessageTest::testCreate()
 {
@@ -115,17 +110,17 @@ void BtRequestMessageTest::testCreate()
   bittorrent::setIntParam(&msg[9], 256);
   bittorrent::setIntParam(&msg[13], 1_k);
   auto pm = BtRequestMessage::create(&msg[4], 13);
-  CPPUNIT_ASSERT_EQUAL((uint8_t)6, pm->getId());
-  CPPUNIT_ASSERT_EQUAL((size_t)12345, pm->getIndex());
-  CPPUNIT_ASSERT_EQUAL(256, pm->getBegin());
-  CPPUNIT_ASSERT_EQUAL((int32_t)1_k, pm->getLength());
+  REQUIRE_EQ((uint8_t)6, pm->getId());
+  REQUIRE_EQ((size_t)12345, pm->getIndex());
+  REQUIRE_EQ(256, pm->getBegin());
+  REQUIRE_EQ((int32_t)1_k, pm->getLength());
 
   // case: payload size is wrong
   try {
     unsigned char msg[18];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 14, 6);
     BtRequestMessage::create(&msg[4], 14);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -134,7 +129,7 @@ void BtRequestMessageTest::testCreate()
     unsigned char msg[17];
     bittorrent::createPeerMessageString(msg, sizeof(msg), 13, 7);
     BtRequestMessage::create(&msg[4], 13);
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (...) {
   }
@@ -152,8 +147,8 @@ void BtRequestMessageTest::testCreateMessage()
   bittorrent::setIntParam(&data[9], 256);
   bittorrent::setIntParam(&data[13], 1_k);
   auto rawmsg = msg.createMessage();
-  CPPUNIT_ASSERT_EQUAL((size_t)17, rawmsg.size());
-  CPPUNIT_ASSERT(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
+  REQUIRE_EQ((size_t)17, rawmsg.size());
+  REQUIRE(std::equal(std::begin(rawmsg), std::end(rawmsg), data));
 }
 
 void BtRequestMessageTest::testDoReceivedAction_hasPieceAndAmNotChoking()
@@ -161,14 +156,14 @@ void BtRequestMessageTest::testDoReceivedAction_hasPieceAndAmNotChoking()
   peer_->amChoking(false);
   msg->doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, dispatcher_->messageQueue.size());
-  CPPUNIT_ASSERT(BtPieceMessage::ID ==
+  REQUIRE_EQ((size_t)1, dispatcher_->messageQueue.size());
+  REQUIRE(BtPieceMessage::ID ==
                  dispatcher_->messageQueue.front()->getId());
   auto pieceMsg = static_cast<const BtPieceMessage*>(
       dispatcher_->messageQueue.front().get());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, pieceMsg->getIndex());
-  CPPUNIT_ASSERT_EQUAL((int32_t)16, pieceMsg->getBegin());
-  CPPUNIT_ASSERT_EQUAL((int32_t)32, pieceMsg->getBlockLength());
+  REQUIRE_EQ((size_t)1, pieceMsg->getIndex());
+  REQUIRE_EQ((int32_t)16, pieceMsg->getBegin());
+  REQUIRE_EQ((int32_t)32, pieceMsg->getBlockLength());
 }
 
 void BtRequestMessageTest::
@@ -178,14 +173,14 @@ void BtRequestMessageTest::
   peer_->setFastExtensionEnabled(true);
   msg->doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, dispatcher_->messageQueue.size());
-  CPPUNIT_ASSERT(BtRejectMessage::ID ==
+  REQUIRE_EQ((size_t)1, dispatcher_->messageQueue.size());
+  REQUIRE(BtRejectMessage::ID ==
                  dispatcher_->messageQueue.front()->getId());
   auto rejectMsg = static_cast<const BtRejectMessage*>(
       dispatcher_->messageQueue.front().get());
-  CPPUNIT_ASSERT_EQUAL((size_t)1, rejectMsg->getIndex());
-  CPPUNIT_ASSERT_EQUAL((int32_t)16, rejectMsg->getBegin());
-  CPPUNIT_ASSERT_EQUAL((int32_t)32, rejectMsg->getLength());
+  REQUIRE_EQ((size_t)1, rejectMsg->getIndex());
+  REQUIRE_EQ((int32_t)16, rejectMsg->getBegin());
+  REQUIRE_EQ((int32_t)32, rejectMsg->getLength());
 }
 
 void BtRequestMessageTest::
@@ -194,7 +189,7 @@ void BtRequestMessageTest::
   peer_->amChoking(true);
   msg->doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)0, dispatcher_->messageQueue.size());
+  REQUIRE_EQ((size_t)0, dispatcher_->messageQueue.size());
 }
 
 void BtRequestMessageTest::
@@ -205,14 +200,14 @@ void BtRequestMessageTest::
   peer_->setFastExtensionEnabled(true);
   msg->doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, dispatcher_->messageQueue.size());
-  CPPUNIT_ASSERT(BtRejectMessage::ID ==
+  REQUIRE_EQ((size_t)1, dispatcher_->messageQueue.size());
+  REQUIRE(BtRejectMessage::ID ==
                  dispatcher_->messageQueue.front()->getId());
   auto rejectMsg = static_cast<const BtRejectMessage*>(
       dispatcher_->messageQueue.front().get());
-  CPPUNIT_ASSERT_EQUAL((size_t)2, rejectMsg->getIndex());
-  CPPUNIT_ASSERT_EQUAL((int32_t)16, rejectMsg->getBegin());
-  CPPUNIT_ASSERT_EQUAL((int32_t)32, rejectMsg->getLength());
+  REQUIRE_EQ((size_t)2, rejectMsg->getIndex());
+  REQUIRE_EQ((int32_t)16, rejectMsg->getBegin());
+  REQUIRE_EQ((int32_t)32, rejectMsg->getLength());
 }
 
 void BtRequestMessageTest::
@@ -222,37 +217,37 @@ void BtRequestMessageTest::
   peer_->amChoking(false);
   msg->doReceivedAction();
 
-  CPPUNIT_ASSERT_EQUAL((size_t)0, dispatcher_->messageQueue.size());
+  REQUIRE_EQ((size_t)0, dispatcher_->messageQueue.size());
 }
 
 void BtRequestMessageTest::testHandleAbortRequestEvent()
 {
   auto piece = std::make_shared<Piece>(1, 16_k);
-  CPPUNIT_ASSERT(!msg->isInvalidate());
+  REQUIRE(!msg->isInvalidate());
   msg->onAbortOutstandingRequestEvent(BtAbortOutstandingRequestEvent(piece));
-  CPPUNIT_ASSERT(msg->isInvalidate());
+  REQUIRE(msg->isInvalidate());
 }
 
 void BtRequestMessageTest::testHandleAbortRequestEvent_indexNoMatch()
 {
   auto piece = std::make_shared<Piece>(2, 16_k);
-  CPPUNIT_ASSERT(!msg->isInvalidate());
+  REQUIRE(!msg->isInvalidate());
   msg->onAbortOutstandingRequestEvent(BtAbortOutstandingRequestEvent(piece));
-  CPPUNIT_ASSERT(!msg->isInvalidate());
+  REQUIRE(!msg->isInvalidate());
 }
 
 void BtRequestMessageTest::testHandleAbortRequestEvent_alreadyInvalidated()
 {
   auto piece = std::make_shared<Piece>(1, 16_k);
   msg->setInvalidate(true);
-  CPPUNIT_ASSERT(msg->isInvalidate());
+  REQUIRE(msg->isInvalidate());
   msg->onAbortOutstandingRequestEvent(BtAbortOutstandingRequestEvent(piece));
-  CPPUNIT_ASSERT(msg->isInvalidate());
+  REQUIRE(msg->isInvalidate());
 }
 
 void BtRequestMessageTest::testToString()
 {
-  CPPUNIT_ASSERT_EQUAL(std::string("request index=1, begin=16, length=32"),
+  REQUIRE_EQ(std::string("request index=1, begin=16, length=32"),
                        msg->toString());
 }
 
@@ -271,10 +266,10 @@ void BtRequestMessageTest::testValidate_lengthTooLong()
       make_unique<RangeBtMessageValidator>(&msg, 1_k, 256_k));
   try {
     msg.validate();
-    CPPUNIT_FAIL("exception must be thrown.");
+    FAIL("exception must be thrown.");
   }
   catch (DlAbortEx& e) {
-    CPPUNIT_ASSERT_EQUAL(
+    REQUIRE_EQ(
         "Length too long: " + util::uitos(MAX_BLOCK_LENGTH + 1) + " > " +
             util::uitos(MAX_BLOCK_LENGTH / 1024) + "KB",
         std::string(e.what()));

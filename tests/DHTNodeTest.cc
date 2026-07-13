@@ -2,15 +2,12 @@
 #include "Exception.h"
 #include "util.h"
 #include <iostream>
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class DHTNodeTest : public CppUnit::TestFixture {
+class DHTNodeTest {
 
-  CPPUNIT_TEST_SUITE(DHTNodeTest);
-  CPPUNIT_TEST(testGenerateID);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -20,7 +17,7 @@ public:
   void testGenerateID();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTNodeTest);
+A2_TEST(DHTNodeTest, testGenerateID)
 
 void DHTNodeTest::testGenerateID()
 {

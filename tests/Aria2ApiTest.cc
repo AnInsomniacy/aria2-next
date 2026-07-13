@@ -1,6 +1,6 @@
 #include "aria2api.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "TestUtil.h"
 #include "prefs.h"
@@ -14,19 +14,8 @@
 
 namespace aria2 {
 
-class Aria2ApiTest : public CppUnit::TestFixture {
+class Aria2ApiTest {
 
-  CPPUNIT_TEST_SUITE(Aria2ApiTest);
-  CPPUNIT_TEST(testAddUri);
-  CPPUNIT_TEST(testAddMetalink);
-  CPPUNIT_TEST(testAddTorrent);
-  CPPUNIT_TEST(testRemovePause);
-  CPPUNIT_TEST(testChangePosition);
-  CPPUNIT_TEST(testChangeOption);
-  CPPUNIT_TEST(testChangeGlobalOption);
-  CPPUNIT_TEST(testDownloadResultDH);
-  CPPUNIT_TEST(testGetFilesOutlivesDownloadHandle);
-  CPPUNIT_TEST_SUITE_END();
 
   Session* session_;
 
@@ -51,7 +40,15 @@ public:
   void testGetFilesOutlivesDownloadHandle();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(Aria2ApiTest);
+A2_TEST(Aria2ApiTest, testAddUri)
+A2_TEST(Aria2ApiTest, testAddMetalink)
+A2_TEST(Aria2ApiTest, testAddTorrent)
+A2_TEST(Aria2ApiTest, testRemovePause)
+A2_TEST(Aria2ApiTest, testChangePosition)
+A2_TEST(Aria2ApiTest, testChangeOption)
+A2_TEST(Aria2ApiTest, testChangeGlobalOption)
+A2_TEST(Aria2ApiTest, testDownloadResultDH)
+A2_TEST(Aria2ApiTest, testGetFilesOutlivesDownloadHandle)
 
 void Aria2ApiTest::testAddUri()
 {
@@ -59,19 +56,19 @@ void Aria2ApiTest::testAddUri()
   std::vector<std::string> uris(1);
   KeyVals options;
   uris[0] = "http://localhost/1";
-  CPPUNIT_ASSERT_EQUAL(0, addUri(session_, &gid, uris, options));
-  CPPUNIT_ASSERT(!isNull(gid));
+  REQUIRE_EQ(0, addUri(session_, &gid, uris, options));
+  REQUIRE(!isNull(gid));
 
   DownloadHandle* hd = getDownloadHandle(session_, gid);
-  CPPUNIT_ASSERT(hd);
-  CPPUNIT_ASSERT_EQUAL(1, hd->getNumFiles());
+  REQUIRE(hd);
+  REQUIRE_EQ(1, hd->getNumFiles());
   FileData file = hd->getFile(1);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, file.uris.size());
-  CPPUNIT_ASSERT_EQUAL(uris[0], file.uris[0].uri);
+  REQUIRE_EQ((size_t)1, file.uris.size());
+  REQUIRE_EQ(uris[0], file.uris[0].uri);
   deleteDownloadHandle(hd);
 
   options.push_back(KeyVals::value_type("file-allocation", "foo"));
-  CPPUNIT_ASSERT_EQUAL(-1, addUri(session_, &gid, uris, options));
+  REQUIRE_EQ(-1, addUri(session_, &gid, uris, options));
 }
 
 void Aria2ApiTest::testAddMetalink()
@@ -80,18 +77,18 @@ void Aria2ApiTest::testAddMetalink()
   std::vector<A2Gid> gids;
   KeyVals options;
 #ifdef ENABLE_METALINK
-  CPPUNIT_ASSERT_EQUAL(0, addMetalink(session_, &gids, metalinkPath, options));
+  REQUIRE_EQ(0, addMetalink(session_, &gids, metalinkPath, options));
 #  ifdef ENABLE_BITTORRENT
-  CPPUNIT_ASSERT_EQUAL((size_t)2, gids.size());
+  REQUIRE_EQ((size_t)2, gids.size());
 #  else  // !ENABLE_BITTORRENT
-  CPPUNIT_ASSERT_EQUAL((size_t)1, gids.size());
+  REQUIRE_EQ((size_t)1, gids.size());
 #  endif // !ENABLE_BITTORRENT
 
   gids.clear();
   options.push_back(KeyVals::value_type("file-allocation", "foo"));
-  CPPUNIT_ASSERT_EQUAL(-1, addMetalink(session_, &gids, metalinkPath, options));
+  REQUIRE_EQ(-1, addMetalink(session_, &gids, metalinkPath, options));
 #else  // !ENABLE_METALINK
-  CPPUNIT_ASSERT_EQUAL(-1, addMetalink(session_, &gids, metalinkPath, options));
+  REQUIRE_EQ(-1, addMetalink(session_, &gids, metalinkPath, options));
 #endif // !ENABLE_METALINK
 }
 
@@ -101,13 +98,13 @@ void Aria2ApiTest::testAddTorrent()
   A2Gid gid;
   KeyVals options;
 #ifdef ENABLE_BITTORRENT
-  CPPUNIT_ASSERT_EQUAL(0, addTorrent(session_, &gid, torrentPath, options));
-  CPPUNIT_ASSERT(!isNull(gid));
+  REQUIRE_EQ(0, addTorrent(session_, &gid, torrentPath, options));
+  REQUIRE(!isNull(gid));
 
   options.push_back(KeyVals::value_type("file-allocation", "foo"));
-  CPPUNIT_ASSERT_EQUAL(-1, addTorrent(session_, &gid, torrentPath, options));
+  REQUIRE_EQ(-1, addTorrent(session_, &gid, torrentPath, options));
 #else  // !ENABLE_BITTORRENT
-  CPPUNIT_ASSERT_EQUAL(-1, addTorrent(session_, &gid, torrentPath, options));
+  REQUIRE_EQ(-1, addTorrent(session_, &gid, torrentPath, options));
 #endif // !ENABLE_BITTORRENT
 }
 
@@ -117,31 +114,31 @@ void Aria2ApiTest::testRemovePause()
   std::vector<std::string> uris(1);
   KeyVals options;
   uris[0] = "http://localhost/1";
-  CPPUNIT_ASSERT_EQUAL(0, addUri(session_, &gid, uris, options));
+  REQUIRE_EQ(0, addUri(session_, &gid, uris, options));
 
   DownloadHandle* hd = getDownloadHandle(session_, gid);
-  CPPUNIT_ASSERT(hd);
-  CPPUNIT_ASSERT_EQUAL(DOWNLOAD_WAITING, hd->getStatus());
+  REQUIRE(hd);
+  REQUIRE_EQ(DOWNLOAD_WAITING, hd->getStatus());
   deleteDownloadHandle(hd);
 
-  CPPUNIT_ASSERT_EQUAL(-1, pauseDownload(session_, (A2Gid)0));
-  CPPUNIT_ASSERT_EQUAL(0, pauseDownload(session_, gid));
+  REQUIRE_EQ(-1, pauseDownload(session_, (A2Gid)0));
+  REQUIRE_EQ(0, pauseDownload(session_, gid));
   hd = getDownloadHandle(session_, gid);
-  CPPUNIT_ASSERT(hd);
-  CPPUNIT_ASSERT_EQUAL(DOWNLOAD_PAUSED, hd->getStatus());
+  REQUIRE(hd);
+  REQUIRE_EQ(DOWNLOAD_PAUSED, hd->getStatus());
   deleteDownloadHandle(hd);
 
-  CPPUNIT_ASSERT_EQUAL(-1, unpauseDownload(session_, (A2Gid)0));
-  CPPUNIT_ASSERT_EQUAL(0, unpauseDownload(session_, gid));
+  REQUIRE_EQ(-1, unpauseDownload(session_, (A2Gid)0));
+  REQUIRE_EQ(0, unpauseDownload(session_, gid));
   hd = getDownloadHandle(session_, gid);
-  CPPUNIT_ASSERT(hd);
-  CPPUNIT_ASSERT_EQUAL(DOWNLOAD_WAITING, hd->getStatus());
+  REQUIRE(hd);
+  REQUIRE_EQ(DOWNLOAD_WAITING, hd->getStatus());
   deleteDownloadHandle(hd);
 
-  CPPUNIT_ASSERT_EQUAL(-1, removeDownload(session_, (A2Gid)0));
-  CPPUNIT_ASSERT_EQUAL(0, removeDownload(session_, gid));
+  REQUIRE_EQ(-1, removeDownload(session_, (A2Gid)0));
+  REQUIRE_EQ(0, removeDownload(session_, gid));
   hd = getDownloadHandle(session_, gid);
-  CPPUNIT_ASSERT(!hd);
+  REQUIRE(!hd);
 }
 
 void Aria2ApiTest::testChangePosition()
@@ -152,17 +149,17 @@ void Aria2ApiTest::testChangePosition()
   KeyVals options;
   uris[0] = "http://localhost/";
   for (int i = 0; i < N; ++i) {
-    CPPUNIT_ASSERT_EQUAL(0, addUri(session_, &gids[i], uris, options));
+    REQUIRE_EQ(0, addUri(session_, &gids[i], uris, options));
   }
-  CPPUNIT_ASSERT_EQUAL(-1,
+  REQUIRE_EQ(-1,
                        changePosition(session_, (A2Gid)0, -2, OFFSET_MODE_CUR));
-  CPPUNIT_ASSERT_EQUAL(2,
+  REQUIRE_EQ(2,
                        changePosition(session_, gids[4], -2, OFFSET_MODE_CUR));
 
-  CPPUNIT_ASSERT_EQUAL(5,
+  REQUIRE_EQ(5,
                        changePosition(session_, gids[4], 5, OFFSET_MODE_SET));
 
-  CPPUNIT_ASSERT_EQUAL(7,
+  REQUIRE_EQ(7,
                        changePosition(session_, gids[4], -2, OFFSET_MODE_END));
 }
 
@@ -173,56 +170,56 @@ void Aria2ApiTest::testChangeOption()
   KeyVals options;
   uris[0] = "http://localhost/1";
   options.push_back(KeyVals::value_type("dir", "mydownload"));
-  CPPUNIT_ASSERT_EQUAL(0, addUri(session_, &gid, uris, options));
+  REQUIRE_EQ(0, addUri(session_, &gid, uris, options));
 
   DownloadHandle* hd = getDownloadHandle(session_, gid);
-  CPPUNIT_ASSERT(hd);
-  CPPUNIT_ASSERT_EQUAL(1, hd->getNumFiles());
+  REQUIRE(hd);
+  REQUIRE_EQ(1, hd->getNumFiles());
   FileData file = hd->getFile(1);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, file.uris.size());
-  CPPUNIT_ASSERT_EQUAL(uris[0], file.uris[0].uri);
+  REQUIRE_EQ((size_t)1, file.uris.size());
+  REQUIRE_EQ(uris[0], file.uris[0].uri);
 
-  CPPUNIT_ASSERT_EQUAL(std::string("mydownload"), hd->getOption("dir"));
-  CPPUNIT_ASSERT(hd->getOption("unknown").empty());
+  REQUIRE_EQ(std::string("mydownload"), hd->getOption("dir"));
+  REQUIRE(hd->getOption("unknown").empty());
   KeyVals retopts = hd->getOptions();
-  CPPUNIT_ASSERT(std::find(retopts.begin(), retopts.end(),
+  REQUIRE(std::find(retopts.begin(), retopts.end(),
                            KeyVals::value_type("dir", "mydownload")) !=
                  retopts.end());
   // Don't return hidden option
-  CPPUNIT_ASSERT(hd->getOption(PREF_STARTUP_IDLE_TIME->k).empty());
+  REQUIRE(hd->getOption(PREF_STARTUP_IDLE_TIME->k).empty());
   deleteDownloadHandle(hd);
   // failure with null gid
-  CPPUNIT_ASSERT_EQUAL(-1, changeOption(session_, (A2Gid)0, options));
+  REQUIRE_EQ(-1, changeOption(session_, (A2Gid)0, options));
   // change option
   options.clear();
   options.push_back(KeyVals::value_type("dir", "newlocation"));
-  CPPUNIT_ASSERT_EQUAL(0, changeOption(session_, gid, options));
+  REQUIRE_EQ(0, changeOption(session_, gid, options));
   hd = getDownloadHandle(session_, gid);
-  CPPUNIT_ASSERT_EQUAL(std::string("newlocation"), hd->getOption("dir"));
+  REQUIRE_EQ(std::string("newlocation"), hd->getOption("dir"));
   deleteDownloadHandle(hd);
   // failure with bad option value
   options.clear();
   options.push_back(KeyVals::value_type("file-allocation", "foo"));
-  CPPUNIT_ASSERT_EQUAL(-1, changeOption(session_, gid, options));
+  REQUIRE_EQ(-1, changeOption(session_, gid, options));
 }
 
 void Aria2ApiTest::testChangeGlobalOption()
 {
-  CPPUNIT_ASSERT_EQUAL(OptionParser::getInstance()
+  REQUIRE_EQ(OptionParser::getInstance()
                            ->find(PREF_FILE_ALLOCATION)
                            ->getDefaultValue(),
                        getGlobalOption(session_, PREF_FILE_ALLOCATION->k));
   KeyVals options;
   options.push_back(KeyVals::value_type(PREF_FILE_ALLOCATION->k, "none"));
-  CPPUNIT_ASSERT_EQUAL(0, changeGlobalOption(session_, options));
-  CPPUNIT_ASSERT_EQUAL(std::string("none"),
+  REQUIRE_EQ(0, changeGlobalOption(session_, options));
+  REQUIRE_EQ(std::string("none"),
                        getGlobalOption(session_, PREF_FILE_ALLOCATION->k));
   // Don't return hidden option
-  CPPUNIT_ASSERT(getGlobalOption(session_, PREF_STARTUP_IDLE_TIME->k).empty());
+  REQUIRE(getGlobalOption(session_, PREF_STARTUP_IDLE_TIME->k).empty());
   // failure with bad option value
   options.clear();
   options.push_back(KeyVals::value_type(PREF_FILE_ALLOCATION->k, "foo"));
-  CPPUNIT_ASSERT_EQUAL(-1, changeGlobalOption(session_, options));
+  REQUIRE_EQ(-1, changeGlobalOption(session_, options));
 }
 
 void Aria2ApiTest::testDownloadResultDH()
@@ -238,13 +235,13 @@ void Aria2ApiTest::testDownloadResultDH()
   gman->addDownloadResult(dr2);
 
   DownloadHandle* hd = getDownloadHandle(session_, dr1->gid->getNumericId());
-  CPPUNIT_ASSERT_EQUAL(DOWNLOAD_ERROR, hd->getStatus());
-  CPPUNIT_ASSERT_EQUAL((int)error_code::TIME_OUT, hd->getErrorCode());
-  CPPUNIT_ASSERT_EQUAL(std::string("mydownload"), hd->getOption(PREF_DIR->k));
+  REQUIRE_EQ(DOWNLOAD_ERROR, hd->getStatus());
+  REQUIRE_EQ((int)error_code::TIME_OUT, hd->getErrorCode());
+  REQUIRE_EQ(std::string("mydownload"), hd->getOption(PREF_DIR->k));
   // Don't return hidden option
-  CPPUNIT_ASSERT(hd->getOption(PREF_STARTUP_IDLE_TIME->k).empty());
+  REQUIRE(hd->getOption(PREF_STARTUP_IDLE_TIME->k).empty());
   KeyVals retopts = hd->getOptions();
-  CPPUNIT_ASSERT(std::find(retopts.begin(), retopts.end(),
+  REQUIRE(std::find(retopts.begin(), retopts.end(),
                            KeyVals::value_type(PREF_DIR->k, "mydownload")) !=
                  retopts.end());
   deleteDownloadHandle(hd);
@@ -256,18 +253,18 @@ void Aria2ApiTest::testGetFilesOutlivesDownloadHandle()
   std::vector<std::string> uris(1);
   KeyVals options;
   uris[0] = "http://localhost/1";
-  CPPUNIT_ASSERT_EQUAL(0, addUri(session_, &gid, uris, options));
+  REQUIRE_EQ(0, addUri(session_, &gid, uris, options));
 
   DownloadHandle* hd = getDownloadHandle(session_, gid);
-  CPPUNIT_ASSERT(hd);
+  REQUIRE(hd);
 
   std::vector<FileData> files = hd->getFiles();
   deleteDownloadHandle(hd);
 
-  CPPUNIT_ASSERT_EQUAL((size_t)1, files.size());
-  CPPUNIT_ASSERT_EQUAL(1, files[0].index);
-  CPPUNIT_ASSERT_EQUAL((size_t)1, files[0].uris.size());
-  CPPUNIT_ASSERT_EQUAL(uris[0], files[0].uris[0].uri);
+  REQUIRE_EQ((size_t)1, files.size());
+  REQUIRE_EQ(1, files[0].index);
+  REQUIRE_EQ((size_t)1, files[0].uris.size());
+  REQUIRE_EQ(uris[0], files[0].uris[0].uri);
 
   std::vector<FileData>().swap(files);
 }

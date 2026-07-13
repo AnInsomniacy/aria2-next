@@ -129,7 +129,7 @@ private:
 
 class CookieStorage {
 public:
-  static const size_t MAX_COOKIE_PER_DOMAIN = 50;
+  static constexpr size_t MAX_COOKIE_PER_DOMAIN = 50;
 
 private:
   // typedef std::set<std::shared_ptr<DomainEntry>,

@@ -1,16 +1,12 @@
 #include "DefaultAuthResolver.h"
 #include "prefs.h"
 #include "AuthConfig.h"
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class DefaultAuthResolverTest : public CppUnit::TestFixture {
+class DefaultAuthResolverTest {
 
-  CPPUNIT_TEST_SUITE(DefaultAuthResolverTest);
-  CPPUNIT_TEST(testResolveAuthConfig_without_userDefined);
-  CPPUNIT_TEST(testResolveAuthConfig_with_userDefined);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::unique_ptr<DefaultAuthResolver> resolver_;
@@ -29,19 +25,20 @@ public:
   void testResolveAuthConfig_with_userDefined();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DefaultAuthResolverTest);
+A2_TEST(DefaultAuthResolverTest, testResolveAuthConfig_without_userDefined)
+A2_TEST(DefaultAuthResolverTest, testResolveAuthConfig_with_userDefined)
 
 void DefaultAuthResolverTest::testResolveAuthConfig_without_userDefined()
 {
   auto authConfig = resolver_->resolveAuthConfig("localhost");
-  CPPUNIT_ASSERT_EQUAL(std::string("foo:bar"), authConfig->getAuthText());
+  REQUIRE_EQ(std::string("foo:bar"), authConfig->getAuthText());
 }
 
 void DefaultAuthResolverTest::testResolveAuthConfig_with_userDefined()
 {
   resolver_->setUserDefinedCred("myname", "mypasswd");
   auto authConfig = resolver_->resolveAuthConfig("localhost");
-  CPPUNIT_ASSERT_EQUAL(std::string("myname:mypasswd"),
+  REQUIRE_EQ(std::string("myname:mypasswd"),
                        authConfig->getAuthText());
 }
 

@@ -81,9 +81,9 @@ public:
 
   ~DHTBucket();
 
-  static const size_t K = 8;
+  static constexpr size_t K = 8;
 
-  static const size_t CACHE_SIZE = 2;
+  static constexpr size_t CACHE_SIZE = 2;
 
   void getRandomNodeID(unsigned char* nodeID) const;
 

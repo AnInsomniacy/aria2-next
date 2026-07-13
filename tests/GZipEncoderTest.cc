@@ -1,25 +1,22 @@
 #include "GZipEncoder.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "GZipDecoder.h"
 #include "util.h"
 
 namespace aria2 {
 
-class GZipEncoderTest : public CppUnit::TestFixture {
+class GZipEncoderTest {
 
-  CPPUNIT_TEST_SUITE(GZipEncoderTest);
-  CPPUNIT_TEST(testEncode);
-  CPPUNIT_TEST(testEncodeBinaryChunk);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void testEncode();
   void testEncodeBinaryChunk();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(GZipEncoderTest);
+A2_TEST(GZipEncoderTest, testEncode)
+A2_TEST(GZipEncoderTest, testEncodeBinaryChunk)
 
 void GZipEncoderTest::testEncode()
 {
@@ -42,8 +39,8 @@ void GZipEncoderTest::testEncode()
   std::string gunzippedData =
       decoder.decode(reinterpret_cast<const unsigned char*>(gzippedData.data()),
                      gzippedData.size());
-  CPPUNIT_ASSERT(decoder.finished());
-  CPPUNIT_ASSERT_EQUAL(strjoin(inputs.begin(), inputs.end(), ""),
+  REQUIRE(decoder.finished());
+  REQUIRE_EQ(strjoin(inputs.begin(), inputs.end(), ""),
                        gunzippedData);
 }
 
@@ -65,8 +62,8 @@ void GZipEncoderTest::testEncodeBinaryChunk()
   std::string gunzippedData =
       decoder.decode(reinterpret_cast<const unsigned char*>(gzippedData.data()),
                      gzippedData.size());
-  CPPUNIT_ASSERT(decoder.finished());
-  CPPUNIT_ASSERT_EQUAL(input, gunzippedData);
+  REQUIRE(decoder.finished());
+  REQUIRE_EQ(input, gunzippedData);
 }
 
 } // namespace aria2

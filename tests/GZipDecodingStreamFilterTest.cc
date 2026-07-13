@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -16,11 +16,8 @@
 
 namespace aria2 {
 
-class GZipDecodingStreamFilterTest : public CppUnit::TestFixture {
+class GZipDecodingStreamFilterTest {
 
-  CPPUNIT_TEST_SUITE(GZipDecodingStreamFilterTest);
-  CPPUNIT_TEST(testTransform);
-  CPPUNIT_TEST_SUITE_END();
 
   class MockSegment2 : public MockSegment {
   private:
@@ -58,7 +55,7 @@ public:
   void testTransform();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(GZipDecodingStreamFilterTest);
+A2_TEST(GZipDecodingStreamFilterTest, testTransform)
 
 void GZipDecodingStreamFilterTest::testTransform()
 {
@@ -68,11 +65,11 @@ void GZipDecodingStreamFilterTest::testTransform()
     in.read(reinterpret_cast<char*>(buf), sizeof(buf));
     filter_->transform(writer_, segment_, buf, in.gcount());
   }
-  CPPUNIT_ASSERT(filter_->finished());
+  REQUIRE(filter_->finished());
   std::string data = writer_->getString();
   std::shared_ptr<MessageDigest> sha1(MessageDigest::sha1());
   sha1->update(data.data(), data.size());
-  CPPUNIT_ASSERT_EQUAL(std::string("8b577b33c0411b2be9d4fa74c7402d54a8d21f96"),
+  REQUIRE_EQ(std::string("8b577b33c0411b2be9d4fa74c7402d54a8d21f96"),
                        util::toHex(sha1->digest()));
 }
 

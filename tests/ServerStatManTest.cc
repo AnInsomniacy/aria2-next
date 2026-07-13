@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "ServerStat.h"
 #include "Exception.h"
@@ -12,14 +12,8 @@
 
 namespace aria2 {
 
-class ServerStatManTest : public CppUnit::TestFixture {
+class ServerStatManTest {
 
-  CPPUNIT_TEST_SUITE(ServerStatManTest);
-  CPPUNIT_TEST(testAddAndFind);
-  CPPUNIT_TEST(testSave);
-  CPPUNIT_TEST(testLoad);
-  CPPUNIT_TEST(testRemoveStaleServerStat);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -32,7 +26,10 @@ public:
   void testRemoveStaleServerStat();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(ServerStatManTest);
+A2_TEST(ServerStatManTest, testAddAndFind)
+A2_TEST(ServerStatManTest, testSave)
+A2_TEST(ServerStatManTest, testLoad)
+A2_TEST(ServerStatManTest, testRemoveStaleServerStat)
 
 void ServerStatManTest::testAddAndFind()
 {
@@ -42,20 +39,20 @@ void ServerStatManTest::testAddAndFind()
   std::shared_ptr<ServerStat> mirror(new ServerStat("mirror", "http"));
 
   ServerStatMan ssm;
-  CPPUNIT_ASSERT(ssm.add(localhost_http));
-  CPPUNIT_ASSERT(!ssm.add(localhost_http));
-  CPPUNIT_ASSERT(ssm.add(localhost_ftp));
-  CPPUNIT_ASSERT(ssm.add(mirror));
+  REQUIRE(ssm.add(localhost_http));
+  REQUIRE(!ssm.add(localhost_http));
+  REQUIRE(ssm.add(localhost_ftp));
+  REQUIRE(ssm.add(mirror));
 
   {
     std::shared_ptr<ServerStat> r = ssm.find("localhost", "http");
-    CPPUNIT_ASSERT(r);
-    CPPUNIT_ASSERT_EQUAL(std::string("localhost"), r->getHostname());
-    CPPUNIT_ASSERT_EQUAL(std::string("http"), r->getProtocol());
+    REQUIRE(r);
+    REQUIRE_EQ(std::string("localhost"), r->getHostname());
+    REQUIRE_EQ(std::string("http"), r->getProtocol());
   }
   {
     std::shared_ptr<ServerStat> r = ssm.find("mirror", "ftp");
-    CPPUNIT_ASSERT(!r);
+    REQUIRE(!r);
   }
 }
 
@@ -77,13 +74,13 @@ void ServerStatManTest::testSave()
   mirror->setLastUpdated(Time(1210000002));
 
   ServerStatMan ssm;
-  CPPUNIT_ASSERT(ssm.add(localhost_http));
-  CPPUNIT_ASSERT(ssm.add(localhost_ftp));
-  CPPUNIT_ASSERT(ssm.add(mirror));
+  REQUIRE(ssm.add(localhost_http));
+  REQUIRE(ssm.add(localhost_ftp));
+  REQUIRE(ssm.add(mirror));
 
   const char* filename = A2_TEST_OUT_DIR "/aria2_ServerStatManTest_testSave";
-  CPPUNIT_ASSERT(ssm.save(filename));
-  CPPUNIT_ASSERT_EQUAL(std::string("host=localhost, protocol=ftp,"
+  REQUIRE(ssm.save(filename));
+  REQUIRE_EQ(std::string("host=localhost, protocol=ftp,"
                                    " dl_speed=30000,"
                                    " sc_avg_speed=0,"
                                    " mc_avg_speed=0,"
@@ -120,27 +117,27 @@ void ServerStatManTest::testLoad()
       "host=mirror, protocol=http, dl_speed=0, last_updated=1210000002, "
       "status=ERROR\n";
   BufferedFile fp(filename, BufferedFile::WRITE);
-  CPPUNIT_ASSERT_EQUAL((size_t)in.size(), fp.write(in.data(), in.size()));
-  CPPUNIT_ASSERT(fp.close() != EOF);
+  REQUIRE_EQ((size_t)in.size(), fp.write(in.data(), in.size()));
+  REQUIRE(fp.close() != EOF);
 
   ServerStatMan ssm;
-  CPPUNIT_ASSERT(ssm.load(filename));
+  REQUIRE(ssm.load(filename));
 
   std::shared_ptr<ServerStat> localhost_http = ssm.find("localhost", "http");
-  CPPUNIT_ASSERT(localhost_http);
-  CPPUNIT_ASSERT_EQUAL(std::string("localhost"), localhost_http->getHostname());
-  CPPUNIT_ASSERT_EQUAL(std::string("http"), localhost_http->getProtocol());
-  CPPUNIT_ASSERT_EQUAL(25000, localhost_http->getDownloadSpeed());
-  CPPUNIT_ASSERT_EQUAL(101, localhost_http->getSingleConnectionAvgSpeed());
-  CPPUNIT_ASSERT_EQUAL(102, localhost_http->getMultiConnectionAvgSpeed());
-  CPPUNIT_ASSERT_EQUAL(6, localhost_http->getCounter());
-  CPPUNIT_ASSERT_EQUAL(static_cast<time_t>(1210000000),
+  REQUIRE(localhost_http);
+  REQUIRE_EQ(std::string("localhost"), localhost_http->getHostname());
+  REQUIRE_EQ(std::string("http"), localhost_http->getProtocol());
+  REQUIRE_EQ(25000, localhost_http->getDownloadSpeed());
+  REQUIRE_EQ(101, localhost_http->getSingleConnectionAvgSpeed());
+  REQUIRE_EQ(102, localhost_http->getMultiConnectionAvgSpeed());
+  REQUIRE_EQ(6, localhost_http->getCounter());
+  REQUIRE_EQ(static_cast<time_t>(1210000000),
                        localhost_http->getLastUpdated().getTimeFromEpoch());
-  CPPUNIT_ASSERT_EQUAL(ServerStat::OK, localhost_http->getStatus());
+  REQUIRE_EQ(ServerStat::OK, localhost_http->getStatus());
 
   std::shared_ptr<ServerStat> mirror = ssm.find("mirror", "http");
-  CPPUNIT_ASSERT(mirror);
-  CPPUNIT_ASSERT_EQUAL(ServerStat::A2_ERROR, mirror->getStatus());
+  REQUIRE(mirror);
+  REQUIRE_EQ(ServerStat::A2_ERROR, mirror->getStatus());
 }
 
 void ServerStatManTest::testRemoveStaleServerStat()
@@ -159,15 +156,15 @@ void ServerStatManTest::testRemoveStaleServerStat()
   mirror->setLastUpdated(Time(1210000002));
 
   ServerStatMan ssm;
-  CPPUNIT_ASSERT(ssm.add(localhost_http));
-  CPPUNIT_ASSERT(ssm.add(localhost_ftp));
-  CPPUNIT_ASSERT(ssm.add(mirror));
+  REQUIRE(ssm.add(localhost_http));
+  REQUIRE(ssm.add(localhost_ftp));
+  REQUIRE(ssm.add(mirror));
 
   ssm.removeStaleServerStat(24_h);
 
-  CPPUNIT_ASSERT(ssm.find("localhost", "http"));
-  CPPUNIT_ASSERT(!ssm.find("localhost", "ftp"));
-  CPPUNIT_ASSERT(!ssm.find("mirror", "http"));
+  REQUIRE(ssm.find("localhost", "http"));
+  REQUIRE(!ssm.find("localhost", "ftp"));
+  REQUIRE(!ssm.find("mirror", "http"));
 }
 
 } // namespace aria2

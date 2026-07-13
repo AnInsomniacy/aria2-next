@@ -87,7 +87,7 @@ private:
 
   std::unique_ptr<struct epoll_event[]> epEvents_;
 
-  static const size_t EPOLL_EVENTS_MAX = 1024;
+  static constexpr size_t EPOLL_EVENTS_MAX = 1024;
 
   bool addEvents(sock_t socket, const KEvent& event);
 
@@ -123,10 +123,10 @@ public:
                      Command* command) override;
 #endif // ENABLE_ASYNC_DNS
 
-  static const int IEV_READ = EPOLLIN;
-  static const int IEV_WRITE = EPOLLOUT;
-  static const int IEV_ERROR = EPOLLERR;
-  static const int IEV_HUP = EPOLLHUP;
+  static constexpr int IEV_READ = EPOLLIN;
+  static constexpr int IEV_WRITE = EPOLLOUT;
+  static constexpr int IEV_ERROR = EPOLLERR;
+  static constexpr int IEV_HUP = EPOLLHUP;
 };
 
 } // namespace aria2

@@ -43,7 +43,7 @@ class BtHaveNoneMessage : public ZeroBtMessage {
 public:
   BtHaveNoneMessage();
 
-  static const uint8_t ID = 15;
+  static constexpr uint8_t ID = 15;
 
   static const char NAME[];
 

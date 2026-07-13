@@ -1,15 +1,10 @@
 #include "Peer.h"
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 namespace aria2 {
 
-class PeerTest : public CppUnit::TestFixture {
+class PeerTest {
 
-  CPPUNIT_TEST_SUITE(PeerTest);
-  CPPUNIT_TEST(testPeerAllowedIndexSet);
-  CPPUNIT_TEST(testAmAllowedIndexSet);
-  CPPUNIT_TEST(testCountSeeder);
-  CPPUNIT_TEST_SUITE_END();
 
 private:
   std::shared_ptr<Peer> peer;
@@ -26,20 +21,22 @@ public:
   void testCountSeeder();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(PeerTest);
+A2_TEST(PeerTest, testPeerAllowedIndexSet)
+A2_TEST(PeerTest, testAmAllowedIndexSet)
+A2_TEST(PeerTest, testCountSeeder)
 
 void PeerTest::testPeerAllowedIndexSet()
 {
-  CPPUNIT_ASSERT(!peer->isInPeerAllowedIndexSet(0));
+  REQUIRE(!peer->isInPeerAllowedIndexSet(0));
   peer->addPeerAllowedIndex(0);
-  CPPUNIT_ASSERT(peer->isInPeerAllowedIndexSet(0));
+  REQUIRE(peer->isInPeerAllowedIndexSet(0));
 }
 
 void PeerTest::testAmAllowedIndexSet()
 {
-  CPPUNIT_ASSERT(!peer->isInAmAllowedIndexSet(0));
+  REQUIRE(!peer->isInAmAllowedIndexSet(0));
   peer->addAmAllowedIndex(0);
-  CPPUNIT_ASSERT(peer->isInAmAllowedIndexSet(0));
+  REQUIRE(peer->isInAmAllowedIndexSet(0));
 }
 
 void PeerTest::testCountSeeder()
@@ -58,7 +55,7 @@ void PeerTest::testCountSeeder()
   peers[1]->setBitfield(bitfield, 1);
   peers[3]->setBitfield(bitfield, 1);
   peers[4]->setBitfield(bitfield, 1);
-  CPPUNIT_ASSERT_EQUAL((size_t)3, countSeeder(peers.begin(), peers.end()));
+  REQUIRE_EQ((size_t)3, countSeeder(peers.begin(), peers.end()));
 }
 
 } // namespace aria2

@@ -1,6 +1,6 @@
 #include "DHTGetPeersMessage.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "DHTNode.h"
 #include "Exception.h"
@@ -21,12 +21,8 @@
 
 namespace aria2 {
 
-class DHTGetPeersMessageTest : public CppUnit::TestFixture {
+class DHTGetPeersMessageTest {
 
-  CPPUNIT_TEST_SUITE(DHTGetPeersMessageTest);
-  CPPUNIT_TEST(testGetBencodedMessage);
-  CPPUNIT_TEST(testDoReceivedAction);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   std::shared_ptr<DHTNode> localNode_;
@@ -60,7 +56,8 @@ public:
   };
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTGetPeersMessageTest);
+A2_TEST(DHTGetPeersMessageTest, testGetBencodedMessage)
+A2_TEST(DHTGetPeersMessageTest, testDoReceivedAction)
 
 void DHTGetPeersMessageTest::testGetBencodedMessage()
 {
@@ -86,7 +83,7 @@ void DHTGetPeersMessageTest::testGetBencodedMessage()
   aDict->put("info_hash", String::g(infoHash, DHT_ID_LENGTH));
   dict.put("a", std::move(aDict));
 
-  CPPUNIT_ASSERT_EQUAL(util::percentEncode(bencode2::encode(&dict)),
+  REQUIRE_EQ(util::percentEncode(bencode2::encode(&dict)),
                        util::percentEncode(msgbody));
 }
 
@@ -144,33 +141,33 @@ void DHTGetPeersMessageTest::testDoReceivedAction()
 
     msg.doReceivedAction();
 
-    CPPUNIT_ASSERT_EQUAL((size_t)1, dispatcher.messageQueue_.size());
+    REQUIRE_EQ((size_t)1, dispatcher.messageQueue_.size());
     auto m = dynamic_cast<DHTGetPeersReplyMessage*>(
         dispatcher.messageQueue_[0].message_.get());
-    CPPUNIT_ASSERT(*localNode_ == *m->getLocalNode());
-    CPPUNIT_ASSERT(*remoteNode_ == *m->getRemoteNode());
-    CPPUNIT_ASSERT_EQUAL(std::string("get_peers"), m->getMessageType());
-    CPPUNIT_ASSERT_EQUAL(msg.getTransactionID(), m->getTransactionID());
-    CPPUNIT_ASSERT_EQUAL(tokenTracker.generateToken(infoHash,
+    REQUIRE(*localNode_ == *m->getLocalNode());
+    REQUIRE(*remoteNode_ == *m->getRemoteNode());
+    REQUIRE_EQ(std::string("get_peers"), m->getMessageType());
+    REQUIRE_EQ(msg.getTransactionID(), m->getTransactionID());
+    REQUIRE_EQ(tokenTracker.generateToken(infoHash,
                                                     remoteNode_->getIPAddress(),
                                                     remoteNode_->getPort()),
                          m->getToken());
-    CPPUNIT_ASSERT_EQUAL((size_t)0, m->getClosestKNodes().size());
-    CPPUNIT_ASSERT_EQUAL((size_t)3, m->getValues().size());
+    REQUIRE_EQ((size_t)0, m->getClosestKNodes().size());
+    REQUIRE_EQ((size_t)3, m->getValues().size());
     {
       auto peer = m->getValues()[0];
-      CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.100"), peer->getIPAddress());
-      CPPUNIT_ASSERT_EQUAL((uint16_t)6888, peer->getPort());
+      REQUIRE_EQ(std::string("192.168.0.100"), peer->getIPAddress());
+      REQUIRE_EQ((uint16_t)6888, peer->getPort());
     }
     {
       auto peer = m->getValues()[1];
-      CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.101"), peer->getIPAddress());
-      CPPUNIT_ASSERT_EQUAL((uint16_t)6889, peer->getPort());
+      REQUIRE_EQ(std::string("192.168.0.101"), peer->getIPAddress());
+      REQUIRE_EQ((uint16_t)6889, peer->getPort());
     }
     {
       auto peer = m->getValues()[2];
-      CPPUNIT_ASSERT_EQUAL(std::string("192.168.0.1"), peer->getIPAddress());
-      CPPUNIT_ASSERT_EQUAL((uint16_t)6890, peer->getPort());
+      REQUIRE_EQ(std::string("192.168.0.1"), peer->getIPAddress());
+      REQUIRE_EQ((uint16_t)6890, peer->getPort());
     }
   }
   msg.setBtRegistry(nullptr);
@@ -187,20 +184,20 @@ void DHTGetPeersMessageTest::testDoReceivedAction()
 
     msg.doReceivedAction();
 
-    CPPUNIT_ASSERT_EQUAL((size_t)1, dispatcher.messageQueue_.size());
+    REQUIRE_EQ((size_t)1, dispatcher.messageQueue_.size());
     auto m = dynamic_cast<DHTGetPeersReplyMessage*>(
         dispatcher.messageQueue_[0].message_.get());
-    CPPUNIT_ASSERT(*localNode_ == *m->getLocalNode());
-    CPPUNIT_ASSERT(*remoteNode_ == *m->getRemoteNode());
-    CPPUNIT_ASSERT_EQUAL(std::string("get_peers"), m->getMessageType());
-    CPPUNIT_ASSERT_EQUAL(msg.getTransactionID(), m->getTransactionID());
-    CPPUNIT_ASSERT_EQUAL(tokenTracker.generateToken(infoHash,
+    REQUIRE(*localNode_ == *m->getLocalNode());
+    REQUIRE(*remoteNode_ == *m->getRemoteNode());
+    REQUIRE_EQ(std::string("get_peers"), m->getMessageType());
+    REQUIRE_EQ(msg.getTransactionID(), m->getTransactionID());
+    REQUIRE_EQ(tokenTracker.generateToken(infoHash,
                                                     remoteNode_->getIPAddress(),
                                                     remoteNode_->getPort()),
                          m->getToken());
-    CPPUNIT_ASSERT_EQUAL((size_t)1, m->getClosestKNodes().size());
-    CPPUNIT_ASSERT(*returnNode1 == *m->getClosestKNodes()[0]);
-    CPPUNIT_ASSERT_EQUAL((size_t)0, m->getValues().size());
+    REQUIRE_EQ((size_t)1, m->getClosestKNodes().size());
+    REQUIRE(*returnNode1 == *m->getClosestKNodes()[0]);
+    REQUIRE_EQ((size_t)0, m->getValues().size());
   }
 }
 

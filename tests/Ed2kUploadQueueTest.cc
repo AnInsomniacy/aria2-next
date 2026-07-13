@@ -1,6 +1,6 @@
 #include "Ed2kUploadQueue.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "ed2k_hash.h"
 
@@ -8,18 +8,15 @@ namespace aria2 {
 
 namespace ed2k {
 
-class Ed2kUploadQueueTest : public CppUnit::TestFixture {
-  CPPUNIT_TEST_SUITE(Ed2kUploadQueueTest);
-  CPPUNIT_TEST(testRejectsDuplicateUserHash);
-  CPPUNIT_TEST(testCreditsSortWaitingPeers);
-  CPPUNIT_TEST_SUITE_END();
+class Ed2kUploadQueueTest {
 
 public:
   void testRejectsDuplicateUserHash();
   void testCreditsSortWaitingPeers();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(Ed2kUploadQueueTest);
+A2_TEST(Ed2kUploadQueueTest, testRejectsDuplicateUserHash)
+A2_TEST(Ed2kUploadQueueTest, testCreditsSortWaitingPeers)
 
 void Ed2kUploadQueueTest::testRejectsDuplicateUserHash()
 {
@@ -37,16 +34,16 @@ void Ed2kUploadQueueTest::testRejectsDuplicateUserHash()
   const std::string otherUserHash(HASH_LENGTH, '\x45');
   const std::string fileHash(HASH_LENGTH, '\x66');
 
-  CPPUNIT_ASSERT(queue.requestUpload(first, userHash, fileHash, 1000, nullptr));
-  CPPUNIT_ASSERT(!queue.requestUpload(duplicate, userHash, fileHash, 1001,
+  REQUIRE(queue.requestUpload(first, userHash, fileHash, 1000, nullptr));
+  REQUIRE(!queue.requestUpload(duplicate, userHash, fileHash, 1001,
                                       nullptr));
-  CPPUNIT_ASSERT_EQUAL((size_t)1, queue.peers().size());
-  CPPUNIT_ASSERT(queue.isUploading(first));
+  REQUIRE_EQ((size_t)1, queue.peers().size());
+  REQUIRE(queue.isUploading(first));
 
-  CPPUNIT_ASSERT(!queue.requestUpload(other, otherUserHash, fileHash, 1002,
+  REQUIRE(!queue.requestUpload(other, otherUserHash, fileHash, 1002,
                                       nullptr));
-  CPPUNIT_ASSERT_EQUAL((size_t)2, queue.peers().size());
-  CPPUNIT_ASSERT_EQUAL((uint16_t)1, queue.queueRank(other));
+  REQUIRE_EQ((size_t)2, queue.peers().size());
+  REQUIRE_EQ((uint16_t)1, queue.queueRank(other));
 }
 
 void Ed2kUploadQueueTest::testCreditsSortWaitingPeers()
@@ -66,16 +63,16 @@ void Ed2kUploadQueueTest::testCreditsSortWaitingPeers()
   const std::string creditedHash(HASH_LENGTH, '\x42');
   const std::string fileHash(HASH_LENGTH, '\x66');
 
-  CPPUNIT_ASSERT(queue.requestUpload(active, activeHash, fileHash, 1000,
+  REQUIRE(queue.requestUpload(active, activeHash, fileHash, 1000,
                                      nullptr));
-  CPPUNIT_ASSERT(!queue.requestUpload(older, olderHash, fileHash, 1001,
+  REQUIRE(!queue.requestUpload(older, olderHash, fileHash, 1001,
                                       nullptr));
   queue.credits().addDownloaded(creditedHash, 4 * 1024 * 1024);
-  CPPUNIT_ASSERT(!queue.requestUpload(credited, creditedHash, fileHash, 1002,
+  REQUIRE(!queue.requestUpload(credited, creditedHash, fileHash, 1002,
                                       nullptr));
 
-  CPPUNIT_ASSERT_EQUAL((uint16_t)2, queue.queueRank(older));
-  CPPUNIT_ASSERT_EQUAL((uint16_t)1, queue.queueRank(credited));
+  REQUIRE_EQ((uint16_t)2, queue.queueRank(older));
+  REQUIRE_EQ((uint16_t)1, queue.queueRank(credited));
 }
 
 } // namespace ed2k

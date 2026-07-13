@@ -1,6 +1,6 @@
 #include "DHTMessageTracker.h"
 
-#include <cppunit/extensions/HelperMacros.h>
+#include "a2doctest.h"
 
 #include "Exception.h"
 #include "util.h"
@@ -13,12 +13,8 @@
 
 namespace aria2 {
 
-class DHTMessageTrackerTest : public CppUnit::TestFixture {
+class DHTMessageTrackerTest {
 
-  CPPUNIT_TEST_SUITE(DHTMessageTrackerTest);
-  CPPUNIT_TEST(testMessageArrived);
-  CPPUNIT_TEST(testHandleTimeout);
-  CPPUNIT_TEST_SUITE_END();
 
 public:
   void setUp() {}
@@ -30,7 +26,8 @@ public:
   void testHandleTimeout();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION(DHTMessageTrackerTest);
+A2_TEST(DHTMessageTrackerTest, testMessageArrived)
+A2_TEST(DHTMessageTrackerTest, testHandleTimeout)
 
 void DHTMessageTrackerTest::testMessageArrived()
 {
@@ -68,9 +65,9 @@ void DHTMessageTrackerTest::testMessageArrived()
         tracker.messageArrived(&resDict, r2->getIPAddress(), r2->getPort());
     auto& reply = p.first;
 
-    CPPUNIT_ASSERT(reply);
-    CPPUNIT_ASSERT(!tracker.getEntryFor(m2.get()));
-    CPPUNIT_ASSERT_EQUAL((size_t)2, tracker.countEntry());
+    REQUIRE(reply);
+    REQUIRE(!tracker.getEntryFor(m2.get()));
+    REQUIRE_EQ((size_t)2, tracker.countEntry());
   }
   {
     Dict resDict;
@@ -80,9 +77,9 @@ void DHTMessageTrackerTest::testMessageArrived()
         tracker.messageArrived(&resDict, r3->getIPAddress(), r3->getPort());
     auto& reply = p.first;
 
-    CPPUNIT_ASSERT(reply);
-    CPPUNIT_ASSERT(!tracker.getEntryFor(m3.get()));
-    CPPUNIT_ASSERT_EQUAL((size_t)1, tracker.countEntry());
+    REQUIRE(reply);
+    REQUIRE(!tracker.getEntryFor(m3.get()));
+    REQUIRE_EQ((size_t)1, tracker.countEntry());
   }
   {
     Dict resDict;
@@ -91,7 +88,7 @@ void DHTMessageTrackerTest::testMessageArrived()
     auto p = tracker.messageArrived(&resDict, "192.168.1.100", 6889);
     auto& reply = p.first;
 
-    CPPUNIT_ASSERT(!reply);
+    REQUIRE(!reply);
   }
 }
 
