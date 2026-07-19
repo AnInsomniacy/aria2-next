@@ -401,11 +401,9 @@ HTTP Specific Options
 
   .. note::
 
-    If you build with OpenSSL or the recent version of GnuTLS which
-    has ``gnutls_certificate_set_x509_system_trust()`` function and
-    the library is properly configured to locate the system-wide CA
-    certificates store, aria2 will automatically load those
-    certificates at the startup. If the backend cannot locate usable system
+    If you build with OpenSSL and the library is properly configured to
+    locate the system-wide CA certificates store, aria2 will
+    automatically load those certificates at the startup. If the backend cannot locate usable system
     trust, provide a PEM CA file explicitly with this option.
 
   .. note::
@@ -4531,8 +4529,7 @@ Verify SSL/TLS servers using given CA certificates
 
 .. note::
 
-  This option is only available when aria2 was compiled against GnuTLS or
-  OpenSSL.
+  This option is only available when aria2 was compiled against OpenSSL.
   WinTLS will always use the system certificate store. Instead of
   ``--ca-certificate`` install the certificate in that store.
 
@@ -4553,7 +4550,7 @@ Specify a server PKC12 file:
   The file specified in :option:`--rpc-certificate` must be contain one PKCS12
   encoded certificate and key. The password must be blank.
 
-Alternatively, when PEM files are supported (GnuTLS and OpenSSL), specify the
+Alternatively, when PEM files are supported (OpenSSL), specify the
 server certificate file and private key file as follows:
 
 .. code-block:: console

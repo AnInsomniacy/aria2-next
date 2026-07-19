@@ -117,110 +117,67 @@ Dependency
 ======================== ========================================
 features                  dependency
 ======================== ========================================
-HTTPS                    OpenSSL or GnuTLS or Windows
+HTTPS                    OpenSSL or Windows TLS (Schannel)
 SFTP                     libssh2
-BitTorrent               None. Optional: libnettle+libgmp or libgcrypt
-                         or OpenSSL (see note)
+BitTorrent               None (OpenSSL is used when present)
 ED2K                     None
-Metalink                 libxml2 or Expat.
-Checksum                 None. Optional: OpenSSL or libnettle or libgcrypt
-                         or Windows (see note)
+Metalink                 Expat
 gzip, deflate in HTTP    zlib
-Async DNS                C-Ares
+Async DNS                c-ares
 Firefox3/Chromium cookie libsqlite3
-XML-RPC                  libxml2 or Expat.
-JSON-RPC over WebSocket  libnettle or libgcrypt or OpenSSL
+XML-RPC                  Expat
+JSON-RPC over WebSocket  None (bundled wslay)
 ======================== ========================================
 
 
 .. note::
 
-  libxml2 has precedence over Expat if both libraries are installed.
-  If you prefer Expat, configure CMake with ``-DARIA2_WITH_LIBXML2=OFF -DARIA2_WITH_EXPAT=ON``.
+  On Windows, the native Schannel-based TLS implementation (WinTLS) is
+  preferred, so OpenSSL is not required on that platform. To use OpenSSL
+  instead, configure CMake with ``-DARIA2_WITH_WINTLS=OFF``. On every
+  other platform OpenSSL 3.0 or newer provides TLS, message digests, and
+  the DH key exchange.
 
-.. note::
-
-  OpenSSL has precedence over GnuTLS if both libraries are installed.
-  If you prefer GnuTLS, configure CMake with
-  ``-DARIA2_WITH_OPENSSL=OFF -DARIA2_WITH_GNUTLS=ON``.
-
-  On Windows, there is SSL implementation available that is based on
-  the native Windows SSL capabilities (Schannel) and it will be
-  preferred.  Hence neither GnuTLS nor OpenSSL is required on that
-  platform.  If you would like to disable this behavior, configure CMake with
-  ``-DARIA2_WITH_WINTLS=OFF``.
-
-.. note::
-
-  libnettle has precedence over libgcrypt if both libraries are
-  installed.  If you prefer libgcrypt, configure CMake with
-  ``-DARIA2_WITH_LIBNETTLE=OFF -DARIA2_WITH_LIBGCRYPT=ON``. If OpenSSL is selected over
-  GnuTLS, neither libnettle nor libgcrypt will be used.
-
-  If none of the optional dependencies are installed, an internal
-  implementation that only supports md5 and sha1 will be used.
-
-  On Windows, there is SSL implementation available that is based on
-  the native Windows capabilities and it will be preferred, unless aria2 is configured with ``-DARIA2_WITH_WINTLS=OFF``.
+  Without OpenSSL (WinTLS builds), a bundled implementation provides the
+  message digests and bignum arithmetic, so BitTorrent, ED2K, and
+  checksum validation work on every configuration.
 
 A user can have one of the following configurations for SSL and crypto
 libraries:
 
 * OpenSSL
-* GnuTLS + libgcrypt
-* GnuTLS + libnettle
 * Windows TLS (Windows only)
 
 You can disable BitTorrent and Metalink support with
 ``-DARIA2_ENABLE_BITTORRENT=OFF`` and ``-DARIA2_ENABLE_METALINK=OFF``.
 
-To enable async DNS support, you need c-ares.
+To enable async DNS support, you need c-ares 1.34.5 or newer.
 
-* c-ares: http://c-ares.haxx.se/
+* c-ares: https://c-ares.org/
 
 How to build
 ------------
 
-aria2 is primarily written in C++. Initially, it was written based on
-C++98/C++03 standard features. We are now migrating aria2 to the C++11
-standard. The current source code requires a C++11 aware compiler. For
-well-known compilers, such as g++ and clang, the ``-std=c++11`` or
-``-std=c++0x`` flag must be supported.
+aria2-next is written in C++17 with a small amount of C11; any current
+GCC, Clang, or llvm-mingw toolchain works.
 
-To build aria2 from the source package, you need the following
-development packages (package name may vary depending on the
-distribution you use):
+To build from source, you need the following development packages
+(package names may vary depending on the distribution you use):
 
-* libgnutls-dev    (Required for HTTPS, BitTorrent, Checksum support)
-* nettle-dev       (Required for BitTorrent, Checksum support)
-* libgmp-dev       (Required for BitTorrent)
+* libssl-dev       (Required for HTTPS, BitTorrent, Checksum support)
 * libssh2-1-dev    (Required for SFTP support)
 * libc-ares-dev    (Required for async DNS support)
-* libxml2-dev      (Required for Metalink support)
+* libexpat1-dev    (Required for Metalink and XML-RPC support)
 * zlib1g-dev       (Required for gzip, deflate decoding support in HTTP)
 * libsqlite3-dev   (Required for Firefox3/Chromium cookie support)
 * pkg-config       (Required to detect installed libraries)
 
-You can use libgcrypt-dev instead of nettle-dev and libgmp-dev:
+The unit test framework (doctest) and the WebSocket library (wslay) are
+bundled under ``third_party/``, so no extra packages are needed for
+tests or JSON-RPC over WebSocket.
 
-* libgpg-error-dev (Required for BitTorrent, Checksum support)
-* libgcrypt-dev    (Required for BitTorrent, Checksum support)
-
-You can use libssl-dev instead of
-libgnutls-dev, nettle-dev, libgmp-dev, libgpg-error-dev and libgcrypt-dev:
-
-* libssl-dev       (Required for HTTPS, BitTorrent, Checksum support)
-
-You can use libexpat1-dev instead of libxml2-dev:
-
-* libexpat1-dev    (Required for Metalink support)
-
-On Fedora you need the following packages: gcc, gcc-c++, kernel-devel,
-libgcrypt-devel, libxml2-devel, openssl-devel, cppunit
-
-Source builds require CMake, Ninja, pkg-config, a C++11 compiler, and the
-development packages for the features you want to enable. Maintained OpenSSL
-builds require OpenSSL 3.0 or newer when the OpenSSL backend is selected.
+Source builds require CMake 3.25+, Ninja, and pkg-config. Maintained
+OpenSSL builds require OpenSSL 3.0 or newer.
 Install the documentation toolchain if you want to build the manual and man
 page::
 
@@ -249,12 +206,10 @@ preset.
 The CMake configure step checks available libraries and enables as many
 features as possible except experimental features not enabled by default.
 
-Since 1.1.0, aria2 checks the certificate of HTTPS servers by default. If you
-build with OpenSSL or a recent GnuTLS version that has
-``gnutls_certificate_set_x509_system_trust()``, and the library is properly
-configured to locate the system-wide CA certificate store, aria2 loads those
-certificates at startup. If the backend cannot locate usable system trust,
-provide a PEM CA file explicitly with ``--ca-certificate``.
+Since 1.1.0, aria2 checks the certificate of HTTPS servers by default. OpenSSL
+builds load the system-wide CA certificate store at startup; if the library
+cannot locate usable system trust, provide a PEM CA file explicitly with
+``--ca-certificate``.
 
 Using WinTLS automatically uses the system certificate store, so an explicit CA
 bundle is not necessary for that backend.
@@ -263,7 +218,9 @@ By default, the bash completion file named ``aria2-next`` is installed to the
 default documentation directory. To change that directory, set
 ``-DARIA2_BASH_COMPLETION_DIR=/path/to/directory``.
 
-aria2 uses CppUnit for automated unit testing. CTest runs the tests executable.
+Unit tests use the bundled doctest framework and always build; CTest runs the
+tests executable. Run a subset with
+``build/default/aria2_tests --test-case='UtilTest1.*'``.
 
 See `Cross-compiling Windows binary`_ to create a Windows binary.
 See `Cross-compiling Android binary`_ to create an Android binary.
@@ -287,7 +244,6 @@ built for cross-compilation:
 * sqlite3
 * zlib
 * libssh2
-* cppunit
 
 Some environment variables can be adjusted to change build settings:
 
