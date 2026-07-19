@@ -105,14 +105,6 @@ aria2_check_c_symbol(timegm HAVE_TIMEGM "time.h")
 aria2_check_c_symbol(usleep HAVE_USLEEP "unistd.h")
 aria2_check_c_symbol(utimes HAVE_UTIMES "sys/time.h")
 
-aria2_check_c_compiles(HAVE_ASCTIME_R "
-#include <time.h>
-int main(void) {
-  struct tm value;
-  char buffer[32];
-  return asctime_r(&value, buffer) == 0;
-}")
-
 aria2_check_c_compiles(HAVE_LOCALTIME_R "
 #include <time.h>
 int main(void) {

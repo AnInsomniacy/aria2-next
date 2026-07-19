@@ -1000,11 +1000,6 @@ set(ARIA2_SOURCES_ENABLE_METALINK
   src/metalink_helper.h
 )
 
-set(ARIA2_SOURCES_NOT_HAVE_ASCTIME_R
-  src/asctime_r.c
-  src/asctime_r.h
-)
-
 set(ARIA2_SOURCES_NOT_HAVE_GAI_STRERROR
   src/gai_strerror.c
   src/gai_strerror.h

@@ -36,9 +36,6 @@
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #cmakedefine HAVE_ARPA_INET_H @HAVE_ARPA_INET_H@
 
-/* Define to 1 if you have the `asctime_r' function or macro. */
-#cmakedefine HAVE_ASCTIME_R @HAVE_ASCTIME_R@
-
 /* Define to 1 if you have the 'daemon' function. */
 #cmakedefine HAVE_DAEMON @HAVE_DAEMON@
 

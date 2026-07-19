@@ -33,6 +33,9 @@
  */
 /* copyright --> */
 #include "OptionHandlerFactory.h"
+
+#include <cstdlib>
+
 #include "prefs.h"
 #include "OptionHandlerImpl.h"
 #include "array_fun.h"
@@ -341,9 +344,12 @@ std::vector<OptionHandler*> OptionHandlerFactory::createOptionHandlers()
   }
 #endif // ENABLE_ASYNC_DNS
   {
-    OptionHandler* op(new BooleanOptionHandler(PREF_ENABLE_COLOR,
-                                               TEXT_ENABLE_COLOR, A2_V_TRUE,
-                                               OptionHandler::OPT_ARG));
+    // https://no-color.org/: a non-empty NO_COLOR environment variable
+    // disables colored output unless --enable-color is given explicitly.
+    const char* noColor = getenv("NO_COLOR");
+    OptionHandler* op(new BooleanOptionHandler(
+        PREF_ENABLE_COLOR, TEXT_ENABLE_COLOR,
+        noColor && *noColor ? A2_V_FALSE : A2_V_TRUE, OptionHandler::OPT_ARG));
     op->addTag(TAG_ADVANCED);
     handlers.push_back(op);
   }

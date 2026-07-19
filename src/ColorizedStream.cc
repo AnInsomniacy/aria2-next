@@ -35,6 +35,9 @@
 
 #include "ColorizedStream.h"
 
+#include <cstdint>
+#include <utility>
+
 namespace aria2 {
 namespace colors {
 
@@ -59,6 +62,74 @@ const Color clear("0");
 
 } // namespace colors
 
+namespace {
+
+// Decodes the UTF-8 sequence starting at s[i] (length n). Stores the code
+// point in cp and returns the number of bytes consumed. Malformed input is
+// consumed one byte at a time and reported as U+FFFD.
+size_t decodeUtf8(const std::string& s, size_t i, size_t n, uint32_t& cp)
+{
+  const auto b0 = static_cast<unsigned char>(s[i]);
+  size_t len;
+  if (b0 < 0x80) {
+    cp = b0;
+    return 1;
+  }
+  else if ((b0 & 0xe0) == 0xc0) {
+    cp = b0 & 0x1f;
+    len = 2;
+  }
+  else if ((b0 & 0xf0) == 0xe0) {
+    cp = b0 & 0x0f;
+    len = 3;
+  }
+  else if ((b0 & 0xf8) == 0xf0) {
+    cp = b0 & 0x07;
+    len = 4;
+  }
+  else {
+    cp = 0xfffd;
+    return 1;
+  }
+  if (i + len > n) {
+    cp = 0xfffd;
+    return 1;
+  }
+  for (size_t k = 1; k < len; ++k) {
+    const auto b = static_cast<unsigned char>(s[i + k]);
+    if ((b & 0xc0) != 0x80) {
+      cp = 0xfffd;
+      return 1;
+    }
+    cp = (cp << 6) | (b & 0x3f);
+  }
+  return len;
+}
+
+// Terminal column width of a code point: East Asian wide/fullwidth code
+// points occupy two columns, everything else one. Over-counting is the safe
+// direction for truncation (a line can only end up shorter, never wrap).
+size_t displayWidth(uint32_t cp)
+{
+  static const std::pair<uint32_t, uint32_t> wide[] = {
+      {0x1100, 0x115f},   {0x2e80, 0x303e},   {0x3041, 0x33ff},
+      {0x3400, 0x4dbf},   {0x4e00, 0x9fff},   {0xa000, 0xa4cf},
+      {0xa960, 0xa97f},   {0xac00, 0xd7a3},   {0xf900, 0xfaff},
+      {0xfe10, 0xfe19},   {0xfe30, 0xfe52},   {0xfe54, 0xfe66},
+      {0xfe68, 0xfe6b},   {0xff00, 0xff60},   {0xffe0, 0xffe6},
+      {0x1f300, 0x1f64f}, {0x1f900, 0x1f9ff}, {0x20000, 0x2fffd},
+      {0x30000, 0x3fffd},
+  };
+  for (const auto& r : wide) {
+    if (cp >= r.first && cp <= r.second) {
+      return 2;
+    }
+  }
+  return 1;
+}
+
+} // namespace
+
 std::string ColorizedStreamBuf::str(bool color) const
 {
   std::stringstream rv;
@@ -75,7 +146,11 @@ std::string ColorizedStreamBuf::str(bool color) const
 
 std::string ColorizedStreamBuf::str(bool color, size_t max) const
 {
+  // max is a budget of terminal columns, not bytes: UTF-8 sequences are
+  // never split and East Asian wide characters count as two columns.
   std::stringstream rv;
+  size_t remaining = max;
+  bool full = false;
   for (const auto& e : elems) {
     if (e.first == eColor) {
       if (color) {
@@ -83,15 +158,26 @@ std::string ColorizedStreamBuf::str(bool color, size_t max) const
       }
       continue;
     }
-    auto size = e.second.size();
-    if (size > max) {
-      rv.write(e.second.c_str(), max);
-      break;
+    if (full) {
+      continue;
     }
-    rv << e.second;
-    max -= size;
-    if (!max) {
-      break;
+    const auto& text = e.second;
+    const size_t n = text.size();
+    size_t i = 0;
+    while (i < n) {
+      uint32_t cp;
+      const size_t len = decodeUtf8(text, i, n, cp);
+      const size_t width = displayWidth(cp);
+      if (width > remaining) {
+        full = true;
+        break;
+      }
+      rv.write(text.c_str() + i, len);
+      remaining -= width;
+      i += len;
+    }
+    if (remaining == 0) {
+      full = true;
     }
   }
   if (color) {

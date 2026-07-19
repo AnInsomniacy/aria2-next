@@ -56,10 +56,6 @@
 #  include "timegm.h"
 #endif // HAVE_TIMEGM
 
-#ifndef HAVE_ASCTIME_R
-#  include "asctime_r.h"
-#endif // HAVE_ASCTIME_R
-
 #ifdef __MINGW32__
 #  define suseconds_t uint64_t
 #endif
