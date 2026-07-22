@@ -91,22 +91,22 @@ void Ed2kKadStateTest::testRoutingFindClosestAndSnapshot()
 {
   auto self = hashFromHex("00000000000000000000000000000000");
   KadRoutingTable table(self, 10);
-  auto near = contactFromHex("00000000000000000000000000000001",
-                             "1.2.3.4", 4672);
-  auto far = contactFromHex("80000000000000000000000000000000",
-                            "5.6.7.8", 4672);
+  auto nearContact = contactFromHex("00000000000000000000000000000001",
+                                    "1.2.3.4", 4672);
+  auto farContact = contactFromHex("80000000000000000000000000000000",
+                                   "5.6.7.8", 4672);
   auto unconfirmed = contactFromHex("00000000000000000000000000000002",
                                     "9.9.9.9", 4672);
-  table.nodeSeen(far, 10);
-  table.nodeSeen(near, 11);
+  table.nodeSeen(farContact, 10);
+  table.nodeSeen(nearContact, 11);
   table.heardAbout(unconfirmed, 12);
   table.addRouterNode(endpoint("203.0.113.1", 4672));
   table.addRouterNode(endpoint("203.0.113.1", 4672));
 
   auto confirmed = table.findClosest(self, 10, false);
   REQUIRE_EQ((size_t)2, confirmed.size());
-  REQUIRE_EQ(near.id, confirmed[0].id);
-  REQUIRE_EQ(far.id, confirmed[1].id);
+  REQUIRE_EQ(nearContact.id, confirmed[0].id);
+  REQUIRE_EQ(farContact.id, confirmed[1].id);
 
   auto all = table.findClosest(self, 10, true);
   REQUIRE_EQ((size_t)3, all.size());
