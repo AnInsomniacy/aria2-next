@@ -25,8 +25,8 @@ void DownloadEngineTest::testHttpsSocketPoolRequiresSameHostname()
 
   REQUIRE(!e.popPooledSocketForHostname("192.0.2.1", 443,
                                                "redirect.example"));
-  REQUIRE(socket == e.popPooledSocketForHostname("192.0.2.1", 443,
-                                                  "origin.example"));
+  REQUIRE_UNARY(socket == e.popPooledSocketForHostname(
+                              "192.0.2.1", 443, "origin.example"));
 }
 
 } // namespace aria2
