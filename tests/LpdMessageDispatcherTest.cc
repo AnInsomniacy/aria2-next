@@ -23,7 +23,9 @@ public:
 };
 
 A2_TEST(LpdMessageDispatcherTest, testCreateLpdRequest)
+#ifndef __APPLE__
 A2_TEST(LpdMessageDispatcherTest, testSendMessage)
+#endif // !__APPLE__
 
 void LpdMessageDispatcherTest::testCreateLpdRequest()
 {

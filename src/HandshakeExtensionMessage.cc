@@ -95,6 +95,9 @@ std::string HandshakeExtensionMessage::toString() const
 
 void HandshakeExtensionMessage::doReceivedAction()
 {
+  if (!clientVersion_.empty()) {
+    peer_->setClientName(util::encodeNonUtf8(clientVersion_));
+  }
   if (tcpPort_ > 0) {
     peer_->setPort(tcpPort_);
     peer_->setIncomingPeer(false);

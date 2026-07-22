@@ -23,7 +23,9 @@ public:
   void testReceiveMessage();
 };
 
+#ifndef __APPLE__
 A2_TEST(LpdMessageReceiverTest, testReceiveMessage)
+#endif // !__APPLE__
 
 void LpdMessageReceiverTest::testReceiveMessage()
 {

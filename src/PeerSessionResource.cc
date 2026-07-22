@@ -59,7 +59,8 @@ PeerSessionResource::PeerSessionResource(int32_t pieceLength,
       snubbing_(false),
       fastExtensionEnabled_(false),
       extendedMessagingEnabled_(false),
-      dhtEnabled_(false)
+      dhtEnabled_(false),
+      handshakeCompleted_(false)
 {
 }
 

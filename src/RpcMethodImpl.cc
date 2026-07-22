@@ -120,7 +120,19 @@ const char KEY_PEER_ID[] = "peerId";
 const char KEY_IP[] = "ip";
 const char KEY_PORT[] = "port";
 const char KEY_AM_CHOKING[] = "amChoking";
+const char KEY_AM_INTERESTED[] = "amInterested";
 const char KEY_PEER_CHOKING[] = "peerChoking";
+const char KEY_PEER_INTERESTED[] = "peerInterested";
+const char KEY_PEER_CLIENT_NAME[] = "peerClientName";
+const char KEY_DOWNLOADED[] = "downloaded";
+const char KEY_UPLOADED[] = "uploaded";
+const char KEY_PROGRESS[] = "progress";
+const char KEY_FLAGS[] = "flags";
+const char KEY_INCOMING[] = "incoming";
+const char KEY_SNUBBED[] = "snubbed";
+const char KEY_OPTIMISTIC_UNCHOKE[] = "optimisticUnchoke";
+const char KEY_HANDSHAKING[] = "handshaking";
+const char KEY_PRIVATE_TORRENT[] = "privateTorrent";
 const char KEY_SEEDER[] = "seeder";
 const char KEY_INDEX[] = "index";
 const char KEY_PATH[] = "path";
@@ -978,6 +990,8 @@ void gatherBitTorrentMetadata(Dict* btDict, TorrentAttribute* torrentAttrs)
   }
   btDict->put(KEY_ANNOUNCE_LIST, std::move(destAnnounceList));
   if (!torrentAttrs->metadata.empty()) {
+    btDict->put(KEY_PRIVATE_TORRENT,
+                torrentAttrs->privateTorrent ? VLB_TRUE : VLB_FALSE);
     auto infoDict = Dict::g();
     infoDict->put(KEY_NAME, torrentAttrs->name);
     btDict->put(KEY_INFO, std::move(infoDict));
@@ -1015,7 +1029,43 @@ void gatherProgressBitTorrent(Dict* entryDict,
 } // namespace
 
 namespace {
-void gatherPeer(List* peers, const std::shared_ptr<PeerStorage>& ps)
+std::string createPeerFlags(const Peer& peer)
+{
+  std::string flags;
+  auto append = [&flags](const char* flag) {
+    if (!flags.empty()) {
+      flags += ' ';
+    }
+    flags += flag;
+  };
+
+  if (peer.amInterested()) {
+    append(peer.peerChoking() ? "d" : "D");
+  }
+  if (peer.peerInterested()) {
+    append(peer.amChoking() ? "u" : "U");
+  }
+  if (!peer.peerChoking() && !peer.amInterested()) {
+    append("K");
+  }
+  if (!peer.amChoking() && !peer.peerInterested()) {
+    append("?");
+  }
+  if (peer.optUnchoking()) {
+    append("O");
+  }
+  if (peer.snubbing()) {
+    append("S");
+  }
+  if (peer.isIncomingConnection()) {
+    append("I");
+  }
+  return flags;
+}
+
+void gatherPeer(List* peers, const std::shared_ptr<PeerStorage>& ps,
+                const DownloadContext* dctx,
+                const TorrentAttribute* torrentAttrs)
 {
   auto& usedPeers = ps->getUsedPeers();
   for (auto& peer : usedPeers) {
@@ -1023,8 +1073,13 @@ void gatherPeer(List* peers, const std::shared_ptr<PeerStorage>& ps)
       continue;
     }
     auto peerEntry = Dict::g();
-    peerEntry->put(KEY_PEER_ID, util::torrentPercentEncode(peer->getPeerId(),
-                                                           PEER_ID_LENGTH));
+    if (peer->isHandshakeCompleted()) {
+      peerEntry->put(KEY_PEER_ID, util::torrentPercentEncode(peer->getPeerId(),
+                                                             PEER_ID_LENGTH));
+    }
+    if (!peer->getClientName().empty()) {
+      peerEntry->put(KEY_PEER_CLIENT_NAME, peer->getClientName());
+    }
     peerEntry->put(KEY_IP, peer->getIPAddress());
     if (peer->isIncomingPeer()) {
       peerEntry->put(KEY_PORT, VLB_ZERO);
@@ -1035,11 +1090,34 @@ void gatherPeer(List* peers, const std::shared_ptr<PeerStorage>& ps)
     peerEntry->put(KEY_BITFIELD,
                    util::toHex(peer->getBitfield(), peer->getBitfieldLength()));
     peerEntry->put(KEY_AM_CHOKING, peer->amChoking() ? VLB_TRUE : VLB_FALSE);
+    peerEntry->put(KEY_AM_INTERESTED,
+                   peer->amInterested() ? VLB_TRUE : VLB_FALSE);
     peerEntry->put(KEY_PEER_CHOKING,
                    peer->peerChoking() ? VLB_TRUE : VLB_FALSE);
+    peerEntry->put(KEY_PEER_INTERESTED,
+                   peer->peerInterested() ? VLB_TRUE : VLB_FALSE);
     peerEntry->put(KEY_DOWNLOAD_SPEED,
                    util::itos(peer->calculateDownloadSpeed()));
     peerEntry->put(KEY_UPLOAD_SPEED, util::itos(peer->calculateUploadSpeed()));
+    peerEntry->put(KEY_DOWNLOADED,
+                   util::itos(peer->getSessionDownloadLength()));
+    peerEntry->put(KEY_UPLOADED, util::itos(peer->getSessionUploadLength()));
+    if (!torrentAttrs->metadata.empty() && dctx->getTotalLength() > 0) {
+      const auto completedLength = peer->getCompletedLength();
+      peerEntry->put(KEY_COMPLETED_LENGTH, util::itos(completedLength));
+      peerEntry->put(
+          KEY_PROGRESS,
+          fmt("%.6f", static_cast<double>(completedLength) /
+                         static_cast<double>(dctx->getTotalLength())));
+    }
+    peerEntry->put(KEY_FLAGS, createPeerFlags(*peer));
+    peerEntry->put(KEY_INCOMING,
+                   peer->isIncomingConnection() ? VLB_TRUE : VLB_FALSE);
+    peerEntry->put(KEY_SNUBBED, peer->snubbing() ? VLB_TRUE : VLB_FALSE);
+    peerEntry->put(KEY_OPTIMISTIC_UNCHOKE,
+                   peer->optUnchoking() ? VLB_TRUE : VLB_FALSE);
+    peerEntry->put(KEY_HANDSHAKING,
+                   peer->isHandshakeCompleted() ? VLB_FALSE : VLB_TRUE);
     peerEntry->put(KEY_SEEDER, peer->isSeeder() ? VLB_TRUE : VLB_FALSE);
     peers->append(std::move(peerEntry));
   }
@@ -1252,9 +1330,36 @@ std::unique_ptr<ValueBase> GetPeersRpcMethod::process(const RpcRequest& req,
   auto btObject = e->getBtRegistry()->get(group->getGID());
   if (btObject) {
     assert(btObject->peerStorage);
-    gatherPeer(peers.get(), btObject->peerStorage);
+    auto dctx = group->getDownloadContext().get();
+    gatherPeer(peers.get(), btObject->peerStorage, dctx,
+               bittorrent::getTorrentAttrs(dctx));
   }
   return std::move(peers);
+}
+
+std::unique_ptr<ValueBase>
+SetBtPeerBlocklistRpcMethod::process(const RpcRequest& req, DownloadEngine* e)
+{
+  const List* rulesParam = checkRequiredParam<List>(req, 0);
+  std::vector<std::string> rules;
+  rules.reserve(rulesParam->size());
+  size_t index = 0;
+  for (const auto& value : *rulesParam) {
+    const auto rule = downcast<String>(value);
+    if (!rule) {
+      throw DL_ABORT_EX(fmt("The blocklist rule at index %lu has wrong type.",
+                            static_cast<unsigned long>(index)));
+    }
+    rules.push_back(rule->s());
+    ++index;
+  }
+
+  const auto& blocklist = e->getBtRegistry()->getPeerBlocklist();
+  blocklist->replace(rules, "RPC");
+  auto result = Dict::g();
+  result->put("ruleCount", Integer::g(blocklist->count()));
+  result->put("revision", Integer::g(blocklist->revision()));
+  return result;
 }
 #endif // ENABLE_BITTORRENT
 

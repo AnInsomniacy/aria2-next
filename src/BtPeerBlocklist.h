@@ -42,6 +42,8 @@ public:
   void clear();
   void load(const std::string& path);
   void load(std::istream& input, const std::string& source);
+  void replace(const std::vector<std::string>& rules,
+               const std::string& source);
 
   bool contains(const std::string& ipaddr) const;
   size_t count() const { return ruleCount_; }

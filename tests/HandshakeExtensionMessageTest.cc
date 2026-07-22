@@ -96,7 +96,7 @@ void HandshakeExtensionMessageTest::testDoReceivedAction()
   dctx->setAttribute(CTX_ATTR_BT, make_unique<TorrentAttribute>());
   dctx->markTotalLengthIsUnknown();
 
-  auto peer = std::make_shared<Peer>("192.168.0.1", 0);
+  auto peer = std::make_shared<Peer>("192.168.0.1", 0, true);
   peer->allocateSessionResource(1_k, 1_m);
   HandshakeExtensionMessage msg;
   msg.setClientVersion("aria2");
@@ -109,7 +109,10 @@ void HandshakeExtensionMessageTest::testDoReceivedAction()
 
   msg.doReceivedAction();
 
+  REQUIRE_EQ(std::string("aria2"), peer->getClientName());
   REQUIRE_EQ((uint16_t)6889, peer->getPort());
+  REQUIRE(!peer->isIncomingPeer());
+  REQUIRE(peer->isIncomingConnection());
   REQUIRE_EQ((uint8_t)1, peer->getExtensionMessageID(
                                        ExtensionMessageRegistry::UT_PEX));
   REQUIRE_EQ((uint8_t)3, peer->getExtensionMessageID(

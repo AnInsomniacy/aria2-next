@@ -29,7 +29,10 @@
 #include "ed2k_search.h"
 #ifdef ENABLE_BITTORRENT
 #  include "BtRegistry.h"
+#  include "BtPeerBlocklist.h"
 #  include "BtRuntime.h"
+#  include "DefaultPeerStorage.h"
+#  include "Peer.h"
 #  include "bittorrent_helper.h"
 #endif // ENABLE_BITTORRENT
 
@@ -99,6 +102,8 @@ public:
   void testGatherProgressEd2kStatus();
 #ifdef ENABLE_BITTORRENT
   void testGatherStoppedDownload_bt();
+  void testGetPeers();
+  void testSetBtPeerBlocklist();
 #endif // ENABLE_BITTORRENT
   void testGatherProgressCommon();
 #ifdef ENABLE_BITTORRENT
@@ -157,6 +162,8 @@ A2_TEST(RpcMethodTest, testGatherStoppedDownload)
 A2_TEST(RpcMethodTest, testGatherProgressEd2kStatus)
 #ifdef ENABLE_BITTORRENT
 A2_TEST(RpcMethodTest, testGatherStoppedDownload_bt)
+A2_TEST(RpcMethodTest, testGetPeers)
+A2_TEST(RpcMethodTest, testSetBtPeerBlocklist)
 #endif // ENABLE_BITTORRENT
 A2_TEST(RpcMethodTest, testGatherProgressCommon)
 #ifdef ENABLE_BITTORRENT
@@ -1341,6 +1348,7 @@ void RpcMethodTest::testGatherBitTorrentMetadata()
   option->put(PREF_DIR, ".");
   auto dctx = std::make_shared<DownloadContext>();
   bittorrent::load(A2_TEST_DIR "/test.torrent", dctx, option);
+  bittorrent::getTorrentAttrs(dctx)->privateTorrent = true;
   auto btDict = Dict::g();
   gatherBitTorrentMetadata(btDict.get(), bittorrent::getTorrentAttrs(dctx));
   REQUIRE_EQ(std::string("REDNOAH.COM RULES"),
@@ -1352,6 +1360,7 @@ void RpcMethodTest::testGatherBitTorrentMetadata()
   REQUIRE_EQ(
       std::string("aria2-test"),
       downcast<String>(downcast<Dict>(btDict->get("info"))->get("name"))->s());
+  REQUIRE_EQ(std::string("true"), getString(btDict.get(), "privateTorrent"));
   REQUIRE_EQ(
       std::string("magnet:?xt=urn:btih:248D0A1CD08284299DE78D5C1ED359BB46717D8C"
                   "&dn=aria2-test"
@@ -1382,7 +1391,79 @@ void RpcMethodTest::testGatherBitTorrentMetadata()
   REQUIRE(!btDict->containsKey("creationDate"));
   REQUIRE(!btDict->containsKey("mode"));
   REQUIRE(!btDict->containsKey("info"));
+  REQUIRE(!btDict->containsKey("privateTorrent"));
   REQUIRE(btDict->containsKey("announceList"));
+}
+
+void RpcMethodTest::testGetPeers()
+{
+  auto dctx = std::make_shared<DownloadContext>(1_k, 2_k);
+  auto attrs = make_unique<TorrentAttribute>();
+  attrs->metadata = "metadata";
+  dctx->setAttribute(CTX_ATTR_BT, std::move(attrs));
+  auto group = std::make_shared<RequestGroup>(GroupId::create(), option_);
+  group->setDownloadContext(dctx);
+  e_->getRequestGroupMan()->addReservedGroup(group);
+
+  auto peerStorage = std::make_shared<DefaultPeerStorage>(
+      e_->getBtRegistry()->getPeerBlocklist());
+  auto peer = std::make_shared<Peer>("203.0.113.1", 6881, true);
+  REQUIRE(peerStorage->addAndCheckoutPeer(peer, 1));
+  peer->allocateSessionResource(1_k, 2_k);
+  const unsigned char peerId[PEER_ID_LENGTH] = {
+      '-', 'q', 'B', '5', '0', '0', '0', '-', '1', '2',
+      '3', '4', '5', '6', '7', '8', '9', '0', 'a', 'b'};
+  peer->setPeerId(peerId);
+  peer->setHandshakeCompleted(true);
+  peer->setClientName("qBittorrent/5.0.0");
+  peer->updateDownload(1024);
+  peer->updateUploadLength(512);
+  const unsigned char bitfield[] = {0x80};
+  peer->setBitfield(bitfield, sizeof(bitfield));
+  peer->amInterested(true);
+  peer->peerChoking(false);
+  peer->peerInterested(true);
+  peer->amChoking(false);
+  peer->optUnchoking(true);
+
+  auto btObject = make_unique<BtObject>();
+  btObject->peerStorage = peerStorage;
+  e_->getBtRegistry()->put(group->getGID(), std::move(btObject));
+
+  GetPeersRpcMethod method;
+  auto req = createReq(GetPeersRpcMethod::getMethodName());
+  req.params->append(GroupId::toHex(group->getGID()));
+  auto response = method.execute(std::move(req), e_.get());
+  REQUIRE_EQ(0, response.code);
+  auto result = downcast<List>(response.param);
+  REQUIRE_EQ((size_t)1, result->size());
+  auto entry = downcast<Dict>(result->get(0));
+  REQUIRE_EQ(std::string("qBittorrent/5.0.0"),
+             getString(entry, "peerClientName"));
+  REQUIRE_EQ(std::string("1024"), getString(entry, "downloaded"));
+  REQUIRE_EQ(std::string("512"), getString(entry, "uploaded"));
+  REQUIRE_EQ(std::string("1024"), getString(entry, "completedLength"));
+  REQUIRE_EQ(std::string("0.500000"), getString(entry, "progress"));
+  REQUIRE_EQ(std::string("D U O I"), getString(entry, "flags"));
+  REQUIRE_EQ(std::string("false"), getString(entry, "handshaking"));
+}
+
+void RpcMethodTest::testSetBtPeerBlocklist()
+{
+  SetBtPeerBlocklistRpcMethod method;
+  auto req = createReq(SetBtPeerBlocklistRpcMethod::getMethodName());
+  auto rules = List::g();
+  rules->append("203.0.113.0/24");
+  rules->append("2001:db8::1");
+  req.params->append(std::move(rules));
+  auto response = method.execute(std::move(req), e_.get());
+  REQUIRE_EQ(0, response.code);
+  auto result = downcast<Dict>(response.param);
+  REQUIRE_EQ((int64_t)2,
+             downcast<Integer>(result->get("ruleCount"))->i());
+  const auto& blocklist = e_->getBtRegistry()->getPeerBlocklist();
+  REQUIRE(blocklist->contains("203.0.113.9"));
+  REQUIRE(blocklist->contains("2001:db8::1"));
 }
 #endif // ENABLE_BITTORRENT
 

@@ -156,6 +156,7 @@ DefaultBtInteractive::receiveHandshake(bool quickReply)
     peer_->setDHTEnabled(true);
     A2_LOG_DEBUG(fmt(MSG_DHT_ENABLED_PEER, cuid_));
   }
+  peer_->setHandshakeCompleted(true);
   A2_LOG_DEBUG(fmt(MSG_RECEIVE_PEER_MESSAGE, cuid_,
                   peer_->getIPAddress().c_str(), peer_->getPort(),
                   message->toString().c_str()));

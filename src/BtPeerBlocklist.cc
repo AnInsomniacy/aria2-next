@@ -147,10 +147,7 @@ BtPeerBlocklist::BtPeerBlocklist() : ruleCount_(0), revision_(1) {}
 
 void BtPeerBlocklist::clear()
 {
-  ipv4Ranges_.clear();
-  ipv6Ranges_.clear();
-  ruleCount_ = 0;
-  ++revision_;
+  replace({}, "clear");
 }
 
 void BtPeerBlocklist::load(const std::string& path)
@@ -166,12 +163,22 @@ void BtPeerBlocklist::load(const std::string& path)
 
 void BtPeerBlocklist::load(std::istream& input, const std::string& source)
 {
+  std::vector<std::string> rules;
+  std::string line;
+  while (std::getline(input, line)) {
+    rules.push_back(std::move(line));
+  }
+  replace(rules, source);
+}
+
+void BtPeerBlocklist::replace(const std::vector<std::string>& rules,
+                              const std::string& source)
+{
   std::vector<Range> ipv4Ranges;
   std::vector<Range> ipv6Ranges;
   size_t ruleCount = 0;
   size_t lineNumber = 0;
-  std::string line;
-  while (std::getline(input, line)) {
+  for (auto line : rules) {
     ++lineNumber;
     line = util::strip(line);
     if (line.empty() || line[0] == '#') {

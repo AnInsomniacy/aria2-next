@@ -4,6 +4,7 @@
 #include "PieceStorage.h"
 
 #include <algorithm>
+#include <deque>
 
 #include "BitfieldMan.h"
 #include "FatalException.h"
@@ -261,7 +262,7 @@ public:
   virtual void addInFlightPiece(
       const std::vector<std::shared_ptr<Piece>>& pieces) override
   {
-    std::copy(pieces.begin(), pieces.end(), back_inserter(inFlightPieces));
+    std::copy(pieces.begin(), pieces.end(), std::back_inserter(inFlightPieces));
   }
 
   virtual size_t countInFlightPiece() override

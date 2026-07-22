@@ -79,6 +79,9 @@ private:
   // If true, port is assumed not to be a listening port.
   bool incoming_;
 
+  // True if the current peer connection was accepted by localhost.
+  bool incomingConnection_;
+
   // If true, this peer is from local network.
   bool localPeer_;
 
@@ -235,6 +238,14 @@ public:
 
   bool isDHTEnabled() const;
 
+  const std::string& getClientName() const;
+
+  void setClientName(std::string name);
+
+  bool isHandshakeCompleted() const;
+
+  void setHandshakeCompleted(bool completed);
+
   bool shouldBeChoking() const;
 
   bool hasPiece(size_t index) const;
@@ -254,6 +265,8 @@ public:
   bool isIncomingPeer() const { return incoming_; }
 
   void setIncomingPeer(bool incoming);
+
+  bool isIncomingConnection() const { return incomingConnection_; }
 
   bool isLocalPeer() const { return localPeer_; }
 

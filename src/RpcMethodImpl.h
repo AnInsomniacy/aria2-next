@@ -293,6 +293,15 @@ protected:
 public:
   static const char* getMethodName() { return "aria2.getPeers"; }
 };
+
+class SetBtPeerBlocklistRpcMethod : public RpcMethod {
+protected:
+  virtual std::unique_ptr<ValueBase> process(const RpcRequest& req,
+                                             DownloadEngine* e) override;
+
+public:
+  static const char* getMethodName() { return "aria2.setBtPeerBlocklist"; }
+};
 #endif // ENABLE_BITTORRENT
 
 class GetServersRpcMethod : public RpcMethod {

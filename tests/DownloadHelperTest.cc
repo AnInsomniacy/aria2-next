@@ -66,8 +66,10 @@ public:
   void testCreateRequestGroupForUri_BadThunder();
   void testCreateRequestGroupForUri_ED2K();
   void testCreateRequestGroupForUri_ED2KClientHash();
+#ifndef __MINGW32__
   void testCreateRequestGroupForUri_ED2KDefaultKadBootstrap();
   void testCreateRequestGroupForUri_ED2KDefaultMacKadBootstrap();
+#endif // !__MINGW32__
   void testCreateEd2kSearchRequestGroupClientHash();
   void testCreateRequestGroupForUri_ED2KNodesDat();
   void testCreateRequestGroupForUri_ED2KServerMetMetadata();
@@ -136,8 +138,10 @@ A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_Thunder)
 A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_BadThunder)
 A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2K)
 A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KClientHash)
+#ifndef __MINGW32__
 A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KDefaultKadBootstrap)
 A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KDefaultMacKadBootstrap)
+#endif // !__MINGW32__
 A2_TEST(DownloadHelperTest, testCreateEd2kSearchRequestGroupClientHash)
 A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KNodesDat)
 A2_TEST(DownloadHelperTest, testCreateRequestGroupForUri_ED2KServerMetMetadata)
@@ -363,6 +367,8 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KClientHash()
                        util::toHex(attrs->clientHash));
 }
 
+#ifndef __MINGW32__
+
 void DownloadHelperTest::testCreateRequestGroupForUri_ED2KDefaultKadBootstrap()
 {
   std::string nodeIdHex("23a8ceff57a7a32d562d649ed7893796");
@@ -496,6 +502,8 @@ void DownloadHelperTest::testCreateRequestGroupForUri_ED2KDefaultMacKadBootstrap
   REQUIRE_EQ(ed2k::ed2kHashToKadId(attrs->clientHash),
                        attrs->kadRoutingTable->snapshot().selfId);
 }
+
+#endif // !__MINGW32__
 
 void DownloadHelperTest::testCreateEd2kSearchRequestGroupClientHash()
 {

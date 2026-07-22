@@ -54,6 +54,7 @@ Peer::Peer(std::string ipaddr, uint16_t port, bool incoming)
       dropStartTime_(Timer::zero()),
       seeder_(false),
       incoming_(incoming),
+      incomingConnection_(incoming),
       localPeer_(false),
       disconnectedGracefully_(false)
 {
@@ -357,6 +358,30 @@ bool Peer::isDHTEnabled() const
 {
   assert(res_);
   return res_->dhtEnabled();
+}
+
+const std::string& Peer::getClientName() const
+{
+  assert(res_);
+  return res_->clientName();
+}
+
+void Peer::setClientName(std::string name)
+{
+  assert(res_);
+  res_->clientName(std::move(name));
+}
+
+bool Peer::isHandshakeCompleted() const
+{
+  assert(res_);
+  return res_->handshakeCompleted();
+}
+
+void Peer::setHandshakeCompleted(bool completed)
+{
+  assert(res_);
+  res_->handshakeCompleted(completed);
 }
 
 const Timer& Peer::getLastDownloadUpdate() const

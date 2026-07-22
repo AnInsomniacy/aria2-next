@@ -2855,6 +2855,10 @@ For information on the *secret* parameter, see :ref:`rpc_auth`.
     ``mode``
       File mode of the torrent. The value is either ``single`` or ``multi``.
 
+    ``privateTorrent``
+      ``true`` if the torrent is private. Otherwise ``false``. This key is
+      omitted until torrent metadata is available.
+
     ``info``
       Struct which contains data from Info dictionary. It contains
       following keys.
@@ -3154,7 +3158,12 @@ For information on the *secret* parameter, see :ref:`rpc_auth`.
   contains the following keys. Values are strings.
 
   ``peerId``
-    Percent-encoded peer ID.
+    Percent-encoded peer ID. This key is omitted until the BitTorrent
+    handshake completes.
+
+  ``peerClientName``
+    Client name and version reported by the peer in the extension handshake.
+    This key is omitted when the peer does not report it.
 
   ``ip``
     IP address of the peer.
@@ -3171,14 +3180,51 @@ For information on the *secret* parameter, see :ref:`rpc_auth`.
   ``amChoking``
     ``true`` if aria2 is choking the peer. Otherwise ``false``.
 
+  ``amInterested``
+    ``true`` if aria2 is interested in the peer. Otherwise ``false``.
+
   ``peerChoking``
     ``true`` if the peer is choking aria2. Otherwise ``false``.
+
+  ``peerInterested``
+    ``true`` if the peer is interested in aria2. Otherwise ``false``.
 
   ``downloadSpeed``
     Download speed (byte/sec) that this client obtains from the peer.
 
   ``uploadSpeed``
     Upload speed(byte/sec) that this client uploads to the peer.
+
+  ``downloaded``
+    Payload bytes downloaded from the peer during the current connection.
+
+  ``uploaded``
+    Payload bytes uploaded to the peer during the current connection.
+
+  ``completedLength``
+    Number of bytes represented by the peer bitfield.
+
+  ``progress``
+    Peer completion ratio from ``0.000000`` to ``1.000000``. This key and
+    ``completedLength`` are omitted until torrent metadata is available.
+
+  ``flags``
+    Space-separated peer state flags. ``D`` and ``d`` describe download
+    interest and choking, ``U`` and ``u`` describe upload interest and
+    choking, ``K`` and ``?`` describe unchoked idle directions, ``O`` means
+    optimistic unchoke, ``S`` means snubbed, and ``I`` means incoming.
+
+  ``incoming``
+    ``true`` if the peer opened the connection to aria2.
+
+  ``snubbed``
+    ``true`` if the peer is currently considered snubbed.
+
+  ``optimisticUnchoke``
+    ``true`` if the peer is selected for optimistic unchoking.
+
+  ``handshaking``
+    ``true`` while the connection has not completed the BitTorrent handshake.
 
   ``seeder``
     ``true`` if this peer is a seeder. Otherwise ``false``.
@@ -3241,6 +3287,15 @@ For information on the *secret* parameter, see :ref:`rpc_auth`.
       'port': '37842',
       'seeder': 'false,
       'uploadSpeed': '6890'}]
+
+.. function:: aria2.setBtPeerBlocklist([secret], rules)
+
+  Atomically replaces the active BitTorrent peer blocklist. *rules* is an
+  array of IPv4 addresses, IPv6 addresses, or CIDR ranges. An empty array
+  clears the blocklist. If any rule is invalid, the existing blocklist remains
+  active and the request fails. The response contains integer ``ruleCount``
+  and ``revision`` values. Existing peer connections are rechecked after a
+  successful replacement.
 
 .. function:: aria2.getServers([secret], gid)
 

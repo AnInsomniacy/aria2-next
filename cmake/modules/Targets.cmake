@@ -98,7 +98,9 @@ target_compile_definitions(aria2_spdlog INTERFACE
   SPDLOG_PREVENT_CHILD_FD)
 target_link_libraries(aria2_spdlog INTERFACE Threads::Threads)
 if(WIN32)
-  target_compile_definitions(aria2_spdlog INTERFACE SPDLOG_WCHAR_FILENAMES)
+  target_compile_definitions(aria2_spdlog INTERFACE
+    SPDLOG_UTF8_TO_WCHAR_CONSOLE
+    SPDLOG_WCHAR_FILENAMES)
 endif()
 
 add_library(wslay STATIC

@@ -67,6 +67,8 @@ private:
 
   BtMessageDispatcher* dispatcher_;
 
+  std::string clientName_;
+
   // localhost is choking this peer
   bool amChoking_;
   // localhost is interested in this peer
@@ -84,6 +86,7 @@ private:
   bool fastExtensionEnabled_;
   bool extendedMessagingEnabled_;
   bool dhtEnabled_;
+  bool handshakeCompleted_;
 
 public:
   PeerSessionResource(int32_t pieceLength, int64_t totalLength);
@@ -177,6 +180,14 @@ public:
   bool dhtEnabled() const { return dhtEnabled_; }
 
   void dhtEnabled(bool b);
+
+  const std::string& clientName() const { return clientName_; }
+
+  void clientName(std::string name) { clientName_ = std::move(name); }
+
+  bool handshakeCompleted() const { return handshakeCompleted_; }
+
+  void handshakeCompleted(bool completed) { handshakeCompleted_ = completed; }
 
   NetStat& getNetStat() { return netStat_; }
 
