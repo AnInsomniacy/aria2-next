@@ -253,14 +253,14 @@ if(HAVE_OPENSSL)
   cmake_pop_check_state()
 endif()
 
-# OpenSSL provides the message digests and bignum; WinTLS builds fall back to
-# the internal implementations. RC4 is always the internal implementation and
-# is compiled unconditionally (see ARIA2_SOURCES_ARC4).
+# OpenSSL provides the message digests and MSE DH implementation. Other TLS
+# backends use the internal implementations. RC4 is always internal and is
+# compiled unconditionally (see ARIA2_SOURCES_ARC4).
 if(HAVE_OPENSSL)
   set(USE_OPENSSL_MD 1)
 else()
   set(USE_INTERNAL_MD 1)
-  set(USE_INTERNAL_BIGNUM 1)
+  set(USE_INTERNAL_MSE_DH 1)
 endif()
 
 if(ARIA2_ENABLE_BITTORRENT)

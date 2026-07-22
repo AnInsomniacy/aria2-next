@@ -65,12 +65,6 @@ const size_t MAX_PAD_LENGTH = 512;
 const size_t CRYPTO_BITFIELD_LENGTH = 4;
 constexpr auto VC = std::array<unsigned char, MSEHandshake::VC_LENGTH>{};
 
-const unsigned char* PRIME = reinterpret_cast<const unsigned char*>(
-    "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B"
-    "139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485"
-    "B576625E7EC6F44C42E9A63A36210000000000090563");
-const unsigned char* GENERATOR = reinterpret_cast<const unsigned char*>("2");
-
 } // namespace
 
 MSEHandshake::MSEHandshake(cuid_t cuid,
@@ -113,8 +107,6 @@ MSEHandshake::HANDSHAKE_TYPE MSEHandshake::identifyHandshakeType()
 void MSEHandshake::initEncryptionFacility(bool initiator)
 {
   dh_ = make_unique<DHKeyExchange>();
-  dh_->init(PRIME, PRIME_BITS, GENERATOR, 160);
-  dh_->generatePublicKey();
   A2_LOG_TRACE(fmt("CUID#%" PRId64 " - DH initialized.", cuid_));
   initiator_ = initiator;
 }
@@ -123,11 +115,12 @@ void MSEHandshake::sendPublicKey()
 {
   A2_LOG_TRACE(fmt("CUID#%" PRId64 " - Sending public key.", cuid_));
   auto buf = std::vector<unsigned char>(KEY_LENGTH + MAX_PAD_LENGTH);
-  dh_->getPublicKey(buf.data(), KEY_LENGTH);
+  const auto& publicKey = dh_->getPublicKey();
+  std::copy(publicKey.begin(), publicKey.end(), buf.begin());
 
   size_t padLength =
       SimpleRandomizer::getInstance()->getRandomNumber(MAX_PAD_LENGTH + 1);
-  dh_->generateNonce(buf.data() + KEY_LENGTH, padLength);
+  util::generateRandomData(buf.data() + KEY_LENGTH, padLength);
   buf.resize(KEY_LENGTH + padLength);
 
   socketBuffer_.pushBytes(std::move(buf));
@@ -170,7 +163,10 @@ bool MSEHandshake::receivePublicKey()
   }
   A2_LOG_TRACE(fmt("CUID#%" PRId64 " - public key received.", cuid_));
   // TODO handle exception. in catch, resbufLength = 0;
-  dh_->computeSecret(secret_, sizeof(secret_), rbuf_, KEY_LENGTH);
+  MSEDHPublicKey peerPublicKey;
+  std::copy_n(rbuf_, KEY_LENGTH, peerPublicKey.begin());
+  const auto secret = dh_->computeSecret(peerPublicKey);
+  std::copy(secret.begin(), secret.end(), secret_);
   // shift buffer
   shiftBuffer(KEY_LENGTH);
   return true;

@@ -36,35 +36,23 @@
 #ifndef D_INTERNAL_DH_KEY_EXCHANGE_H
 #define D_INTERNAL_DH_KEY_EXCHANGE_H
 
-#include "common.h"
-#include "bignum.h"
+#include "MSEDHKeyExchange.h"
 
 namespace aria2 {
 
-class DHKeyExchange {
+class InternalDHKeyExchange {
 private:
-  typedef bignum::ulong<1024> n; // aka max. 8096 bits
-  size_t keyLength_;
-  n prime_;
-  n generator_;
-  n privateKey_;
-  n publicKey_;
+  MSEDHPrivateKey privateKey_;
+  MSEDHPublicKey publicKey_;
 
 public:
-  DHKeyExchange() : keyLength_(0) {}
+  InternalDHKeyExchange();
 
-  void init(const unsigned char* prime, size_t primeBits,
-            const unsigned char* generator, size_t privateKeyBits);
+  explicit InternalDHKeyExchange(const MSEDHPrivateKey& privateKey);
 
-  void generatePublicKey();
+  const MSEDHPublicKey& getPublicKey() const { return publicKey_; }
 
-  size_t getPublicKey(unsigned char* out, size_t outLength) const;
-
-  void generateNonce(unsigned char* out, size_t outLength) const;
-
-  size_t computeSecret(unsigned char* out, size_t outLength,
-                       const unsigned char* peerPublicKeyData,
-                       size_t peerPublicKeyLength) const;
+  MSEDHPublicKey computeSecret(const MSEDHPublicKey& peerPublicKey) const;
 };
 
 } // namespace aria2

@@ -41,6 +41,7 @@
 #include <memory>
 
 #include "BtConstants.h"
+#include "DHKeyExchange.h"
 #include "SocketBuffer.h"
 #include "Command.h"
 
@@ -48,7 +49,6 @@ namespace aria2 {
 
 class Option;
 class SocketCore;
-class DHKeyExchange;
 class ARC4Encryptor;
 class DownloadContext;
 class MessageDigest;

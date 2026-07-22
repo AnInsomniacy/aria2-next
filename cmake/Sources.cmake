@@ -759,6 +759,9 @@ set(ARIA2_SOURCES_ENABLE_BITTORRENT
   src/DefaultPeerStorage.cc
   src/DefaultPeerStorage.h
   src/DHKeyExchange.h
+  src/MSEDHKeyExchange.h
+  src/InternalDHKeyExchange.cc
+  src/InternalDHKeyExchange.h
   src/DHTAbstractMessage.cc
   src/DHTAbstractMessage.h
   src/DHTAbstractNodeLookupTask.h
@@ -958,12 +961,6 @@ set(ARIA2_SOURCES_ENABLE_BITTORRENT
   src/XORCloser.h
   src/ZeroBtMessage.cc
   src/ZeroBtMessage.h
-)
-
-set(ARIA2_SOURCES_ENABLE_BITTORRENT__USE_INTERNAL_BIGNUM
-  src/bignum.h
-  src/InternalDHKeyExchange.cc
-  src/InternalDHKeyExchange.h
 )
 
 set(ARIA2_SOURCES_ARC4

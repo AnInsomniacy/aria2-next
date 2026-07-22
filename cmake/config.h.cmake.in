@@ -276,7 +276,7 @@
 #cmakedefine TM_IN_SYS_TIME @TM_IN_SYS_TIME@
 
 /* Define to 1 if internal BIGNUM support is enabled. */
-#cmakedefine USE_INTERNAL_BIGNUM @USE_INTERNAL_BIGNUM@
+#cmakedefine USE_INTERNAL_MSE_DH @USE_INTERNAL_MSE_DH@
 
 /* What message digest implementation to use */
 #cmakedefine USE_INTERNAL_MD @USE_INTERNAL_MD@
