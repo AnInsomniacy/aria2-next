@@ -1,5 +1,7 @@
 #include "ExtensionMessageRegistry.h"
 
+#include <string>
+
 #include "a2doctest.h"
 
 namespace aria2 {

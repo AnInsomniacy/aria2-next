@@ -3,6 +3,7 @@
 #include "util.h"
 #include "DHTNodeLookupEntry.h"
 #include "DHTNode.h"
+#include <deque>
 #include <cstring>
 #include <algorithm>
 #include "a2doctest.h"

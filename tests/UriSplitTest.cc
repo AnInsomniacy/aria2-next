@@ -1,6 +1,7 @@
 #include "uri_split.h"
 
 #include <cstring>
+#include <string>
 
 #include "a2doctest.h"
 
