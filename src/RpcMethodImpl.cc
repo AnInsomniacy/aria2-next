@@ -1081,12 +1081,7 @@ void gatherPeer(List* peers, const std::shared_ptr<PeerStorage>& ps,
       peerEntry->put(KEY_PEER_CLIENT_NAME, peer->getClientName());
     }
     peerEntry->put(KEY_IP, peer->getIPAddress());
-    if (peer->isIncomingPeer()) {
-      peerEntry->put(KEY_PORT, VLB_ZERO);
-    }
-    else {
-      peerEntry->put(KEY_PORT, util::uitos(peer->getPort()));
-    }
+    peerEntry->put(KEY_PORT, util::uitos(peer->getPort()));
     peerEntry->put(KEY_BITFIELD,
                    util::toHex(peer->getBitfield(), peer->getBitfieldLength()));
     peerEntry->put(KEY_AM_CHOKING, peer->amChoking() ? VLB_TRUE : VLB_FALSE);

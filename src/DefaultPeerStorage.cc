@@ -90,6 +90,11 @@ void DefaultPeerStorage::addUniqPeer(const std::shared_ptr<Peer>& peer)
 
 bool DefaultPeerStorage::addPeer(const std::shared_ptr<Peer>& peer)
 {
+  if (peer->getPort() == 0) {
+    A2_LOG_TRACE(fmt("Adding %s:%u is rejected because port is 0.",
+                     peer->getIPAddress().c_str(), peer->getPort()));
+    return false;
+  }
   if (unusedPeers_.size() >= maxPeerListSize_) {
     A2_LOG_TRACE(fmt("Adding %s:%u is rejected, since unused peer list is full "
                      "(%lu peers > %lu)",

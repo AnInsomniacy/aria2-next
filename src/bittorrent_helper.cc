@@ -876,10 +876,13 @@ std::pair<std::string, uint16_t> unpackcompact(const unsigned char* compact,
   int portOffset = family == AF_INET ? 4 : 16;
   char buf[NI_MAXHOST];
   if (inetNtop(family, compact, buf, sizeof(buf)) == 0) {
-    r.first = buf;
     uint16_t portN;
     memcpy(&portN, compact + portOffset, sizeof(portN));
-    r.second = ntohs(portN);
+    auto port = ntohs(portN);
+    if (port != 0) {
+      r.first = buf;
+      r.second = port;
+    }
   }
   return r;
 }

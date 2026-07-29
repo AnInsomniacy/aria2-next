@@ -293,7 +293,7 @@ void extractPeer(const ValueBase* peerData, int family, OutputIterator dest)
         const unsigned char* end = base + length;
         for (; base != end; base += unit) {
           std::pair<std::string, uint16_t> p = unpackcompact(base, family_);
-          if (p.first.empty()) {
+          if (p.first.empty() || p.second == 0) {
             continue;
           }
           *dest_++ = std::make_shared<Peer>(p.first, p.second);
