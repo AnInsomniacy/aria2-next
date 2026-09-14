@@ -12,6 +12,7 @@
 /* copyright --> */
 #include "DownloadContext.h"
 #include "File.h"
+#include "Option.h"
 #include "RequestGroup.h"
 #include <libtorrent/session.hpp>
 #include "BtDownload.h"
@@ -20,18 +21,46 @@
 #include "BtSnapshot.h"
 #include "Log.h"
 #include "fmt.h"
+#include "prefs.h"
+#include "support/Text.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <libtorrent/error_code.hpp>
 #include <libtorrent/torrent_flags.hpp>
+#include <libtorrent/web_seed_entry.hpp>
 #include <memory>
+#include <sstream>
+#include <string>
 #include <utility>
 #include "bittorrent/BtSessionInternal.h"
 
 namespace aria2 {
 namespace bt_session {
 } // namespace bt_session
+namespace {
+lt::web_seed_entry::headers_t webSeedHeaders(const Option* option)
+{
+  lt::web_seed_entry::headers_t headers;
+  std::istringstream lines(option->get(PREF_HEADER));
+  std::string line;
+  while (std::getline(lines, line)) {
+    const auto separator = line.find(':');
+    if (separator == std::string::npos) {
+      continue;
+    }
+    auto name = util::strip(line.substr(0, separator));
+    auto value = line.substr(separator + 1);
+    const auto firstValue = value.find_first_not_of(" \t");
+    value = firstValue == std::string::npos ? std::string()
+                                             : value.substr(firstValue);
+    if (!name.empty()) {
+      headers.emplace_back(std::move(name), std::move(value));
+    }
+  }
+  return headers;
+}
+} // namespace
 using namespace bt_session;
 
 void BtSession::prepareFreshAdd(BtDownload* download)
@@ -271,6 +300,8 @@ void BtSession::attach(const std::shared_ptr<BtDownload>& download,
   download->impl_->appliedFilePriorities =
       download->impl_->params.file_priorities;
   download->impl_->appliedPiecePriorities.clear();
+  download->impl_->params.url_seed_headers =
+      webSeedHeaders(group->getOption().get());
   download->impl_->nativeState = BtNativeState::Adding;
   impl_->session->async_add_torrent(download->impl_->params);
 }
