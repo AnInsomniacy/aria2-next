@@ -13,6 +13,7 @@ see LICENSE file.
 
 #include "libtorrent/config.hpp"
 
+#include <algorithm>
 #include <limits>
 #include <cstdlib>
 
@@ -108,41 +109,56 @@ namespace libtorrent::aux {
 	void web_connection_base::add_headers(std::string& request
 		, aux::session_settings const& sett, bool const using_proxy) const
 	{
-		request += "Host: ";
-		request += format_host_header(m_host, m_port, m_ssl ? 443 : 80);
-		if ((m_first_request || m_settings.get_bool(settings_pack::always_send_user_agent))
-			&& !m_settings.get_bool(settings_pack::anonymous_mode))
+		auto const has_extra_header = [this](string_view const name)
 		{
-			request += "\r\nUser-Agent: ";
+			return std::any_of(m_extra_headers.begin(), m_extra_headers.end()
+				, [name](auto const& header)
+				{ return string_equal_no_case(header.first, name); });
+		};
+		if (!has_extra_header("Host"))
+		{
+			request += "Host: ";
+			request += format_host_header(m_host, m_port, m_ssl ? 443 : 80);
+		}
+		if ((m_first_request || m_settings.get_bool(settings_pack::always_send_user_agent))
+			&& !m_settings.get_bool(settings_pack::anonymous_mode)
+			&& !has_extra_header("User-Agent"))
+		{
+			if (!request.empty()) request += "\r\n";
+			request += "User-Agent: ";
 			request += m_settings.get_str(settings_pack::user_agent);
 		}
-		if (!m_external_auth.empty())
+		if (!has_extra_header("Authorization") && !m_external_auth.empty())
 		{
-			request += "\r\nAuthorization: ";
+			if (!request.empty()) request += "\r\n";
+			request += "Authorization: ";
 			request += m_external_auth;
 		}
-		else if (!m_basic_auth.empty())
+		else if (!has_extra_header("Authorization") && !m_basic_auth.empty())
 		{
-			request += "\r\nAuthorization: Basic ";
+			if (!request.empty()) request += "\r\n";
+			request += "Authorization: Basic ";
 			request += m_basic_auth;
 		}
-		if (sett.get_int(settings_pack::proxy_type) == settings_pack::http_pw)
+		if (sett.get_int(settings_pack::proxy_type) == settings_pack::http_pw
+			&& !has_extra_header("Proxy-Authorization"))
 		{
-			request += "\r\nProxy-Authorization: Basic ";
+			if (!request.empty()) request += "\r\n";
+			request += "Proxy-Authorization: Basic ";
 			request += base64encode(sett.get_str(settings_pack::proxy_username)
 				+ ":" + sett.get_str(settings_pack::proxy_password));
 		}
 		for (auto const& h : m_extra_headers)
 		{
-			request += "\r\n";
+			if (!request.empty()) request += "\r\n";
 			request += h.first;
 			request += ": ";
 			request += h.second;
 		}
-		if (using_proxy) {
+		if (using_proxy && !has_extra_header("Proxy-Connection")) {
 			request += "\r\nProxy-Connection: keep-alive";
 		}
-		if (m_first_request || using_proxy) {
+		if ((m_first_request || using_proxy) && !has_extra_header("Connection")) {
 			request += "\r\nConnection: keep-alive";
 		}
 	}
