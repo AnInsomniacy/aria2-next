@@ -15,6 +15,7 @@ see LICENSE file.
 
 #include "libtorrent/config.hpp"
 
+#include <algorithm>
 #include <functional>
 #include <cstdlib>
 #include <cstdio> // for snprintf
@@ -35,6 +36,7 @@ see LICENSE file.
 #include "libtorrent/aux_/escape_string.hpp" // for escape_path
 #include "libtorrent/hex.hpp" // for is_hex
 #include "libtorrent/aux_/random.hpp"
+#include "libtorrent/aux_/string_util.hpp"
 #include "libtorrent/aux_/torrent.hpp"
 #include "libtorrent/aux_/http_parser.hpp"
 
@@ -43,6 +45,21 @@ namespace libtorrent::aux {
 constexpr int request_size_overhead = 5000;
 
 std::string escape_file_path(file_storage const& storage, file_index_t index);
+
+static web_seed_entry::headers_t redirect_headers(
+	web_seed_entry::headers_t const& headers, bool const same_origin_redirect)
+{
+	if (same_origin_redirect) return headers;
+
+	auto filtered = headers;
+	filtered.erase(std::remove_if(filtered.begin(), filtered.end()
+		, [](auto const& header)
+		{
+			return string_equal_no_case(header.first, "Authorization")
+				|| string_equal_no_case(header.first, "Cookie");
+		}), filtered.end());
+	return filtered;
+}
 
 web_peer_connection::web_peer_connection(peer_connection_args& pack
 	, aux::web_seed_t& web)
@@ -708,9 +725,13 @@ void web_peer_connection::handle_redirect(int const bytes_left)
 		// Don't forward our credentials (the web_seed_entry::auth value, sent
 		// as the Authorization header) to a different origin. The redirect
 		// target may be a third party server that should not see them. Note
-		// that any user-supplied m_extra_headers are still forwarded -- see the
-		// warning on web_seed_entry::extra_headers.
-		std::string const auth = same_origin(m_url, location) ? m_external_auth : std::string();
+		// that user-supplied Authorization and Cookie headers follow the same
+		// rule. Other m_extra_headers are still forwarded -- see the warning on
+		// web_seed_entry::extra_headers.
+		bool const same_origin_redirect = same_origin(m_url, location);
+		std::string const auth = same_origin_redirect ? m_external_auth : std::string();
+		auto const headers = redirect_headers(
+			m_extra_headers, same_origin_redirect);
 
 		// "ephemeral" flag should be set to avoid "web_seed_t" saving in resume data.
 		// E.g. original "web_seed_t" request url points to "http://example1.com/file1" and
@@ -719,7 +740,7 @@ void web_peer_connection::handle_redirect(int const bytes_left)
 		// with base url=="http://example2.com/" and redirects[0]=="/subpath/file2").
 		// If we try to load resume with such "web_seed_t" then "web_peer_connection" will send
 		// request with wrong path "http://example2.com/file1" (cause "redirects" map is not serialized in resume)
-		web_seed_t* web = t->add_web_seed(redirect_base, auth, m_extra_headers, web_seed_flags);
+		web_seed_t* web = t->add_web_seed(redirect_base, auth, headers, web_seed_flags);
 		web->have_files.resize(t->torrent_file().num_files(), false);
 
 		// the new web seed we're adding only has this file for now
@@ -769,10 +790,13 @@ void web_peer_connection::handle_redirect(int const bytes_left)
 		// Don't forward our credentials (the web_seed_entry::auth value, sent
 		// as the Authorization header) to a different origin. The redirect
 		// target may be a third party server that should not see them. Note
-		// that any user-supplied m_extra_headers are still forwarded -- see the
-		// warning on web_seed_entry::extra_headers.
-		std::string const auth = same_origin(m_url, location) ? m_external_auth : std::string();
-		t->add_web_seed(location, auth, m_extra_headers, web_seed_flags);
+		// that user-supplied Authorization and Cookie headers follow the same
+		// rule. Other m_extra_headers are still forwarded -- see the warning on
+		// web_seed_entry::extra_headers.
+		bool const same_origin_redirect = same_origin(m_url, location);
+		std::string const auth = same_origin_redirect ? m_external_auth : std::string();
+		auto const headers = redirect_headers(m_extra_headers, same_origin_redirect);
+		t->add_web_seed(location, auth, headers, web_seed_flags);
 
 		// this web seed doesn't have any files. Don't try to request from it
 		// again this session

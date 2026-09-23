@@ -342,7 +342,7 @@ aux::vector<download_priority_t, piece_index_t> file_to_piece_prio(
 
 		for (auto const& u : p.url_seeds)
 		{
-			ws.emplace_back(u);
+			ws.emplace_back(u, std::string(), p.url_seed_headers);
 
 			// correct URLs to end with a "/" for multi-file torrents
 			if (multi_file)
