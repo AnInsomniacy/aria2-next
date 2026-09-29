@@ -27,8 +27,11 @@ namespace stream {
 // Ordering is preserved (chunks are written in submission order), so overlapping
 // ranges keep the same last-writer-wins result as writing directly.
 //
-// Backpressure bounds memory: writeData() waits while the outstanding byte count
-// is at the limit, which only happens if the device cannot keep up.
+// Backpressure does not block: writeData() only enqueues, because the caller is
+// the engine thread and waiting there is the defect this class removes. Bounded
+// memory is therefore the caller's responsibility - it stops feeding the writer
+// while isBacklogged() is true, which the stream path does by pausing the
+// transfer in the libcurl write callback.
 //
 // Durability is explicit: flush() waits until nothing is outstanding. Any caller
 // that records resume state or closes the output must call it first, so recorded
