@@ -106,6 +106,10 @@ public:
   virtual void dropCache(int64_t len, int64_t offset) override;
 
   virtual void flushOSBuffers() override;
+
+  // Backed by a real file (or an XML-RPC/in-memory target that is not).
+  // Subclasses that do not touch a device override this to return false.
+  virtual bool isFileBacked() const override;
 };
 
 } // namespace aria2

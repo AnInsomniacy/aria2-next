@@ -40,6 +40,7 @@ set(ARIA2_SOURCES_BASE
   src/stream/StreamRequest.cc
   src/stream/StreamCompletion.cc
   src/stream/CurlHandle.cc
+  src/stream/AsyncDiskWriter.cc
   src/transport/CurlMulti.cc
   src/transport/CurlOptions.cc
   src/transport/HttpHeaders.cc

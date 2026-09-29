@@ -14,6 +14,7 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/a2functionalTest.cc
   tests/ApplicationStatePathTest.cc
   tests/StreamStoreTest.cc
+  tests/AsyncDiskWriterTest.cc
   tests/MediaTest.cc
   tests/CurlSessionTest.cc
   tests/FileEntryTest.cc

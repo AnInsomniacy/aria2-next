@@ -72,6 +72,9 @@ struct CurlHandle {
   bool fullResponseAccepted = false;
   bool headersComplete = false;
   bool primary = false;
+  // Set when the write callback returned CURL_WRITEFUNC_PAUSE because the
+  // offloaded writer is backlogged, so poll resumes the transfer once drained.
+  bool pausedForBacklog = false;
   CurlResponseFailure responseFailure = CurlResponseFailure::None;
   std::string responseEtag;
   std::string responseLastModified;

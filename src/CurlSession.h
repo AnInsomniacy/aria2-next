@@ -111,6 +111,8 @@ private:
                                bool validatedRange, bool applicationConnected);
 
   void rebalanceLimits();
+  // Lifts CURL_WRITEFUNC_PAUSE on handles whose offloaded writer has drained.
+  void resumeFromBacklog();
   bool refreshConnectionPoolLimits();
   void eraseTask(CurlDownload* download);
   void

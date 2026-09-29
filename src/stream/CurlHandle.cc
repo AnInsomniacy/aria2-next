@@ -348,6 +348,18 @@ size_t CurlHandle::writeData(char* data, size_t size, size_t count,
       length =
           std::min<uint64_t>(length, handle->lease.end - handle->writeOffset);
     }
+    // Output writes are offloaded to a worker thread, so this callback does not
+    // block on the device. When the worker falls behind, ask libcurl to hold
+    // these bytes and stop delivering more.
+    //
+    // This must be decided BEFORE any state below is advanced: libcurl
+    // re-delivers the same block after a pause resume, so advancing
+    // writeOffset/buffers here would count the replay twice and overrun the
+    // range.
+    if (impl.writer && impl.writer->isBacklogged()) {
+      handle->pausedForBacklog = true;
+      return CURL_WRITEFUNC_PAUSE; // libcurl retains the bytes
+    }
     if (handle->writeBuffer.empty()) {
       handle->bufferOffset = handle->writeOffset;
     }

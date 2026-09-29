@@ -626,4 +626,6 @@ void AbstractDiskWriter::flushOSBuffers()
 #endif // __MINGW32__
 }
 
+bool AbstractDiskWriter::isFileBacked() const { return true; }
+
 } // namespace aria2

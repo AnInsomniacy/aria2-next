@@ -92,6 +92,33 @@ public:
 
   // Force physical write of data from OS buffer cache.
   virtual void flushOSBuffers() {}
+
+  // True when this writer targets a real filesystem, so a write can block on a
+  // device. In-memory writers return false.
+  virtual bool isFileBacked() const { return false; }
+
+  // True when writes are already completed on another thread, so the caller
+  // does not need to offload them. See AsyncDiskWriter.
+  virtual bool isWriteOffloaded() const { return false; }
+
+  // Waits for writes that were accepted but not yet completed. A no-op unless
+  // writes are offloaded. Called from paths that cannot propagate a write
+  // failure, so implementations must not throw.
+  virtual void flushPendingWrites() {}
+
+  // True once a write has failed and not been cleared. Offloaded writers can
+  // fail after the caller already recorded the range as complete, so callers
+  // must consult this before trusting recorded progress (for example when
+  // persisting resume state).
+  virtual bool hasWriteFailed() const { return false; }
+
+  // True when accepted writes have not yet completed. Callers on the engine
+  // thread use this to defer work instead of blocking on a slow device.
+  virtual bool hasPendingWrites() const { return false; }
+
+  // True when this writer has reached its backlog limit and the caller should
+  // stop feeding it for now. Only offloaded writers report true.
+  virtual bool isBacklogged() const { return false; }
 };
 
 } // namespace aria2

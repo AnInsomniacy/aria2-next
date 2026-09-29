@@ -45,6 +45,7 @@
 #include "CurlDownloadCommand.h"
 #include "CurlDownloadImpl.h"
 #include "stream/CurlHandle.h"
+#include "stream/AsyncDiskWriter.h"
 #include "DownloadContext.h"
 #include "DownloadEngine.h"
 #include "DefaultDiskWriterFactory.h"
@@ -105,6 +106,11 @@ bool CurlSession::openOutput(CurlDownload* download, bool preserveExisting,
                        "Unable to create the output writer");
       return false;
     }
+    // Payload arrives inside the libcurl write callback on the engine thread, so
+    // a slow device would otherwise delay the whole engine loop (including
+    // JSON-RPC) for the duration of each write. In-memory writers are returned
+    // unchanged.
+    impl.writer = stream::wrapAsyncWriter(std::move(impl.writer));
     if (preserveExisting) {
       impl.writer->openExistingFile();
     }
@@ -345,11 +351,36 @@ bool CurlSession::checkpoint(const std::shared_ptr<CurlDownload>& download,
                              bool force)
 {
   auto& impl = *download->impl_;
-  if (!impl.group || impl.dryRun || impl.filenamePending ||
-      (!force && !impl.lastCheckpoint.isZero() &&
-       impl.lastCheckpoint.difference(global::wallclock()) <
-           std::chrono::seconds(1))) {
+  if (!impl.group || impl.dryRun || impl.filenamePending) {
     return true;
+  }
+  if (!force && !impl.lastCheckpoint.isZero() &&
+      impl.lastCheckpoint.difference(global::wallclock()) <
+          std::chrono::seconds(1)) {
+    return true;
+  }
+  // Payload is recorded in the planner as soon as it is accepted for writing,
+  // while the bytes may still be queued for the device. Persisting a range whose
+  // bytes have not landed would let a resumed task trust data that was never
+  // written.
+  if (impl.writer) {
+    if (force) {
+      // Terminal paths (stop, failure, completion) must publish the final
+      // snapshot, so wait for the queue and then treat a device error as a
+      // failed checkpoint rather than storing a stale range list.
+      impl.writer->flushPendingWrites();
+      if (impl.writer->hasWriteFailed()) {
+        return false;
+      }
+    }
+    else {
+      // Periodic checkpoints run on the engine thread. Blocking here would
+      // reintroduce the very stall the offloaded writer exists to remove, so
+      // report "not yet" and let a later tick persist once the queue drains.
+      if (impl.writer->hasWriteFailed() || impl.writer->hasPendingWrites()) {
+        return false;
+      }
+    }
   }
   StreamState state;
   state.gid = GroupId::toHex(impl.group->getGID());

@@ -256,10 +256,37 @@ void CurlSession::poll()
     }
   }
   rebalanceLimits();
+  resumeFromBacklog();
   for (const auto& entry : tasks_) {
     checkpoint(entry.second, false);
   }
   transport_.poll();
+}
+
+void CurlSession::resumeFromBacklog()
+{
+  for (const auto& entry : tasks_) {
+    auto& impl = *entry.second->impl_;
+    if (!impl.writer || impl.writer->hasWriteFailed() ||
+        impl.writer->isBacklogged()) {
+      // Still behind: leave the paused handles paused so libcurl keeps holding
+      // their body bytes rather than growing the queue.
+      continue;
+    }
+    for (auto& handle : impl.handles) {
+      if (!handle->pausedForBacklog || !handle->value) {
+        continue;
+      }
+      handle->pausedForBacklog = false;
+      const auto result = curl_easy_pause(handle->value, CURLPAUSE_CONT);
+      if (result != CURLE_OK) {
+        A2_LOG_WARN(fmt("component=stream event=resume_failed gid=%s curl=%d "
+                        "message=%s",
+                        CurlHandle::gid(entry.second.get()).c_str(),
+                        static_cast<int>(result), curl_easy_strerror(result)));
+      }
+    }
+  }
 }
 
 void CurlSession::refreshConnectionCount(
