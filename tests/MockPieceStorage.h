@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <deque>
+#include <iterator>
 
 #include "BitfieldMan.h"
 #include "FatalException.h"

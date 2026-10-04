@@ -37,6 +37,7 @@
 
 #include "common.h"
 
+#include <iterator>
 #include <string>
 #include <vector>
 #include <algorithm>

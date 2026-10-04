@@ -5,6 +5,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+if(WIN32)
+  # Match libtorrent's Windows baseline before any system or Asio headers.
+  set(ARIA2_WINDOWS_VERSION 0x0A00)
+  list(APPEND CMAKE_REQUIRED_DEFINITIONS
+    -DWINVER=${ARIA2_WINDOWS_VERSION}
+    -D_WIN32_WINNT=${ARIA2_WINDOWS_VERSION})
+endif()
+
 option(ARIA2_ENABLE_BITTORRENT "Enable BitTorrent support" ON)
 option(ARIA2_ENABLE_METALINK "Enable Metalink support" ON)
 option(ARIA2_ENABLE_WEBSOCKET "Enable WebSocket support" ON)

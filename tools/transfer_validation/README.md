@@ -26,6 +26,12 @@ local payloads. Failed runs always retain their state. Results, logs and payload
 live under `build/transfer-validation`. Shared helpers own process control,
 hashing and native media inspection; protocol-specific scenarios remain separate.
 
+For a quick executable check requiring only Python, run
+`python3 tools/transfer_validation/http/smoke.py --engine PATH`. It downloads a
+loopback fixture through both CLI and RPC, verifies file checksums and checks
+clean shutdown. Use the packaged executable to catch build configuration defects
+that a version query or a differently configured unit-test build cannot expose.
+
 The dependency lock pins Caddy and Toxiproxy for Windows x64 and macOS ARM64.
 WireMock requires Java 17+; Java 21 LTS is suitable. Other modules require their
 listed tools; encryption and ED2K hashing use OpenSSL 3. Unpinned hosts fail

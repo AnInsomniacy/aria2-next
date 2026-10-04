@@ -40,6 +40,7 @@
 #include <cassert>
 #include <deque>
 #include <algorithm>
+#include <iterator>
 
 #include "RpcRequest.h"
 #include "ValueBase.h"

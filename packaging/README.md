@@ -10,6 +10,10 @@ Linux releases target Ubuntu 22.04 and require glibc 2.35 or newer, with a
 compatible system C++ runtime. The Docker image uses the same baseline.
 Runtime checks inspect ELF version requirements with `readelf` before upload.
 
+Windows builds target Windows 10 or later. CMake supplies the same `WINVER` and
+`_WIN32_WINNT` definitions to the engine and its consumers to match libtorrent;
+header include order must not select incompatible Boost.Asio lock layouts.
+
 | Path | Purpose |
 | --- | --- |
 | `docker/` | Linux runtime container image definition |

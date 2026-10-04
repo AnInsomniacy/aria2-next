@@ -159,6 +159,10 @@ if(APPLE)
   target_link_libraries(aria2_core PUBLIC "-framework Foundation")
 endif()
 if(WIN32)
+  # Asio lock layouts must agree across the core, dependencies and consumers.
+  target_compile_definitions(aria2_core PUBLIC
+    WINVER=${ARIA2_WINDOWS_VERSION}
+    _WIN32_WINNT=${ARIA2_WINDOWS_VERSION})
   target_link_libraries(aria2_core PUBLIC ws2_32 wsock32 gdi32 winmm iphlpapi psapi crypt32 secur32 advapi32 shell32 ole32)
 endif()
 
