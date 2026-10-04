@@ -1,5 +1,6 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
 #include "MediaStore.h"
+#include "SqliteTransaction.h"
 #include "media/MediaDownload.h"
 #include <cstdint>
 #include <optional>
@@ -15,29 +16,7 @@
 namespace aria2 {
 namespace media {
 namespace {
-class Transaction {
-public:
-  explicit Transaction(sqlite3* db) : db_(db) { execute("BEGIN IMMEDIATE"); }
-  ~Transaction()
-  {
-    if (!committed_)
-      sqlite3_exec(db_, "ROLLBACK", nullptr, nullptr, nullptr);
-  }
-  void commit()
-  {
-    execute("COMMIT");
-    committed_ = true;
-  }
-
-private:
-  void execute(const char* sql)
-  {
-    if (sqlite3_exec(db_, sql, nullptr, nullptr, nullptr) != SQLITE_OK)
-      throw std::runtime_error(sqlite3_errmsg(db_));
-  }
-  sqlite3* db_;
-  bool committed_ = false;
-};
+using sqlite::Transaction;
 class Statement {
 public:
   Statement(sqlite3* db, const char* sql) : db_(db)

@@ -21,6 +21,7 @@
 #include <chrono>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -32,12 +33,12 @@
 #include "RangePlanner.h"
 #include "SpeedCalc.h"
 #include "TimerA2.h"
+#include "stream/IoQueue.h"
 
 namespace aria2 {
 
 class RequestGroup;
 class CurlDownload;
-
 
 struct CurlEndpoint {
   static long alternateFamily(long family)
@@ -86,7 +87,14 @@ struct CurlDownloadImpl {
   std::string currentUri;
   std::string etag;
   std::string lastModified;
-  std::unique_ptr<DiskWriter> writer;
+  std::shared_ptr<DiskWriter> writer;
+  stream::IoQueue io;
+  std::optional<bool> pendingStop;
+  std::optional<std::pair<error_code::Value, std::string>> pendingFailure;
+  bool retainFailure = true;
+  std::string pendingRestart;
+  std::optional<curl_off_t> pendingFinalize;
+  bool finalCheckpointQueued = false;
   std::vector<std::unique_ptr<CurlHandle>> handles;
   RangePlanner planner;
   RequestGroup* group = nullptr;
@@ -102,6 +110,8 @@ struct CurlDownloadImpl {
   bool rangeValidated = false;
   bool allowFullRestart = false;
   bool fullDownload = false;
+  unsigned fullRestarts = 0;
+  std::optional<std::chrono::steady_clock::time_point> fullRetryAt;
   bool plannerConfigured = false;
   bool kickPending = false;
   bool stopRequested = false;

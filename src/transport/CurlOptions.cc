@@ -8,12 +8,58 @@
 #include <curl/curl.h>
 #include <memory>
 #include <string>
+#include <regex>
+#include "uri.h"
 
 #include "Option.h"
 #include "prefs.h"
 #include "support/Text.h"
 
 namespace aria2::http {
+std::string noProxyFor(const std::string& rules, const std::string& url)
+{
+  uri::UriStruct parsed;
+  if (!uri::parse(parsed, url))
+    return {};
+  std::string result;
+  for (size_t begin = 0; begin < rules.size();) {
+    const auto end = rules.find_first_of(",;\r\n", begin);
+    auto rule =
+        rules.substr(begin, end == std::string::npos ? end : end - begin);
+    const auto first = rule.find_first_not_of(" \t");
+    if (first != std::string::npos)
+      rule = rule.substr(first, rule.find_last_not_of(" \t") - first + 1);
+    else
+      rule.clear();
+    if (rule != "*" && rule.find('*') != std::string::npos) {
+      std::string expression;
+      for (const char c : rule) {
+        if (c == '*')
+          expression += ".*";
+        else {
+          if (std::string(".^$|()[]{}+?\\").find(c) != std::string::npos)
+            expression += '\\';
+          expression += c;
+        }
+      }
+      rule = rule.size() <= 253 &&
+                     std::regex_match(parsed.host,
+                                      std::regex(expression, std::regex::icase))
+                 ? parsed.host
+                 : "";
+    }
+    if (!rule.empty()) {
+      if (!result.empty())
+        result += ',';
+      result += rule;
+    }
+    if (end == std::string::npos)
+      break;
+    begin = end + 1;
+  }
+  return result;
+}
+
 namespace {
 long platformSslOptions() noexcept
 {

@@ -59,7 +59,8 @@ bool CurlDownloadCommand::execute()
                              snapshot.error.c_str());
   }
   if (download_->stopped()) {
-    if (download_->snapshot().mediaManifest && !group_->isHaltRequested()) {
+    if (download_->snapshot().mediaManifest && !download_->failed() &&
+        !group_->isHaltRequested()) {
       auto mediaDownload =
           std::make_shared<media::Download>(download_->snapshot().currentUri);
       group_->setMediaDownload(mediaDownload);

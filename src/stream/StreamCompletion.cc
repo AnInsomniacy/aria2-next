@@ -145,14 +145,50 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
 {
   auto& impl = *download->impl_;
   long responseCode = handle->responseCode;
+  if (handle->manualRedirect && responseCode >= 300 && responseCode < 400) {
+    char* destination = nullptr;
+    curl_easy_getinfo(handle->value, CURLINFO_REDIRECT_URL, &destination);
+    const std::string redirect = destination ? destination : "";
+    const auto lease = handle->lease;
+    const auto primary = handle->primary;
+    const auto ranged = handle->ranged;
+    const auto family = handle->addressFamily;
+    const auto redirects = handle->redirects + 1;
+    handle->reset();
+    impl.handles.erase(std::remove_if(impl.handles.begin(), impl.handles.end(),
+                                      [handle](const auto& item) {
+                                        return item.get() == handle;
+                                      }),
+                       impl.handles.end());
+    if (redirects > 10 || !(redirect.rfind("https://", 0) == 0 ||
+                            redirect.rfind("http://", 0) == 0)) {
+      failTask(download, error_code::HTTP_TOO_MANY_REDIRECTS,
+               "Invalid or excessive HTTP redirects");
+      return;
+    }
+    if (!createHandle(download, lease, primary, ranged, family, redirect,
+                      redirects)) {
+      failTask(download, error_code::NETWORK_PROBLEM,
+               "Unable to follow HTTP redirect");
+      return;
+    }
+    auto* next = impl.handles.back().get();
+    downloads_[next->value] = std::make_pair(download, next);
+    impl.kickPending = true;
+    return;
+  }
   if (download->snapshot_.mediaManifest) {
     cancelHandles(download);
     closeOutput(download.get());
-    store_.remove(CurlHandle::gid(download.get()));
-    if (impl.createdOutput && File(impl.path).size() == 0)
-      File(impl.path).remove();
-    download->snapshot_.state = CurlSnapshot::State::Stopped;
-    eraseTask(download.get());
+    discardRecovery(download);
+    if (impl.createdOutput) {
+      impl.io.submit([path = impl.path] {
+        if (File(path).size() == 0)
+          File(path).remove();
+      });
+    }
+    impl.finalCheckpointQueued = true;
+    stop(download, false);
     return;
   }
   curl_off_t retryAfter = 0;
@@ -196,8 +232,7 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
     curl_easy_getinfo(handle->value, CURLINFO_PRIMARY_PORT, &primaryPort);
     curl_easy_getinfo(handle->value, CURLINFO_EFFECTIVE_URL, &effectiveUri);
   }
-  if (result == CURLE_WRITE_ERROR &&
-      handle->rangeAccepted &&
+  if (result == CURLE_WRITE_ERROR && handle->rangeAccepted &&
       handle->writeOffset == handle->lease.end &&
       handle->lease.end < handle->responseRangeEnd &&
       download->snapshot_.errorCode == error_code::UNDEFINED) {
@@ -228,10 +263,15 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
   const bool ranged = handle->ranged;
   const bool rangeAccepted = handle->rangeAccepted;
   const bool fullResponseAccepted = handle->fullResponseAccepted;
+  const bool encoded = handle->encoded;
   const auto responseFailure = responseCode == 412
                                    ? CurlResponseFailure::PreconditionFailed
                                    : handle->responseFailure;
   if (responseFailure != CurlResponseFailure::None) {
+    if (responseFailure == CurlResponseFailure::EncodedRange) {
+      restartFullDownload(download, "encoded_range");
+      return;
+    }
     A2_LOG_DEBUG(
         fmt("component=stream event=response_rejected gid=%s "
             "transfer=%" PRId64 " reason=%s http=%ld range=%" PRId64 "-%" PRId64
@@ -311,7 +351,7 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
   if (impl.dryRun) {
     download->snapshot_.totalLength = std::max<curl_off_t>(0, reportedLength);
     download->snapshot_.state = CurlSnapshot::State::Complete;
-    store_.remove(CurlHandle::gid(download.get()));
+    discardRecovery(download);
     eraseTask(download.get());
     return;
   }
@@ -356,6 +396,10 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
       finalize(download, reportedFileTime);
       return;
     }
+    if (ranged && !impl.fullDownload) {
+      restartFullDownload(download, "range_not_satisfiable");
+      return;
+    }
     failTask(download, error_code::CANNOT_RESUME,
              "The requested byte range is no longer satisfiable");
     return;
@@ -368,6 +412,12 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
   }
 
   if (result != CURLE_OK) {
+    if (impl.fullDownload &&
+        retryableFailure(result, responseCode, impl.fileNotFoundCount, 0, false,
+                         appConnectTime > 0 || startTransferTime > 0)) {
+      restartFullDownload(download, "complete_response_interrupted");
+      return;
+    }
     if (unavailableRoute && endpointGeneration == endpoint.generation) {
       // One unusable route does not invalidate an already validated peer.
       impl.planner.enqueue(lease.remainder(writeOffset));
@@ -433,6 +483,10 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
     }
   }
   else if (fullResponseAccepted || !impl.http) {
+    if (encoded) {
+      download->snapshot_.totalLength = writeOffset;
+      reportedLength = writeOffset;
+    }
     auto length = download->snapshot_.totalLength;
     if (length <= 0) {
       length = std::max<int64_t>(impl.planner.completedLength(),

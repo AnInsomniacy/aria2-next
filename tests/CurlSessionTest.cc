@@ -12,6 +12,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <thread>
 #include "CurlSession.h"
 #include "transport/CurlOptions.h"
 #include "support/OutputName.h"
@@ -44,24 +45,48 @@ TEST_CASE("Output names preserve text and follow source precedence")
   CHECK_EQ(std::string(236, 'a') + ".zip",
            output::safeName(std::string(300, 'a') + ".zip"));
   const std::string url = "https://example.test/a%2520b.zip";
+  CHECK_EQ(
+      "report name.pdf",
+      output::suggestedName(
+          option, "https://example.test/redirection?filename=report+name.pdf"));
+  CHECK_EQ("server.pdf",
+           output::suggestedName(
+               option, "https://example.test/redirection?filename=hint.pdf",
+               "attachment; filename=server.pdf"));
+  CHECK_EQ("report.pdf", output::suggestedName(
+                             option, "https://cdn.example.test/opaque", {},
+                             "https://example.test/get?filename=report.pdf"));
   CHECK_EQ("a%20b.zip", output::suggestedName(option, url));
-  CHECK_EQ("report%20.zip", output::suggestedName(
-      option, url, "attachment; filename=\"report%20.zip\""));
-  CHECK_EQ("report%20.zip", output::suggestedName(
-      option, url, "attachment; filename=plain.zip; filename*=UTF-8''report%2520.zip"));
-  CHECK_EQ("résumé.pdf", output::suggestedName(
-      option, url, "attachment; filename=\"=?UTF-8?Q?r=C3=A9sum=C3=A9.pdf?=\""));
-  CHECK_EQ("Итоги_2026.docx", output::suggestedName(
-      option, url, "attachment; filename=\"=?UTF-8?B?0JjRgtC+0LPQuF8yMDI2LmRvY3g=?=\""));
-  CHECK_EQ("%3D%3FUTF-8%3FQ%3Freport.pdf%3F%3D", output::suggestedName(
-      option, url,
-      "attachment; filename*=UTF-8''%253D%253FUTF-8%253FQ%253Freport.pdf%253F%253D"));
+  CHECK_EQ("report%20.zip",
+           output::suggestedName(option, url,
+                                 "attachment; filename=\"report%20.zip\""));
+  CHECK_EQ(
+      "report%20.zip",
+      output::suggestedName(
+          option, url,
+          "attachment; filename=plain.zip; filename*=UTF-8''report%2520.zip"));
+  CHECK_EQ("résumé.pdf",
+           output::suggestedName(
+               option, url,
+               "attachment; filename=\"=?UTF-8?Q?r=C3=A9sum=C3=A9.pdf?=\""));
+  CHECK_EQ(
+      "Итоги_2026.docx",
+      output::suggestedName(
+          option, url,
+          "attachment; filename=\"=?UTF-8?B?0JjRgtC+0LPQuF8yMDI2LmRvY3g=?=\""));
+  CHECK_EQ(
+      "%3D%3FUTF-8%3FQ%3Freport.pdf%3F%3D",
+      output::suggestedName(
+          option, url,
+          "attachment; "
+          "filename*=UTF-8''%253D%253FUTF-8%253FQ%253Freport.pdf%253F%253D"));
   option.put(PREF_FILENAME_HINT, "browser%20.zip");
   CHECK_EQ("server.zip", output::suggestedName(
-      option, url, "attachment; filename=server.zip"));
+                             option, url, "attachment; filename=server.zip"));
   option.put(PREF_FILENAME_HINT_SOURCE, "browser");
-  CHECK_EQ("browser%20.zip", output::suggestedName(
-      option, url, "attachment; filename=server.zip"));
+  CHECK_EQ(
+      "browser%20.zip",
+      output::suggestedName(option, url, "attachment; filename=server.zip"));
   option.put(PREF_MEDIA_FORMAT, "mkv");
   CHECK_EQ("browser%20.mkv", output::mediaName(option, url));
   option.put(PREF_OUT, "chosen.mp4");
@@ -100,6 +125,8 @@ public:
   void testBoundedInitialRequest();
   void testAbandonedNativeRequest();
   void testWriteErrorBoundary();
+  void testEncodedRangeBoundary();
+  void testDiskFailureDuringPause();
   void testOutputFilename();
   void testResponseIdentity();
   void testRangeOwnershipAndResponseBoundaries();
@@ -362,7 +389,7 @@ void CurlSessionTest::testOutputFilename()
   const std::pair<std::string, std::string> cases[] = {
       {"%E4%B8%AD%E6%96%87%20file.bin", "中文 file.bin"},
       {"a%2520b.bin", "a%20b.bin"},
-      {"a+b.bin?filename=ignored", "a+b.bin"},
+      {"a+b.bin?filename=query.bin", "query.bin"},
       {"bad%ZZ.bin", "bad%ZZ.bin"},
       {"bad%FF.bin", "bad%FF.bin"},
       {"dir%2Fchild.bin", "dir%2Fchild.bin"},
@@ -458,6 +485,13 @@ void CurlSessionTest::testTailRecovery()
   CHECK_EQ(CURL_WRITEFUNC_ERROR,
            CurlHandle::writeData(body.data(), 1, body.size(), donor));
   CHECK_EQ(lease->begin, donor->writeOffset);
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(2);
+  while (impl.io.busy() && std::chrono::steady_clock::now() < deadline) {
+    impl.io.poll(
+        [&](int64_t begin, int64_t end) { impl.planner.commit(begin, end); });
+    std::this_thread::yield();
+  }
   CHECK_EQ(lease->begin, impl.writer->size());
   CHECK_EQ(error_code::UNDEFINED, download->snapshot_.errorCode);
   impl.planner.commit(0, 80_k);
@@ -546,11 +580,26 @@ void CurlSessionTest::testWriteErrorBoundary()
   CurlHandle handle;
   handle.download = &download;
   char data[] = "data";
-  CHECK_EQ(CURL_WRITEFUNC_ERROR,
+  CHECK_EQ(sizeof(data) - 1,
            CurlHandle::writeData(data, 1, sizeof(data) - 1, &handle));
-  CHECK_EQ(CurlSnapshot::State::Error, download.snapshot().state);
-  CHECK_EQ(error_code::NOT_ENOUGH_DISK_SPACE, download.snapshot().errorCode);
-  CHECK_EQ(std::string("Disk is full"), download.snapshot().error);
+  bool failed = false;
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(2);
+  while (download.impl_->io.busy() &&
+         std::chrono::steady_clock::now() < deadline) {
+    try {
+      download.impl_->io.poll([&](int64_t begin, int64_t end) {
+        download.impl_->planner.commit(begin, end);
+      });
+    }
+    catch (const Exception& error) {
+      CHECK_EQ(error_code::NOT_ENOUGH_DISK_SPACE, error.getErrorCode());
+      failed = true;
+    }
+    std::this_thread::yield();
+  }
+  CHECK(failed);
+  CHECK_EQ(0, download.impl_->planner.completedLength());
 }
 
 void CurlSessionTest::testResponseIdentity()
@@ -706,7 +755,6 @@ void CurlSessionTest::testUnsatisfiedRangeResponseForms()
   CHECK_EQ(-1, handle.unsatisfiedTotalLength);
 }
 
-
 void CurlSessionTest::testRetryableFailureClassification()
 {
   CHECK(CurlSession::retryableFailure(CURLE_SSL_CONNECT_ERROR, 0, 0, 0, false,
@@ -737,4 +785,120 @@ void CurlSessionTest::testFailureMessageUsesTheFailureLayer()
            CurlHandle::failureMessage(handle, CURLE_HTTP_RETURNED_ERROR, 503));
 }
 
+} // namespace aria2
+
+TEST_CASE(
+    "Proxy bypass expands host globs without changing native network rules")
+{
+  CHECK_EQ("api.example.com,10.0.0.0/8",
+           aria2::http::noProxyFor("*.example.com,10.0.0.0/8",
+                                   "https://api.example.com/file"));
+  CHECK_EQ("10.0.0.0/8",
+           aria2::http::noProxyFor("*.example.com,10.0.0.0/8",
+                                   "https://example.com.attacker.test/file"));
+  CHECK_EQ("dlinks.net",
+           aria2::http::noProxyFor("dlinks.*", "https://dlinks.net/file"));
+}
+
+TEST_CASE("Stream I/O preserves order without blocking the engine thread")
+{
+  aria2::stream::IoQueue queue;
+  std::promise<void> release;
+  auto ready = release.get_future().share();
+  queue.submit([ready] { ready.wait(); }, 0, 4);
+  queue.submit([] {}, 4, 4);
+  std::vector<std::pair<int64_t, int64_t>> committed;
+  const auto commit = [&](int64_t first, int64_t last) {
+    committed.emplace_back(first, last);
+  };
+  queue.poll(commit);
+  const auto pendingBytes = queue.bytes();
+  const auto premature = committed.size();
+  release.set_value();
+  CHECK_EQ(8, pendingBytes);
+  CHECK_EQ(0, premature);
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(2);
+  while (queue.busy() && std::chrono::steady_clock::now() < deadline) {
+    queue.poll(commit);
+    std::this_thread::yield();
+  }
+  REQUIRE_FALSE(queue.busy());
+  CHECK_EQ(0, queue.bytes());
+  CHECK_EQ((std::vector<std::pair<int64_t, int64_t>>{{0, 4}, {4, 8}}),
+           committed);
+}
+
+namespace aria2 {
+TEST_CASE_FIXTURE(CurlSessionTest, "CurlSessionTest.testEncodedRangeBoundary")
+{
+  testEncodedRangeBoundary();
+}
+void CurlSessionTest::testEncodedRangeBoundary()
+{
+  CurlDownload download({"https://example.test/archive.exe"});
+  download.impl_->writer = std::make_shared<ByteArrayDiskWriter>();
+  CurlHandle handle;
+  handle.download = &download;
+  handle.lease = {0, 4096};
+  handle.ranged = true;
+  handle.encoded = true;
+  respond(handle, 206, "bytes 0-4095/8192");
+  CHECK_EQ(CurlResponseFailure::EncodedRange, handle.responseFailure);
+  char data[] = "encoded";
+  CHECK_EQ(CURL_WRITEFUNC_ERROR,
+           CurlHandle::writeData(data, 1, sizeof(data) - 1, &handle));
+  CHECK_EQ(0, download.impl_->writer->size());
+  CHECK_FALSE(download.impl_->io.busy());
+  CHECK_EQ(0, download.impl_->planner.completedLength());
+  handle.ranged = false;
+  handle.responseContentLength = 7;
+  respond(handle, 200);
+  CHECK(handle.fullResponseAccepted);
+  CHECK_EQ(0, download.snapshot_.totalLength);
+  CHECK_EQ(0, CurlHandle::updateProgress(&handle, 7, 7, 0, 0));
+  CHECK_EQ(0, download.snapshot_.totalLength);
+}
+} // namespace aria2
+
+namespace aria2 {
+TEST_CASE_FIXTURE(CurlSessionTest, "CurlSessionTest.testDiskFailureDuringPause")
+{
+  testDiskFailureDuringPause();
+}
+void CurlSessionTest::testDiskFailureDuringPause()
+{
+  auto option = std::make_shared<Option>();
+  OptionParser::getInstance()->parseDefaultValues(*option);
+  option->put(PREF_STATE_DIR, A2_TEST_OUT_DIR "/curl-pause-error");
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option.get());
+  auto* session = engine.getCurlSession();
+  session->engine_ = &engine;
+  auto group = std::make_shared<RequestGroup>(GroupId::create(), option);
+  auto download = std::make_shared<CurlDownload>(
+      std::vector<std::string>{"https://example.test/file"});
+  auto& impl = *download->impl_;
+  impl.group = group.get();
+  impl.pendingStop = true;
+  impl.writer = std::make_shared<FailingDiskWriter>();
+  download->snapshot_.state = CurlSnapshot::State::Active;
+  impl.io.submit(
+      [writer = impl.writer] {
+        const unsigned char data = 0;
+        writer->writeData(&data, 1, 0);
+      },
+      0, 1);
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(2);
+  while (!download->stopped() && std::chrono::steady_clock::now() < deadline) {
+    session->advance(download);
+    std::this_thread::yield();
+  }
+  CHECK(download->failed());
+  CHECK_EQ(error_code::NOT_ENOUGH_DISK_SPACE, download->snapshot_.errorCode);
+  CHECK_EQ(0, impl.planner.completedLength());
+  CHECK_FALSE(impl.io.busy());
+  CHECK_FALSE(impl.pendingStop);
+}
 } // namespace aria2

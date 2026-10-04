@@ -24,11 +24,31 @@
 #include "File.h"
 #include "Log.h"
 #include "SqliteDiagnostics.h"
+#include "SqliteTransaction.h"
+#include <limits>
 #include "fmt.h"
 
 namespace aria2 {
 
 namespace {
+bool validState(const StreamState& state)
+{
+  if (state.uri.empty() || state.path.empty() || state.totalLength < 0 ||
+      state.completedLength < 0)
+    return false;
+  int64_t length = 0, previous = 0;
+  for (const auto& range : state.completedRanges) {
+    if (range.first < previous || range.second <= range.first ||
+        (state.totalLength > 0 && range.second > state.totalLength) ||
+        range.second - range.first >
+            std::numeric_limits<int64_t>::max() - length)
+      return false;
+    length += range.second - range.first;
+    previous = range.second;
+  }
+  return length == state.completedLength &&
+         (state.totalLength == 0 || state.completedLength <= state.totalLength);
+}
 
 class Statement {
 public:
@@ -246,6 +266,14 @@ bool StreamStore::open()
     return false;
   }
   pruneMissingFiles();
+  Statement rows(db_, "SELECT gid,path FROM downloads");
+  if (!rows)
+    return false;
+  while (step(rows.get(), "restore_cache") == SQLITE_ROW) {
+    StreamState state;
+    if (loadStored(state, textColumn(rows.get(), 0), textColumn(rows.get(), 1)))
+      states_.emplace(state.gid, std::move(state));
+  }
   return true;
 }
 
@@ -277,6 +305,18 @@ void StreamStore::pruneMissingFiles()
 bool StreamStore::load(StreamState& state, const std::string& gid,
                        const std::string& path) const
 {
+  // RPC-triggered task creation must not wait for another task's SQLite fsync.
+  std::lock_guard<std::mutex> lock(cacheMutex_);
+  const auto found = states_.find(gid);
+  if (found == states_.end() || found->second.path != path)
+    return false;
+  state = found->second;
+  return true;
+}
+
+bool StreamStore::loadStored(StreamState& state, const std::string& gid,
+                             const std::string& path) const
+{
   if (!db_) {
     return false;
   }
@@ -301,29 +341,19 @@ bool StreamStore::load(StreamState& state, const std::string& gid,
   if (!decodeRanges(value.completedRanges, textColumn(statement.get(), 7))) {
     return false;
   }
-  int64_t rangeLength = 0;
-  for (const auto& range : value.completedRanges) {
-    if (value.totalLength > 0 && range.second > value.totalLength) {
-      return false;
-    }
-    rangeLength += range.second - range.first;
-  }
-  if (value.uri.empty() || value.path.empty() || value.totalLength < 0 ||
-      value.completedLength < 0 ||
-      (value.totalLength > 0 && value.completedLength > value.totalLength) ||
-      rangeLength != value.completedLength) {
+  if (!validState(value))
     return false;
-  }
   state = std::move(value);
   return true;
 }
 
 bool StreamStore::save(const StreamState& state)
-{
-  if (!db_ || state.gid.empty() || state.uri.empty() || state.path.empty() ||
-      state.totalLength < 0 || state.completedLength < 0) {
+try {
+  std::lock_guard<std::mutex> writeLock(writeMutex_);
+  if (!db_ || state.gid.empty() || !validState(state)) {
     return false;
   }
+  sqlite::Transaction transaction(db_);
   Statement removeStale(db_, "DELETE FROM downloads WHERE path=?1 AND gid<>?2");
   if (!removeStale || !bindText(removeStale.get(), 1, state.path) ||
       !bindText(removeStale.get(), 2, state.gid) ||
@@ -341,25 +371,50 @@ bool StreamStore::save(const StreamState& state)
       "completed_length=excluded.completed_length,"
       "completed_ranges=excluded.completed_ranges,updated_at=excluded.updated_"
       "at");
-  return statement && bindText(statement.get(), 1, state.gid) &&
-         bindText(statement.get(), 2, state.uri) &&
-         bindText(statement.get(), 3, state.path) &&
-         bindText(statement.get(), 4, state.etag) &&
-         bindText(statement.get(), 5, state.lastModified) &&
-         bindInt64(statement.get(), 6, state.totalLength) &&
-         bindInt64(statement.get(), 7, state.completedLength) &&
-         bindText(statement.get(), 8, encodeRanges(state.completedRanges)) &&
-         step(statement.get(), "save") == SQLITE_DONE;
+  const bool saved =
+      statement && bindText(statement.get(), 1, state.gid) &&
+      bindText(statement.get(), 2, state.uri) &&
+      bindText(statement.get(), 3, state.path) &&
+      bindText(statement.get(), 4, state.etag) &&
+      bindText(statement.get(), 5, state.lastModified) &&
+      bindInt64(statement.get(), 6, state.totalLength) &&
+      bindInt64(statement.get(), 7, state.completedLength) &&
+      bindText(statement.get(), 8, encodeRanges(state.completedRanges)) &&
+      step(statement.get(), "save") == SQLITE_DONE;
+  if (saved) {
+    transaction.commit();
+    std::lock_guard<std::mutex> lock(cacheMutex_);
+    for (auto it = states_.begin(); it != states_.end();) {
+      if (it->second.path == state.path)
+        it = states_.erase(it);
+      else
+        ++it;
+    }
+    states_[state.gid] = state;
+  }
+  return saved;
+}
+catch (const std::exception& error) {
+  A2_LOG_ERROR(
+      fmt("component=storage store=stream event=checkpoint_failed message=%s",
+          error.what()));
+  return false;
 }
 
 bool StreamStore::remove(const std::string& gid)
 {
+  std::lock_guard<std::mutex> writeLock(writeMutex_);
   if (!db_) {
     return false;
   }
   Statement statement(db_, "DELETE FROM downloads WHERE gid=?1");
-  return statement && bindText(statement.get(), 1, gid) &&
-         step(statement.get(), "remove_gid") == SQLITE_DONE;
+  const bool removed = statement && bindText(statement.get(), 1, gid) &&
+                       step(statement.get(), "remove_gid") == SQLITE_DONE;
+  if (removed) {
+    std::lock_guard<std::mutex> lock(cacheMutex_);
+    states_.erase(gid);
+  }
+  return removed;
 }
 
 } // namespace aria2

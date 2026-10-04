@@ -31,6 +31,7 @@
 #include <curl/curl.h>
 #include <curl/system.h>
 #include <exception>
+#include <stdexcept>
 #include <limits>
 #include <memory>
 #include <map>
@@ -65,12 +66,12 @@ CurlSession::CurlSession(const Option* option)
       }),
       option_(option),
       globalDownloadLimit_(option->getAsLLInt(PREF_MAX_OVERALL_DOWNLOAD_LIMIT)),
-      store_(state::streamDatabaseFile(option)),
+      store_(std::make_shared<StreamStore>(state::streamDatabaseFile(option))),
       loggingRevision_(logging::revision())
 {
   if (!transport_.get())
     return;
-  store_.open();
+  store_->open();
   if (!refreshConnectionPoolLimits())
     transport_.disable();
 }
@@ -138,8 +139,7 @@ void CurlSession::activate(const std::shared_ptr<CurlDownload>& download)
     return;
   }
   const auto rangeStart = impl.planner.contiguousLength();
-  const bool ranged =
-      impl.http && (impl.maxConnections > 1 || rangeStart > 0);
+  const bool ranged = impl.http && (impl.maxConnections > 1 || rangeStart > 0);
   auto rangeEnd =
       ranged ? rangeStart +
                    (impl.maxConnections > 1
@@ -193,7 +193,19 @@ void CurlSession::restartFullDownload(
     const std::shared_ptr<CurlDownload>& download, const char* reason)
 {
   auto& impl = *download->impl_;
-  if (impl.maxRangeSize > 0 || !impl.allowFullRestart || impl.fullDownload) {
+  const auto configuredTries =
+      impl.group->getOption()->getAsInt(PREF_MAX_TRIES);
+  if (impl.io.busy()) {
+    impl.stopRequested = true;
+    impl.pendingRestart = reason;
+    cancelHandles(download);
+    return;
+  }
+  impl.stopRequested = false;
+  const auto maxRestarts =
+      static_cast<unsigned>(configuredTries > 0 ? configuredTries : 3);
+  if (impl.maxRangeSize > 0 || !impl.allowFullRestart ||
+      impl.fullRestarts >= maxRestarts) {
     failTask(download, error_code::CANNOT_RESUME,
              "The resource cannot be resumed safely; the existing file and "
              "range policy were preserved");
@@ -201,34 +213,32 @@ void CurlSession::restartFullDownload(
   }
   cancelHandles(download);
   closeOutput(download.get());
-  store_.remove(CurlHandle::gid(download.get()));
+  if (impl.io.busy()) {
+    impl.pendingRestart = reason;
+    return;
+  }
+  discardRecovery(download);
   impl.planner.clear();
   impl.plannerConfigured = false;
   impl.rangeValidated = false;
   impl.fullDownload = true;
+  ++impl.fullRestarts;
   impl.etag.clear();
   impl.lastModified.clear();
   impl.maxConnections = 1;
   impl.connectionLimit = 1;
   download->snapshot_.totalLength = 0;
   download->snapshot_.completedLength = 0;
-  if (!openOutput(download.get(), false, true)) {
+  if (!impl.filenamePending && !openOutput(download.get(), false, true)) {
     failTask(download, download->snapshot_.errorCode, download->snapshot_.error,
              false);
     return;
   }
-  const RangeLease lease{0, std::numeric_limits<int64_t>::max(), 0,
-                         impl.preferredUriIndex};
-  if (!createHandle(download, lease, true, false)) {
-    failTask(download, error_code::NETWORK_PROBLEM,
-             "Unable to restart the complete transfer");
-    return;
-  }
-  auto* handle = impl.handles.back().get();
-  downloads_[handle->value] = std::make_pair(download, handle);
-  impl.kickPending = true;
+  impl.fullRetryAt =
+      std::chrono::steady_clock::now() +
+      std::chrono::seconds(
+          std::max(1, impl.group->getOption()->getAsInt(PREF_RETRY_WAIT)));
   rebalanceLimits();
-  checkpoint(download, true);
   engine_->setNoWait(true);
   A2_LOG_INFO(fmt("component=stream event=full_download_restart gid=%s "
                   "reason=%s",
@@ -305,7 +315,13 @@ void CurlSession::processMessages()
     }
     downloads_.erase(found);
     rebalanceLimits();
-    finish(download, handle, result);
+    handle->completed = result;
+    try {
+      stream::flushWriteBuffer(*download->impl_, *handle);
+    }
+    catch (const std::exception& error) {
+      failTask(download, error_code::FILE_IO_ERROR, error.what());
+    }
   }
 }
 
@@ -314,6 +330,7 @@ void CurlSession::stop(const std::shared_ptr<CurlDownload>& download,
 {
   auto& impl = *download->impl_;
   impl.stopRequested = true;
+  impl.pendingStop = retainState;
   try {
     for (auto& handle : impl.handles) {
       stream::flushWriteBuffer(impl, *handle);
@@ -321,15 +338,27 @@ void CurlSession::stop(const std::shared_ptr<CurlDownload>& download,
     download->snapshot_.completedLength = impl.planner.completedLength();
   }
   catch (const Exception& error) {
-    CurlHandle::fail(download.get(), error.getErrorCode(), error.what());
+    failTask(download, error.getErrorCode(), error.what(), false);
+    return;
   }
   catch (const std::exception& error) {
-    CurlHandle::fail(download.get(), error_code::FILE_IO_ERROR, error.what());
+    failTask(download, error_code::FILE_IO_ERROR, error.what(), false);
+    return;
   }
-  checkpoint(download, true);
   cancelHandles(download);
+  if (impl.io.busy())
+    return;
+  if (!impl.finalCheckpointQueued) {
+    checkpoint(download, true);
+    impl.finalCheckpointQueued = true;
+    if (impl.io.busy())
+      return;
+  }
   rebalanceLimits();
   closeOutput(download.get());
+  if (impl.io.busy())
+    return;
+  impl.pendingStop.reset();
   if (!download->failed()) {
     if (retainState) {
       download->snapshot_.state = CurlSnapshot::State::Paused;
@@ -343,7 +372,11 @@ void CurlSession::stop(const std::shared_ptr<CurlDownload>& download,
 
 void CurlSession::discardRecovery(const std::shared_ptr<CurlDownload>& download)
 {
-  store_.remove(CurlHandle::gid(download.get()));
+  download->impl_->io.submit(
+      [store = store_, gid = CurlHandle::gid(download.get())] {
+        if (!store->remove(gid))
+          throw std::runtime_error("Unable to remove stream recovery state");
+      });
 }
 
 bool CurlSession::refreshConnectionPoolLimits()

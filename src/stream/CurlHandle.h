@@ -9,6 +9,7 @@
 #include <curl/curl.h>
 #include <array>
 #include <string>
+#include <optional>
 #include <vector>
 
 namespace aria2 {
@@ -22,6 +23,7 @@ enum class CurlResponseFailure {
   LengthChanged,
   InvalidRange,
   RangeUnsupported,
+  EncodedRange,
   PreconditionFailed
 };
 // Owns one native request and its response/write progress on the engine thread.
@@ -33,7 +35,8 @@ struct CurlHandle {
   CurlHandle& operator=(const CurlHandle&) = delete;
   void reset() noexcept;
 
-  static std::string failureMessage(const CurlHandle& handle, CURLcode result, long responseCode);
+  static std::string failureMessage(const CurlHandle& handle, CURLcode result,
+                                    long responseCode);
   static void rememberEndpoint(CurlHandle& handle);
   static std::string gid(const CurlDownload* download);
   static void fail(CurlDownload* download, error_code::Value code,
@@ -70,8 +73,13 @@ struct CurlHandle {
   bool ranged = false;
   bool rangeAccepted = false;
   bool fullResponseAccepted = false;
+  bool encoded = false;
   bool headersComplete = false;
   bool primary = false;
+  bool pausedForDisk = false;
+  std::optional<CURLcode> completed;
+  bool manualRedirect = false;
+  unsigned redirects = 0;
   CurlResponseFailure responseFailure = CurlResponseFailure::None;
   std::string responseEtag;
   std::string responseLastModified;

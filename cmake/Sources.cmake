@@ -39,6 +39,7 @@ set(ARIA2_SOURCES_BASE
   src/stream/StreamScheduling.cc
   src/stream/StreamRequest.cc
   src/stream/StreamCompletion.cc
+  src/stream/IoQueue.h
   src/stream/CurlHandle.cc
   src/transport/CurlMulti.cc
   src/transport/CurlOptions.cc
@@ -485,6 +486,7 @@ set(ARIA2_SOURCES_BASE
   src/StreamPieceSelector.h
   src/StreamStore.cc
   src/StreamStore.h
+  src/SqliteTransaction.h
   src/StructParserStateMachine.h
   src/TimeA2.cc
   src/TimeA2.h

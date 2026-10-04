@@ -39,7 +39,6 @@ class Option;
 class RequestGroup;
 struct CurlHandle;
 
-
 class CurlSession {
 public:
   explicit CurlSession(const Option* option);
@@ -65,7 +64,7 @@ private:
   int64_t globalDownloadLimit_ = 0;
   size_t externalDownloadCount_ = 0;
   long connectionPoolLimit_ = 0;
-  StreamStore store_;
+  std::shared_ptr<StreamStore> store_;
   std::map<CURL*, std::pair<std::shared_ptr<CurlDownload>, CurlHandle*>>
       downloads_;
   std::map<CurlDownload*, std::shared_ptr<CurlDownload>> tasks_;
@@ -77,7 +76,8 @@ private:
   void activate(const std::shared_ptr<CurlDownload>& download);
   bool createHandle(const std::shared_ptr<CurlDownload>& download,
                     RangeLease lease, bool primary, bool ranged,
-                    long addressFamily = CURL_IPRESOLVE_WHATEVER);
+                    long addressFamily = CURL_IPRESOLVE_WHATEVER,
+                    const std::string& redirect = {}, unsigned redirects = 0);
   void finish(const std::shared_ptr<CurlDownload>& download, CurlHandle* handle,
               CURLcode result);
   bool checkpoint(const std::shared_ptr<CurlDownload>& download, bool force);

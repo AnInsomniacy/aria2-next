@@ -109,7 +109,8 @@ void markUriUsed(RequestGroup* group, const std::string& uriValue)
 
 bool CurlSession::createHandle(const std::shared_ptr<CurlDownload>& download,
                                RangeLease lease, bool primary, bool ranged,
-                               long addressFamily)
+                               long addressFamily, const std::string& redirect,
+                               unsigned redirects)
 {
   auto& impl = *download->impl_;
   const auto taskOption = impl.group->getOption().get();
@@ -177,11 +178,15 @@ bool CurlSession::createHandle(const std::shared_ptr<CurlDownload>& download,
   const auto uriIndex = lease.uriIndex % impl.uris.size();
   auto& endpoint = impl.endpoint(uriIndex, addressFamily);
   const auto& originalUri = impl.uris[uriIndex];
-  const auto& uriValue = endpoint.uri.empty() ? originalUri : endpoint.uri;
+  const auto& uriValue = !redirect.empty()      ? redirect
+                         : endpoint.uri.empty() ? originalUri
+                                                : endpoint.uri;
+  transfer->redirects = redirects;
+  transfer->manualRedirect =
+      taskOption->get(PREF_NO_PROXY).find('*') != std::string::npos;
   transfer->endpointGeneration = endpoint.generation;
   transfer->resolvingEndpoint = impl.http && endpoint.uri.empty();
-  transfer->redirectedEndpoint =
-      !endpoint.uri.empty() && uriValue != originalUri;
+  transfer->redirectedEndpoint = uriValue != originalUri;
   transfer->addressFamily = addressFamily;
   const bool sourceCredentials = http::sameOrigin(originalUri, uriValue);
   impl.currentUri = originalUri;
@@ -199,7 +204,7 @@ bool CurlSession::createHandle(const std::shared_ptr<CurlDownload>& download,
                   A2_LOG_ENABLED(spdlog::level::trace) ? 1L : 0L);
   SET_CURL_OPTION(CURLOPT_PROTOCOLS_STR, "http,https,sftp");
   SET_CURL_OPTION(CURLOPT_REDIR_PROTOCOLS_STR, "http,https,sftp");
-  SET_CURL_OPTION(CURLOPT_FOLLOWLOCATION, 1L);
+  SET_CURL_OPTION(CURLOPT_FOLLOWLOCATION, transfer->manualRedirect ? 0L : 1L);
   SET_CURL_OPTION(CURLOPT_SUPPRESS_CONNECT_HEADERS, 1L);
   SET_CURL_OPTION(CURLOPT_FAILONERROR, 1L);
   SET_CURL_OPTION(CURLOPT_MAXREDIRS, 10L);
@@ -210,14 +215,15 @@ bool CurlSession::createHandle(const std::shared_ptr<CurlDownload>& download,
                       ? CURL_HTTP_VERSION_1_1
                       : CURL_HTTP_VERSION_2TLS);
   SET_CURL_OPTION(CURLOPT_NOSIGNAL, 1L);
-  SET_CURL_OPTION(CURLOPT_BUFFERSIZE, 1024L * 1024L);
+  // Keep paused, automatically decoded responses bounded to curl's normal
+  // input chunks; a megabyte of compressed input can expand dramatically.
+  SET_CURL_OPTION(CURLOPT_BUFFERSIZE, static_cast<long>(CURL_MAX_WRITE_SIZE));
   SET_CURL_OPTION(CURLOPT_TCP_KEEPALIVE, 1L);
   SET_CURL_OPTION(CURLOPT_DNS_CACHE_TIMEOUT, 300L);
   SET_CURL_OPTION(CURLOPT_SOCKOPTFUNCTION, socketOptionCallback);
   SET_CURL_OPTION(CURLOPT_SOCKOPTDATA, const_cast<Option*>(taskOption));
   SET_CURL_OPTION(CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-  SET_CURL_OPTION(CURLOPT_NOBODY,
-                  impl.dryRun ? 1L : 0L);
+  SET_CURL_OPTION(CURLOPT_NOBODY, impl.dryRun ? 1L : 0L);
   SET_CURL_OPTION(CURLOPT_FILETIME,
                   taskOption->getAsBool(PREF_REMOTE_TIME) ? 1L : 0L);
   SET_CURL_OPTION(CURLOPT_WRITEFUNCTION, CurlHandle::writeData);
@@ -235,9 +241,12 @@ bool CurlSession::createHandle(const std::shared_ptr<CurlDownload>& download,
   SET_CURL_OPTION(CURLOPT_USERAGENT, taskOption->get(PREF_USER_AGENT).c_str());
   SET_CURL_OPTION(CURLOPT_FORBID_REUSE,
                   taskOption->getAsBool(PREF_ENABLE_HTTP_KEEP_ALIVE) ? 0L : 1L);
-  if (taskOption->getAsBool(PREF_HTTP_ACCEPT_GZIP) && !transfer->ranged) {
-    SET_CURL_OPTION(CURLOPT_ACCEPT_ENCODING, "");
-  }
+  SET_CURL_OPTION(CURLOPT_ACCEPT_ENCODING,
+                  !transfer->ranged &&
+                          taskOption->getAsBool(PREF_HTTP_ACCEPT_GZIP)
+                      ? ""
+                      : "identity");
+  SET_CURL_OPTION(CURLOPT_HTTP_CONTENT_DECODING, transfer->ranged ? 0L : 1L);
   if (taskOption->getAsBool(PREF_HTTP_NO_CACHE)) {
     if (!appendHeader("Cache-Control: no-cache") ||
         !appendHeader("Pragma: no-cache")) {
@@ -304,7 +313,9 @@ bool CurlSession::createHandle(const std::shared_ptr<CurlDownload>& download,
     }
   }
   if (!taskOption->blank(PREF_NO_PROXY)) {
-    SET_CURL_OPTION(CURLOPT_NOPROXY, taskOption->get(PREF_NO_PROXY).c_str());
+    const auto bypass =
+        http::noProxyFor(taskOption->get(PREF_NO_PROXY), uriValue);
+    SET_CURL_OPTION(CURLOPT_NOPROXY, bypass.c_str());
   }
   if (impl.http) {
     SET_CURL_OPTION(CURLOPT_COOKIEFILE, "");

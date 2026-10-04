@@ -72,6 +72,17 @@ TEST_CASE("StreamStoreTest.testPrunesMissingPayloads")
     state.completedRanges = {{0, 1}};
     REQUIRE(store.save(state));
   }
+  {
+    StreamStore cached(database);
+    REQUIRE(cached.open());
+    StreamState value;
+    REQUIRE(cached.load(value, "0000000000000003", payload));
+    CHECK_EQ(1, value.completedLength);
+    value.completedLength = 2;
+    CHECK_FALSE(cached.save(value));
+    REQUIRE(cached.load(value, value.gid, payload));
+    CHECK_EQ(1, value.completedLength);
+  }
   REQUIRE(File(payload).remove());
   StreamStore reopened(database);
   REQUIRE(reopened.open());

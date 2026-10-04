@@ -71,6 +71,8 @@ const char* responseFailureName(CurlResponseFailure failure)
     return "invalid_range";
   case CurlResponseFailure::RangeUnsupported:
     return "range_limit_unsupported";
+  case CurlResponseFailure::EncodedRange:
+    return "encoded_range";
   case CurlResponseFailure::PreconditionFailed:
     return "precondition_failed";
   default:
@@ -96,6 +98,8 @@ const char* responseFailureMessage(CurlResponseFailure failure)
   case CurlResponseFailure::RangeUnsupported:
     return "The server ignored the requested byte range; the configured range "
            "limit cannot be honored";
+  case CurlResponseFailure::EncodedRange:
+    return "An encoded HTTP representation cannot be written as byte ranges";
   case CurlResponseFailure::PreconditionFailed:
     return "HTTP 412: the server rejected a request precondition; existing "
            "data was preserved";
@@ -113,17 +117,19 @@ void flushWriteBuffer(CurlDownloadImpl& impl, CurlHandle& handle)
     throw DL_ABORT_EX2("The output file is not open",
                        error_code::FILE_OPEN_ERROR);
   }
-  impl.writer->writeData(handle.writeBuffer.data(), handle.writeBuffer.size(),
-                         handle.bufferOffset);
-  impl.planner.commit(handle.bufferOffset,
-                      handle.bufferOffset +
-                          static_cast<int64_t>(handle.writeBuffer.size()));
-  handle.writeBuffer.clear();
+  const auto size = handle.writeBuffer.size();
+  const auto offset = handle.bufferOffset;
+  impl.io.submit(
+      [writer = impl.writer, data = std::move(handle.writeBuffer), offset] {
+        writer->writeData(data.data(), data.size(), offset);
+      },
+      offset, size);
+  handle.writeBuffer = {};
 }
 
 int64_t bufferedLength(const CurlDownloadImpl& impl)
 {
-  int64_t result = 0;
+  int64_t result = static_cast<int64_t>(impl.io.bytes());
   for (const auto& handle : impl.handles) {
     result += static_cast<int64_t>(handle->writeBuffer.size());
   }
@@ -156,6 +162,7 @@ void resetResponse(CurlHandle& handle)
   handle.unsatisfiedTotalLength = -1;
   handle.rangeAccepted = false;
   handle.fullResponseAccepted = false;
+  handle.encoded = false;
   handle.headersComplete = false;
   handle.responseFailure = CurlResponseFailure::None;
   handle.responseEtag.clear();
@@ -312,12 +319,18 @@ size_t CurlHandle::writeData(char* data, size_t size, size_t count,
   auto* download = handle->download;
   try {
     auto& impl = *download->impl_;
+    if (impl.io.bytes() >= stream::IoQueue::capacity) {
+      handle->pausedForDisk = true;
+      return CURL_WRITEFUNC_PAUSE;
+    }
     if (size != 0 && count > std::numeric_limits<size_t>::max() / size) {
       fail(download, error_code::FILE_IO_ERROR,
            "Received an oversized output block");
       return CURL_WRITEFUNC_ERROR;
     }
     auto length = size * count;
+    if (handle->responseCode >= 300 && handle->responseCode < 400)
+      return length;
     if (handle->responseFailure != CurlResponseFailure::None ||
         (handle->ranged && handle->headersComplete && !handle->rangeAccepted &&
          !handle->fullResponseAccepted)) {
@@ -424,6 +437,10 @@ void CurlHandle::validateResponse(CurlHandle& handle,
   if (handle.responseCode != 200 && handle.responseCode != 206) {
     return;
   }
+  if (handle.ranged && handle.encoded) {
+    handle.responseFailure = CurlResponseFailure::EncodedRange;
+    return;
+  }
   handle.responseFailure = identityFailure(impl, handle);
   if (handle.responseCode == 206 && handle.ranged) {
     int64_t first = -1;
@@ -459,7 +476,7 @@ void CurlHandle::validateResponse(CurlHandle& handle,
          (impl.etag.empty() && handle.responseLastModified.empty()))) {
       handle.responseFailure = CurlResponseFailure::ValidatorUnavailable;
     }
-    if (download.snapshot_.totalLength > 0 &&
+    if (!handle.encoded && download.snapshot_.totalLength > 0 &&
         handle.responseContentLength >= 0 &&
         download.snapshot_.totalLength != handle.responseContentLength) {
       handle.responseFailure = CurlResponseFailure::LengthChanged;
@@ -468,6 +485,9 @@ void CurlHandle::validateResponse(CurlHandle& handle,
         handle.lease.begin == 0 && impl.planner.completedLength() == 0 &&
         !impl.plannerConfigured) {
       handle.fullResponseAccepted = true;
+      impl.fullDownload = true;
+      impl.maxConnections = impl.connectionLimit = 1;
+      handle.lease.end = std::numeric_limits<int64_t>::max();
       stream::rememberIdentity(impl, handle.responseEtag,
                                handle.responseLastModified,
                                handle.responseDate);
@@ -497,6 +517,10 @@ size_t CurlHandle::receiveHeader(char* data, size_t size, size_t count,
       handle->responseLastModified =
           http::responseHeader(handle->value, "Last-Modified");
       handle->responseDate = http::responseHeader(handle->value, "Date");
+      const auto encoding = http::trimHeader(
+          http::responseHeader(handle->value, "Content-Encoding"));
+      handle->encoded =
+          !encoding.empty() && !curl_strequal(encoding.c_str(), "identity");
       http::parseContentLength(
           http::responseHeader(handle->value, "Content-Length"),
           handle->responseContentLength);
@@ -515,8 +539,8 @@ size_t CurlHandle::receiveHeader(char* data, size_t size, size_t count,
       }
       validateResponse(*handle,
                        http::responseHeader(handle->value, "Content-Range"));
-      if (!download->snapshot_.mediaManifest &&
-          handle->responseCode >= 200 && handle->responseCode < 300 &&
+      if (!download->snapshot_.mediaManifest && handle->responseCode >= 200 &&
+          handle->responseCode < 300 &&
           handle->responseFailure == CurlResponseFailure::None &&
           !CurlSession::resolveOutput(download, handle->value)) {
         return CURL_WRITEFUNC_ERROR;
@@ -547,7 +571,7 @@ int CurlHandle::updateProgress(void* userData, curl_off_t downloadTotal,
     auto* download = handle->download;
     auto& impl = *download->impl_;
     const auto total =
-        handle->ranged && !handle->fullResponseAccepted
+        handle->encoded || (handle->ranged && !handle->fullResponseAccepted)
             ? 0
             : handle->lease.begin + std::max<curl_off_t>(0, downloadTotal);
     if (total > 0 && download->snapshot_.totalLength == 0) {

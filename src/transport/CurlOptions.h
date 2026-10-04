@@ -14,6 +14,9 @@ namespace http {
 // Uses libcurl's canonical scheme, host and effective port. Invalid URLs never
 // grant access to credentials belonging to another request.
 bool sameOrigin(const std::string& first, const std::string& second);
+// Expand host globs only for this request; curl retains native domain/IP/CIDR
+// matching.
+std::string noProxyFor(const std::string& rules, const std::string& url);
 
 // Applies the existing target-specific trust policy to an unshared easy handle.
 // Returns the first native option failure without changing caller error policy.

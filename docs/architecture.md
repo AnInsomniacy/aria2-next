@@ -33,6 +33,12 @@ feature guards live in `cmake/Sources.cmake` and `cmake/TestSources.cmake`.
   `CurlHandle` owns its easy handle and header list. Remove an easy handle from
   the multi handle before destroying it. Copy borrowed native result strings
   before releasing the easy handle.
+- Stream output creation, writes, allocation, close and recovery checkpoints run
+  on a bounded Boost.Asio pool, serialized per task. The engine polls completions
+  without waiting; only successful writes commit planner ranges. libcurl pause/resume
+  supplies backpressure. Pausing, restarting and final results wait for pending I/O;
+  an output error wins over a pending pause. SQLite checkpoints are transactional,
+  and a committed in-memory index keeps task lookup off the database write lock.
 - Stream leases use half-open byte ranges `[begin, end)`. Media HTTP range
   endpoints are inclusive. Keep conversions explicit at the protocol boundary.
 - Persist completed output and recovery state before releasing task runtime
@@ -44,7 +50,10 @@ feature guards live in `cmake/Sources.cmake` and `cmake/TestSources.cmake`.
 - BitTorrent add alerts carry `add_torrent_params::userdata` back to their owning
   `BtDownload`. An info hash identifies content, not an asynchronous request.
 - `stream-max-range-size` caps requests at the libcurl handle boundary. Validator
-  changes can restart an owned partial file once, with a fresh full request;
+  changes or encoded range responses can restart an owned partial file with a fresh
+  full request. Encoded ranges are rejected before writes; full responses use native
+  libcurl decoding and track decoded output length. Interrupted full responses have
+  a bounded restart budget (`max-tries`, or three restarts when unlimited was requested);
   they never join old bytes to a new representation or override a range cap.
 - Each media worker owns its GPAC client, transport cache and publication
   transaction. `DashFileIo` borrows that worker. Only the shared `Control` crosses
@@ -79,7 +88,8 @@ the same persisted GID, URL and path; matching file sizes never establish owners
 output created or recovered by that task (or an explicitly permitted overwrite).
 
 Precedence is explicit `out` or persisted path, browser-resolved hint, final
-Content-Disposition, suggested hint, final URL basename, then the default.
+Content-Disposition, suggested hint, original URL `filename=` query, final URL
+`filename=` query, final URL basename, then the default.
 Content-Disposition uses the existing aria2 parser. Browser names and persisted
 paths are already text and are never URL decoded. Final names are persisted in
 native task options so restart does not choose another path.

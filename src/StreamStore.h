@@ -17,6 +17,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <mutex>
+#include <unordered_map>
 
 struct sqlite3;
 
@@ -47,6 +49,11 @@ public:
 
 private:
   void pruneMissingFiles();
+  bool loadStored(StreamState& state, const std::string& gid,
+                  const std::string& path) const;
+  mutable std::mutex cacheMutex_;
+  std::mutex writeMutex_;
+  std::unordered_map<std::string, StreamState> states_;
 
   std::string path_;
   sqlite3* db_ = nullptr;

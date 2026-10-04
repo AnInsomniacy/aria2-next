@@ -33,6 +33,7 @@
 #include <curl/curl.h>
 #include <curl/system.h>
 #include <exception>
+#include <stdexcept>
 #include <limits>
 #include <memory>
 #include <string>
@@ -106,14 +107,23 @@ bool CurlSession::openOutput(CurlDownload* download, bool preserveExisting,
       return false;
     }
     if (preserveExisting) {
-      impl.writer->openExistingFile();
+      impl.io.submit([writer = impl.writer] {
+        writer->openExistingFile();
+        writer->enableSparse();
+      });
     }
     else if (truncateOwned ||
              impl.group->getOption()->getAsBool(PREF_ALLOW_OVERWRITE)) {
-      impl.writer->initAndOpenFile();
+      impl.io.submit([writer = impl.writer] {
+        writer->initAndOpenFile();
+        writer->enableSparse();
+      });
     }
     else {
-      impl.writer->openNewFile();
+      impl.io.submit([writer = impl.writer] {
+        writer->openNewFile();
+        writer->enableSparse();
+      });
       impl.createdOutput = true;
     }
     return true;
@@ -128,8 +138,7 @@ bool CurlSession::openOutput(CurlDownload* download, bool preserveExisting,
   }
   catch (...) {
     impl.writer.reset();
-    CurlHandle::fail(download, fallbackError,
-                     "Unable to open the output file");
+    CurlHandle::fail(download, fallbackError, "Unable to open the output file");
   }
   return false;
 }
@@ -147,7 +156,7 @@ bool CurlSession::resolveOutput(CurlDownload* download, CURL* easy)
   auto option = impl.group->getOption();
   const auto name = output::suggestedName(
       *option, effective ? effective : impl.currentUri,
-      http::responseHeader(easy, "Content-Disposition"));
+      http::responseHeader(easy, "Content-Disposition"), impl.currentUri);
   impl.path = util::applyDir(option->get(PREF_DIR), name);
   auto context = impl.group->getDownloadContext();
   context->getFirstFileEntry()->setPath(impl.path);
@@ -170,7 +179,8 @@ void CurlSession::closeOutput(CurlDownload* download) noexcept
     return;
   }
   try {
-    download->impl_->writer->closeFile();
+    download->impl_->io.submit(
+        [writer = download->impl_->writer] { writer->closeFile(); });
   }
   catch (const std::exception& error) {
     A2_LOG_ERROR(fmt("Closing stream output failed: %s", error.what()));
@@ -215,6 +225,13 @@ bool CurlSession::prepare(const std::shared_ptr<CurlDownload>& download,
   impl.fileNotFoundCount = 0;
   impl.rangeValidated = false;
   impl.fullDownload = false;
+  impl.fullRestarts = 0;
+  impl.fullRetryAt.reset();
+  impl.finalCheckpointQueued = false;
+  impl.pendingFinalize.reset();
+  impl.pendingFailure.reset();
+  impl.pendingRestart.clear();
+  impl.pendingStop.reset();
   impl.maxConnections = effectiveStreamMaxConnections(group->getOption().get());
   impl.connectionLimit = impl.maxConnections;
   impl.maxRangeSize =
@@ -235,7 +252,7 @@ bool CurlSession::prepare(const std::shared_ptr<CurlDownload>& download,
 
   StreamState state;
   const auto taskId = GroupId::toHex(group->getGID());
-  const auto hasState = store_.load(state, taskId, impl.path) &&
+  const auto hasState = store_->load(state, taskId, impl.path) &&
                         std::find(impl.uris.begin(), impl.uris.end(),
                                   state.uri) != impl.uris.end() &&
                         state.path == impl.path;
@@ -266,7 +283,7 @@ bool CurlSession::prepare(const std::shared_ptr<CurlDownload>& download,
   const bool restoreState = hasState && output.isFile() && rangesFit &&
                             existingLength >= state.completedLength;
   if (hasState && !restoreState) {
-    store_.remove(taskId);
+    discardRecovery(download);
   }
   impl.allowFullRestart = true;
   if (restoreState) {
@@ -316,7 +333,7 @@ void CurlSession::restorePaused(const std::shared_ptr<CurlDownload>& download,
   StreamState state;
   File file(impl.path);
   const auto groupId = GroupId::toHex(group->getGID());
-  if (!store_.load(state, groupId, impl.path) || state.gid != groupId ||
+  if (!store_->load(state, groupId, impl.path) || state.gid != groupId ||
       state.path != impl.path || !file.isFile() ||
       std::find(impl.uris.begin(), impl.uris.end(), state.uri) ==
           impl.uris.end()) {
@@ -346,6 +363,7 @@ bool CurlSession::checkpoint(const std::shared_ptr<CurlDownload>& download,
 {
   auto& impl = *download->impl_;
   if (!impl.group || impl.dryRun || impl.filenamePending ||
+      (!force && impl.stopRequested) ||
       (!force && !impl.lastCheckpoint.isZero() &&
        impl.lastCheckpoint.difference(global::wallclock()) <
            std::chrono::seconds(1))) {
@@ -360,18 +378,29 @@ bool CurlSession::checkpoint(const std::shared_ptr<CurlDownload>& download,
   state.totalLength = download->snapshot_.totalLength;
   state.completedLength = impl.planner.completedLength();
   state.completedRanges = impl.planner.completedRanges();
-  if (store_.save(state)) {
-    impl.lastCheckpoint = global::wallclock();
+  if (!force && impl.io.busy())
     return true;
-  }
-  return false;
+  impl.io.submit([store = store_, state = std::move(state)] {
+    if (!store->save(state))
+      throw std::runtime_error("Unable to persist stream recovery state");
+  });
+  impl.lastCheckpoint = global::wallclock();
+  return true;
 }
 
 void CurlSession::finalize(const std::shared_ptr<CurlDownload>& download,
                            curl_off_t reportedFileTime)
 {
   auto& impl = *download->impl_;
+  if (impl.io.busy()) {
+    impl.pendingFinalize = reportedFileTime;
+    return;
+  }
   closeOutput(download.get());
+  if (impl.io.busy()) {
+    impl.pendingFinalize = reportedFileTime;
+    return;
+  }
   auto length = File(impl.path).size();
   if (download->snapshot_.totalLength > 0) {
     length = download->snapshot_.totalLength;
@@ -390,11 +419,13 @@ void CurlSession::finalize(const std::shared_ptr<CurlDownload>& download,
     impl.group->getPieceStorage()->getDiskAdaptor()->openExistingFile();
   }
   context->resetDownloadStopTime();
-  if (!checkpoint(download, true)) {
-    failTask(download, error_code::FILE_IO_ERROR,
-             "Unable to persist completed download state");
+  if (!impl.finalCheckpointQueued) {
+    checkpoint(download, true);
+    impl.finalCheckpointQueued = true;
+    impl.pendingFinalize = reportedFileTime;
     return;
   }
+  impl.pendingFinalize.reset();
   impl.group->getPieceStorage()->markAllPiecesDone();
   download->snapshot_.state = CurlSnapshot::State::Complete;
   eraseTask(download.get());
@@ -420,6 +451,17 @@ void CurlSession::failTask(const std::shared_ptr<CurlDownload>& download,
 {
   auto& impl = *download->impl_;
   auto finalMessage = message;
+  impl.pendingStop.reset();
+  impl.pendingFinalize.reset();
+  impl.pendingRestart.clear();
+  impl.stopRequested = true;
+  if (impl.io.busy()) {
+    download->snapshot_.state = CurlSnapshot::State::Active;
+    impl.pendingFailure = std::make_pair(errorCode, message);
+    impl.retainFailure = retainState;
+    cancelHandles(download);
+    return;
+  }
   if (retainState) {
     if (!download->failed()) {
       try {
@@ -437,13 +479,24 @@ void CurlSession::failTask(const std::shared_ptr<CurlDownload>& download,
         finalMessage = error.what();
       }
     }
-    checkpoint(download, true);
+    if (!impl.finalCheckpointQueued) {
+      checkpoint(download, true);
+      impl.finalCheckpointQueued = true;
+    }
   }
-  else if (impl.group) {
-    store_.remove(CurlHandle::gid(download.get()));
+  else if (impl.group && !impl.finalCheckpointQueued) {
+    discardRecovery(download);
+    impl.finalCheckpointQueued = true;
   }
   cancelHandles(download);
   closeOutput(download.get());
+  if (impl.io.busy()) {
+    impl.pendingFailure = std::make_pair(errorCode, finalMessage);
+    download->snapshot_.state = CurlSnapshot::State::Active;
+    impl.retainFailure = retainState;
+    return;
+  }
+  impl.pendingFailure.reset();
   CurlHandle::fail(download.get(), errorCode, finalMessage);
   A2_LOG_ERROR(fmt("component=stream event=task_failed gid=%s error_code=%d "
                    "completed=%" PRId64 " uri=%s message=%s",

@@ -135,7 +135,7 @@ void CurlSession::configurePlanner(
     return;
   }
   try {
-    impl.writer->truncate(total);
+    impl.io.submit([writer = impl.writer, total] { writer->truncate(total); });
   }
   catch (const Exception& error) {
     failTask(download, error.getErrorCode(), error.what());
@@ -157,6 +157,26 @@ void CurlSession::schedule(const std::shared_ptr<CurlDownload>& download)
   }
 
   const auto now = std::chrono::steady_clock::now();
+  if (impl.fullRetryAt) {
+    if (now < *impl.fullRetryAt) {
+      engine_->setRefreshInterval(
+          std::chrono::duration_cast<std::chrono::milliseconds>(
+              *impl.fullRetryAt - now));
+      return;
+    }
+    impl.fullRetryAt.reset();
+    const RangeLease lease{0, std::numeric_limits<int64_t>::max(), 0,
+                           impl.preferredUriIndex};
+    if (!createHandle(download, lease, true, false)) {
+      failTask(download, error_code::NETWORK_PROBLEM,
+               "Unable to restart the complete transfer");
+      return;
+    }
+    auto* handle = impl.handles.back().get();
+    downloads_[handle->value] = std::make_pair(download, handle);
+    impl.kickPending = true;
+    rebalanceLimits();
+  }
   if (!impl.plannerConfigured) {
     if (impl.handles.empty()) {
       if (auto lease = impl.planner.takeReady(now)) {
@@ -178,6 +198,10 @@ void CurlSession::schedule(const std::shared_ptr<CurlDownload>& download)
           std::max(std::chrono::milliseconds(0),
                    std::chrono::duration_cast<std::chrono::milliseconds>(
                        *deadline - now)));
+    }
+    if (impl.handles.empty() && !impl.planner.hasPending()) {
+      failTask(download, error_code::NETWORK_PROBLEM,
+               "The stream ended without completing the download");
     }
     return;
   }
@@ -285,7 +309,8 @@ bool CurlSession::rebalanceEndgame(
   const auto& now = global::wallclock();
   for (const auto& candidate : impl.handles) {
     const auto remaining = candidate->lease.end - candidate->writeOffset;
-    if (!candidate->rangeAccepted || remaining <= 0) {
+    if (candidate->completed || candidate->pausedForDisk ||
+        !candidate->rangeAccepted || remaining <= 0) {
       continue;
     }
     if (remaining >= 2 * 64_k) {
@@ -471,6 +496,79 @@ void CurlSession::rewardConnectionLimit(
 
 void CurlSession::advance(const std::shared_ptr<CurlDownload>& download)
 {
+  auto& impl = *download->impl_;
+  try {
+    impl.io.poll(
+        [&](int64_t begin, int64_t end) { impl.planner.commit(begin, end); });
+  }
+  catch (const Exception& error) {
+    if (!impl.pendingFailure || impl.retainFailure)
+      impl.finalCheckpointQueued = false;
+    failTask(download, error.getErrorCode(), error.what(), false);
+    return;
+  }
+  catch (const std::exception& error) {
+    if (!impl.pendingFailure || impl.retainFailure)
+      impl.finalCheckpointQueued = false;
+    failTask(download, error_code::FILE_IO_ERROR, error.what(), false);
+    return;
+  }
+  if (download->failed() && !impl.pendingFailure) {
+    failTask(download, download->snapshot_.errorCode,
+             download->snapshot_.error);
+    return;
+  }
+  if (download->stopped())
+    return;
+  if (impl.io.busy())
+    engine_->setRefreshInterval(std::chrono::milliseconds(10));
+  download->snapshot_.completedLength =
+      impl.planner.completedLength() + stream::bufferedLength(impl);
+  if (impl.pendingFailure) {
+    auto failure = *impl.pendingFailure;
+    failTask(download, failure.first, failure.second, impl.retainFailure);
+    return;
+  }
+  if (impl.pendingStop) {
+    stop(download, *impl.pendingStop);
+    return;
+  }
+  if (!impl.pendingRestart.empty()) {
+    auto reason = std::move(impl.pendingRestart);
+    impl.pendingRestart.clear();
+    restartFullDownload(download, reason.c_str());
+    return;
+  }
+  if (impl.pendingFinalize) {
+    finalize(download, *impl.pendingFinalize);
+    return;
+  }
+  if (!impl.io.busy()) {
+    for (;;) {
+      const auto found = std::find_if(
+          impl.handles.begin(), impl.handles.end(),
+          [](const auto& handle) { return handle->completed.has_value(); });
+      if (found == impl.handles.end())
+        break;
+      auto* handle = found->get();
+      finish(download, handle, *handle->completed);
+      if (download->stopped() || impl.io.busy() || impl.pendingFinalize ||
+          !impl.pendingRestart.empty())
+        return;
+    }
+  }
+  for (const auto& handle : impl.handles) {
+    if (handle->pausedForDisk && !handle->completed &&
+        impl.io.bytes() < stream::IoQueue::capacity / 2) {
+      handle->pausedForDisk = false;
+      const auto result = curl_easy_pause(handle->value, CURLPAUSE_CONT);
+      if (result != CURLE_OK) {
+        failTask(download, error_code::NETWORK_PROBLEM,
+                 curl_easy_strerror(result));
+        return;
+      }
+    }
+  }
   schedule(download);
   if (download->impl_->kickPending) {
     download->impl_->kickPending = false;

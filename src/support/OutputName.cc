@@ -100,13 +100,45 @@ std::string safeName(const std::string& name)
   return result;
 }
 
-std::string urlName(const std::string& uri)
+namespace {
+std::string queryName(const std::string& uri)
 {
   uri::UriStruct parsed;
   if (!uri::parse(parsed, uri)) {
     return {};
   }
-  auto name = parsed.file;
+  auto query = parsed.query;
+  if (!query.empty() && query.front() == '?')
+    query.erase(0, 1);
+  for (size_t begin = 0; begin < query.size();) {
+    const auto end = query.find('&', begin);
+    const auto entry =
+        query.substr(begin, end == std::string::npos ? end : end - begin);
+    const auto equals = entry.find('=');
+    if (equals != std::string::npos &&
+        percentDecode(entry.substr(0, equals)) == "filename") {
+      const auto name =
+          percentDecode(util::replace(entry.substr(equals + 1), "+", " "));
+      if (util::isUtf8(name) && !safeName(name).empty())
+        return safeName(name);
+    }
+    if (end == std::string::npos)
+      break;
+    begin = end + 1;
+  }
+  return {};
+}
+} // namespace
+
+std::string urlName(const std::string& uri)
+{
+  auto name = queryName(uri);
+  if (!name.empty())
+    return name;
+  uri::UriStruct parsed;
+  if (!uri::parse(parsed, uri))
+    return {};
+  name = parsed.file;
   auto candidate = percentDecode(name);
   if (util::isUtf8(candidate) && candidate != "." && candidate != "..") {
     name = std::move(candidate);
@@ -115,7 +147,8 @@ std::string urlName(const std::string& uri)
 }
 
 std::string suggestedName(const Option& option, const std::string& uri,
-                          const std::string& disposition)
+                          const std::string& disposition,
+                          const std::string& originalUri)
 {
   const auto hint = safeName(option.get(PREF_FILENAME_HINT));
   if (!hint.empty() && option.get(PREF_FILENAME_HINT_SOURCE) == "browser") {
@@ -132,7 +165,9 @@ std::string suggestedName(const Option& option, const std::string& uri,
   if (!hint.empty()) {
     return hint;
   }
-  name = urlName(uri);
+  name = queryName(originalUri);
+  if (name.empty())
+    name = urlName(uri);
   return name.empty() ? Request::DEFAULT_FILE : name;
 }
 

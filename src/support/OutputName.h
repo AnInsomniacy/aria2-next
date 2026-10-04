@@ -11,7 +11,8 @@ namespace output {
 std::string safeName(const std::string& name);
 std::string urlName(const std::string& uri);
 std::string suggestedName(const Option& option, const std::string& uri,
-                          const std::string& disposition = {});
+                          const std::string& disposition = {},
+                          const std::string& originalUri = {});
 std::string mediaName(const Option& option, const std::string& uri);
 } // namespace output
 } // namespace aria2

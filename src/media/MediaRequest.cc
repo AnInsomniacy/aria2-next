@@ -196,8 +196,10 @@ void configureNetwork(Request& request, const Option* option,
     request.set(CURLOPT_PROXYUSERNAME, option->get(user).c_str());
     request.set(CURLOPT_PROXYPASSWORD, option->get(password).c_str());
   }
-  if (!option->blank(PREF_NO_PROXY))
-    request.set(CURLOPT_NOPROXY, option->get(PREF_NO_PROXY).c_str());
+  if (!option->blank(PREF_NO_PROXY)) {
+    const auto bypass = http::noProxyFor(option->get(PREF_NO_PROXY), url);
+    request.set(CURLOPT_NOPROXY, bypass.c_str());
+  }
   if (!option->blank(PREF_REFERER))
     request.set(CURLOPT_REFERER, option->get(PREF_REFERER).c_str());
   if (!option->blank(PREF_LOAD_COOKIES))
