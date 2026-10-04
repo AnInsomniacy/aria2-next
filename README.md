@@ -85,6 +85,11 @@ skipped with one warning when the native engine owns or removed the behavior.
 Unknown option names remain errors. Legacy task state and adjacent `.aria2`
 control files are not imported.
 
+`always-resume` is accepted as a retired boolean option, including the
+`--always-resume=false` argument supplied by yt-dlp. It is skipped with a warning;
+native recovery ownership, bounded full-response restarts and explicit overwrite
+settings determine the download behavior.
+
 ## Quick Start
 
 Download a file:

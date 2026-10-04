@@ -48,8 +48,9 @@ struct LegacyOptionSpec {
   bool sensitive = false;
 };
 
-constexpr std::array<LegacyOptionSpec, 72> LEGACY_OPTIONS{{
+constexpr std::array<LegacyOptionSpec, 73> LEGACY_OPTIONS{{
     {"allow-piece-length-change", ArgumentKind::OptionalBoolean},
+    {"always-resume", ArgumentKind::OptionalBoolean},
     {"async-dns", ArgumentKind::OptionalBoolean},
     {"async-dns-server", ArgumentKind::Required},
     {"auto-save-interval", ArgumentKind::Required},
@@ -498,6 +499,11 @@ KeyVals normalizeLegacyInput(const KeyVals& options, LegacyInputSource source)
     }
     addGroup({"split", "max-connection-per-server"}, "stream-max-connections",
              value, true);
+  }
+
+  if (const auto item = legacy.find("always-resume"); item != legacy.end()) {
+    parseBoolean(item->first, item->second);
+    ignore(item->first, "native recovery and bounded full-response restarts own this policy");
   }
 
   static constexpr std::array<const char*, 35> RETIRED{{

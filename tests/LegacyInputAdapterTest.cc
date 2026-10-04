@@ -136,6 +136,30 @@ TEST_CASE("LegacyInputAdapter projects only meaningful current values")
   CHECK_FALSE(isLegacyInputOption("definitely-not-an-aria2-option"));
 }
 
+TEST_CASE("LegacyInputAdapter accepts yt-dlp resume input without changing file policy")
+{
+  char executable[] = "aria2-next";
+  char resume[] = "--always-resume=false";
+  char overwrite[] = "--allow-overwrite=true";
+  char rename[] = "--auto-file-renaming=false";
+  char uri[] = "https://example.com/video.mp4";
+  char* argv[]{executable, resume, overwrite, rename, uri};
+  const auto output = normalizeLegacyCommandLine(
+      static_cast<int>(std::size(argv)), argv, LegacyInputSource::CommandLine);
+  CHECK_EQ((std::vector<std::string>{executable, overwrite, rename, uri}), output);
+
+  for (const auto source : {LegacyInputSource::Configuration,
+                            LegacyInputSource::Rpc}) {
+    for (const auto* value : {"true", "false"}) {
+      const auto options = normalizeLegacyInput(
+          {{"always-resume", value}, {"allow-overwrite", "false"}}, source);
+      REQUIRE_EQ(1, options.size());
+      CHECK_EQ("false", valueFor(options, "allow-overwrite"));
+    }
+    CHECK_THROWS(normalizeLegacyInput({{"always-resume", "invalid"}}, source));
+  }
+}
+
 TEST_CASE("LegacyInputAdapter is shared by configuration and task input")
 {
   auto parser = OptionParser::getInstance();
