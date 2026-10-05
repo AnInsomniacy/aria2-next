@@ -69,11 +69,11 @@ struct TORRENT_EXPORT web_seed_entry
 	std::string auth;
 
 	// Any extra HTTP headers that need to be passed to the web seed.
-	// Warning: unlike ``auth``, these headers are sent verbatim with
+	// ``Authorization`` and ``Cookie`` follow ``auth``'s origin boundary.
+	// Warning: unlike ``auth``, the other headers are sent verbatim with
 	// every request, including requests to a different origin that the web
-	// seed may redirect to. Do not put sensitive credentials (such as an
-	// ``Authorization`` or ``Cookie`` header) here unless you trust every
-	// host the web seed might redirect to.
+	// seed may redirect to. Do not put other sensitive credentials here unless
+	// you trust every host the web seed might redirect to.
 	headers_t extra_headers;
 
 #if TORRENT_ABI_VERSION < 4

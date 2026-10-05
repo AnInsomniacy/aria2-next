@@ -29,6 +29,7 @@ see LICENSE file.
 #include "libtorrent/torrent_flags.hpp"
 #include "libtorrent/info_hash.hpp"
 #include "libtorrent/download_priority.hpp"
+#include "libtorrent/web_seed_entry.hpp"
 #include "libtorrent/client_data.hpp"
 #include "libtorrent/aux_/noexcept_movable.hpp"
 #include "libtorrent/fwd.hpp"
@@ -299,6 +300,7 @@ TORRENT_VERSION_NAMESPACE_3
 		std::vector<std::string> http_seeds;
 #endif
 		std::vector<std::string> url_seeds;
+		web_seed_entry::headers_t url_seed_headers;
 
 		// peers to add to the torrent, to be tried to be connected to as
 		// bittorrent peers.

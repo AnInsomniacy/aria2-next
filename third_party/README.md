@@ -43,6 +43,7 @@ trees are excluded.
 
 The libtorrent tree carries an aria2-next setting extension for encrypted-first
 peer negotiation with libtorrent's native plaintext fallback.
+It also carries an extension for per-task HTTP headers on BitTorrent web seeds.
 
 GPAC is configured without a player, renderer, JavaScript runtime, external
 media codecs, or independent TLS and cryptography backends. Its public DASH client uses aria2-next's
