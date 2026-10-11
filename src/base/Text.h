@@ -20,6 +20,9 @@ std::string replaceAll(std::string value, std::string_view from,
                        std::string_view to);
 
 bool isUtf8(std::string_view value);
+// Replaces every byte that does not belong to a well-formed UTF-8 sequence
+// with U+FFFD, e.g. ANSI code page text from Windows error messages.
+std::string repairUtf8(std::string_view value);
 std::string latin1ToUtf8(std::string_view value);
 std::string percentDecode(std::string_view value);
 std::string percentEncode(std::string_view value); // RFC 3986 unreserved kept

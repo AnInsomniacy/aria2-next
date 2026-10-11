@@ -76,3 +76,17 @@ TEST_CASE("same paths")
   CHECK(samePath("C:/Downloads/File.ZIP", "c:/downloads/file.zip"));
 #endif
 }
+
+TEST_CASE("text from the system is repaired into UTF-8")
+{
+  // GBK for the Chinese word for "error", as an ANSI Windows message has it.
+  const std::string ansi = "open failed: \xB4\xED\xCE\xF3";
+  CHECK_FALSE(text::isUtf8(ansi));
+  const auto repaired = text::repairUtf8(ansi);
+  CHECK(text::isUtf8(repaired));
+  CHECK(repaired.rfind("open failed: ", 0) == 0);
+  CHECK(text::repairUtf8("caf\xC3\xA9 \xF0\x9F\x8E\xAC") ==
+        "caf\xC3\xA9 \xF0\x9F\x8E\xAC");
+  CHECK(text::repairUtf8("\xED\xA0\x80") == // a UTF-16 surrogate
+        "\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD");
+}

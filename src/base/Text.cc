@@ -82,32 +82,63 @@ std::string replaceAll(std::string value, std::string_view from,
   return value;
 }
 
+namespace {
+// Length of the well-formed UTF-8 sequence starting at value[i], or 0.
+size_t utf8Sequence(std::string_view value, size_t i)
+{
+  const auto c = static_cast<unsigned char>(value[i]);
+  const size_t length = c < 0x80           ? 1
+                        : (c >> 5) == 0x6  ? 2
+                        : (c >> 4) == 0xe  ? 3
+                        : (c >> 3) == 0x1e ? 4
+                                           : 0;
+  if (length == 0 || i + length > value.size() || (length == 2 && c < 0xc2) ||
+      (length == 4 && c > 0xf4)) {
+    return 0;
+  }
+  uint32_t code = length == 1 ? c : c & (0x7f >> length);
+  for (size_t k = 1; k < length; ++k) {
+    const auto next = static_cast<unsigned char>(value[i + k]);
+    if ((next & 0xc0) != 0x80) {
+      return 0;
+    }
+    code = code << 6 | (next & 0x3f);
+  }
+  if ((length == 3 && (code < 0x800 || (code >= 0xd800 && code <= 0xdfff))) ||
+      (length == 4 && (code < 0x10000 || code > 0x10ffff))) {
+    return 0;
+  }
+  return length;
+}
+} // namespace
+
 bool isUtf8(std::string_view value)
 {
   for (size_t i = 0; i < value.size();) {
-    const auto c = static_cast<unsigned char>(value[i]);
-    size_t length = c < 0x80 ? 1 : (c >> 5) == 0x6 ? 2 : (c >> 4) == 0xe ? 3
-                                : (c >> 3) == 0x1e  ? 4
-                                                    : 0;
-    if (length == 0 || i + length > value.size() || (length == 2 && c < 0xc2) ||
-        (length == 4 && c > 0xf4)) {
-      return false;
-    }
-    uint32_t code = length == 1 ? c : c & (0x7f >> length);
-    for (size_t k = 1; k < length; ++k) {
-      const auto next = static_cast<unsigned char>(value[i + k]);
-      if ((next & 0xc0) != 0x80) {
-        return false;
-      }
-      code = code << 6 | (next & 0x3f);
-    }
-    if ((length == 3 && (code < 0x800 || (code >= 0xd800 && code <= 0xdfff))) ||
-        (length == 4 && (code < 0x10000 || code > 0x10ffff))) {
+    const auto length = utf8Sequence(value, i);
+    if (length == 0) {
       return false;
     }
     i += length;
   }
   return true;
+}
+
+std::string repairUtf8(std::string_view value)
+{
+  std::string result;
+  result.reserve(value.size());
+  for (size_t i = 0; i < value.size();) {
+    if (const auto length = utf8Sequence(value, i)) {
+      result.append(value.substr(i, length));
+      i += length;
+    }
+    else {
+      result += "\xEF\xBF\xBD"; // U+FFFD REPLACEMENT CHARACTER
+      ++i;
+    }
+  }
+  return result;
 }
 
 std::string latin1ToUtf8(std::string_view value)

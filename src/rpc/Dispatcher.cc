@@ -3,6 +3,7 @@
 
 #include "base/Error.h"
 #include "base/Log.h"
+#include "base/Text.h"
 #include "core/Engine.h"
 
 #include <boost/json/parse.hpp>
@@ -15,6 +16,34 @@ namespace aria2::rpc {
 namespace json = boost::json;
 
 namespace {
+
+// JSON text must be UTF-8. Strings from the system (Windows error messages in
+// the ANSI code page, for one) may not be, and one invalid byte would make a
+// client reject the whole response.
+void repairStrings(json::value& value)
+{
+  if (auto* string = value.if_string()) {
+    if (!text::isUtf8(*string)) {
+      *string = text::repairUtf8(*string);
+    }
+  }
+  else if (auto* array = value.if_array()) {
+    for (auto& item : *array) {
+      repairStrings(item);
+    }
+  }
+  else if (auto* object = value.if_object()) {
+    for (auto& item : *object) {
+      repairStrings(item.value());
+    }
+  }
+}
+
+std::string encode(json::value value)
+{
+  repairStrings(value);
+  return json::serialize(value);
+}
 
 json::object reply(const json::value& id, json::value result)
 {
@@ -188,7 +217,7 @@ void Dispatcher::handle(std::string_view body,
   boost::system::error_code error;
   const auto request = json::parse(body, error);
   if (error) {
-    done(json::serialize(failure(nullptr, -32700, "Parse error.")));
+    done(encode(failure(nullptr, -32700, "Parse error.")));
     return;
   }
   const auto* object = request.if_object();
@@ -202,7 +231,7 @@ void Dispatcher::handle(std::string_view body,
                          })
           : asyncMethods_.end();
   if (found == asyncMethods_.end()) {
-    done(json::serialize(handle(request)));
+    done(encode(handle(request)));
     return;
   }
   const auto* id = object->if_contains("id");
@@ -212,12 +241,12 @@ void Dispatcher::handle(std::string_view body,
   try {
     authorize(name, list);
     found->second(list, [requestId, done](json::value result) {
-      done(json::serialize(reply(requestId, std::move(result))));
+      done(encode(reply(requestId, std::move(result))));
     });
   }
   catch (const std::exception& error) {
     log::info("RPC {} failed: {}", name, error.what());
-    done(json::serialize(failure(requestId, 1, error.what())));
+    done(encode(failure(requestId, 1, error.what())));
   }
 }
 
