@@ -8,6 +8,7 @@
 #include "base/Uri.h"
 #include "core/Engine.h"
 #include "core/Version.h"
+#include "http/Probe.h"
 #include "rpc/Dispatcher.h"
 
 #include <random>
@@ -193,6 +194,31 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
 {
   auto& d = dispatcher;
   auto& e = engine;
+
+  d.addAsync("aria2.probe", [&e](json::array& p, Dispatcher::Reply reply) {
+    const auto uri = text(p, 0, "uri");
+    const auto parts = uri::parse(uri);
+    if (!parts || (parts->scheme != "http" && parts->scheme != "https")) {
+      invalid("aria2.probe takes an HTTP or HTTPS URI");
+    }
+    const auto options = taskOptions(e, optionPairs(p, 1));
+    http::probe(e.http(), *options, uri, [reply](http::ProbeResult probe) {
+      json::object result{{"status", std::to_string(probe.status)},
+                          {"finalUrl", probe.finalUrl},
+                          {"contentType", probe.contentType},
+                          {"resumable", probe.resumable ? "true" : "false"}};
+      if (!probe.filename.empty()) {
+        result["filename"] = probe.filename;
+      }
+      if (probe.size >= 0) {
+        result["totalLength"] = std::to_string(probe.size);
+      }
+      if (!probe.error.empty()) {
+        result["error"] = probe.error;
+      }
+      reply(std::move(result));
+    });
+  });
 
   d.add("aria2.addUri", [&e](json::array& p) -> json::value {
     auto options = taskOptions(e, optionPairs(p, 1));

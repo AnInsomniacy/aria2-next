@@ -65,12 +65,7 @@ Network::Network(Engine& engine) : engine_(engine), ticker_(engine.io())
   const auto& global = engine.global();
   addBootstrap(global.get("ed2k-server"), global.get("ed2k-server-list"),
                global.get("ed2k-node-list"));
-  if (global.flag("ed2k-port-mapping")) {
-    portMapper_ =
-        std::make_unique<net::PortMapper>(engine.io(), "aria2-next ED2K");
-    portMapper_->add(net::PortMapper::Protocol::Tcp, tcpPort_);
-    portMapper_->add(net::PortMapper::Protocol::Udp, udpPort_);
-  }
+  updatePortMapping();
   scheduleTick();
   log::info("ED2K: user hash {}, TCP port {}, UDP port {}",
             text::toHex(userHash_), tcpPort_, udpPort_);
@@ -165,6 +160,31 @@ void Network::globalOptionsChanged()
   uploadLimit_.setRate(global.integer("max-overall-upload-limit"));
   downloadLimit_.setRate(global.integer("max-overall-download-limit"));
   uploads_->setSlots(static_cast<int>(global.integer("ed2k-upload-slots")));
+  if (acceptor_ || udp_) {
+    updatePortMapping();
+  }
+}
+
+void Network::updatePortMapping()
+{
+  const bool wanted = engine_.global().flag("ed2k-port-mapping");
+  if (closed_ || wanted == static_cast<bool>(portMapper_)) {
+    return;
+  }
+  if (!wanted) {
+    // Removing the mappings takes a round trip; the mapper lives until then.
+    std::shared_ptr<net::PortMapper> mapper(std::move(portMapper_));
+    mapper->close([mapper] {});
+    return;
+  }
+  portMapper_ =
+      std::make_unique<net::PortMapper>(engine_.io(), "aria2-next ED2K");
+  if (acceptor_) {
+    portMapper_->add(net::PortMapper::Protocol::Tcp, tcpPort_);
+  }
+  if (udp_) {
+    portMapper_->add(net::PortMapper::Protocol::Udp, udpPort_);
+  }
 }
 
 uint32_t Network::clientId() const

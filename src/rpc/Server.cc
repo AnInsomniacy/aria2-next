@@ -45,7 +45,8 @@ public:
   {
     queue_.push_back(std::move(message));
     if (queue_.size() == 1) {
-      asio::co_spawn(ws.get_executor(), drain(shared_from_this()), asio::detached);
+      asio::co_spawn(ws.get_executor(), drain(shared_from_this()),
+                     asio::detached);
     }
   }
 
@@ -84,8 +85,7 @@ struct Server::State : std::enable_shared_from_this<State> {
   std::set<std::shared_ptr<Socket>> sockets;
   bool stopped = false;
 
-  template <typename Body>
-  void decorate(http::response<Body>& response)
+  template <typename Body> void decorate(http::response<Body>& response)
   {
     response.set(http::field::server, "aria2-next");
     if (engine.global().flag("rpc-allow-origin-all")) {
@@ -93,10 +93,29 @@ struct Server::State : std::enable_shared_from_this<State> {
     }
   }
 
-  http::response<http::string_body>
+  // Resumes with the response document once the dispatcher answers.
+  awaitable<std::string> dispatch(std::string body)
+  {
+    co_return co_await
+        asio::async_initiate<decltype(use_awaitable), void(std::string)>(
+            [this, &body](auto handler) {
+              auto shared =
+                  std::make_shared<decltype(handler)>(std::move(handler));
+              dispatcher.handle(body, [shared](std::string reply) {
+                asio::post(asio::get_associated_executor(*shared),
+                           [shared, reply = std::move(reply)]() mutable {
+                             std::move (*shared)(std::move(reply));
+                           });
+              });
+            },
+            use_awaitable);
+  }
+
+  awaitable<http::response<http::string_body>>
   answer(const http::request<http::string_body>& request)
   {
-    http::response<http::string_body> response{http::status::ok, request.version()};
+    http::response<http::string_body> response{http::status::ok,
+                                               request.version()};
     decorate(response);
     response.keep_alive(request.keep_alive());
     const auto target = std::string_view(request.target());
@@ -104,38 +123,40 @@ struct Server::State : std::enable_shared_from_this<State> {
     if (path != "/jsonrpc") {
       response.result(http::status::not_found);
       response.prepare_payload();
-      return response;
+      co_return response;
     }
     if (request.method() == http::verb::options) {
-      response.set(http::field::access_control_allow_methods, "POST, GET, OPTIONS");
+      response.set(http::field::access_control_allow_methods,
+                   "POST, GET, OPTIONS");
       response.set(http::field::access_control_allow_headers,
                    request[http::field::access_control_request_headers]);
       response.set(http::field::access_control_max_age, "1728000");
       response.prepare_payload();
-      return response;
+      co_return response;
     }
     std::string body;
     if (request.method() == http::verb::post) {
-      body = dispatcher.handle(request.body());
+      body = co_await dispatch(request.body());
     }
     else if (request.method() == http::verb::get) {
-      body = dispatcher.handle(getRequest(target));
+      body = co_await dispatch(getRequest(target));
     }
     else {
       response.result(http::status::method_not_allowed);
       response.prepare_payload();
-      return response;
+      co_return response;
     }
     response.set(http::field::content_type, "application/json-rpc");
     response.body() = std::move(body);
     response.prepare_payload();
-    return response;
+    co_return response;
   }
 
   // GET /jsonrpc?method=M&id=I&params=BASE64(JSON array)
   static std::string getRequest(std::string_view target)
   {
-    const auto query = target.substr(std::min(target.find('?') + 1, target.size()));
+    const auto query =
+        target.substr(std::min(target.find('?') + 1, target.size()));
     boost::json::object request{{"jsonrpc", "2.0"}};
     for (const auto& pair : text::split(query, '&')) {
       const auto equals = pair.find('=');
@@ -151,7 +172,8 @@ struct Server::State : std::enable_shared_from_this<State> {
       }
       else if (name == "params") {
         boost::system::error_code error;
-        auto params = boost::json::parse(text::base64Decode(value).value_or(""), error);
+        auto params =
+            boost::json::parse(text::base64Decode(value).value_or(""), error);
         if (!error) {
           request["params"] = std::move(params);
         }
@@ -178,11 +200,13 @@ struct Server::State : std::enable_shared_from_this<State> {
     }
   }
 
-  static awaitable<void> session(std::shared_ptr<State> self, tcp::socket socket)
+  static awaitable<void> session(std::shared_ptr<State> self,
+                                 tcp::socket socket)
   {
     beast::tcp_stream stream(std::move(socket));
     beast::flat_buffer buffer;
-    const auto limit = static_cast<uint64_t>(self->engine.global().integer("rpc-max-request-size"));
+    const auto limit = static_cast<uint64_t>(
+        self->engine.global().integer("rpc-max-request-size"));
     for (;;) {
       http::request_parser<http::string_body> parser;
       parser.body_limit(limit);
@@ -199,7 +223,7 @@ struct Server::State : std::enable_shared_from_this<State> {
         co_await serveSocket(self, stream.release_socket(), std::move(request));
         co_return;
       }
-      auto response = self->answer(request);
+      auto response = co_await self->answer(request);
       co_await http::async_write(stream, response,
                                  asio::redirect_error(use_awaitable, error));
       if (error || !response.keep_alive()) {
@@ -208,28 +232,33 @@ struct Server::State : std::enable_shared_from_this<State> {
     }
   }
 
-  static awaitable<void> serveSocket(std::shared_ptr<State> self, tcp::socket socket,
+  static awaitable<void> serveSocket(std::shared_ptr<State> self,
+                                     tcp::socket socket,
                                      http::request<http::string_body> request)
   {
     auto client = std::make_shared<Socket>(std::move(socket));
-    client->ws.set_option(websocket::stream_base::timeout::suggested(beast::role_type::server));
-    client->ws.read_message_max(
-        static_cast<uint64_t>(self->engine.global().integer("rpc-max-request-size")));
+    client->ws.set_option(
+        websocket::stream_base::timeout::suggested(beast::role_type::server));
+    client->ws.read_message_max(static_cast<uint64_t>(
+        self->engine.global().integer("rpc-max-request-size")));
     boost::system::error_code error;
-    co_await client->ws.async_accept(request, asio::redirect_error(use_awaitable, error));
+    co_await client->ws.async_accept(
+        request, asio::redirect_error(use_awaitable, error));
     if (error) {
       co_return;
     }
     self->sockets.insert(client);
     beast::flat_buffer buffer;
     for (;;) {
-      co_await client->ws.async_read(buffer, asio::redirect_error(use_awaitable, error));
+      co_await client->ws.async_read(
+          buffer, asio::redirect_error(use_awaitable, error));
       if (error) {
         break;
       }
-      auto reply = self->dispatcher.handle(beast::buffers_to_string(buffer.data()));
+      self->dispatcher.handle(
+          beast::buffers_to_string(buffer.data()),
+          [client](std::string reply) { client->send(std::move(reply)); });
       buffer.consume(buffer.size());
-      client->send(std::move(reply));
     }
     self->sockets.erase(client);
   }
@@ -245,7 +274,8 @@ Server::~Server() { stop(); }
 void Server::start()
 {
   auto& engine = state_->engine;
-  const auto port = static_cast<unsigned short>(engine.global().integer("rpc-listen-port"));
+  const auto port =
+      static_cast<unsigned short>(engine.global().integer("rpc-listen-port"));
   const bool all = engine.global().flag("rpc-listen-all");
   std::vector<tcp::endpoint> endpoints = {
       {all ? asio::ip::address(asio::ip::address_v4::any())
@@ -274,15 +304,18 @@ void Server::start()
       acceptor->listen(asio::socket_base::max_listen_connections, error);
     }
     if (error) {
-      failure = fmt::format("{} ({})", error.message(), endpoint.address().to_string());
+      failure = fmt::format("{} ({})", error.message(),
+                            endpoint.address().to_string());
       continue;
     }
-    log::notice("RPC: listening on {} port {}", endpoint.address().to_string(), port);
+    log::notice("RPC: listening on {} port {}", endpoint.address().to_string(),
+                port);
     asio::co_spawn(engine.io(), state_->accept(*acceptor), asio::detached);
     state_->acceptors.push_back(std::move(acceptor));
   }
   if (state_->acceptors.empty()) {
-    fail(ErrorCode::Unknown, "RPC: cannot listen on port {}: {}", port, failure);
+    fail(ErrorCode::Unknown, "RPC: cannot listen on port {}: {}", port,
+         failure);
   }
 }
 

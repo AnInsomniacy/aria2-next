@@ -161,6 +161,15 @@ aria2 JSON-RPC over HTTP POST and WebSocket, with `system.multicall`,
 notifications and the token secret. XML-RPC and JSONP are not provided.
 Extension methods keep their existing names and fields.
 
+`aria2.probe(uri, options)` requests the first byte of an HTTP(S) URL with
+the request settings a task with `options` would use and answers
+`{status, finalUrl, contentType, filename?, totalLength?, resumable, error?}`
+once the response headers arrive (at most 20 s). Clients use it to decide
+whether the engine can take over a download a browser started. It is the
+only asynchronous method: it must be called alone, not in a batch or
+`system.multicall`, and other requests on the same connection are answered
+meanwhile only over WebSocket.
+
 ## State
 
 - Session file: aria2 input-file format, written atomically.

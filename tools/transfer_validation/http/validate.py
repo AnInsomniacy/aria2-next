@@ -493,6 +493,27 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                         or sha256(output) != expected):
                     raise RuntimeError("Automatic output filename mismatch")
             results["automaticFilename"] = "passed"
+            # aria2.probe sees what a download would: redirects with the
+            # cookies they set, the final URL, size and range support.
+            probes = {
+                "direct": engine.rpc.call("aria2.probe", [f"{caddy.base_url}/payload.bin"]),
+                "redirect": engine.rpc.call("aria2.probe", [f"{wiremock.base_url}/download?token=fixture"]),
+                "empty": engine.rpc.call("aria2.probe", [f"{caddy.base_url}/empty.bin"]),
+                "missing": engine.rpc.call("aria2.probe", [f"{caddy.base_url}/missing.bin"]),
+            }
+            for case in ("direct", "redirect"):
+                probe = probes[case]
+                if (probe["status"] != "206" or probe["resumable"] != "true"
+                        or probe["totalLength"] != str(size) or "error" in probe):
+                    raise RuntimeError(f"Probe {case} mismatch: {probe}")
+            if not probes["redirect"]["finalUrl"].endswith("/payload.bin?case=redirect"):
+                raise RuntimeError(f"Probe lost the redirect: {probes['redirect']}")
+            if (probes["empty"]["status"] != "200" or probes["empty"].get("totalLength") != "0"
+                    or "error" in probes["empty"]):
+                raise RuntimeError(f"Probe of an empty file: {probes['empty']}")
+            if probes["missing"]["status"] != "404" or "error" not in probes["missing"]:
+                raise RuntimeError(f"Probe of a missing file: {probes['missing']}")
+            results["probe"] = "passed"
             for name in ("empty.bin", "tiny.bin"):
                 check(name, f"{caddy.base_url}/{name}",
                       digest=sha256(run.fixtures / name))

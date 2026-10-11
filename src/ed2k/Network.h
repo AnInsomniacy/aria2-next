@@ -109,6 +109,8 @@ private:
   void scheduleTick();
   void tick();
   void listen();
+  // Starts or stops the UPnP forwarding to follow ed2k-port-mapping.
+  void updatePortMapping();
 
   Engine& engine_;
   std::unique_ptr<Store> store_;
