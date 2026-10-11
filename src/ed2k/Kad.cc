@@ -153,8 +153,9 @@ void Kad::addNodes(const std::string& path)
   for (const auto& contact : nodes.contacts) {
     table_.addRouterNode(contact);
   }
-  log::info("ED2K: {} Kad nodes from {}",
-            table_.getRouterContacts().size() - before, path);
+  // Contacts restored from the saved routing table are not counted again.
+  log::info("ED2K: {} Kad nodes in {}, {} new", nodes.contacts.size(), path,
+            table_.getRouterContacts().size() - before);
 }
 
 void Kad::save()
