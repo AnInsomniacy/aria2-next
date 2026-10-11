@@ -311,6 +311,24 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             "request": {"method": "GET", "url": "/payload.bin?case=naming-resume"},
             "response": {"proxyBaseUrl": caddy.base_url, "headers": {"Content-Disposition": "attachment; filename=resume%20.bin"}},
         })
+        # A cache that answers a range with the length of a compressed copy
+        # but sends the whole uncompressed body (gh-proxy, rayburst#695).
+        wiremock.file("tiny.bin", run.fixtures / "tiny.bin")
+        wiremock.stub({
+            "priority": 1,
+            "request": {"method": "GET", "url": "/tiny.bin?case=understated",
+                        "headers": {"Range": {"matches": "bytes=.*"}}},
+            "response": {
+                "status": 206, "bodyFileName": "tiny.bin",
+                "headers": {"Content-Range": "bytes 0-9999/10000"},
+                "chunkedDribbleDelay": {"numberOfChunks": 8, "totalDuration": 400},
+            },
+        })
+        wiremock.stub({
+            "priority": 2,
+            "request": {"method": "GET", "url": "/tiny.bin?case=understated"},
+            "response": {"proxyBaseUrl": caddy.base_url},
+        })
         engine = EngineProcess(run, "engine", engine_path)
         session = run.state / "download.session"
         engine.start([f"--save-session={session}"])
@@ -578,6 +596,8 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             check("date.bin", f"{wiremock.base_url}/payload.bin?case=date")
             check("ignored.bin", f"{wiremock.base_url}/payload.bin?case=ignored",
                   restart=True)
+            check("understated.bin", f"{wiremock.base_url}/tiny.bin?case=understated",
+                  digest=hashlib.sha256(block[:60651]).hexdigest(), restart=True)
             ignored_done = time.time()
             # A file the task created is downloaded again when the remote
             # representation changes under it, so progress legitimately

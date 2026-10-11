@@ -147,6 +147,9 @@ private:
   bool owned_ = false;  // the output file belongs to this task
   bool ranged_ = true;  // the server honours byte ranges
   bool single_ = false; // one connection only
+  // A ranged answer carried more than the length it announced: ask for
+  // whole responses from then on.
+  bool rangesDistrusted_ = false;
   int restarts_ = 0;
   int cap_ = 1; // connections allowed after overload feedback
   Clock::time_point calmSince_ = Clock::now();

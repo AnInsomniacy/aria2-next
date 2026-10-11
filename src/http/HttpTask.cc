@@ -838,6 +838,14 @@ size_t HttpTask::receive(Worker& worker, const char* data, size_t size)
     // The assignment ended inside this chunk: take over what follows, or stop.
     std::optional<int> taken;
     if (!planner_.extend(worker.id, taken)) {
+      // Bytes past the end of the file: the announced length is wrong, and
+      // so is whatever the server said about ranges with it.
+      if (planner_.length() >= 0 &&
+          planner_.worker(worker.id)->position >= planner_.length()) {
+        rangesDistrusted_ = true;
+        changed("the server sent more than the length it announced");
+        return 0;
+      }
       worker.done = true;
       break;
     }
@@ -1193,7 +1201,7 @@ void HttpTask::changed(const std::string& why)
   }
   log::notice("{}: {}; restarting from the beginning", gidText(gid()), why);
   // Sources that disagree with each other are served by one stream from now.
-  single_ = single_ || restarts_ > 1;
+  single_ = single_ || restarts_ > 1 || rangesDistrusted_;
   phase_ = Phase::Restarting;
   for (const auto& [id, worker] : std::map(workers_)) {
     worker->cancel();
@@ -1219,7 +1227,7 @@ void HttpTask::restartWhenQuiet()
     reset();
     etag_.clear();
     lastModified_.clear();
-    ranged_ = true;
+    ranged_ = !rangesDistrusted_;
     path_ = path; // reopened with truncation by the next first response
     phase_ = Phase::Probing;
     launch();
@@ -1238,6 +1246,14 @@ void HttpTask::tryFinish()
 {
   if (phase_ != Phase::Running || !planner_.complete()) {
     return;
+  }
+  // A ranged answer without Content-Length may carry more than its
+  // Content-Range announced; it must end by itself so receive() sees that.
+  for (const auto& [id, worker] : workers_) {
+    if (worker->accepted && !worker->done && worker->status == 206 &&
+        worker->contentLength < 0) {
+      return; // finished() calls back
+    }
   }
   for (const auto& [id, worker] : std::map(workers_)) {
     cancelWorker(id);
