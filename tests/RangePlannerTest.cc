@@ -9,7 +9,7 @@ namespace aria2 {
 TEST_CASE("RangePlannerTest.testRestoreAndScheduleGaps")
 {
   RangePlanner planner;
-  planner.restore({{0, 10}, {20, 30}});
+  planner.restore({{0, 10}, {20, 30}}, 50);
   planner.configure(50, 10, {{30, 40}});
 
   REQUIRE_EQ(20, planner.completedLength());
@@ -22,6 +22,19 @@ TEST_CASE("RangePlannerTest.testRestoreAndScheduleGaps")
   CHECK_EQ(40, second->begin);
   CHECK_EQ(50, second->end);
   CHECK(!planner.takeReady({}));
+}
+
+TEST_CASE("RangePlannerTest.testRestoredCompletionNeedsNoResponse")
+{
+  // A download stopped after its last byte was committed resumes complete;
+  // otherwise the next request would ask for an empty range.
+  RangePlanner planner;
+  planner.restore({{0, 50}}, 50);
+  CHECK(planner.complete());
+  planner.restore({{0, 40}}, 50);
+  CHECK_FALSE(planner.complete());
+  CHECK_EQ(40, planner.contiguousLength());
+  CHECK_EQ(50, planner.gapEnd(40, 50));
 }
 
 TEST_CASE("RangePlannerTest.testLocalizedRetry")

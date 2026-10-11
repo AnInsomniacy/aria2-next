@@ -47,6 +47,7 @@
 #include "stream/CurlHandle.h"
 #include "DownloadContext.h"
 #include "DownloadEngine.h"
+#include "Exception.h"
 #include "Log.h"
 #include "Option.h"
 #include "RequestGroup.h"
@@ -215,9 +216,13 @@ bool CurlSession::createHandle(const std::shared_ptr<CurlDownload>& download,
                       ? CURL_HTTP_VERSION_1_1
                       : CURL_HTTP_VERSION_2TLS);
   SET_CURL_OPTION(CURLOPT_NOSIGNAL, 1L);
-  // Keep paused, automatically decoded responses bounded to curl's normal
-  // input chunks; a megabyte of compressed input can expand dramatically.
-  SET_CURL_OPTION(CURLOPT_BUFFERSIZE, static_cast<long>(CURL_MAX_WRITE_SIZE));
+  // libcurl's 16 KiB default limits fast transfers; curl's own tool uses a
+  // larger buffer. Decoded responses keep the default because compressed
+  // input can expand dramatically while a transfer is paused.
+  const bool decoded =
+      !transfer->ranged && taskOption->getAsBool(PREF_HTTP_ACCEPT_GZIP);
+  SET_CURL_OPTION(CURLOPT_BUFFERSIZE,
+                  decoded ? static_cast<long>(CURL_MAX_WRITE_SIZE) : 256L * 1024);
   SET_CURL_OPTION(CURLOPT_TCP_KEEPALIVE, 1L);
   SET_CURL_OPTION(CURLOPT_DNS_CACHE_TIMEOUT, 300L);
   SET_CURL_OPTION(CURLOPT_SOCKOPTFUNCTION, socketOptionCallback);
@@ -320,9 +325,21 @@ bool CurlSession::createHandle(const std::shared_ptr<CurlDownload>& download,
   if (impl.http) {
     SET_CURL_OPTION(CURLOPT_COOKIEFILE, "");
   }
-  if (!taskOption->blank(PREF_LOAD_COOKIES)) {
-    SET_CURL_OPTION(CURLOPT_COOKIEFILE,
-                    taskOption->get(PREF_LOAD_COOKIES).c_str());
+  try {
+    if (const auto result =
+            http::loadCookies(easy, taskOption, loadedCookies_);
+        result != CURLE_OK) {
+      CurlHandle::fail(download.get(), error_code::FILE_OPEN_ERROR,
+                       fmt("Unable to load cookies: %s",
+                           curl_easy_strerror(result)));
+      transfer->reset();
+      return false;
+    }
+  }
+  catch (const Exception& error) {
+    CurlHandle::fail(download.get(), error.getErrorCode(), error.what());
+    transfer->reset();
+    return false;
   }
   if (!taskOption->blank(PREF_SAVE_COOKIES)) {
     SET_CURL_OPTION(CURLOPT_COOKIEJAR,

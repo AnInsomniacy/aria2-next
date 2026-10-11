@@ -23,6 +23,7 @@ set(ARIA2_TEST_SOURCES_BASE
   tests/SingleFileAllocationIteratorTest.cc
   tests/RequestGroupTest.cc
   tests/RangePlannerTest.cc
+  tests/CookieStoreTest.cc
   tests/support/TextMatchTest.cc
   tests/support/TextSplitTest.cc
   tests/support/ContentDispositionTest.cc

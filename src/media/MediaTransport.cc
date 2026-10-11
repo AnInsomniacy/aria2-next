@@ -1,5 +1,6 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
 #include "MediaTransport.h"
+#include "MediaRequest.h"
 #include "MuxInput.h"
 #include "media/MediaDownload.h"
 #include <algorithm>
@@ -16,6 +17,11 @@
 #include <utility>
 #include "MediaFiles.h"
 
+#include "Log.h"
+#include "fmt.h"
+#include <curl/urlapi.h>
+#include <optional>
+#include "support/Numbers.h"
 #include "Option.h"
 #include "prefs.h"
 #include <openssl/evp.h>
@@ -111,9 +117,14 @@ Transport::Transport(const Option* option, std::string source,
   curl_share_setopt(share_, CURLSHOPT_SHARE, CURL_LOCK_DATA_COOKIE);
   curl_share_setopt(share_, CURLSHOPT_SHARE, CURL_LOCK_DATA_DNS);
   curl_share_setopt(share_, CURLSHOPT_SHARE, CURL_LOCK_DATA_SSL_SESSION);
+  // Segment parallelism follows the per-file connection ceiling, bounded so a
+  // large HTTP setting does not flood a segment origin.
+  prefetchLimit_ = static_cast<size_t>(
+      std::clamp(option->getAsInt(PREF_STREAM_MAX_CONNECTIONS), 1, 8) - 1);
 }
 Transport::~Transport()
 {
+  prefetched_.clear();
   curl_multi_cleanup(multi_);
   curl_share_cleanup(share_);
 }
@@ -140,10 +151,12 @@ Resource Transport::get(const std::string& url, int64_t begin, int64_t end,
     if (!output)
       throw std::runtime_error("Cannot store captured manifest");
     suppliedManifests_.insert(url);
-    return {path, url, "", static_cast<int64_t>(manifest->second.size())};
+    Resource resource{path, url, "",
+                      static_cast<int64_t>(manifest->second.size())};
+    learn(resource);
+    return resource;
   }
-  const auto key = fingerprint(url + "\n" + std::to_string(begin) + "\n" +
-                               std::to_string(end));
+  const auto key = resourceKey(url, begin, end);
   auto path = (nativePath(directory_) / key).u8string();
   auto found = retained_.find(key);
   if (cached && found != retained_.end() &&
@@ -160,7 +173,10 @@ Resource Transport::get(const std::string& url, int64_t begin, int64_t end,
     if (control_->cancel)
       throw std::runtime_error("Media transfer interrupted");
     try {
-      auto resource = request(url, begin, end, temporary);
+      control_->connections = static_cast<int>(1 + prefetched_.size());
+      auto fetched = collect(key, url, begin, end, temporary);
+      auto resource = fetched ? std::move(*fetched)
+                              : request(url, begin, end, temporary);
       const auto digest = fileDigest(temporary);
       const auto committed = path + "-" + digest;
       if (std::filesystem::exists(nativePath(committed)) &&
@@ -171,6 +187,10 @@ Resource Transport::get(const std::string& url, int64_t begin, int64_t end,
         std::filesystem::rename(nativePath(temporary), nativePath(committed));
       }
       resource.path = committed;
+      learn(resource);
+      if (cached)
+        prefetchAfter(key);
+      control_->connections = static_cast<int>(prefetched_.size());
       return resource;
     }
     catch (const HttpError& error) {
@@ -182,6 +202,118 @@ Resource Transport::get(const std::string& url, int64_t begin, int64_t end,
       std::unique_lock<std::mutex> lock(control_->mutex);
       control_->wake.wait_for(lock, std::chrono::seconds(delay),
                               [&] { return control_->cancel.load(); });
+    }
+  }
+}
+
+std::string Transport::resourceKey(const std::string& url, int64_t begin,
+                                   int64_t end)
+{
+  return fingerprint(url + "\n" + std::to_string(begin) + "\n" +
+                     std::to_string(end));
+}
+
+void Transport::invalidate()
+{
+  retained_.clear();
+  prefetched_.clear();
+  playlists_.clear();
+  positions_.clear();
+}
+
+void Transport::learn(const Resource& resource)
+{
+  constexpr int64_t maximumPlaylist = 16 * 1024 * 1024;
+  if (resource.size <= 0 || resource.size > maximumPlaylist)
+    return;
+  std::ifstream input(nativePath(resource.path), std::ios::binary);
+  std::string line;
+  if (!std::getline(input, line) || line.rfind("#EXTM3U", 0) != 0)
+    return;
+  std::unique_ptr<CURLU, decltype(&curl_url_cleanup)> base(curl_url(),
+                                                           curl_url_cleanup);
+  if (!base ||
+      curl_url_set(base.get(), CURLUPART_URL, resource.url.c_str(), 0) !=
+          CURLUE_OK)
+    return;
+  std::vector<Location> entries;
+  std::optional<std::pair<int64_t, int64_t>> range;
+  int64_t nextOffset = 0;
+  bool media = false;
+  while (std::getline(input, line)) {
+    if (!line.empty() && line.back() == '\r')
+      line.pop_back();
+    if (line.rfind("#EXTINF:", 0) == 0) {
+      media = true;
+      continue;
+    }
+    if (line.rfind("#EXT-X-BYTERANGE:", 0) == 0) {
+      // length[@offset]; without an offset the range follows the previous one.
+      // Prefetch is an optimization; the native client validates playlists.
+      const auto value = line.substr(17);
+      const auto at = value.find('@');
+      int64_t length = 0, offset = nextOffset;
+      if (!util::parseLLIntNoThrow(length, value.substr(0, at)) ||
+          (at != std::string::npos &&
+           !util::parseLLIntNoThrow(offset, value.substr(at + 1))) ||
+          length <= 0 || offset < 0)
+        return;
+      range = std::make_pair(offset, offset + length - 1);
+      nextOffset = offset + length;
+      continue;
+    }
+    if (line.empty() || line.front() == '#')
+      continue;
+    std::unique_ptr<CURLU, decltype(&curl_url_cleanup)> target(
+        curl_url_dup(base.get()), curl_url_cleanup);
+    char* resolved = nullptr;
+    if (target &&
+        curl_url_set(target.get(), CURLUPART_URL, line.c_str(), 0) ==
+            CURLUE_OK &&
+        curl_url_get(target.get(), CURLUPART_URL, &resolved, 0) == CURLUE_OK) {
+      std::unique_ptr<char, decltype(&curl_free)> owned(resolved, curl_free);
+      entries.push_back(range ? Location{resolved, range->first, range->second}
+                              : Location{resolved});
+    }
+    range.reset();
+  }
+  if (!media)
+    return;
+  for (auto position = positions_.begin(); position != positions_.end();) {
+    if (position->second.first == resource.url)
+      position = positions_.erase(position);
+    else
+      ++position;
+  }
+  for (size_t i = 0; i < entries.size(); ++i)
+    positions_[resourceKey(entries[i].url, entries[i].begin, entries[i].end)] =
+        {resource.url, i};
+  playlists_[resource.url] = std::move(entries);
+}
+
+void Transport::prefetchAfter(const std::string& key)
+{
+  const auto position = positions_.find(key);
+  if (position == positions_.end() || prefetchLimit_ == 0)
+    return;
+  const auto& entries = playlists_[position->second.first];
+  for (auto index = position->second.second + 1;
+       index < entries.size() && prefetched_.size() < prefetchLimit_; ++index) {
+    const auto& entry = entries[index];
+    const auto next = resourceKey(entry.url, entry.begin, entry.end);
+    if (prefetched_.count(next) || retained_.count(next))
+      continue;
+    try {
+      auto transfer =
+          open(entry.url, entry.begin, entry.end,
+               (nativePath(directory_) / next).u8string() + ".partial");
+      transfer->start();
+      prefetched_.emplace(next, std::move(transfer));
+    }
+    catch (const std::exception& error) {
+      A2_LOG_DEBUG(fmt("component=media event=prefetch_skipped message=%s",
+                       error.what()));
+      return;
     }
   }
 }

@@ -173,7 +173,7 @@ Prebuilt artifacts are published on the [GitHub Releases](https://github.com/AnI
 | macOS | Intel | `aria2-next-<version>-macos-x86_64` |
 | Windows | x86_64 | `aria2-next-<version>-windows-x86_64.exe` |
 | Windows | ARM64 | `aria2-next-<version>-windows-arm64.exe` |
-| Android | ARM64 | `aria2-next-<version>-android-arm64` |
+| Android 7.0+ | ARM64 | `aria2-next-<version>-android-arm64` |
 | Checksums | all release assets | `aria2-next-<version>-checksums.sha256` |
 
 Linux, macOS, and Android downloads are executable files. If your browser clears the executable bit, run `chmod +x ./aria2-next-<version>-<platform>`.

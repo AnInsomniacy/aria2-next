@@ -19,7 +19,7 @@ namespace aria2::stream {
 class IoQueue {
   static boost::asio::thread_pool& pool()
   {
-    static boost::asio::thread_pool value(2);
+    static boost::asio::thread_pool value(4);
     return value;
   }
   struct Operation {
@@ -33,7 +33,7 @@ class IoQueue {
   size_t bytes_ = 0;
 
 public:
-  static constexpr size_t capacity = 8 * 1024 * 1024;
+  static constexpr size_t capacity = 32 * 1024 * 1024;
   template <class F> void submit(F work, int64_t begin = 0, size_t bytes = 0)
   {
     auto task = std::make_shared<std::packaged_task<void()>>(std::move(work));

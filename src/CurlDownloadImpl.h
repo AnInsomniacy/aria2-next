@@ -90,7 +90,10 @@ struct CurlDownloadImpl {
   std::shared_ptr<DiskWriter> writer;
   stream::IoQueue io;
   std::optional<bool> pendingStop;
-  std::optional<std::pair<error_code::Value, std::string>> pendingFailure;
+  // The first reported failure wins. Native callbacks only record it; the
+  // session performs the single terminal transition once output I/O drains.
+  std::optional<std::pair<error_code::Value, std::string>> failure;
+  bool failing = false;
   bool retainFailure = true;
   std::string pendingRestart;
   std::optional<curl_off_t> pendingFinalize;

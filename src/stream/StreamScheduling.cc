@@ -58,20 +58,11 @@
 
 namespace aria2 {
 namespace {
-constexpr int64_t rangePipelineDepth = 2;
-
-int64_t adaptiveRangeSize(int64_t length, int maxConnections, int64_t quantum)
+// Ranges are split no finer than one piece; every split costs a request.
+int64_t minimumSplit(const RequestGroup* group)
 {
-  length = std::max<int64_t>(0, length);
-  quantum = std::max<int64_t>(1, quantum);
-  if (maxConnections <= 1) {
-    return std::max(quantum, length);
-  }
-  const auto targetRanges =
-      static_cast<int64_t>(maxConnections) * rangePipelineDepth;
-  const auto target =
-      std::max<int64_t>(quantum, (length - 1) / targetRanges + 1);
-  return ((target + quantum - 1) / quantum) * quantum;
+  return std::max<int64_t>(1_m,
+                           group->getOption()->getAsInt(PREF_PIECE_LENGTH));
 }
 } // namespace
 
@@ -99,19 +90,44 @@ void CurlSession::configurePlanner(
   if (!impl.rangeValidated) {
     return;
   }
-  const auto quantum = std::max<int64_t>(
-      1_m, impl.group->getOption()->getAsInt(PREF_PIECE_LENGTH));
-  const auto naturalSize =
-      adaptiveRangeSize(total, impl.maxConnections, quantum);
-  const auto rangeSize = impl.maxRangeSize > 0
-                             ? std::min(naturalSize, impl.maxRangeSize)
-                             : naturalSize;
+  // Gaps stay whole; idle connections split the largest remaining range.
+  const auto rangeSize = impl.maxRangeSize > 0 ? impl.maxRangeSize : total;
   auto active = activeLeases(download);
   if (retainedLease && !retainedLease->empty()) {
     active.push_back(*retainedLease);
   }
   impl.planner.configure(total, rangeSize, active);
   impl.plannerConfigured = true;
+  // Spread the live first response over the available connections at once;
+  // its connection keeps the first part and stops at that boundary.
+  const auto primary =
+      std::find_if(impl.handles.begin(), impl.handles.end(),
+                   [](const auto& handle) {
+                     return handle->primary && handle->value &&
+                            handle->rangeAccepted && !handle->completed;
+                   });
+  if (primary != impl.handles.end() && impl.maxRangeSize == 0) {
+    // Parts are whole pieces from the range start, so boundaries do not
+    // depend on how many bytes arrived before the response was validated.
+    auto& lease = (*primary)->lease;
+    const auto quantum = minimumSplit(impl.group);
+    const auto length = lease.end - lease.begin;
+    const auto parts = std::min<int64_t>(
+        static_cast<int64_t>(impl.connectionLimit), length / quantum);
+    if (parts > 1) {
+      const int64_t size = (length / parts + quantum - 1) / quantum * quantum;
+      auto boundary = lease.begin + size;
+      while (boundary <= (*primary)->writeOffset) {
+        boundary += size;
+      }
+      for (auto offset = boundary; offset < lease.end; offset += size) {
+        impl.planner.enqueue({offset,
+                              std::min<int64_t>(lease.end, offset + size), 0,
+                              lease.uriIndex});
+      }
+      lease.end = std::min(lease.end, boundary);
+    }
+  }
   // Workers retain their transport choice as they pull ranges. Fast workers
   // naturally claim more work; no task-wide address-family winner is needed.
   impl.idleWorkers.clear();
@@ -152,7 +168,7 @@ void CurlSession::schedule(const std::shared_ptr<CurlDownload>& download)
     return;
   }
   configurePlanner(download);
-  if (download->failed()) {
+  if (impl.failure) {
     return;
   }
 
@@ -207,17 +223,15 @@ void CurlSession::schedule(const std::shared_ptr<CurlDownload>& download)
   }
 
   rewardConnectionLimit(download);
-  const auto pieceLength = std::max<int64_t>(
-      1_m, impl.group->getOption()->getAsInt(PREF_PIECE_LENGTH));
+  const auto pieceLength = minimumSplit(impl.group);
   bool scheduled = false;
   for (;;) {
-    const auto remaining =
-        std::max<int64_t>(0, download->snapshot_.totalLength -
-                                 download->snapshot_.completedLength);
-    const auto preferredPiece =
-        adaptiveRangeSize(remaining, impl.connectionLimit, pieceLength);
-    impl.planner.refillReady(static_cast<size_t>(impl.connectionLimit),
-                             preferredPiece, pieceLength);
+    const auto open =
+        static_cast<size_t>(impl.connectionLimit) > impl.handles.size()
+            ? static_cast<size_t>(impl.connectionLimit) - impl.handles.size()
+            : 0;
+    impl.planner.refillReady(std::min(open, impl.idleWorkers.size()),
+                             2 * pieceLength, pieceLength);
     auto available = impl.idleWorkers.size();
     while (impl.handles.size() < static_cast<size_t>(impl.connectionLimit) &&
            available-- > 0) {
@@ -286,8 +300,7 @@ bool CurlSession::rebalanceEndgame(
     return false;
   }
   const auto capacity = static_cast<size_t>(impl.connectionLimit);
-  if (capacity <= 1 || active >= capacity || globalDownloadLimit_ > 0 ||
-      impl.group->getMaxDownloadSpeedLimit() > 0) {
+  if (capacity <= 1 || active >= capacity || impl.idleWorkers.empty()) {
     return false;
   }
   // Deferred retries still own work. Creating helpers during their cooldown
@@ -300,8 +313,8 @@ bool CurlSession::rebalanceEndgame(
                   })) {
     return false;
   }
-  // Assign idle workers the largest unfinished suffix, preserving the live
-  // prefix. Splitting does not need to predict a connection's future speed.
+  // Give an idle connection the second half of the largest unfinished range,
+  // preserving the live prefix. Splitting needs no speed prediction.
   CurlHandle* handle = nullptr;
   int64_t largest = 0;
   long double longest = 0;
@@ -313,6 +326,8 @@ bool CurlSession::rebalanceEndgame(
         !candidate->rangeAccepted || remaining <= 0) {
       continue;
     }
+    // Any range worth one more request is split; waiting for a slow
+    // connection costs far more than the extra request.
     if (remaining >= 2 * 64_k) {
       if (remaining > largest) {
         largest = remaining;
@@ -502,20 +517,11 @@ void CurlSession::advance(const std::shared_ptr<CurlDownload>& download)
         [&](int64_t begin, int64_t end) { impl.planner.commit(begin, end); });
   }
   catch (const Exception& error) {
-    if (!impl.pendingFailure || impl.retainFailure)
-      impl.finalCheckpointQueued = false;
     failTask(download, error.getErrorCode(), error.what(), false);
     return;
   }
   catch (const std::exception& error) {
-    if (!impl.pendingFailure || impl.retainFailure)
-      impl.finalCheckpointQueued = false;
     failTask(download, error_code::FILE_IO_ERROR, error.what(), false);
-    return;
-  }
-  if (download->failed() && !impl.pendingFailure) {
-    failTask(download, download->snapshot_.errorCode,
-             download->snapshot_.error);
     return;
   }
   if (download->stopped())
@@ -524,9 +530,9 @@ void CurlSession::advance(const std::shared_ptr<CurlDownload>& download)
     engine_->setRefreshInterval(std::chrono::milliseconds(10));
   download->snapshot_.completedLength =
       impl.planner.completedLength() + stream::bufferedLength(impl);
-  if (impl.pendingFailure) {
-    auto failure = *impl.pendingFailure;
-    failTask(download, failure.first, failure.second, impl.retainFailure);
+  if (impl.failure) {
+    failTask(download, impl.failure->first, impl.failure->second,
+             impl.failing ? impl.retainFailure : true);
     return;
   }
   if (impl.pendingStop) {

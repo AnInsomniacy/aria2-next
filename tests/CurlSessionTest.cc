@@ -12,6 +12,8 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <future>
+#include <limits>
 #include <thread>
 #include "CurlSession.h"
 #include "transport/CurlOptions.h"
@@ -140,6 +142,8 @@ public:
   void testEndpointOrigin();
   void testValidatedEndpoint();
   void testNativeTimerPreservesEarlierWakeup();
+  void testRecordedFailureTerminatesAfterOutputDrains();
+  void testStaleContentRangeIsRejectedNotFatal();
   void respond(CurlHandle& handle, long code, const std::string& range = {},
                const std::string& etag = {}, const std::string& modified = {},
                const std::string& date = {});
@@ -448,8 +452,8 @@ void CurlSessionTest::testTailRecovery()
   REQUIRE(handle->value);
   handle->rangeAccepted = true;
   handle->download = download.get();
-  handle->lease = {0, 1_m};
-  handle->responseRangeEnd = 1_m;
+  handle->lease = {0, 8_m};
+  handle->responseRangeEnd = 8_m;
   handle->writeOffset = 80_k;
   global::wallclock().reset();
   handle->bodySampleStart = global::wallclock();
@@ -461,9 +465,8 @@ void CurlSessionTest::testTailRecovery()
   for (int i = 0; i < 32; ++i) {
     impl.handles.push_back(make_unique<CurlHandle>());
   }
-  group.setMaxDownloadSpeedLimit(1_k);
   CHECK(!session->rebalanceEndgame(download, 1_m));
-  group.setMaxDownloadSpeedLimit(0);
+  impl.idleWorkers.push_back(CURL_IPRESOLVE_WHATEVER);
   auto* retrying = impl.handles.back().get();
   retrying->lease.attempts = 1;
   CHECK(!session->rebalanceEndgame(download, 1_m));
@@ -478,10 +481,10 @@ void CurlSessionTest::testTailRecovery()
   auto lease = impl.planner.takeReady({});
   REQUIRE(lease);
   CHECK_EQ(donor->lease.end, lease->begin);
-  CHECK_EQ(1_m, lease->end);
+  CHECK_EQ(8_m, lease->end);
   CHECK(!impl.planner.takeReady({}));
 
-  std::string body(static_cast<size_t>(1_m - donor->writeOffset), 'x');
+  std::string body(static_cast<size_t>(8_m - donor->writeOffset), 'x');
   CHECK_EQ(CURL_WRITEFUNC_ERROR,
            CurlHandle::writeData(body.data(), 1, body.size(), donor));
   CHECK_EQ(lease->begin, donor->writeOffset);
@@ -496,8 +499,8 @@ void CurlSessionTest::testTailRecovery()
   CHECK_EQ(error_code::UNDEFINED, download->snapshot_.errorCode);
   impl.planner.commit(0, 80_k);
   RangePlanner restored;
-  restored.restore(impl.planner.completedRanges());
-  restored.configure(1_m, 1_m, {});
+  restored.restore(impl.planner.completedRanges(), 8_m);
+  restored.configure(8_m, 8_m, {});
   auto missing = restored.takeReady({});
   REQUIRE(missing);
   CHECK_EQ(lease->begin, missing->begin);
@@ -900,5 +903,74 @@ void CurlSessionTest::testDiskFailureDuringPause()
   CHECK_EQ(0, impl.planner.completedLength());
   CHECK_FALSE(impl.io.busy());
   CHECK_FALSE(impl.pendingStop);
+}
+} // namespace aria2
+
+namespace aria2 {
+TEST_CASE_FIXTURE(CurlSessionTest,
+                  "CurlSessionTest.testRecordedFailureTerminatesAfterOutputDrains")
+{
+  testRecordedFailureTerminatesAfterOutputDrains();
+}
+void CurlSessionTest::testRecordedFailureTerminatesAfterOutputDrains()
+{
+  // A callback failure recorded while output I/O is pending must still end
+  // the task as an error once the I/O drains, never remain active.
+  auto option = std::make_shared<Option>();
+  OptionParser::getInstance()->parseDefaultValues(*option);
+  option->put(PREF_STATE_DIR, A2_TEST_OUT_DIR "/curl-recorded-failure");
+  DownloadEngine engine(make_unique<SelectEventPoll>());
+  engine.setOption(option.get());
+  auto* session = engine.getCurlSession();
+  session->engine_ = &engine;
+  auto group = std::make_shared<RequestGroup>(GroupId::create(), option);
+  auto download = std::make_shared<CurlDownload>(
+      std::vector<std::string>{"https://example.test/file"});
+  auto& impl = *download->impl_;
+  impl.group = group.get();
+  impl.writer = std::make_shared<ByteArrayDiskWriter>();
+  download->snapshot_.state = CurlSnapshot::State::Active;
+  std::promise<void> release;
+  auto released = release.get_future().share();
+  impl.io.submit([released] { released.wait(); });
+  CurlHandle::fail(download.get(), error_code::HTTP_PROTOCOL_ERROR, "first");
+  CurlHandle::fail(download.get(), error_code::NETWORK_PROBLEM, "second");
+  session->advance(download);
+  CHECK_FALSE(download->stopped());
+  release.set_value();
+  const auto deadline =
+      std::chrono::steady_clock::now() + std::chrono::seconds(2);
+  while (!download->stopped() && std::chrono::steady_clock::now() < deadline) {
+    session->advance(download);
+    std::this_thread::yield();
+  }
+  REQUIRE(download->failed());
+  CHECK_EQ(error_code::HTTP_PROTOCOL_ERROR, download->snapshot_.errorCode);
+  CHECK_EQ("first", download->snapshot_.error);
+  session->discardRecovery(download);
+}
+
+TEST_CASE_FIXTURE(CurlSessionTest,
+                  "CurlSessionTest.testStaleContentRangeIsRejectedNotFatal")
+{
+  testStaleContentRangeIsRejectedNotFatal();
+}
+void CurlSessionTest::testStaleContentRangeIsRejectedNotFatal()
+{
+  // Some caches declare a stale Content-Range and send a longer body. The
+  // response is rejected so completion can restart without ranges.
+  CurlDownload download({"https://example.test/file"});
+  download.impl_->writer = std::make_shared<ByteArrayDiskWriter>();
+  CurlHandle handle;
+  handle.download = &download;
+  handle.ranged = true;
+  handle.lease = {0, std::numeric_limits<int64_t>::max()};
+  respond(handle, 206, "bytes 0-9/10");
+  REQUIRE(handle.rangeAccepted);
+  std::string body(32, 'x');
+  CHECK_EQ(CURL_WRITEFUNC_ERROR,
+           CurlHandle::writeData(body.data(), 1, body.size(), &handle));
+  CHECK_EQ(CurlResponseFailure::InvalidRange, handle.responseFailure);
+  CHECK_FALSE(download.impl_->failure);
 }
 } // namespace aria2

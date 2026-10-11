@@ -42,6 +42,7 @@ set(ARIA2_SOURCES_BASE
   src/stream/IoQueue.h
   src/stream/CurlHandle.cc
   src/transport/CurlMulti.cc
+  src/transport/CookieStore.cc
   src/transport/CurlOptions.cc
   src/transport/HttpHeaders.cc
   src/media/MediaDownload.cc

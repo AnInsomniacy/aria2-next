@@ -13,6 +13,8 @@ struct Output {
   AVFormatContext* context = nullptr;
   std::map<std::pair<int, unsigned>, unsigned> mapping;
   std::map<int, size_t> written;
+  // Last decoding timestamp written per output stream, in its time base.
+  std::map<int, int64_t> lastDts;
   ~Output();
 };
 void remux(Output&, Inputs&, const std::string& path, const std::string& format,

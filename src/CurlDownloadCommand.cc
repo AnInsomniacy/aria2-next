@@ -19,6 +19,8 @@
 #include "CurlDownload.h"
 #include "CurlDownloadImpl.h"
 #include "CurlSession.h"
+#include "Exception.h"
+#include "stream/CurlHandle.h"
 #include "DownloadEngine.h"
 #include "RequestGroup.h"
 #include "error_code.h"
@@ -45,11 +47,23 @@ CurlDownloadCommand::~CurlDownloadCommand() { group_->decreaseNumCommand(); }
 
 bool CurlDownloadCommand::execute()
 {
-  session_->advance(download_);
-  session_->armTimeout();
-  if (group_->isHaltRequested() && !download_->impl_->stopRequested) {
-    session_->stop(download_,
-                   group_->isPauseRequested() || group_->isShutdownRequested());
+  // A task failure must never escape into the engine loop, which would end
+  // every other download and the RPC server with it.
+  try {
+    session_->advance(download_);
+    session_->armTimeout();
+    if (group_->isHaltRequested() && !download_->impl_->stopRequested) {
+      session_->stop(download_, group_->isPauseRequested() ||
+                                    group_->isShutdownRequested());
+    }
+  }
+  catch (const Exception& error) {
+    CurlHandle::fail(download_.get(), error.getErrorCode(), error.what());
+    engine_->setNoWait(true);
+  }
+  catch (const std::exception& error) {
+    CurlHandle::fail(download_.get(), error_code::UNKNOWN_ERROR, error.what());
+    engine_->setNoWait(true);
   }
   if (download_->failed()) {
     const auto& snapshot = download_->snapshot();

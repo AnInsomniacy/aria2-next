@@ -39,6 +39,7 @@ struct CurlHandle {
                                     long responseCode);
   static void rememberEndpoint(CurlHandle& handle);
   static std::string gid(const CurlDownload* download);
+  // Records the task's first failure; CurlSession::failTask terminates it.
   static void fail(CurlDownload* download, error_code::Value code,
                    const std::string& message) noexcept;
   static void validateResponse(CurlHandle& handle,
@@ -77,6 +78,9 @@ struct CurlHandle {
   bool headersComplete = false;
   bool primary = false;
   bool pausedForDisk = false;
+  // --continue adopted an existing file after this response had started at
+  // offset zero; the task resumes after the adopted prefix instead.
+  bool superseded = false;
   std::optional<CURLcode> completed;
   bool manualRedirect = false;
   unsigned redirects = 0;

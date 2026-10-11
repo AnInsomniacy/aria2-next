@@ -22,6 +22,12 @@ std::string noProxyFor(const std::string& rules, const std::string& url);
 // Returns the first native option failure without changing caller error policy.
 CURLcode configureTls(CURL* handle, const Option* option);
 
+// Applies load-cookies to a handle attached to a shared cookie jar. Browser
+// SQLite stores are converted and loaded once per store revision; `loaded`
+// records the revision already present in that jar. Throws on unreadable
+// stores.
+CURLcode loadCookies(CURL* handle, const Option* option, std::string& loaded);
+
 } // namespace http
 } // namespace aria2
 #endif

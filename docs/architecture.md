@@ -84,8 +84,11 @@ rejected responses never create provisional files. libcurl's native header and
 URL information provide the accepted response metadata. New tasks reserve an unused
 path, including active-task reservations, and create it exclusively. Recovery requires
 the same persisted GID, URL and path; matching file sizes never establish ownership.
-`continue` does not adopt an unrelated file. A full restart can truncate only an
-output created or recovered by that task (or an explicitly permitted overwrite).
+As in aria2, `continue` resumes an existing file without recovery state as data
+written sequentially from its beginning. If the server cannot resume it, or the
+file is larger than the remote resource, the task fails and the file is left
+unchanged. A full restart can truncate only an output created or recovered by
+that task (or an explicitly permitted overwrite).
 
 Precedence is explicit `out` or persisted path, browser-resolved hint, final
 Content-Disposition, suggested hint, original URL `filename=` query, final URL

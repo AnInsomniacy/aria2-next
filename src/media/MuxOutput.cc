@@ -134,6 +134,23 @@ void remux(Output& out, std::vector<std::unique_ptr<Input>>& inputs,
                          out.context->streams[packet->stream_index]->time_base);
     packet->pos = -1;
     const auto index = packet->stream_index;
+    // Segment boundaries can repeat or step back a decoding timestamp. Muxers
+    // reject that for audio and video; like FFmpeg's own remuxer, advance it
+    // by one tick and keep presentation at or after decoding. Simultaneous
+    // subtitle cues legitimately share a timestamp.
+    if (packet->dts != AV_NOPTS_VALUE) {
+      const auto type =
+          out.context->streams[index]->codecpar->codec_type;
+      const int64_t step =
+          type == AVMEDIA_TYPE_SUBTITLE || type == AVMEDIA_TYPE_DATA ? 0 : 1;
+      const auto last = out.lastDts.find(index);
+      if (last != out.lastDts.end() && packet->dts < last->second + step) {
+        packet->dts = last->second + step;
+        if (packet->pts != AV_NOPTS_VALUE && packet->pts < packet->dts)
+          packet->pts = packet->dts;
+      }
+      out.lastDts[index] = packet->dts;
+    }
     check(av_interleaved_write_frame(out.context, packet));
     ++out.written[index];
     next->next();

@@ -1,5 +1,6 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
 #include "MediaTransport.h"
+#include "MediaRequest.h"
 #include "BufferedFile.h"
 #include "Option.h"
 #include "Log.h"
@@ -11,6 +12,7 @@
 #include <chrono>
 #include <curl/header.h>
 #include <memory>
+#include <optional>
 #include <sstream>
 
 namespace aria2::media {
@@ -31,131 +33,123 @@ HttpError::HttpError(long status, CURLcode result, curl_off_t delay)
 {
 }
 
-namespace {
-// Each hop owns its easy handle and header storage. The task's multi handle
-// retains connections; its share handle retains native DNS/TLS/cookie state.
-class Request {
-public:
-  Request(CURLM* multi, Control* control, const std::string& path)
-      : multi_(multi), control_(control), output_(path.c_str(), "wb")
-  {
-    if (!easy_ || !output_)
-      throw std::runtime_error("Cannot open media HTTP request");
-    std::lock_guard<std::mutex> lock(control_->mutex);
-    metadata_ = control_->snapshot.state == "probing";
-    set(CURLOPT_WRITEFUNCTION, write);
-    set(CURLOPT_WRITEDATA, this);
-    set(CURLOPT_XFERINFOFUNCTION, progress);
-    set(CURLOPT_XFERINFODATA, control_);
-    set(CURLOPT_NOPROGRESS, 0L);
-  }
+Request::Request(CURLM* multi, Control* control, const std::string& path,
+                 std::map<CURL*, CURLcode>& completed)
+    : multi_(multi),
+      control_(control),
+      completed_(completed),
+      output_(path.c_str(), "wb")
+{
+  if (!easy_ || !output_)
+    throw std::runtime_error("Cannot open media HTTP request");
+  std::lock_guard<std::mutex> lock(control_->mutex);
+  metadata_ = control_->snapshot.state == "probing";
+  set(CURLOPT_WRITEFUNCTION, write);
+  set(CURLOPT_WRITEDATA, this);
+  set(CURLOPT_XFERINFOFUNCTION, progress);
+  set(CURLOPT_XFERINFODATA, control_);
+  set(CURLOPT_NOPROGRESS, 0L);
+}
 
-  template <typename T> void set(CURLoption option, T value)
-  {
-    const auto result = curl_easy_setopt(easy_.get(), option, value);
-    if (result != CURLE_OK)
-      throw std::runtime_error(curl_easy_strerror(result));
-  }
+Request::~Request() { detach(); }
 
-  void header(const std::string& line)
-  {
-    auto* next = curl_slist_append(headers_.get(), line.c_str());
-    if (!next)
-      throw std::bad_alloc();
-    headers_.release();
-    headers_.reset(next);
-    set(CURLOPT_HTTPHEADER, headers_.get());
-  }
+void Request::detach() noexcept
+{
+  if (!started_)
+    return;
+  curl_multi_remove_handle(multi_, handle());
+  completed_.erase(handle());
+  started_ = false;
+}
 
-  CURL* handle() const { return easy_.get(); }
-  size_t bytes() const { return bytes_; }
+void Request::header(const std::string& line)
+{
+  auto* next = curl_slist_append(headers_.get(), line.c_str());
+  if (!next)
+    throw std::bad_alloc();
+  headers_.release();
+  headers_.reset(next);
+  set(CURLOPT_HTTPHEADER, headers_.get());
+}
 
-  void perform()
-  {
-    if (curl_multi_add_handle(multi_, handle()) != CURLM_OK)
-      throw std::runtime_error("Cannot schedule media transfer");
-    struct Scheduled {
-      CURLM* multi;
-      CURL* easy;
-      Control* control;
-      ~Scheduled()
-      {
-        curl_multi_remove_handle(multi, easy);
-        control->connections = 0;
-      }
-    } scheduled{multi_, handle(), control_};
-    control_->connections = 1;
+void Request::start()
+{
+  if (started_)
+    return;
+  if (curl_multi_add_handle(multi_, handle()) != CURLM_OK)
+    throw std::runtime_error("Cannot schedule media transfer");
+  started_ = true;
+}
+
+void Request::perform()
+{
+  start();
+  CURLMcode multiResult = CURLM_OK;
+  auto done = completed_.find(handle());
+  while (done == completed_.end() && !control_->cancel) {
     int running = 0;
-    CURLMcode multiResult;
-    do {
-      set(CURLOPT_MAX_RECV_SPEED_LARGE,
-          static_cast<curl_off_t>(control_->downloadLimit.load()));
-      multiResult = curl_multi_perform(multi_, &running);
-      if (multiResult != CURLM_OK || !running || control_->cancel)
-        break;
-      multiResult = curl_multi_poll(multi_, nullptr, 0, 100, nullptr);
-    } while (multiResult == CURLM_OK);
-    CURLcode result = CURLE_ABORTED_BY_CALLBACK;
+    multiResult = curl_multi_perform(multi_, &running);
+    if (multiResult != CURLM_OK)
+      break;
     int remaining = 0;
     while (auto* message = curl_multi_info_read(multi_, &remaining))
-      if (message->msg == CURLMSG_DONE && message->easy_handle == handle())
-        result = message->data.result;
-    if (output_.close() != 0)
-      throw std::runtime_error("Cannot close media cache file");
-    if (metadataTooLarge_)
-      throw Failure(FailureCode::UnsupportedSource,
-                    "Media inspection metadata exceeds 16 MiB");
-    long status = 0;
-    curl_off_t retryAfter = 0;
-    curl_easy_getinfo(handle(), CURLINFO_RESPONSE_CODE, &status);
-    curl_easy_getinfo(handle(), CURLINFO_RETRY_AFTER, &retryAfter);
-    if (result != CURLE_OK || multiResult != CURLM_OK || status >= 400)
-      throw HttpError(status, result, retryAfter);
+      if (message->msg == CURLMSG_DONE)
+        completed_[message->easy_handle] = message->data.result;
+    done = completed_.find(handle());
+    if (done != completed_.end())
+      break;
+    multiResult = curl_multi_poll(multi_, nullptr, 0, 100, nullptr);
+    if (multiResult != CURLM_OK)
+      break;
   }
+  const auto result =
+      done == completed_.end() ? CURLE_ABORTED_BY_CALLBACK : done->second;
+  detach();
+  if (output_.close() != 0)
+    throw std::runtime_error("Cannot close media cache file");
+  if (metadataTooLarge_)
+    throw Failure(FailureCode::UnsupportedSource,
+                  "Media inspection metadata exceeds 16 MiB");
+  long status = 0;
+  curl_off_t retryAfter = 0;
+  curl_easy_getinfo(handle(), CURLINFO_RESPONSE_CODE, &status);
+  curl_easy_getinfo(handle(), CURLINFO_RETRY_AFTER, &retryAfter);
+  if (result != CURLE_OK || multiResult != CURLM_OK || status >= 400)
+    throw HttpError(status, result, retryAfter);
+}
 
-private:
-  static size_t write(char* data, size_t size, size_t count,
+size_t Request::write(char* data, size_t size, size_t count,
                       void* opaque) noexcept
-  {
-    auto& request = *static_cast<Request*>(opaque);
-    if (request.control_->cancel)
-      return CURL_WRITEFUNC_ERROR;
-    const auto length = size * count;
-    long status = 0;
-    curl_easy_getinfo(request.handle(), CURLINFO_RESPONSE_CODE, &status);
-    if (status >= 300 && status < 400)
-      return length;
-    if (request.metadata_ && length > 16 * 1024 * 1024 - request.bytes_) {
-      request.metadataTooLarge_ = true;
-      return CURL_WRITEFUNC_ERROR;
-    }
-    if (request.output_.write(data, length) != length)
-      return CURL_WRITEFUNC_ERROR;
-    request.bytes_ += length;
-    request.control_->received.fetch_add(length);
+{
+  auto& request = *static_cast<Request*>(opaque);
+  if (request.control_->cancel)
+    return CURL_WRITEFUNC_ERROR;
+  const auto length = size * count;
+  long status = 0;
+  curl_easy_getinfo(request.handle(), CURLINFO_RESPONSE_CODE, &status);
+  if (status >= 300 && status < 400)
     return length;
+  if (request.metadata_ && length > 16 * 1024 * 1024 - request.bytes_) {
+    request.metadataTooLarge_ = true;
+    return CURL_WRITEFUNC_ERROR;
   }
+  if (request.output_.write(data, length) != length)
+    return CURL_WRITEFUNC_ERROR;
+  request.bytes_ += length;
+  request.control_->received.fetch_add(length);
+  return length;
+}
 
-  static int progress(void* opaque, curl_off_t, curl_off_t, curl_off_t,
+int Request::progress(void* opaque, curl_off_t, curl_off_t, curl_off_t,
                       curl_off_t) noexcept
-  {
-    return static_cast<Control*>(opaque)->cancel;
-  }
+{
+  return static_cast<Control*>(opaque)->cancel;
+}
 
-  std::unique_ptr<CURL, decltype(&curl_easy_cleanup)> easy_{curl_easy_init(),
-                                                            curl_easy_cleanup};
-  std::unique_ptr<curl_slist, decltype(&curl_slist_free_all)> headers_{
-      nullptr, curl_slist_free_all};
-  CURLM* multi_;
-  Control* control_;
-  BufferedFile output_;
-  size_t bytes_ = 0;
-  bool metadata_ = false;
-  bool metadataTooLarge_ = false;
-};
-
+namespace {
 void configureNetwork(Request& request, const Option* option,
-                      const std::string& url, CURLSH* share)
+                      const std::string& url, CURLSH* share,
+                      std::string& loadedCookies)
 {
   request.set(CURLOPT_URL, url.c_str());
   request.set(CURLOPT_SHARE, share);
@@ -202,8 +196,11 @@ void configureNetwork(Request& request, const Option* option,
   }
   if (!option->blank(PREF_REFERER))
     request.set(CURLOPT_REFERER, option->get(PREF_REFERER).c_str());
-  if (!option->blank(PREF_LOAD_COOKIES))
-    request.set(CURLOPT_COOKIEFILE, option->get(PREF_LOAD_COOKIES).c_str());
+  if (const auto result =
+          http::loadCookies(request.handle(), option, loadedCookies);
+      result != CURLE_OK)
+    throw std::runtime_error(std::string("Unable to load cookies: ") +
+                             curl_easy_strerror(result));
 }
 
 void configureHeaders(Request& request, const Option* option,
@@ -243,60 +240,112 @@ void configureHeaders(Request& request, const Option* option,
 }
 } // namespace
 
-Resource Transport::request(const std::string& url, int64_t begin, int64_t end,
-                            const std::string& temporary)
+std::unique_ptr<Request> Transport::open(const std::string& url, int64_t begin,
+                                         int64_t end,
+                                         const std::string& temporary)
 {
-  auto current = url;
+  auto transfer =
+      std::make_unique<Request>(multi_, control_.get(), temporary, completed_);
+  configureNetwork(*transfer, option_, url, share_, loadedCookies_);
+  configureHeaders(*transfer, option_, source_, url, contexts_);
   const auto range =
       begin || end >= 0
           ? std::to_string(begin) + "-" + (end >= 0 ? std::to_string(end) : "")
           : std::string();
+  transfer->set(CURLOPT_ACCEPT_ENCODING, range.empty() ? "" : "identity");
+  if (!range.empty())
+    transfer->set(CURLOPT_RANGE, range.c_str());
+  // Concurrent segment requests share the task's rate limit.
+  transfer->set(CURLOPT_MAX_RECV_SPEED_LARGE,
+                static_cast<curl_off_t>(control_->downloadLimit.load() /
+                                        static_cast<int64_t>(
+                                            prefetchLimit_ + 1)));
+  return transfer;
+}
+
+Resource Transport::describe(Request& transfer, const std::string& url,
+                             int64_t begin, int64_t end,
+                             const std::string& temporary)
+{
+  auto* handle = transfer.handle();
+  long status = 0;
+  curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &status);
+  if (status < 200 || status >= 300)
+    throw HttpError(status, CURLE_OK, 0);
+  const bool ranged = begin || end >= 0;
+  if ((ranged && status != 206) ||
+      (status == 206 &&
+       !http::matchesRange(handle, begin, end, transfer.bytes())))
+    throw std::runtime_error("Server returned an incorrect media byte range");
+  char* mime = nullptr;
+  curl_easy_getinfo(handle, CURLINFO_CONTENT_TYPE, &mime);
+  Resource resource{temporary, url, mime ? mime : "",
+                    static_cast<int64_t>(transfer.bytes())};
+  curl_off_t elapsed = 0, firstByte = 0;
+  curl_easy_getinfo(handle, CURLINFO_TOTAL_TIME_T, &elapsed);
+  curl_easy_getinfo(handle, CURLINFO_STARTTRANSFER_TIME_T, &firstByte);
+  resource.utcStart = std::chrono::duration_cast<std::chrono::milliseconds>(
+                          std::chrono::system_clock::now().time_since_epoch())
+                          .count() -
+                      (elapsed - firstByte) / 1000;
+  curl_header* field = nullptr;
+  while ((field = curl_easy_nextheader(handle, CURLH_HEADER, -1, field)))
+    resource.headers[field->name] = field->value;
+  A2_LOG_DEBUG(
+      fmt("component=media event=http_complete url=%s status=%ld bytes=%llu",
+          logging::sanitizeUri(url).c_str(), status,
+          static_cast<unsigned long long>(transfer.bytes())));
+  return resource;
+}
+
+Resource Transport::request(const std::string& url, int64_t begin, int64_t end,
+                            const std::string& temporary)
+{
+  auto current = url;
   for (unsigned redirects = 0; redirects <= 10; ++redirects) {
-    Request transfer(multi_, control_.get(), temporary);
-    configureNetwork(transfer, option_, current, share_);
-    configureHeaders(transfer, option_, source_, current, contexts_);
-    transfer.set(CURLOPT_ACCEPT_ENCODING, range.empty() ? "" : "identity");
-    if (!range.empty())
-      transfer.set(CURLOPT_RANGE, range.c_str());
-    transfer.perform();
-    auto* handle = transfer.handle();
+    auto transfer = open(current, begin, end, temporary);
+    transfer->perform();
     long status = 0;
-    curl_easy_getinfo(handle, CURLINFO_RESPONSE_CODE, &status);
+    curl_easy_getinfo(transfer->handle(), CURLINFO_RESPONSE_CODE, &status);
     if (status >= 300 && status < 400) {
       char* location = nullptr;
-      curl_easy_getinfo(handle, CURLINFO_REDIRECT_URL, &location);
+      curl_easy_getinfo(transfer->handle(), CURLINFO_REDIRECT_URL, &location);
       if (!location)
         throw Failure(FailureCode::UnsupportedSource,
                       "Media redirect has no destination");
       current = location; // libcurl resolves relative Location values.
       continue;
     }
-    if (status < 200 || status >= 300)
-      throw HttpError(status, CURLE_OK, 0);
-    if ((!range.empty() && status != 206) ||
-        (status == 206 &&
-         !http::matchesRange(handle, begin, end, transfer.bytes())))
-      throw std::runtime_error("Server returned an incorrect media byte range");
-    char* mime = nullptr;
-    curl_easy_getinfo(handle, CURLINFO_CONTENT_TYPE, &mime);
-    Resource resource{temporary, current, mime ? mime : "",
-                      static_cast<int64_t>(transfer.bytes())};
-    curl_off_t elapsed = 0, firstByte = 0;
-    curl_easy_getinfo(handle, CURLINFO_TOTAL_TIME_T, &elapsed);
-    curl_easy_getinfo(handle, CURLINFO_STARTTRANSFER_TIME_T, &firstByte);
-    resource.utcStart = std::chrono::duration_cast<std::chrono::milliseconds>(
-                            std::chrono::system_clock::now().time_since_epoch())
-                            .count() -
-                        (elapsed - firstByte) / 1000;
-    curl_header* field = nullptr;
-    while ((field = curl_easy_nextheader(handle, CURLH_HEADER, -1, field)))
-      resource.headers[field->name] = field->value;
-    A2_LOG_DEBUG(
-        fmt("component=media event=http_complete url=%s status=%ld bytes=%llu",
-            logging::sanitizeUri(current).c_str(), status,
-            static_cast<unsigned long long>(transfer.bytes())));
-    return resource;
+    return describe(*transfer, current, begin, end, temporary);
   }
   throw Failure(FailureCode::UnsupportedSource, "Too many media redirects");
+}
+
+std::optional<Resource> Transport::collect(const std::string& key,
+                                           const std::string& url,
+                                           int64_t begin, int64_t end,
+                                           const std::string& temporary)
+{
+  auto found = prefetched_.find(key);
+  if (found == prefetched_.end())
+    return std::nullopt;
+  auto transfer = std::move(found->second);
+  prefetched_.erase(found);
+  try {
+    transfer->perform();
+    long status = 0;
+    curl_easy_getinfo(transfer->handle(), CURLINFO_RESPONSE_CODE, &status);
+    // Redirects and failures repeat through the ordinary request path, which
+    // owns redirect limits and retry policy.
+    if (status >= 300 && status < 400)
+      return std::nullopt;
+    return describe(*transfer, url, begin, end, temporary);
+  }
+  catch (const std::exception& error) {
+    A2_LOG_DEBUG(fmt("component=media event=prefetch_discarded url=%s "
+                     "message=%s",
+                     logging::sanitizeUri(url).c_str(), error.what()));
+    return std::nullopt;
+  }
 }
 } // namespace aria2::media

@@ -32,8 +32,10 @@ void RangePlanner::clear()
   deferred_.clear();
 }
 
-void RangePlanner::restore(const std::vector<StoredRange>& ranges)
+void RangePlanner::restore(const std::vector<StoredRange>& ranges,
+                           int64_t totalLength)
 {
+  totalLength_ = std::max<int64_t>(0, totalLength);
   completed_ = ranges;
   normalizeCompleted();
 }

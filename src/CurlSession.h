@@ -69,6 +69,8 @@ private:
       downloads_;
   std::map<CurlDownload*, std::shared_ptr<CurlDownload>> tasks_;
   uint64_t loggingRevision_ = 0;
+  // Cookie store revision already loaded into the shared libcurl jar.
+  std::string loadedCookies_;
 
   static int effectiveStreamMaxConnections(const Option* option);
   bool prepare(const std::shared_ptr<CurlDownload>& download,
@@ -104,7 +106,7 @@ private:
                            const char* reason = "range_ignored");
   static bool openOutput(CurlDownload* download, bool preserveExisting,
                          bool truncateOwned = false);
-  static bool resolveOutput(CurlDownload* download, CURL* easy);
+  static bool resolveOutput(CurlDownload* download, CurlHandle& handle);
   void closeOutput(CurlDownload* download) noexcept;
   static bool retryableFailure(CURLcode result, long responseCode,
                                int fileNotFoundCount, int maxFileNotFound,

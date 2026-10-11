@@ -222,7 +222,7 @@ jobs:
     needs: resolve-release
     runs-on: ubuntu-24.04
     env:
-      API: "33"
+      API: "24"
       ARIA2_BUILD_PROFILE: ${{ needs.resolve-release.outputs.build_profile }}
       CMAKE_BUILD_TYPE: ${{ needs.resolve-release.outputs.cmake_build_type }}
       STRIP_BINARY: ${{ needs.resolve-release.outputs.strip_binary }}

@@ -52,12 +52,14 @@
 
 #include <algorithm>
 #include <iterator>
+#include <typeinfo>
 
 #include "StatCalc.h"
 #include "RequestGroup.h"
 #include "RequestGroupMan.h"
 #include "DownloadResult.h"
 #include "Log.h"
+#include "fmt.h"
 #include "SocketCore.h"
 #include "support/Random.h"
 #include "a2functional.h"
@@ -95,6 +97,24 @@ volatile sig_atomic_t globalHaltRequested = 0;
 
 namespace {
 constexpr auto DEFAULT_REFRESH_INTERVAL = 1_s;
+// RPC, curl and timers share this thread; any step above this budget delays
+// every client and transfer, so it is reported with the responsible step.
+constexpr auto STALL_THRESHOLD = std::chrono::milliseconds(500);
+
+template <class F> void timed(const char* step, F&& work)
+{
+  const auto start = std::chrono::steady_clock::now();
+  work();
+  const auto elapsed = std::chrono::steady_clock::now() - start;
+  if (elapsed >= STALL_THRESHOLD) {
+    A2_LOG_WARN(fmt("component=engine event=loop_stall step=%s duration_ms=%lld",
+                    step,
+                    static_cast<long long>(
+                        std::chrono::duration_cast<std::chrono::milliseconds>(
+                            elapsed)
+                            .count())));
+  }
+}
 } // namespace
 
 DownloadEngine::DownloadEngine(std::unique_ptr<EventPoll> eventPoll)
@@ -139,7 +159,10 @@ void executeCommand(std::deque<std::unique_ptr<Command>>& commands,
       continue;
     }
     com->transitStatus();
-    if (com->execute()) {
+    bool done = false;
+    const auto& command = *com;
+    timed(typeid(command).name(), [&] { done = com->execute(); });
+    if (done) {
       com.reset();
     }
     else {
@@ -177,18 +200,18 @@ int DownloadEngine::run(bool oneshot)
     global::wallclock().reset();
 #ifdef ENABLE_BITTORRENT
     if (btSession_) {
-      btSession_->poll();
+      timed("bt_poll", [this] { btSession_->poll(); });
     }
 #endif
     rebalanceGlobalDownloadLimit();
     if (curlSession_) {
-      curlSession_->poll();
+      timed("curl_poll", [this] { curlSession_->poll(); });
     }
     if (systemResolver_->poll()) {
       setNoWait(true);
       setRefreshInterval(std::chrono::milliseconds(0));
     }
-    calculateStatistics();
+    timed("statistics", [this] { calculateStatistics(); });
     if (lastRefresh_.difference(global::wallclock()) + A2_DELTA_MILLIS >=
         refreshInterval_) {
       refreshInterval_ = DEFAULT_REFRESH_INTERVAL;

@@ -177,6 +177,12 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
     impl.kickPending = true;
     return;
   }
+  if (handle->superseded) {
+    handle->reset();
+    impl.eraseHandle(handle);
+    activate(download);
+    return;
+  }
   if (download->snapshot_.mediaManifest) {
     cancelHandles(download);
     closeOutput(download.get());
@@ -234,8 +240,7 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
   }
   if (result == CURLE_WRITE_ERROR && handle->rangeAccepted &&
       handle->writeOffset == handle->lease.end &&
-      handle->lease.end < handle->responseRangeEnd &&
-      download->snapshot_.errorCode == error_code::UNDEFINED) {
+      handle->lease.end < handle->responseRangeEnd && !impl.failure) {
     // The native callback stopped a donor after completing its shortened
     // assignment. Its suffix is independently owned by another request.
     result = CURLE_OK;
@@ -322,13 +327,13 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
       endpoint.generation = generation;
     }
   }
-  const bool outputFailure =
-      download->snapshot_.errorCode != error_code::UNDEFINED;
+  const bool outputFailure = impl.failure.has_value();
   handle->reset();
   impl.eraseHandle(handle);
   if (primary && rangeAccepted && !impl.plannerConfigured) {
     configurePlanner(download, &lease);
-    if (download->failed()) {
+    if (impl.failure) {
+      failTask(download, impl.failure->first, impl.failure->second);
       return;
     }
   }
@@ -357,17 +362,19 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
   }
 
   if (outputFailure) {
-    failTask(download, download->snapshot_.errorCode,
-             download->snapshot_.error);
+    failTask(download, impl.failure->first, impl.failure->second);
     return;
   }
   if (responseFailure != CurlResponseFailure::None) {
-    const bool identityChanged =
+    // A changed identity or an untrustworthy Content-Range leaves ranges
+    // unusable; one complete response remains a valid way to finish.
+    const bool rangesUnusable =
         responseFailure == CurlResponseFailure::EtagChanged ||
         responseFailure == CurlResponseFailure::ModifiedChanged ||
         responseFailure == CurlResponseFailure::LengthChanged ||
-        responseFailure == CurlResponseFailure::ValidatorUnavailable;
-    if (ranged && identityChanged &&
+        responseFailure == CurlResponseFailure::ValidatorUnavailable ||
+        responseFailure == CurlResponseFailure::InvalidRange;
+    if (ranged && rangesUnusable &&
         (responseCode == 200 || responseCode == 206) && impl.allowFullRestart &&
         !impl.fullDownload && impl.maxRangeSize == 0) {
       restartFullDownload(download,
@@ -382,6 +389,14 @@ void CurlSession::finish(const std::shared_ptr<CurlDownload>& download,
     return;
   }
   if (responseCode == 416) {
+    if (unsatisfiedTotalLength >= 0 &&
+        impl.planner.completedLength() > unsatisfiedTotalLength) {
+      // Never truncate data the remote resource does not account for.
+      failTask(download, error_code::CANNOT_RESUME,
+               "The existing file is larger than the remote resource; it was "
+               "left unchanged");
+      return;
+    }
     if ((unsatisfiedTotalLength == 0 && lease.begin == 0 &&
          impl.planner.completedLength() == 0 && impl.handles.empty()) ||
         (unsatisfiedTotalLength >= 0 &&

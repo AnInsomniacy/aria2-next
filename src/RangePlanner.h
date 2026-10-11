@@ -47,7 +47,9 @@ public:
   using StoredRange = std::pair<int64_t, int64_t>;
 
   void clear();
-  void restore(const std::vector<StoredRange>& ranges);
+  // Restored ranges belong to a representation of a known total length;
+  // completion must not depend on a later response re-declaring it.
+  void restore(const std::vector<StoredRange>& ranges, int64_t totalLength);
   void configure(int64_t totalLength, int64_t chunkSize,
                  const std::vector<RangeLease>& active);
   void commit(int64_t begin, int64_t end);

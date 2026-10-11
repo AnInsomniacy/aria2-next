@@ -122,7 +122,7 @@ CurlSession::start(const std::shared_ptr<CurlDownload>& download,
     }
     activate(download);
   }
-  else if (!download->failed()) {
+  else {
     CurlHandle::fail(download.get(), error_code::NETWORK_PROBLEM,
                      "Unable to start the curl transfer");
   }
@@ -132,29 +132,27 @@ CurlSession::start(const std::shared_ptr<CurlDownload>& download,
 
 void CurlSession::activate(const std::shared_ptr<CurlDownload>& download)
 {
-  constexpr int64_t probeSize = 4_m;
   auto& impl = *download->impl_;
   if (impl.planner.complete()) {
     finalize(download, -1);
     return;
   }
+  // The first request asks for everything that remains. Further connections
+  // split live ranges once the response proves that ranges are honored.
   const auto rangeStart = impl.planner.contiguousLength();
   const bool ranged = impl.http && (impl.maxConnections > 1 || rangeStart > 0);
-  auto rangeEnd =
-      ranged ? rangeStart +
-                   (impl.maxConnections > 1
-                        ? probeSize
-                        : std::numeric_limits<int64_t>::max() - rangeStart)
-             : std::numeric_limits<int64_t>::max();
-  if (download->snapshot_.totalLength > 0) {
-    rangeEnd = std::min(rangeEnd, download->snapshot_.totalLength);
+  const auto total = impl.planner.totalLength();
+  const auto rangeEnd = impl.planner.gapEnd(
+      rangeStart, total > 0 ? total : std::numeric_limits<int64_t>::max());
+  if (rangeEnd <= rangeStart) {
+    CurlHandle::fail(download.get(), error_code::UNKNOWN_ERROR,
+                     "The recovered download state has no remaining range");
+    return;
   }
-  rangeEnd = impl.planner.gapEnd(rangeStart, rangeEnd);
   const RangeLease lease{rangeStart, rangeEnd, 0, impl.preferredUriIndex};
   if (!createHandle(download, lease, true, ranged)) {
     CurlHandle::fail(download.get(), error_code::NETWORK_PROBLEM,
                      "Unable to start the curl transfer");
-    eraseTask(download.get());
     return;
   }
   auto* handle = download->impl_->handles.back().get();
@@ -230,8 +228,7 @@ void CurlSession::restartFullDownload(
   download->snapshot_.totalLength = 0;
   download->snapshot_.completedLength = 0;
   if (!impl.filenamePending && !openOutput(download.get(), false, true)) {
-    failTask(download, download->snapshot_.errorCode, download->snapshot_.error,
-             false);
+    failTask(download, impl.failure->first, impl.failure->second, false);
     return;
   }
   impl.fullRetryAt =
@@ -329,6 +326,11 @@ void CurlSession::stop(const std::shared_ptr<CurlDownload>& download,
                        bool retainState)
 {
   auto& impl = *download->impl_;
+  if (impl.failure) {
+    failTask(download, impl.failure->first, impl.failure->second,
+             impl.failing ? impl.retainFailure : true);
+    return;
+  }
   impl.stopRequested = true;
   impl.pendingStop = retainState;
   try {
@@ -359,14 +361,8 @@ void CurlSession::stop(const std::shared_ptr<CurlDownload>& download,
   if (impl.io.busy())
     return;
   impl.pendingStop.reset();
-  if (!download->failed()) {
-    if (retainState) {
-      download->snapshot_.state = CurlSnapshot::State::Paused;
-    }
-    else {
-      download->snapshot_.state = CurlSnapshot::State::Stopped;
-    }
-  }
+  download->snapshot_.state = retainState ? CurlSnapshot::State::Paused
+                                          : CurlSnapshot::State::Stopped;
   eraseTask(download.get());
 }
 

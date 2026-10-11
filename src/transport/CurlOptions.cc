@@ -14,6 +14,7 @@
 #include "Option.h"
 #include "prefs.h"
 #include "support/Text.h"
+#include "transport/CookieStore.h"
 
 namespace aria2::http {
 std::string noProxyFor(const std::string& rules, const std::string& url)
@@ -126,6 +127,31 @@ CURLcode configureTls(CURL* handle, const Option* option)
   if (!option->blank(PREF_PRIVATE_KEY))
     set(CURLOPT_SSLKEY, option->get(PREF_PRIVATE_KEY).c_str());
   return result;
+}
+
+CURLcode loadCookies(CURL* handle, const Option* option, std::string& loaded)
+{
+  if (option->blank(PREF_LOAD_COOKIES)) {
+    return CURLE_OK;
+  }
+  const auto& path = option->get(PREF_LOAD_COOKIES);
+  if (!isSqliteCookieFile(path)) {
+    return curl_easy_setopt(handle, CURLOPT_COOKIEFILE, path.c_str());
+  }
+  const auto cookies = sqliteCookies(path);
+  const auto revision = path + '|' + cookies.revision;
+  if (loaded == revision) {
+    return CURLE_OK;
+  }
+  for (const auto& line : *cookies.lines) {
+    if (const auto result =
+            curl_easy_setopt(handle, CURLOPT_COOKIELIST, line.c_str());
+        result != CURLE_OK) {
+      return result;
+    }
+  }
+  loaded = revision;
+  return CURLE_OK;
 }
 
 } // namespace aria2::http

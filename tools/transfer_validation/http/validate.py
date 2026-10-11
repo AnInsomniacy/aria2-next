@@ -506,8 +506,16 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                 )
                 status = engine.rpc.wait_status(gid, "error", 10)
                 saved = path.read_bytes()
+                # Written blocks must come from the validated representation;
+                # unwritten blocks of a pre-sized output remain zero.
+                original = payload.read_bytes()
+                block = 64 * 1024
+                foreign = any(
+                    saved[i:i + block] != original[i:i + block]
+                    and saved[i:i + block].count(0) != len(saved[i:i + block])
+                    for i in range(0, len(saved), block))
                 if (status.get("errorCode") != "8" or not saved
-                        or saved != prefix[:len(saved)]
+                        or len(saved) > len(original) or foreign
                         or (case == "ignored" and saved != prefix)):
                     raise RuntimeError(f"Unsafe range failure: {case}: {status}")
             results["conditionalResponses"] = "passed"
@@ -583,8 +591,10 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             for code in (429, 503):
                 if ranges(f"retry-{code}").count(requested) != 2:
                     raise RuntimeError(f"HTTP {code} retry was not exercised exactly once")
-            tail = [tuple(map(int, value.removeprefix("bytes=").split("-")))
-                    for value in ranges("tail") if value]
+            # The first request is open-ended (bytes=N-); it covers the tail.
+            tail = [(int(first), int(last) if last else payload.stat().st_size - 1)
+                    for first, _, last in (value.removeprefix("bytes=").partition("-")
+                                           for value in ranges("tail") if value)]
             if not any(begin < first <= last < end for first, last in tail):
                 raise RuntimeError("Slow tail work was not reassigned")
             if len([r for r in tail if begin <= r[0] < end]) > 2 * (end - begin) // 65536:

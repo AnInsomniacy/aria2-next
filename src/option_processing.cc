@@ -43,6 +43,7 @@
 
 #include "ApplicationStatePath.h"
 
+#include <cctype>
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
@@ -177,6 +178,19 @@ void showCandidates(const std::string& unknownOption,
   }
 }
 
+// Matches the executable naming rule tools use to detect aria2c.
+bool invokedAsAria2c(const char* argv0)
+{
+  std::string name = argv0 ? argv0 : "";
+  const auto slash = name.find_last_of("/\\");
+  if (slash != std::string::npos) {
+    name.erase(0, slash + 1);
+  }
+  std::transform(name.begin(), name.end(), name.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+  return name.find("aria2c") != std::string::npos;
+}
+
 } // namespace
 
 error_code::Value option_processing(Option& op, bool standalone,
@@ -227,6 +241,12 @@ error_code::Value option_processing(Option& op, bool standalone,
     }
     auto confOption = std::make_shared<Option>();
     oparser->parseDefaultValues(*confOption);
+    if (standalone && argc > 0 && invokedAsAria2c(argv[0])) {
+      // Tools such as yt-dlp run an executable named aria2c and expect the
+      // response bytes unchanged; they mux media themselves. Configuration
+      // and explicit options still select media handling.
+      confOption->put(PREF_MEDIA, "file");
+    }
     if (!noConf) {
       std::string cfname =
           ucfname.empty() ? oparser->find(PREF_CONF_PATH)->getDefaultValue()

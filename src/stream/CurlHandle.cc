@@ -345,12 +345,17 @@ size_t CurlHandle::writeData(char* data, size_t size, size_t count,
     }
     if (length > static_cast<size_t>(std::numeric_limits<int64_t>::max()) ||
         handle->writeOffset > std::numeric_limits<int64_t>::max() -
-                                  static_cast<int64_t>(length) ||
-        (handle->rangeAccepted &&
-         handle->writeOffset + static_cast<int64_t>(length) >
-             handle->responseRangeEnd)) {
+                                  static_cast<int64_t>(length)) {
       fail(download, error_code::HTTP_PROTOCOL_ERROR,
-           "The response body exceeds its declared byte range");
+           "Received an oversized output block");
+      return CURL_WRITEFUNC_ERROR;
+    }
+    // Some caches pair a stale Content-Range with a different body. Such a
+    // response cannot be trusted for ranges; completion restarts it whole.
+    if (handle->rangeAccepted &&
+        handle->writeOffset + static_cast<int64_t>(length) >
+            handle->responseRangeEnd) {
+      handle->responseFailure = CurlResponseFailure::InvalidRange;
       return CURL_WRITEFUNC_ERROR;
     }
     // A helper can own the suffix of an in-flight HTTP response. Stop this
@@ -542,7 +547,7 @@ size_t CurlHandle::receiveHeader(char* data, size_t size, size_t count,
       if (!download->snapshot_.mediaManifest && handle->responseCode >= 200 &&
           handle->responseCode < 300 &&
           handle->responseFailure == CurlResponseFailure::None &&
-          !CurlSession::resolveOutput(download, handle->value)) {
+          !CurlSession::resolveOutput(download, *handle)) {
         return CURL_WRITEFUNC_ERROR;
       }
       rememberEndpoint(*handle);
@@ -637,15 +642,15 @@ int CurlHandle::debugCallback(CURL* easy, curl_infotype type, char* data,
 void CurlHandle::fail(CurlDownload* download, error_code::Value errorCode,
                       const std::string& message) noexcept
 {
-  if (!download || download->snapshot_.errorCode != error_code::UNDEFINED) {
+  if (!download || download->impl_->failure) {
     return;
   }
-  download->snapshot_.errorCode = errorCode;
-  download->snapshot_.state = CurlSnapshot::State::Error;
   try {
-    download->snapshot_.error = message;
+    download->impl_->failure = std::make_pair(errorCode, message);
   }
   catch (...) {
+    download->impl_->failure =
+        std::make_pair(errorCode, std::string("Download failed"));
   }
 }
 

@@ -83,6 +83,15 @@ std::string outputPath(RequestGroup* group, const std::string& uriValue)
   }
   return util::applyDir(option->get(PREF_DIR), name);
 }
+
+// Like aria2's --continue, an existing file without recovery state is resumed
+// as data written sequentially from the beginning by another program.
+bool adoptsExistingOutput(const CurlDownloadImpl& impl, int64_t existingLength)
+{
+  return impl.http && !impl.dryRun && existingLength > 0 &&
+         impl.group->getOption()->getAsBool(PREF_CONTINUE) &&
+         !impl.group->getOption()->getAsBool(PREF_ALLOW_OVERWRITE);
+}
 } // namespace
 
 bool CurlSession::openOutput(CurlDownload* download, bool preserveExisting,
@@ -145,12 +154,13 @@ bool CurlSession::openOutput(CurlDownload* download, bool preserveExisting,
 
 // Called on the engine thread after the final payload headers, before any bytes
 // are written. Binding out makes the selected path part of native recovery.
-bool CurlSession::resolveOutput(CurlDownload* download, CURL* easy)
+bool CurlSession::resolveOutput(CurlDownload* download, CurlHandle& handle)
 {
   auto& impl = *download->impl_;
   if (!impl.filenamePending) {
     return true;
   }
+  auto* easy = handle.value;
   char* effective = nullptr;
   curl_easy_getinfo(easy, CURLINFO_EFFECTIVE_URL, &effective);
   auto option = impl.group->getOption();
@@ -160,7 +170,18 @@ bool CurlSession::resolveOutput(CurlDownload* download, CURL* easy)
   impl.path = util::applyDir(option->get(PREF_DIR), name);
   auto context = impl.group->getDownloadContext();
   context->getFirstFileEntry()->setPath(impl.path);
-  if (!impl.dryRun) {
+  File existing(impl.path);
+  const auto existingLength = existing.isFile() ? existing.size() : 0;
+  const auto total = handle.responseCode == 206 ? handle.responseTotalLength
+                     : handle.encoded           ? -1
+                                                : handle.responseContentLength;
+  const bool adopt =
+      adoptsExistingOutput(impl, existingLength) &&
+      (total < 0 || existingLength <= total) &&
+      !(impl.group->getRequestGroupMan() &&
+        impl.group->getRequestGroupMan()->isSameFileBeingDownloaded(
+            impl.group));
+  if (!impl.dryRun && !adopt) {
     impl.group->shouldCancelDownloadForSafety();
     impl.path = impl.group->getFirstFilePath();
   }
@@ -169,6 +190,16 @@ bool CurlSession::resolveOutput(CurlDownload* download, CURL* easy)
   impl.filenamePending = false;
   if (impl.dryRun) {
     return true;
+  }
+  if (adopt) {
+    // This response started at the beginning; resume after the adopted
+    // prefix instead of downloading it again.
+    impl.planner.restore({{0, existingLength}}, std::max<int64_t>(0, total));
+    impl.allowFullRestart = false;
+    download->snapshot_.totalLength = std::max<int64_t>(0, total);
+    handle.superseded = true;
+    openOutput(download, true);
+    return false;
   }
   return openOutput(download, false);
 }
@@ -196,6 +227,9 @@ bool CurlSession::prepare(const std::shared_ptr<CurlDownload>& download,
 {
   download->snapshot_.errorCode = error_code::UNDEFINED;
   download->snapshot_.error.clear();
+  download->impl_->failure.reset();
+  download->impl_->failing = false;
+  download->impl_->retainFailure = true;
   download->snapshot_.totalLength = 0;
   download->snapshot_.completedLength = 0;
   download->snapshot_.sessionDownloadLength = 0;
@@ -229,7 +263,6 @@ bool CurlSession::prepare(const std::shared_ptr<CurlDownload>& download,
   impl.fullRetryAt.reset();
   impl.finalCheckpointQueued = false;
   impl.pendingFinalize.reset();
-  impl.pendingFailure.reset();
   impl.pendingRestart.clear();
   impl.pendingStop.reset();
   impl.maxConnections = effectiveStreamMaxConnections(group->getOption().get());
@@ -287,10 +320,17 @@ bool CurlSession::prepare(const std::shared_ptr<CurlDownload>& download,
   }
   impl.allowFullRestart = true;
   if (restoreState) {
-    impl.planner.restore(state.completedRanges);
+    impl.planner.restore(state.completedRanges, state.totalLength);
     impl.etag = http::normalizeStrongEtag(state.etag);
     impl.lastModified = state.lastModified;
     download->snapshot_.totalLength = state.totalLength;
+  }
+  else if (adoptsExistingOutput(impl, existingLength)) {
+    // The first ranged response confirms or rejects the adopted prefix. As
+    // with aria2's default always-resume, an impossible resume fails instead
+    // of truncating data this task did not write.
+    impl.planner.restore({{0, existingLength}}, 0);
+    impl.allowFullRestart = false;
   }
   else if (!impl.dryRun) {
     group->shouldCancelDownloadForSafety();
@@ -347,7 +387,7 @@ void CurlSession::restorePaused(const std::shared_ptr<CurlDownload>& download,
     return;
   }
   impl.group = group;
-  impl.planner.restore(state.completedRanges);
+  impl.planner.restore(state.completedRanges, state.totalLength);
   impl.etag = http::normalizeStrongEtag(state.etag);
   impl.lastModified = state.lastModified;
   impl.currentUri = state.uri;
@@ -397,35 +437,52 @@ void CurlSession::finalize(const std::shared_ptr<CurlDownload>& download,
     return;
   }
   closeOutput(download.get());
+  if (!impl.finalCheckpointQueued) {
+    impl.finalCheckpointQueued = true;
+    impl.pendingFinalize = reportedFileTime;
+    checkpoint(download, true);
+    if (reportedFileTime >= 0 &&
+        impl.group->getOption()->getAsBool(PREF_REMOTE_TIME)) {
+      // Scanners commonly hold a just-written file; the timestamp is
+      // advisory and must not fail a complete download.
+      impl.io.submit([path = impl.path, reportedFileTime] {
+        if (!File(path).utime(Time(),
+                              Time(static_cast<time_t>(reportedFileTime)))) {
+          A2_LOG_INFO(fmt("component=stream event=remote_time_skipped path=%s",
+                          path.c_str()));
+        }
+      });
+    }
+    return;
+  }
   if (impl.io.busy()) {
     impl.pendingFinalize = reportedFileTime;
     return;
   }
-  auto length = File(impl.path).size();
-  if (download->snapshot_.totalLength > 0) {
-    length = download->snapshot_.totalLength;
-  }
-  if (reportedFileTime >= 0 &&
-      impl.group->getOption()->getAsBool(PREF_REMOTE_TIME)) {
-    File(impl.path).utime(Time(), Time(static_cast<time_t>(reportedFileTime)));
-  }
+  impl.pendingFinalize.reset();
+  const auto length = download->snapshot_.totalLength > 0
+                          ? download->snapshot_.totalLength
+                          : impl.planner.completedLength();
   download->snapshot_.completedLength = length;
   download->snapshot_.totalLength = length;
   auto context = impl.group->getDownloadContext();
   context->getFirstFileEntry()->setLength(length);
   context->markTotalLengthIsKnown();
+  context->resetDownloadStopTime();
+  const bool verify = context->isPieceHashVerificationAvailable() ||
+                      context->isChecksumVerificationAvailable();
   if (!impl.group->getPieceStorage()) {
     impl.group->initPieceStorage();
-    impl.group->getPieceStorage()->getDiskAdaptor()->openExistingFile();
   }
-  context->resetDownloadStopTime();
-  if (!impl.finalCheckpointQueued) {
-    checkpoint(download, true);
-    impl.finalCheckpointQueued = true;
-    impl.pendingFinalize = reportedFileTime;
-    return;
+  if (verify) {
+    try {
+      impl.group->getPieceStorage()->getDiskAdaptor()->openExistingFile();
+    }
+    catch (const Exception& error) {
+      failTask(download, error.getErrorCode(), error.what());
+      return;
+    }
   }
-  impl.pendingFinalize.reset();
   impl.group->getPieceStorage()->markAllPiecesDone();
   download->snapshot_.state = CurlSnapshot::State::Complete;
   eraseTask(download.get());
@@ -450,61 +507,66 @@ void CurlSession::failTask(const std::shared_ptr<CurlDownload>& download,
                            const std::string& message, bool retainState)
 {
   auto& impl = *download->impl_;
-  auto finalMessage = message;
-  impl.pendingStop.reset();
-  impl.pendingFinalize.reset();
-  impl.pendingRestart.clear();
-  impl.stopRequested = true;
-  if (impl.io.busy()) {
-    download->snapshot_.state = CurlSnapshot::State::Active;
-    impl.pendingFailure = std::make_pair(errorCode, message);
-    impl.retainFailure = retainState;
-    cancelHandles(download);
-    return;
+  if (!impl.failure) {
+    impl.failure = std::make_pair(errorCode, message);
   }
-  if (retainState) {
-    if (!download->failed()) {
+  if (!impl.failing) {
+    impl.failing = true;
+    impl.retainFailure = retainState;
+    impl.pendingStop.reset();
+    impl.pendingFinalize.reset();
+    impl.pendingRestart.clear();
+    impl.stopRequested = true;
+    if (retainState) {
       try {
         for (auto& handle : impl.handles) {
           stream::flushWriteBuffer(impl, *handle);
         }
-        download->snapshot_.completedLength = impl.planner.completedLength();
-      }
-      catch (const Exception& error) {
-        errorCode = error.getErrorCode();
-        finalMessage = error.what();
       }
       catch (const std::exception& error) {
-        errorCode = error_code::FILE_IO_ERROR;
-        finalMessage = error.what();
+        A2_LOG_WARN(fmt("component=stream event=final_flush_failed gid=%s "
+                        "message=%s",
+                        CurlHandle::gid(download.get()).c_str(),
+                        logging::sanitizeText(error.what()).c_str()));
+        impl.retainFailure = false;
       }
     }
-    if (!impl.finalCheckpointQueued) {
-      checkpoint(download, true);
-      impl.finalCheckpointQueued = true;
-    }
+    cancelHandles(download);
   }
-  else if (impl.group && !impl.finalCheckpointQueued) {
-    discardRecovery(download);
-    impl.finalCheckpointQueued = true;
+  else if (!retainState && impl.retainFailure) {
+    // Output I/O failed after a retained failure: recovery data is no longer
+    // trustworthy. Replace the queued checkpoint with removal once.
+    impl.retainFailure = false;
+    impl.finalCheckpointQueued = false;
   }
-  cancelHandles(download);
-  closeOutput(download.get());
   if (impl.io.busy()) {
-    impl.pendingFailure = std::make_pair(errorCode, finalMessage);
-    download->snapshot_.state = CurlSnapshot::State::Active;
-    impl.retainFailure = retainState;
     return;
   }
-  impl.pendingFailure.reset();
-  CurlHandle::fail(download.get(), errorCode, finalMessage);
+  if (!impl.finalCheckpointQueued && impl.group) {
+    impl.finalCheckpointQueued = true;
+    if (impl.retainFailure) {
+      download->snapshot_.completedLength = impl.planner.completedLength();
+      checkpoint(download, true);
+    }
+    else {
+      discardRecovery(download);
+    }
+  }
+  closeOutput(download.get());
+  if (impl.io.busy()) {
+    return;
+  }
+  const auto failure = *impl.failure;
+  download->snapshot_.errorCode = failure.first;
+  download->snapshot_.error = failure.second;
+  download->snapshot_.state = CurlSnapshot::State::Error;
   A2_LOG_ERROR(fmt("component=stream event=task_failed gid=%s error_code=%d "
                    "completed=%" PRId64 " uri=%s message=%s",
                    CurlHandle::gid(download.get()).c_str(),
-                   static_cast<int>(errorCode),
+                   static_cast<int>(failure.first),
                    download->snapshot_.completedLength,
                    logging::sanitizeUri(impl.currentUri).c_str(),
-                   logging::sanitizeText(finalMessage).c_str()));
+                   logging::sanitizeText(failure.second).c_str()));
   eraseTask(download.get());
   if (engine_) {
     engine_->setNoWait(true);
