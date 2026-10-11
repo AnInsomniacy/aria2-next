@@ -11,9 +11,10 @@ class Option:
         self.short_opt = short_opt
         self.optional = optional
         self.values = []
+        self.path = False
 
 def get_all_options(cmd):
-    opt_pattern = re.compile(r' (?:(-.), )?(--[^\s\[=]+)(\[)?')
+    opt_pattern = re.compile(r'\s+(?:(-.), )?(--[^\s\[=]+)(\[)?(?:=(\S+))?')
     values_pattern = re.compile(r'\s+Possible Values: (.+)')
     proc = subprocess.Popen([cmd, "--help=#all"], stdout=subprocess.PIPE)
     stdoutdata, stderrdata = proc.communicate()
@@ -28,6 +29,10 @@ def get_all_options(cmd):
             if cur_option:
                 opts[cur_option.long_opt] = cur_option
             cur_option = Option(long_opt, short_opt, optional)
+            argument = match.group(4) or ''
+            if '|' in argument:
+                cur_option.values = argument.split('|')
+            cur_option.path = argument == 'path'
         else:
             match = values_pattern.match(line)
             if match:
@@ -64,6 +69,13 @@ def output_value_case_dir_comp(out, key):
             ;;
 """.format(key))
 
+def output_value_case_any_file_comp(out, key):
+    out.write("""        {0})
+            _filedir
+            return 0
+            ;;
+""".format(key))
+
 def output_case(out, opts):
     out.write("""\
 _aria2_next()
@@ -87,37 +99,18 @@ _aria2_next()
     case $prev in
 """)
     # Complete pre-defined option arguments
-    for long_opt in ['--metalink-preferred-protocol',
-                     '--bt-encryption',
-                     '--bt-transport',
-                     '--bt-disk-io',
-                     '--bt-disk-read-cache',
-                     '--bt-disk-write-cache',
-                     '--bt-mixed-mode',
-                     '--bt-upload-slot-algorithm',
-                     '--bt-seed-choking-algorithm',
-                     '--bt-blocklist-scope',
-                     '--follow-metalink',
-                     '--file-allocation',
-                     '--log-level',
-                     '--event-poll',
-                     '--follow-torrent',
-                     '--ed2k-piece-selector',
-                     '--download-result',
-                     '--min-tls-version',
-                     '--console-log-level']:
-        opt = opts[long_opt]
-        output_value_case(out, opt.long_opt, opt.values)
-    # Complete directory
-    dir_opts = []
     for opt in opts.values():
-        if opt.values and opt.values[0] == '/path/to/directory':
-            dir_opts.append(opt)
-    # Complete file
-    output_value_case_dir_comp(out,'|'.join([opt.long_opt for opt in dir_opts]))
-    # Complete specific file type
-    output_value_case_file_comp(out, '--torrent-file', ['torrent'])
-    output_value_case_file_comp(out, '--metalink-file', ['meta4', 'metalink'])
+        if opt.values:
+            output_value_case(out, opt.long_opt, opt.values)
+    # Complete directory
+    typed = {'--torrent-file': ['torrent'], '--metalink-file': ['meta4', 'metalink']}
+    paths = [opt.long_opt for opt in opts.values() if opt.path and opt.long_opt not in typed]
+    dirs = [name for name in paths if name.endswith('dir')]
+    files = [name for name in paths if not name.endswith('dir')]
+    output_value_case_dir_comp(out, '|'.join(dirs))
+    output_value_case_any_file_comp(out, '|'.join(files))
+    for name, exts in typed.items():
+        output_value_case_file_comp(out, name, exts)
     out.write("""\
     esac
 """)

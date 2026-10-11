@@ -38,8 +38,8 @@ body:
         - BitTorrent / Magnet
         - ED2K
         - Metalink
-        - FTP / SFTP
-        - libaria2
+        - SFTP
+        - HLS / DASH
         - Build / Packaging
         - Docker
         - Documentation

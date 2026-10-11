@@ -12,7 +12,6 @@ maintenance task owns its own subdirectory.
 | `cmake-migration/progress.md` | Completed checkpoint log for the CMake migration |
 | `upstream-issue-review/summary.md` | Completed human-readable summary of the upstream issue review |
 | `upstream-issue-review/matrix.csv` | Completed issue-by-issue review matrix |
-| `ed2k-runtime.md` | Current ED2K runtime architecture and verification record |
 
 Maintenance records should be durable and compact. Temporary API payloads,
 scratch research files, generated reports, local caches, and conversation logs

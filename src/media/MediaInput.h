@@ -1,6 +1,5 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_MEDIA_INPUT_H
-#define D_MEDIA_INPUT_H
+#pragma once
 #include <array>
 #include <cstdint>
 #include <map>
@@ -24,4 +23,3 @@ struct InputPlan {
 InputPlan parseInputPlan(const std::string& json);
 std::array<unsigned char, 16> decodeMediaKey(const std::string& hex);
 } // namespace aria2::media
-#endif

@@ -1,8 +1,9 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#include "MediaTransport.h"
-#include "MediaRequest.h"
-#include "MuxInput.h"
-#include "media/MediaDownload.h"
+#include "options/Options.h"
+#include "media/MediaTransport.h"
+#include "media/MediaRequest.h"
+#include "media/MuxInput.h"
+#include "media/Control.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -15,15 +16,12 @@
 #include <mutex>
 #include <string>
 #include <utility>
-#include "MediaFiles.h"
+#include "media/MediaFiles.h"
 
-#include "Log.h"
-#include "fmt.h"
+#include "base/Log.h"
+#include "base/Text.h"
 #include <curl/urlapi.h>
 #include <optional>
-#include "support/Numbers.h"
-#include "Option.h"
-#include "prefs.h"
 #include <openssl/evp.h>
 #include <array>
 #include <chrono>
@@ -73,10 +71,10 @@ void Transport::retain(const std::string& path)
 {
   if (path.empty())
     return;
-  auto name = nativePath(path).filename().u8string();
+  auto name = utf8(nativePath(path).filename());
   if (name.size() < 129 || name[64] != '-')
     return;
-  auto raw = (nativePath(path).parent_path() / name.substr(0, 129)).u8string();
+  auto raw = utf8(nativePath(path).parent_path() / name.substr(0, 129));
   retained_[name.substr(0, 64)] = raw;
 }
 
@@ -95,14 +93,15 @@ std::string Transport::fingerprint(const std::string& value)
   }
   return result;
 }
-Transport::Transport(const Option* option, std::string source,
+Transport::Transport(const Options* option, std::string source,
                      std::string directory, std::shared_ptr<Control> control)
     : option_(option),
       source_(std::move(source)),
       directory_(std::move(directory)),
       control_(std::move(control)),
-      contexts_(parseRequestContexts(option->get(PREF_MEDIA_REQUEST_CONTEXTS))),
-      input_(parseInputPlan(option->get(PREF_MEDIA_INPUT)))
+      contexts_(parseRequestContexts(option->get("media-request-contexts"))),
+      input_(parseInputPlan(option->get("media-input"))),
+      throttle_(std::make_unique<Throttle>())
 {
   std::filesystem::create_directories(nativePath(directory_));
   multi_ = curl_multi_init();
@@ -120,7 +119,8 @@ Transport::Transport(const Option* option, std::string source,
   // Segment parallelism follows the per-file connection ceiling, bounded so a
   // large HTTP setting does not flood a segment origin.
   prefetchLimit_ = static_cast<size_t>(
-      std::clamp(option->getAsInt(PREF_STREAM_MAX_CONNECTIONS), 1, 8) - 1);
+      std::clamp<int64_t>(option->integer("max-connection-per-server"), 1, 8) -
+      1);
 }
 Transport::~Transport()
 {
@@ -143,8 +143,7 @@ Resource Transport::get(const std::string& url, int64_t begin, int64_t end,
     if (begin != 0 || end != -1)
       throw std::runtime_error("A captured manifest cannot be byte-ranged");
     const auto path =
-        (nativePath(directory_) / fingerprint(url + manifest->second))
-            .u8string();
+        utf8(nativePath(directory_) / fingerprint(url + manifest->second));
     std::ofstream output(nativePath(path), std::ios::binary | std::ios::trunc);
     output.write(manifest->second.data(), manifest->second.size());
     output.close();
@@ -157,26 +156,26 @@ Resource Transport::get(const std::string& url, int64_t begin, int64_t end,
     return resource;
   }
   const auto key = resourceKey(url, begin, end);
-  auto path = (nativePath(directory_) / key).u8string();
+  auto path = utf8(nativePath(directory_) / key);
   auto found = retained_.find(key);
   if (cached && found != retained_.end() &&
       std::filesystem::is_regular_file(nativePath(found->second))) {
-    auto name = nativePath(found->second).filename().u8string();
+    auto name = utf8(nativePath(found->second).filename());
     if (fileDigest(found->second) == name.substr(65, 64))
       return {found->second, url, "",
               static_cast<int64_t>(
                   std::filesystem::file_size(nativePath(found->second)))};
   }
   auto temporary = path + ".partial";
-  const int tries = option_->getAsInt(PREF_MAX_TRIES);
+  const auto tries = option_->integer("max-tries");
   for (int attempt = 0;; ++attempt) {
     if (control_->cancel)
       throw std::runtime_error("Media transfer interrupted");
     try {
       control_->connections = static_cast<int>(1 + prefetched_.size());
       auto fetched = collect(key, url, begin, end, temporary);
-      auto resource = fetched ? std::move(*fetched)
-                              : request(url, begin, end, temporary);
+      auto resource =
+          fetched ? std::move(*fetched) : request(url, begin, end, temporary);
       const auto digest = fileDigest(temporary);
       const auto committed = path + "-" + digest;
       if (std::filesystem::exists(nativePath(committed)) &&
@@ -198,7 +197,8 @@ Resource Transport::get(const std::string& url, int64_t begin, int64_t end,
           control_->cancel)
         throw;
       const auto delay = std::max<curl_off_t>(
-          std::max(1, option_->getAsInt(PREF_RETRY_WAIT)), error.retryAfter);
+          std::max<int64_t>(1, option_->integer("retry-wait")),
+          error.retryAfter);
       std::unique_lock<std::mutex> lock(control_->mutex);
       control_->wake.wait_for(lock, std::chrono::seconds(delay),
                               [&] { return control_->cancel.load(); });
@@ -232,9 +232,8 @@ void Transport::learn(const Resource& resource)
     return;
   std::unique_ptr<CURLU, decltype(&curl_url_cleanup)> base(curl_url(),
                                                            curl_url_cleanup);
-  if (!base ||
-      curl_url_set(base.get(), CURLUPART_URL, resource.url.c_str(), 0) !=
-          CURLUE_OK)
+  if (!base || curl_url_set(base.get(), CURLUPART_URL, resource.url.c_str(),
+                            0) != CURLUE_OK)
     return;
   std::vector<Location> entries;
   std::optional<std::pair<int64_t, int64_t>> range;
@@ -252,14 +251,14 @@ void Transport::learn(const Resource& resource)
       // Prefetch is an optimization; the native client validates playlists.
       const auto value = line.substr(17);
       const auto at = value.find('@');
-      int64_t length = 0, offset = nextOffset;
-      if (!util::parseLLIntNoThrow(length, value.substr(0, at)) ||
-          (at != std::string::npos &&
-           !util::parseLLIntNoThrow(offset, value.substr(at + 1))) ||
-          length <= 0 || offset < 0)
+      const auto length = text::toInt(value.substr(0, at));
+      const auto offset = at == std::string::npos
+                              ? std::optional<int64_t>(nextOffset)
+                              : text::toInt(value.substr(at + 1));
+      if (!length || !offset || *length <= 0 || *offset < 0)
         return;
-      range = std::make_pair(offset, offset + length - 1);
-      nextOffset = offset + length;
+      range = std::make_pair(*offset, *offset + *length - 1);
+      nextOffset = *offset + *length;
       continue;
     }
     if (line.empty() || line.front() == '#')
@@ -304,15 +303,13 @@ void Transport::prefetchAfter(const std::string& key)
     if (prefetched_.count(next) || retained_.count(next))
       continue;
     try {
-      auto transfer =
-          open(entry.url, entry.begin, entry.end,
-               (nativePath(directory_) / next).u8string() + ".partial");
+      auto transfer = open(entry.url, entry.begin, entry.end,
+                           utf8(nativePath(directory_) / next) + ".partial");
       transfer->start();
       prefetched_.emplace(next, std::move(transfer));
     }
     catch (const std::exception& error) {
-      A2_LOG_DEBUG(fmt("component=media event=prefetch_skipped message=%s",
-                       error.what()));
+      log::debug("media: prefetch skipped: {}", error.what());
       return;
     }
   }

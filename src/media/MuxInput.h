@@ -1,9 +1,8 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_MUX_INPUT_H
-#define D_MUX_INPUT_H
+#pragma once
 
-#include "MediaStore.h"
-#include "MediaDownload.h"
+#include "media/MediaStore.h"
+#include "media/Control.h"
 #include <gpac/list.h>
 extern "C" {
 #include <libavformat/avformat.h>
@@ -61,5 +60,3 @@ bool sameCodec(const AVCodecParameters*, const AVCodecParameters*);
 int64_t subtitleOffset(const std::string& path);
 int64_t packedAudioClock(AVFormatContext*);
 } // namespace aria2::media::muxing
-
-#endif // D_MUX_INPUT_H

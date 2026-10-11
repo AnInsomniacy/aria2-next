@@ -9,8 +9,8 @@ extern "C" {
 #include <libavutil/dict.h>
 }
 
-#include "MuxOutput.h"
-#include "media/MediaDownload.h"
+#include "media/MuxOutput.h"
+#include "media/Control.h"
 #include "media/MuxInput.h"
 #include <map>
 #include <memory>
@@ -18,7 +18,7 @@ extern "C" {
 #include <string>
 #include <utility>
 #include <vector>
-#include "MediaFiles.h"
+#include "media/MediaFiles.h"
 #include <algorithm>
 
 namespace aria2::media::muxing {
@@ -110,7 +110,7 @@ void remux(Output& out, std::vector<std::unique_ptr<Input>>& inputs,
   if (outputIndex != out.context->nb_streams)
     throw std::runtime_error("Media track layout changed between periods");
   if (firstEpoch) {
-    check(avio_open(&out.context->pb, nativePath(path).u8string().c_str(),
+    check(avio_open(&out.context->pb, utf8(nativePath(path)).c_str(),
                     AVIO_FLAG_WRITE));
     check(avformat_write_header(out.context, nullptr));
   }
@@ -139,8 +139,7 @@ void remux(Output& out, std::vector<std::unique_ptr<Input>>& inputs,
     // by one tick and keep presentation at or after decoding. Simultaneous
     // subtitle cues legitimately share a timestamp.
     if (packet->dts != AV_NOPTS_VALUE) {
-      const auto type =
-          out.context->streams[index]->codecpar->codec_type;
+      const auto type = out.context->streams[index]->codecpar->codec_type;
       const int64_t step =
           type == AVMEDIA_TYPE_SUBTITLE || type == AVMEDIA_TYPE_DATA ? 0 : 1;
       const auto last = out.lastDts.find(index);

@@ -1,11 +1,10 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_MEDIA_JOB_H
-#define D_MEDIA_JOB_H
+#pragma once
 
-#include "MediaSession.h"
-#include "MediaStore.h"
-#include "MediaTransport.h"
-#include "DashFileIo.h"
+#include "media/MediaSession.h"
+#include "media/MediaStore.h"
+#include "media/MediaTransport.h"
+#include "media/DashFileIo.h"
 #include <map>
 #include <tuple>
 
@@ -14,7 +13,7 @@ namespace aria2::media {
 // Only Control crosses threads; access to its snapshot requires its mutex.
 class MediaJob {
 public:
-  MediaJob(std::shared_ptr<Option>, std::string source, std::string gid,
+  MediaJob(std::shared_ptr<const Options>, std::string source, std::string gid,
            std::string directory, std::shared_ptr<Control>);
   ~MediaJob();
   MediaJob(const MediaJob&) = delete;
@@ -30,7 +29,7 @@ private:
     int64_t timeOffset = 0;
   };
   using SegmentKey = std::tuple<int64_t, std::string, int64_t>;
-  std::shared_ptr<Option> option;
+  std::shared_ptr<const Options> option;
   std::shared_ptr<Control> control;
   std::string uri, gid, directory, taskDirectory;
   Store store;
@@ -76,5 +75,3 @@ private:
   void runCollection();
 };
 } // namespace aria2::media
-
-#endif // D_MEDIA_JOB_H

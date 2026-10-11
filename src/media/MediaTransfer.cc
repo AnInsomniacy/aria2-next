@@ -1,5 +1,5 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#include "Option.h"
+#include "options/Options.h"
 #include "media/MediaTransport.h"
 #include <cstdint>
 #include <gpac/dash.h>
@@ -8,9 +8,8 @@
 #include <map>
 #include <stdexcept>
 #include <string>
-#include "MediaJob.h"
-#include "MediaFiles.h"
-#include "prefs.h"
+#include "media/MediaJob.h"
+#include "media/MediaFiles.h"
 #include <algorithm>
 #include <filesystem>
 
@@ -67,7 +66,7 @@ MediaJob::SegmentResult MediaJob::consumeSegment(int group)
                                           &start, &duration, nullptr);
   if (info < 0)
     throw std::runtime_error(gf_error_to_string(info));
-  const auto endTime = option->getAsLLInt(PREF_MEDIA_END_TIME);
+  const auto endTime = option->integer("media-end-time");
   const auto position =
       start.den ? gf_timestamp_rescale_signed(start.num, start.den, 1000) : 0;
   if (!live && endTime > 0 &&
@@ -116,7 +115,7 @@ void MediaJob::run()
 {
   if (recoverPublication())
     return;
-  if (option->get(PREF_MEDIA) == "collection") {
+  if (option->get("media") == "collection") {
     runCollection();
     return;
   }
@@ -149,7 +148,7 @@ void MediaJob::run()
     }
     if (advanced)
       progress();
-    const auto limit = option->getAsLLInt(PREF_MEDIA_RECORD_TIME);
+    const auto limit = option->integer("media-record-time");
     if (limit > 0 && snapshot().live &&
         snapshot().completedDuration >= limit * 1000)
       control->requestFinish();

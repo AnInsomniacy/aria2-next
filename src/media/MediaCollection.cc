@@ -1,18 +1,16 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#include "MediaJob.h"
-#include "MediaInput.h"
-#include "Option.h"
-#include "prefs.h"
+#include "options/Options.h"
+#include "media/MediaJob.h"
+#include "media/MediaInput.h"
 #include <algorithm>
 
 namespace aria2::media {
 void MediaJob::runCollection()
 {
-  const auto plan = parseInputPlan(option->get(PREF_MEDIA_INPUT));
+  const auto plan = parseInputPlan(option->get("media-input"));
   if (plan.tracks.empty())
     throw Failure(FailureCode::UnsupportedSource, "No captured media tracks");
-  if (option->getAsLLInt(PREF_MEDIA_START_TIME) ||
-      option->getAsLLInt(PREF_MEDIA_END_TIME))
+  if (option->integer("media-start-time") || option->integer("media-end-time"))
     throw Failure(FailureCode::UnsupportedSelection,
                   "Time ranges require an HLS or DASH presentation");
   auto value = snapshot();
@@ -41,15 +39,15 @@ void MediaJob::runCollection()
     Track text;
     text.id = "composition-subtitles";
     text.type = "subtitle";
-    text.selected = option->get(PREF_MEDIA_SUBTITLES) != "none";
+    text.selected = option->get("media-subtitles") != "none";
     value.tracks.push_back(text);
   }
-  if (option->get(PREF_MEDIA_VIDEO) == "none" &&
-      option->get(PREF_MEDIA_AUDIO) == "none" &&
-      option->get(PREF_MEDIA_SUBTITLES) == "none")
+  if (option->get("media-video") == "none" &&
+      option->get("media-audio") == "none" &&
+      option->get("media-subtitles") == "none")
     throw Failure(FailureCode::UnsupportedSelection, "Select output content");
   store.saveTracks(value.tracks);
-  if (option->getAsBool(PREF_MEDIA_PAUSE_AFTER_PROBE)) {
+  if (option->flag("media-pause-after-probe")) {
     value.state = "awaiting-selection";
     awaiting = true;
     publish(value);

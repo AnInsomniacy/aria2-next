@@ -3,9 +3,7 @@ extern "C" {
 #include <libavutil/log.h>
 }
 
-#include "MediaSession.h"
-#include "media/MediaDownload.h"
-#include "spdlog/common.h"
+#include "media/MediaSession.h"
 #include <cstdarg>
 #include <exception>
 #include <gpac/setup.h>
@@ -14,9 +12,9 @@ extern "C" {
 #include <mutex>
 #include <stdexcept>
 #include <utility>
-#include "MediaJob.h"
-#include "MediaFiles.h"
-#include "Log.h"
+#include "media/MediaJob.h"
+#include "media/MediaFiles.h"
+#include "base/Log.h"
 
 namespace aria2::media {
 namespace {
@@ -24,16 +22,17 @@ std::once_flag initialization;
 void nativeLog(void* context, int level, const char* format,
                va_list args) noexcept
 {
-  if (level > AV_LOG_WARNING || !A2_LOG_ENABLED(spdlog::level::debug))
+  if (level > AV_LOG_WARNING || !log::enabled(log::Level::Debug))
     return;
   try {
     char line[2048];
     int prefix = 1;
     av_log_format_line2(context, level, format, args, line, sizeof(line),
                         &prefix);
-    logging::tryWrite(spdlog::level::debug, __FILE__, __LINE__,
-                      "component=media library=ffmpeg " +
-                          logging::sanitizeText(line));
+    std::string_view text(line);
+    while (!text.empty() && (text.back() == '\n' || text.back() == '\r'))
+      text.remove_suffix(1);
+    log::debug("media: ffmpeg: {}", text);
   }
   catch (...) {
   }
@@ -49,7 +48,7 @@ void initialize()
 }
 } // namespace
 
-Session::Session(std::shared_ptr<Option> option, std::string uri,
+Session::Session(std::shared_ptr<const Options> option, std::string uri,
                  std::string gid, std::string directory,
                  std::shared_ptr<Control> control)
     : control_(std::move(control))
@@ -71,7 +70,8 @@ Session::Session(std::shared_ptr<Option> option, std::string uri,
       }
     }
     std::lock_guard<std::mutex> lock(control->mutex);
-    if (control->cancel && control->snapshot.state != "complete")
+    if (control->cancel && control->snapshot.state != "complete" &&
+        control->snapshot.state != "awaiting-selection")
       control->snapshot.state = "paused";
     else if (control->finish && control->snapshot.state != "complete" &&
              control->snapshot.state != "error") {

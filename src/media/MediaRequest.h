@@ -1,15 +1,28 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_MEDIA_REQUEST_H
-#define D_MEDIA_REQUEST_H
+#pragma once
 
-#include "BufferedFile.h"
-#include "MediaDownload.h"
+#include "core/Speed.h"
+#include "media/Control.h"
 #include <curl/curl.h>
+#include <cstdio>
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace aria2::media {
+
+// The task's download limit over all of its concurrent requests. A request
+// over the limit pauses in its write callback; whichever request drives the
+// multi handle resumes it once the bucket refills.
+struct Throttle {
+  RateLimit bucket;
+  std::vector<CURL*> paused;
+
+  void resume();
+  void forget(CURL* handle);
+};
 
 // One HTTP hop with its own easy handle, header storage and cache file. The
 // task's multi handle retains connections and may run several requests at
@@ -17,8 +30,8 @@ namespace aria2::media {
 // a request waits for its own completion without consuming another's result.
 class Request {
 public:
-  Request(CURLM* multi, Control* control, const std::string& path,
-          std::map<CURL*, CURLcode>& completed);
+  Request(CURLM* multi, Control* control, Throttle& throttle,
+          const std::string& path, std::map<CURL*, CURLcode>& completed);
   ~Request();
   Request(const Request&) = delete;
   Request& operator=(const Request&) = delete;
@@ -53,8 +66,10 @@ private:
       nullptr, curl_slist_free_all};
   CURLM* multi_;
   Control* control_;
+  Throttle& throttle_;
   std::map<CURL*, CURLcode>& completed_;
-  BufferedFile output_;
+  std::unique_ptr<std::FILE, decltype(&std::fclose)> output_{nullptr,
+                                                             std::fclose};
   size_t bytes_ = 0;
   bool started_ = false;
   bool metadata_ = false;
@@ -62,4 +77,3 @@ private:
 };
 
 } // namespace aria2::media
-#endif // D_MEDIA_REQUEST_H

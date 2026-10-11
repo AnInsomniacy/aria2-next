@@ -1,6 +1,7 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_MEDIA_FILES_H
-#define D_MEDIA_FILES_H
+#pragma once
+
+#include "base/Path.h"
 
 #include <filesystem>
 #include <string>
@@ -12,12 +13,19 @@
 #  include <unistd.h>
 #endif
 
-namespace aria2 {
-namespace media {
+namespace aria2::media {
+
+// Native separators, so the long-path prefix of nativePath() survives a
+// round trip through a string.
+inline std::string utf8(const std::filesystem::path& path)
+{
+  const auto text = path.u8string();
+  return std::string(text.begin(), text.end());
+}
 
 inline std::filesystem::path nativePath(const std::string& value)
 {
-  auto path = std::filesystem::u8path(value);
+  auto path = toPath(value);
 #ifdef _WIN32
   auto wide = path.native();
   if (wide.rfind(L"\\\\?\\", 0) == 0)
@@ -40,8 +48,7 @@ inline std::string failureMessage(const std::exception& error)
           dynamic_cast<const std::filesystem::filesystem_error*>(&error))
     return "Media file operation failed: code=" +
            std::to_string(file->code().value()) +
-           " path=" + file->path1().u8string() +
-           " target=" + file->path2().u8string();
+           " path=" + utf8(file->path1()) + " target=" + utf8(file->path2());
   if (auto system = dynamic_cast<const std::system_error*>(&error))
     return "Media system operation failed: code=" +
            std::to_string(system->code().value());
@@ -79,12 +86,10 @@ inline void syncFile(const std::string& value)
 inline void syncParent(const std::string& value)
 {
 #ifndef _WIN32
-  syncFile(nativePath(value).parent_path().u8string());
+  syncFile(utf8(nativePath(value).parent_path()));
 #else
   (void)value; // Publication uses MoveFileExW with MOVEFILE_WRITE_THROUGH.
 #endif
 }
 
-} // namespace media
-} // namespace aria2
-#endif
+} // namespace aria2::media

@@ -1,166 +1,113 @@
-/* <!-- copyright */
-/*
- * aria2 - The high speed download utility
- *
- * Copyright (C) 2009 Tatsuhiro Tsujikawa
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
- *
- * In addition, as a special exception, the copyright holders give
- * permission to link the code of portions of this program with the
- * OpenSSL library under certain conditions as described in each
- * individual source file, and distribute linked combinations
- * including the two.
- * You must obey the GNU General Public License in all respects
- * for all of the code used other than OpenSSL.  If you modify
- * file(s) with this exception, you may extend this exception to your
- * version of the file(s), but you are not obligated to do so.  If you
- * do not wish to do so, delete this exception statement from your
- * version.  If you delete this exception statement from all source
- * files in the program, then also delete it here.
- */
-/* copyright --> */
-#include "DownloadContext.h"
-#include "ContextAttribute.h"
-#include "GroupId.h"
-#include "RpcRequest.h"
-#include "ValueBase.h"
-#include "ed2k_search.h"
-#include <cstdint>
-#include <memory>
-#include <utility>
-#include "common.h" // IWYU pragma: keep
+/* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
+// ED2K methods: keyword searches on the server and in Kad, and the state of
+// the eDonkey network presence.
+#include "rpc/Params.h"
 
-#include "RpcMethods.h"
-#include "RpcRequestHelpers.h"
-#include "RpcFields.h"
-#include "DownloadEngine.h"
-#include "RequestGroup.h"
-#include "support/Numbers.h"
-#include "support/Encoding.h"
-#include "fmt.h"
-#include "DlAbortEx.h"
-#include "Option.h"
-#include "download_helper.h"
-#include "Ed2kAttribute.h"
-#include <limits>
+#include "base/Text.h"
+#include "core/Engine.h"
+#include "ed2k/Network.h"
+#include "ed2k/Search.h"
+#include "ed2k/Searches.h"
+#include "rpc/Dispatcher.h"
 
 namespace aria2::rpc {
 
-using namespace fields;
-using namespace detail;
-
 namespace {
-int64_t getDictInt(const Dict* dict, const char* key, int64_t defaultValue)
+
+constexpr int64_t defaultSearchTimeout = 60;
+
+std::string field(const json::object* options, std::string_view name)
 {
-  if (!dict) {
-    return defaultValue;
+  const auto* value = options ? options->if_contains(name) : nullptr;
+  if (!value) {
+    return {};
   }
-  const auto value = downcast<Integer>(dict->get(key));
-  return value ? value->i() : defaultValue;
+  if (value->is_string()) {
+    return std::string(value->as_string());
+  }
+  if (value->is_int64()) {
+    return std::to_string(value->as_int64());
+  }
+  if (value->is_uint64()) {
+    return std::to_string(value->as_uint64());
+  }
+  return {};
 }
 
-uint32_t getDictUInt32(const Dict* dict, const char* key)
+int64_t number(const json::object* options, std::string_view name,
+               int64_t fallback)
 {
-  const auto value = getDictInt(dict, key, 0);
-  if (value <= 0) {
-    return 0;
+  const auto value = field(options, name);
+  if (value.empty()) {
+    return fallback;
   }
-  if (value > std::numeric_limits<uint32_t>::max()) {
-    return std::numeric_limits<uint32_t>::max();
+  const auto parsed = text::toSize(value);
+  if (!parsed || *parsed < 0) {
+    invalid(fmt::format("{} must be a non-negative number", name));
   }
-  return static_cast<uint32_t>(value);
+  return *parsed;
 }
 
-std::string getDictString(const Dict* dict, const char* key)
+Gid searchGid(const json::array& params)
 {
-  if (!dict) {
-    return std::string();
+  const auto gid = parseGid(text(params, 0, "GID"));
+  if (!gid) {
+    invalid("Invalid GID");
   }
-  const auto value = downcast<String>(dict->get(key));
-  return value ? value->s() : std::string();
+  return *gid;
 }
 
-std::unique_ptr<Dict>
-createEd2kSearchResultEntry(const ed2k::SearchResultEntry& entry)
-{
-  auto dict = Dict::g();
-  dict->put(KEY_HASH, util::toHex(entry.hash));
-  dict->put(KEY_NAME, entry.name);
-  dict->put(KEY_LENGTH, util::itos(entry.size));
-  dict->put(KEY_SOURCE_COUNT, util::uitos(entry.sourceCount));
-  dict->put(KEY_COMPLETE_SOURCE_COUNT, util::uitos(entry.completeSourceCount));
-  dict->put(KEY_FILE_TYPE, entry.fileType);
-  dict->put(KEY_EXTENSION, entry.extension);
-  dict->put(KEY_MEDIA_ARTIST, entry.mediaArtist);
-  dict->put(KEY_MEDIA_ALBUM, entry.mediaAlbum);
-  dict->put(KEY_MEDIA_TITLE, entry.mediaTitle);
-  dict->put(KEY_MEDIA_LENGTH, entry.mediaLength);
-  dict->put(KEY_MEDIA_BITRATE, util::uitos(entry.mediaBitrate));
-  dict->put(KEY_MEDIA_CODEC, entry.mediaCodec);
-  dict->put(KEY_SOURCE_NETWORK, entry.sourceNetwork);
-  dict->put(KEY_ED2K_LINK, entry.ed2kLink);
-  return dict;
-}
 } // namespace
 
-std::unique_ptr<ValueBase> Ed2kSearchRpcMethod::process(const RpcRequest& req,
-                                                        DownloadEngine* e)
+void registerEd2kMethods(Dispatcher& d, Engine& e)
 {
-  const String* keywordParam = checkRequiredParam<String>(req, 0);
-  const Dict* optsParam = checkParam<Dict>(req, 1);
-  if (keywordParam->s().empty()) {
-    throw DL_ABORT_EX("ED2K search keyword is empty.");
-  }
-  ed2k::SearchQuery query;
-  query.keyword = keywordParam->s();
-  query.fileType = getDictString(optsParam, KEY_FILE_TYPE);
-  query.extension = getDictString(optsParam, KEY_EXTENSION);
-  query.minSize = getDictInt(optsParam, "minSize", 0);
-  query.maxSize = getDictInt(optsParam, "maxSize", 0);
-  query.minSourceCount = getDictUInt32(optsParam, "minSourceCount");
-  query.minCompleteSourceCount =
-      getDictUInt32(optsParam, "minCompleteSourceCount");
-
-  auto requestOption = std::make_shared<Option>(*e->getOption());
-  gatherRequestOption(requestOption.get(), optsParam);
-  auto group = createEd2kSearchRequestGroup(query, requestOption);
-  return addRequestGroup(group, e, false, 0);
-}
-
-std::unique_ptr<ValueBase>
-GetEd2kSearchResultsRpcMethod::process(const RpcRequest& req, DownloadEngine* e)
-{
-  const String* gidParam = checkRequiredParam<String>(req, 0);
-  a2_gid_t gid = str2Gid(gidParam);
-  auto group = e->getRequestGroupMan()->findGroup(gid);
-  if (!group || !group->getDownloadContext()->hasAttribute(CTX_ATTR_ED2K)) {
-    throw DL_ABORT_EX(fmt("No ED2K search data is available for GID#%s",
-                          GroupId::toHex(gid).c_str()));
-  }
-  auto attrs = getEd2kAttrs(group->getDownloadContext());
-  auto result = Dict::g();
-  result->put(KEY_GID, GroupId::toHex(gid));
-  result->put(KEY_MORE_RESULTS,
-              attrs->searchMoreResults ? Bool::gTrue() : Bool::gFalse());
-  auto entries = List::g();
-  for (const auto& entry : attrs->searchResults) {
-    entries->append(createEd2kSearchResultEntry(entry));
-  }
-  result->put("results", std::move(entries));
-  return std::move(result);
+  d.add("aria2.ed2kSearch", [&e](json::array& p) -> json::value {
+    ed2k::SearchQuery query;
+    query.keyword = std::string(text::trim(text(p, 0, "keyword")));
+    if (query.keyword.empty()) {
+      invalid("The ED2K search keyword is empty");
+    }
+    const auto* value = at(p, 1);
+    const auto* options = value ? value->if_object() : nullptr;
+    query.fileType = field(options, "fileType");
+    query.extension = field(options, "extension");
+    query.minSize = number(options, "minSize", 0);
+    query.maxSize = number(options, "maxSize", 0);
+    query.minSourceCount =
+        static_cast<uint32_t>(number(options, "minSourceCount", 0));
+    query.minCompleteSourceCount =
+        static_cast<uint32_t>(number(options, "minCompleteSourceCount", 0));
+    const auto timeout = std::clamp<int64_t>(
+        number(options, "timeout", defaultSearchTimeout), 5, 600);
+    const auto gid =
+        e.ed2k().searches().start(query, std::chrono::seconds(timeout));
+    return json::string(gidText(gid));
+  });
+  d.add("aria2.getEd2kSearchResults", [&e](json::array& p) -> json::value {
+    const auto gid = searchGid(p);
+    auto results =
+        e.ed2kStarted() ? e.ed2k().searches().results(gid) : std::nullopt;
+    if (!results) {
+      invalid(fmt::format("No ED2K search with GID {}", gidText(gid)));
+    }
+    return std::move(*results);
+  });
+  d.add("aria2.ed2kSearchMore", [&e](json::array& p) -> json::value {
+    const auto gid = searchGid(p);
+    return json::value(e.ed2kStarted() && e.ed2k().searches().more(gid));
+  });
+  d.add("aria2.removeEd2kSearch", [&e](json::array& p) -> json::value {
+    const auto gid = searchGid(p);
+    if (e.ed2kStarted()) {
+      e.ed2k().searches().remove(gid);
+    }
+    return json::string("OK");
+  });
+  d.add("aria2.getEd2kStatus", [&e](json::array&) -> json::value {
+    json::object out;
+    e.ed2k().describe(out);
+    return out;
+  });
 }
 
 } // namespace aria2::rpc

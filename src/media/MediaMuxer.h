@@ -1,7 +1,6 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_MEDIA_MUXER_H
-#define D_MEDIA_MUXER_H
-#include "MediaStore.h"
+#pragma once
+#include "media/MediaStore.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -23,4 +22,3 @@ public:
 };
 } // namespace media
 } // namespace aria2
-#endif

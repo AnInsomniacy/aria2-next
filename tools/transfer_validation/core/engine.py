@@ -120,6 +120,18 @@ class EngineProcess:
             self.stderr.close()
         self.process = None
 
+    def kill(self) -> None:
+        """Ends the engine abruptly, as a crash or power loss would."""
+        if self.process is None:
+            return
+        self.process.kill()
+        self.process.wait(timeout=10)
+        if self.stdout:
+            self.stdout.close()
+        if self.stderr:
+            self.stderr.close()
+        self.process = None
+
     def __enter__(self) -> "EngineProcess":
         self.start()
         return self

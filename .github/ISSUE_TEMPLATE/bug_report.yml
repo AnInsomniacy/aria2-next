@@ -64,7 +64,8 @@ body:
         - BitTorrent / Magnet
         - ED2K
         - Metalink
-        - FTP / SFTP
+        - SFTP
+        - HLS / DASH
         - RPC
         - Docker
         - Build / Packaging

@@ -1,44 +1,7 @@
-add_library(aria2_doctest INTERFACE)
-target_include_directories(aria2_doctest INTERFACE
-  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest)
-
-set(ARIA2_TEST_SOURCES ${ARIA2_TEST_SOURCES_BASE})
-if(ENABLE_XML_RPC)
-  list(APPEND ARIA2_TEST_SOURCES ${ARIA2_TEST_SOURCES_ENABLE_XML_RPC})
-endif()
-if(HAVE_SOME_FALLOCATE)
-  list(APPEND ARIA2_TEST_SOURCES ${ARIA2_TEST_SOURCES_HAVE_SOME_FALLOCATE})
-endif()
-if(HAVE_ZLIB)
-  list(APPEND ARIA2_TEST_SOURCES ${ARIA2_TEST_SOURCES_HAVE_ZLIB})
-endif()
-if(ENABLE_BITTORRENT)
-  list(APPEND ARIA2_TEST_SOURCES ${ARIA2_TEST_SOURCES_ENABLE_BITTORRENT})
-endif()
-if(ENABLE_METALINK)
-  list(APPEND ARIA2_TEST_SOURCES ${ARIA2_TEST_SOURCES_ENABLE_METALINK})
-endif()
-if(NOT HAVE_TIMEGM)
-  list(APPEND ARIA2_TEST_SOURCES ${ARIA2_TEST_SOURCES_NOT_HAVE_TIMEGM})
-endif()
-if(ENABLE_LIBARIA2)
-  list(APPEND ARIA2_TEST_SOURCES ${ARIA2_TEST_SOURCES_ENABLE_LIBARIA2})
-endif()
-if(NOT ENABLE_WEBSOCKET)
-  list(REMOVE_ITEM ARIA2_TEST_SOURCES tests/WebSocketSessionManTest.cc)
-endif()
-list(REMOVE_DUPLICATES ARIA2_TEST_SOURCES)
-
+file(GLOB ARIA2_TEST_SOURCES CONFIGURE_DEPENDS
+  "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cc")
 add_executable(aria2_tests ${ARIA2_TEST_SOURCES})
-target_compile_definitions(aria2_tests PRIVATE HAVE_CONFIG_H A2_TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests" A2_TEST_OUT_DIR="test_outdir")
 target_include_directories(aria2_tests PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/tests
-  ${CMAKE_CURRENT_SOURCE_DIR}/src
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/includes
-  ${ARIA2_BOOST_ROOT}
-  ${CMAKE_CURRENT_BINARY_DIR}
-  ${CMAKE_CURRENT_BINARY_DIR}/src/includes)
-target_link_libraries(aria2_tests PRIVATE aria2_core aria2_doctest
-  spdlog::spdlog_header_only)
+  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/doctest")
+target_link_libraries(aria2_tests PRIVATE aria2_core)
 add_test(NAME aria2_tests COMMAND aria2_tests)
-set_tests_properties(aria2_tests PROPERTIES WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

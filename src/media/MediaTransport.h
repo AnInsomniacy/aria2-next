@@ -1,9 +1,8 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_MEDIA_TRANSPORT_H
-#define D_MEDIA_TRANSPORT_H
-#include "MediaDownload.h"
-#include "MediaRequestContext.h"
-#include "MediaInput.h"
+#pragma once
+#include "media/Control.h"
+#include "media/MediaRequestContext.h"
+#include "media/MediaInput.h"
 #include <curl/curl.h>
 #include <memory>
 #include <optional>
@@ -14,7 +13,7 @@
 #include <stdexcept>
 
 namespace aria2 {
-class Option;
+class Options;
 namespace media {
 struct HttpError : Failure {
   HttpError(long status, CURLcode result, curl_off_t retryAfter);
@@ -29,9 +28,10 @@ struct Resource {
   std::map<std::string, std::string> headers;
 };
 class Request;
+struct Throttle;
 class Transport {
 public:
-  Transport(const Option* option, std::string source, std::string directory,
+  Transport(const Options* option, std::string source, std::string directory,
             std::shared_ptr<Control> control);
   ~Transport();
   Transport(const Transport&) = delete;
@@ -48,7 +48,7 @@ public:
   void invalidate();
 
 private:
-  const Option* option_;
+  const Options* option_;
   std::string source_, directory_;
   std::shared_ptr<Control> control_;
   CURLM* multi_ = nullptr;
@@ -62,6 +62,7 @@ private:
   std::map<std::string, InputKey> verifiedKeys_;
   // Finished transfers of multi_, collected by the request that owns each.
   std::map<CURL*, CURLcode> completed_;
+  std::unique_ptr<Throttle> throttle_;
   // HLS media playlist entries in order, and each entry's resource key to its
   // playlist and position. Later VOD segments are fetched ahead in parallel
   // while the native client consumes them in order.
@@ -90,4 +91,3 @@ private:
 };
 } // namespace media
 } // namespace aria2
-#endif

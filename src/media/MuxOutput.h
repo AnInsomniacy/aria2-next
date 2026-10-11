@@ -1,8 +1,7 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_MUX_OUTPUT_H
-#define D_MUX_OUTPUT_H
+#pragma once
 
-#include "MuxInput.h"
+#include "media/MuxInput.h"
 #include <map>
 
 namespace aria2::media::muxing {
@@ -20,5 +19,3 @@ struct Output {
 void remux(Output&, Inputs&, const std::string& path, const std::string& format,
            bool video, bool audio, bool subtitles, Control*);
 } // namespace aria2::media::muxing
-
-#endif // D_MUX_OUTPUT_H

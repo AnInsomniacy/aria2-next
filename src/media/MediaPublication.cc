@@ -1,5 +1,5 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#include "Option.h"
+#include "options/Options.h"
 #include "media/MediaStore.h"
 #include "media/MediaTransport.h"
 #include <cstdint>
@@ -7,11 +7,10 @@
 #include <mutex>
 #include <stdexcept>
 #include <utility>
-#include "MediaJob.h"
-#include "MediaFiles.h"
-#include "MediaMuxer.h"
-#include "prefs.h"
-#include "Log.h"
+#include "media/MediaJob.h"
+#include "media/MediaFiles.h"
+#include "media/MediaMuxer.h"
+#include "base/Log.h"
 #include <filesystem>
 
 namespace aria2::media {
@@ -33,8 +32,7 @@ void MediaJob::complete(const Publication& publication)
     store.remove();
   }
   catch (const std::exception& error) {
-    A2_LOG_WARN(std::string("Media recovery cleanup failed: ") +
-                failureMessage(error));
+    log::warn("media: recovery cleanup failed: {}", failureMessage(error));
   }
 }
 
@@ -61,7 +59,7 @@ bool MediaJob::recoverPublication()
   }
   if (matches(publication->staging)) {
     Muxer::publish(publication->staging, publication->output,
-                   option->getAsBool(PREF_ALLOW_OVERWRITE));
+                   option->flag("allow-overwrite"));
     complete(*publication);
     return true;
   }
@@ -76,10 +74,10 @@ void MediaJob::finalize()
   value.state = "finalizing";
   publish(value);
   auto staging = Muxer::stage(
-      store.segments(), value.path, taskDirectory,
-      option->get(PREF_MEDIA_FORMAT), option->get(PREF_MEDIA_VIDEO) != "none",
-      option->get(PREF_MEDIA_AUDIO) != "none",
-      option->get(PREF_MEDIA_SUBTITLES) != "none", control, value.duration,
+      store.segments(), value.path, taskDirectory, option->get("media-format"),
+      option->get("media-video") != "none",
+      option->get("media-audio") != "none",
+      option->get("media-subtitles") != "none", control, value.duration,
       value.live, value.protocol == "collection");
   Publication publication{
       value.path, staging, Transport::digest(staging),
@@ -87,7 +85,7 @@ void MediaJob::finalize()
   store.preparePublication(publication);
   if (control->cancel)
     return;
-  Muxer::publish(staging, value.path, option->getAsBool(PREF_ALLOW_OVERWRITE));
+  Muxer::publish(staging, value.path, option->flag("allow-overwrite"));
   complete(publication);
 }
 

@@ -7,8 +7,20 @@ _aria2_next()
     cmd=${COMP_WORDS[0]}
     _get_comp_words_by_ref cur prev
     case $prev in
-        --metalink-preferred-protocol)
-            COMPREPLY=( $( compgen -W 'http https none' -- "$cur" ) )
+        --min-tls-version)
+            COMPREPLY=( $( compgen -W 'TLSv1.1 TLSv1.2 TLSv1.3' -- "$cur" ) )
+            return 0
+            ;;
+        --filename-hint-source)
+            COMPREPLY=( $( compgen -W 'browser title suggested' -- "$cur" ) )
+            return 0
+            ;;
+        --file-allocation)
+            COMPREPLY=( $( compgen -W 'none prealloc falloc trunc' -- "$cur" ) )
+            return 0
+            ;;
+        --follow-torrent)
+            COMPREPLY=( $( compgen -W 'true mem false' -- "$cur" ) )
             return 0
             ;;
         --bt-encryption)
@@ -19,30 +31,6 @@ _aria2_next()
             COMPREPLY=( $( compgen -W 'tcp utp both' -- "$cur" ) )
             return 0
             ;;
-        --bt-disk-io)
-            COMPREPLY=( $( compgen -W 'default pread mmap posix' -- "$cur" ) )
-            return 0
-            ;;
-        --bt-disk-read-cache)
-            COMPREPLY=( $( compgen -W 'enabled disabled' -- "$cur" ) )
-            return 0
-            ;;
-        --bt-disk-write-cache)
-            COMPREPLY=( $( compgen -W 'enabled disabled write-through' -- "$cur" ) )
-            return 0
-            ;;
-        --bt-mixed-mode)
-            COMPREPLY=( $( compgen -W 'prefer-tcp peer-proportional' -- "$cur" ) )
-            return 0
-            ;;
-        --bt-upload-slot-algorithm)
-            COMPREPLY=( $( compgen -W 'fixed rate-based' -- "$cur" ) )
-            return 0
-            ;;
-        --bt-seed-choking-algorithm)
-            COMPREPLY=( $( compgen -W 'round-robin fastest-upload anti-leech' -- "$cur" ) )
-            return 0
-            ;;
         --bt-blocklist-scope)
             COMPREPLY=( $( compgen -W 'peers peers-and-trackers all' -- "$cur" ) )
             return 0
@@ -51,40 +39,28 @@ _aria2_next()
             COMPREPLY=( $( compgen -W 'true mem false' -- "$cur" ) )
             return 0
             ;;
-        --file-allocation)
-            COMPREPLY=( $( compgen -W 'none prealloc trunc falloc' -- "$cur" ) )
+        --media)
+            COMPREPLY=( $( compgen -W 'auto file hls dash collection' -- "$cur" ) )
+            return 0
+            ;;
+        --media-format)
+            COMPREPLY=( $( compgen -W 'mp4 mkv vtt' -- "$cur" ) )
             return 0
             ;;
         --log-level)
-            COMPREPLY=( $( compgen -W 'trace debug info warn error' -- "$cur" ) )
-            return 0
-            ;;
-        --event-poll)
-            COMPREPLY=( $( compgen -W 'kqueue poll select' -- "$cur" ) )
-            return 0
-            ;;
-        --follow-torrent)
-            COMPREPLY=( $( compgen -W 'true mem false' -- "$cur" ) )
-            return 0
-            ;;
-        --ed2k-piece-selector)
-            COMPREPLY=( $( compgen -W 'default inorder random geom' -- "$cur" ) )
-            return 0
-            ;;
-        --download-result)
-            COMPREPLY=( $( compgen -W 'default full hide' -- "$cur" ) )
-            return 0
-            ;;
-        --min-tls-version)
-            COMPREPLY=( $( compgen -W 'TLSv1.1 TLSv1.2 TLSv1.3' -- "$cur" ) )
+            COMPREPLY=( $( compgen -W 'debug info notice warn error' -- "$cur" ) )
             return 0
             ;;
         --console-log-level)
-            COMPREPLY=( $( compgen -W 'trace debug info warn error' -- "$cur" ) )
+            COMPREPLY=( $( compgen -W 'debug info notice warn error' -- "$cur" ) )
             return 0
             ;;
         --dir|--state-dir)
             _filedir -d
+            return 0
+            ;;
+        --out|--input-file|--log|--conf-path|--load-cookies|--save-cookies|--ca-certificate|--certificate|--private-key|--netrc-path|--bt-peer-blocklist|--ed2k-server-list|--ed2k-node-list|--save-session|--on-download-start|--on-download-pause|--on-download-stop|--on-download-complete|--on-download-error|--on-bt-download-complete)
+            _filedir
             return 0
             ;;
         --torrent-file)
@@ -98,7 +74,7 @@ _aria2_next()
     esac
     case $cur in
         -*)
-            COMPREPLY=( $( compgen -W '--version --help --help=#basic --help=#advanced --help=#http --help=#https --help=#metalink --help=#bittorrent --help=#ed2k --help=#cookie --help=#hook --help=#file --help=#rpc --help=#checksum --help=#experimental --help=#help --help=#all --timeout --connect-timeout --max-tries --state-save-interval --log --log-max-size --log-max-files --dir --out --daemon --daemon=false --referer --lowest-speed-limit --piece-length --max-overall-download-limit --max-download-limit --file-allocation --no-file-allocation-limit --allow-overwrite --allow-overwrite=false --realtime-chunk-checksum --realtime-chunk-checksum=false --check-integrity --check-integrity=false --netrc-path --continue --continue=false --no-netrc --no-netrc=false --input-file --deferred-input --deferred-input=false --max-concurrent-downloads --optimize-concurrent-downloads --optimize-concurrent-downloads=true --optimize-concurrent-downloads=false --optimize-concurrent-downloads=A:B --force-sequential --force-sequential=false --auto-file-renaming --auto-file-renaming=false --parameterized-uri --parameterized-uri=false --no-conf --no-conf=false --conf-path --stop --quiet --quiet=false --summary-interval --log-level --console-log-level --remote-time --remote-time=false --max-file-not-found --event-poll --enable-rpc --enable-rpc=false --rpc-listen-port --rpc-max-request-size --rpc-listen-all --rpc-listen-all=false --rpc-allow-origin-all --rpc-allow-origin-all=false --rpc-certificate --rpc-private-key --rpc-secure --rpc-secure=false --rpc-save-upload-metadata --rpc-save-upload-metadata=false --dry-run --dry-run=false --on-download-start --on-download-pause --on-download-stop --on-download-complete --on-download-error --interface --multiple-interface --disable-ipv6 --disable-ipv6=false --human-readable --human-readable=false --save-session --ed2k-min-split-size --max-download-result --retry-wait --stream-max-connections --show-console-readout --show-console-readout=false --ed2k-piece-selector --truncate-console-readout --truncate-console-readout=false --pause --pause=false --download-result --hash-check-only --hash-check-only=false --checksum --stop-with-process --enable-mmap --enable-mmap=false --force-save --force-save=false --save-not-found --save-not-found=false --disk-cache --state-dir --ed2k-server --ed2k-server-list --ed2k-node-list --ed2k-listen-port --ed2k-udp-listen-port --ed2k-upload-slots --ed2k-max-connections --ed2k-preview-priority --ed2k-preview-priority=false --gid --save-session-interval --enable-color --enable-color=false --rpc-secret --dscp --pause-metadata --pause-metadata=false --rlimit-nofile --min-tls-version --socket-recv-buffer-size --max-mmap-limit --stderr --stderr=false --keep-unfinished-download-result --keep-unfinished-download-result=false --sftp-user --sftp-passwd --ssh-host-key-sha256 --http-user --http-passwd --user-agent --load-cookies --save-cookies --enable-http-keep-alive --enable-http-keep-alive=false --header --certificate --private-key --ca-certificate --check-certificate --check-certificate=false --http-no-cache --http-no-cache=false --http-accept-gzip --http-accept-gzip=false --http-proxy --https-proxy --all-proxy --no-proxy --http-proxy-user --http-proxy-passwd --https-proxy-user --https-proxy-passwd --all-proxy-user --all-proxy-passwd --show-files --show-files=false --max-overall-upload-limit --max-upload-limit --torrent-file --listen-port --follow-torrent --select-file --seed-time --seed-ratio --enable-peer-exchange --enable-peer-exchange=false --enable-dht --enable-dht=false --bt-encryption --bt-transport --bt-dht-bootstrap-nodes --bt-max-connections --bt-max-uploads --bt-proxy --bt-port-mapping --bt-port-mapping=false --bt-max-open-files --bt-io-threads --bt-hashing-threads --bt-connection-speed --bt-max-out-request-queue --bt-max-in-request-queue --bt-disk-queue-size --bt-disk-io --bt-disk-read-cache --bt-disk-write-cache --bt-checking-memory --bt-piece-extent-affinity --bt-piece-extent-affinity=false --bt-peer-turnover --bt-peer-turnover-cutoff --bt-peer-turnover-interval --bt-mixed-mode --bt-upload-slot-algorithm --bt-seed-choking-algorithm --bt-send-buffer-low-watermark --bt-send-buffer-watermark --bt-send-buffer-watermark-factor --bt-seeding-outgoing-connections --bt-seeding-outgoing-connections=false --bt-rate-limit-overhead --bt-rate-limit-overhead=false --bt-stop-tracker-timeout --bt-blocklist-scope --bt-resume-save-interval --bt-upload-suggestions --bt-upload-suggestions=false --bt-file-priority --bt-max-concurrent-http-announces --bt-announce-all-tiers --bt-announce-all-tiers=false --bt-announce-all-trackers --bt-announce-all-trackers=false --bt-user-agent --bt-peer-id-prefix --bt-anonymous-mode --bt-anonymous-mode=false --bt-seed-unverified --bt-seed-unverified=false --bt-max-peers --bt-max-uploads-per-torrent --bt-first-last-piece-first --bt-first-last-piece-first=false --bt-super-seeding --bt-super-seeding=false --bt-peer-blocklist --bt-external-ip --bt-external-port --index-out --bt-enable-lpd --bt-enable-lpd=false --bt-tracker-completion-timeout --bt-tracker-receive-timeout --bt-interface --on-bt-download-complete --bt-tracker --bt-exclude-tracker --detach-share-only --detach-share-only=false --metalink-file --metalink-version --metalink-language --metalink-os --metalink-location --follow-metalink --metalink-preferred-protocol --metalink-enable-unique-protocol --metalink-enable-unique-protocol=false --metalink-base-uri ' -- "$cur" ) )
+            COMPREPLY=( $( compgen -W '--dir --out --input-file --max-concurrent-downloads --continue --check-integrity --log --quiet --daemon --conf-path --no-conf --version --help --split --max-connection-per-server --min-split-size --timeout --connect-timeout --max-tries --retry-wait --lowest-speed-limit --max-download-limit --max-overall-download-limit --user-agent --referer --header --http-user --http-passwd --http-no-cache --http-accept-gzip --enable-http-keep-alive --load-cookies --save-cookies --check-certificate --ca-certificate --certificate --private-key --min-tls-version --all-proxy --all-proxy-user --all-proxy-passwd --http-proxy --http-proxy-user --http-proxy-passwd --https-proxy --https-proxy-user --https-proxy-passwd --no-proxy --dns-over-https --interface --disable-ipv6 --netrc-path --no-netrc --sftp-user --sftp-passwd --ssh-host-key-sha256 --remote-time --checksum --max-file-not-found --filename-hint --filename-hint-source --dry-run --allow-overwrite --auto-file-renaming --file-allocation --remove-control-file --force-save --save-not-found --index-out --torrent-file --follow-torrent --select-file --show-files --pause-metadata --listen-port --enable-dht --enable-peer-exchange --bt-enable-lpd --bt-port-mapping --bt-encryption --bt-transport --bt-tracker --bt-exclude-tracker --bt-max-peers --bt-max-connections --bt-max-uploads --bt-max-uploads-per-torrent --max-upload-limit --max-overall-upload-limit --seed-ratio --seed-time --bt-seed-unverified --bt-super-seeding --bt-first-last-piece-first --bt-file-priority --force-sequential --hash-check-only --detach-share-only --bt-external-ip --bt-external-port --bt-interface --bt-proxy --bt-anonymous-mode --bt-user-agent --bt-peer-id-prefix --bt-peer-blocklist --bt-blocklist-scope --bt-rate-limit-overhead --bt-dht-bootstrap-nodes --metalink-file --follow-metalink --ed2k-server --ed2k-server-list --ed2k-node-list --ed2k-listen-port --ed2k-udp-listen-port --ed2k-port-mapping --ed2k-upload-slots --ed2k-max-connections --ed2k-preview-priority --media --media-format --media-video --media-audio --media-subtitles --media-pause-after-probe --media-record-time --media-start-time --media-end-time --media-request-contexts --media-input --enable-rpc --rpc-listen-port --rpc-listen-all --rpc-allow-origin-all --rpc-secret --rpc-max-request-size --rpc-save-upload-metadata --pause --gid --state-dir --save-session --save-session-interval --state-save-interval --max-download-result --keep-unfinished-download-result --stop --stop-with-process --summary-interval --show-console-readout --enable-color --log-level --console-log-level --log-max-size --log-max-files --on-download-start --on-download-pause --on-download-stop --on-download-complete --on-download-error --on-bt-download-complete ' -- "$cur" ) )
             ;;
         *)
             _filedir '@(torrent|meta4|metalink|text|txt|list|lst)'

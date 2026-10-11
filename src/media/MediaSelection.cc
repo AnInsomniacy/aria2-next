@@ -1,6 +1,6 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#include "Option.h"
-#include "media/MediaDownload.h"
+#include "options/Options.h"
+#include "media/Control.h"
 #include "media/MediaTransport.h"
 #include <cstdint>
 #include <gpac/dash.h>
@@ -9,10 +9,8 @@
 #include <map>
 #include <stdexcept>
 #include <string>
-#include "MediaJob.h"
-#include "prefs.h"
-#include "Log.h"
-#include "fmt.h"
+#include "media/MediaJob.h"
+#include "base/Log.h"
 #include <gpac/constants.h>
 #include <sstream>
 
@@ -121,16 +119,14 @@ std::map<std::string, Track> MediaJob::chooseTracks(Snapshot& value)
           false,
           info.fps_den ? static_cast<double>(info.fps_num) / info.fps_den : 0};
       value.tracks.push_back(track);
-      A2_LOG_DEBUG(fmt("component=media event=representation id=%s type=%s "
-                       "language=%s mime=%s codec=%s",
-                       track.id.c_str(), track.type.c_str(),
-                       track.language.c_str(), mime.c_str(),
-                       track.codec.c_str()));
+      log::debug(
+          "media: representation id={} type={} language={} mime={} codec={}",
+          track.id, track.type, track.language, mime, track.codec);
       auto pref = type == "video" || (type == "muxed" &&
-                                      option->get(PREF_MEDIA_VIDEO) != "none")
-                      ? PREF_MEDIA_VIDEO
-                  : type == "audio" || type == "muxed" ? PREF_MEDIA_AUDIO
-                                                       : PREF_MEDIA_SUBTITLES;
+                                      option->get("media-video") != "none")
+                      ? "media-video"
+                  : type == "audio" || type == "muxed" ? "media-audio"
+                                                       : "media-subtitles";
       const auto& selection = option->get(pref);
       if (selection == "none")
         continue;
@@ -143,9 +139,9 @@ std::map<std::string, Track> MediaJob::chooseTracks(Snapshot& value)
   }
   for (const auto& type :
        {std::string("video"), std::string("audio"), std::string("subtitle")}) {
-    const auto pref = type == "video"   ? PREF_MEDIA_VIDEO
-                      : type == "audio" ? PREF_MEDIA_AUDIO
-                                        : PREF_MEDIA_SUBTITLES;
+    const auto pref = type == "video"   ? "media-video"
+                      : type == "audio" ? "media-audio"
+                                        : "media-subtitles";
     const auto& selection = option->get(pref);
     const auto muxed = chosen.find("muxed");
     const bool selectedMuxed = type != "subtitle" && muxed != chosen.end() &&
@@ -161,11 +157,11 @@ std::map<std::string, Track> MediaJob::chooseTracks(Snapshot& value)
                      ? "muxed"
                      : "video");
   if (chosen.count("muxed") && chosen.count("audio")) {
-    if (option->get(PREF_MEDIA_VIDEO) == "none" &&
+    if (option->get("media-video") == "none" &&
         chosen.at("audio").bandwidth >= chosen.at("muxed").bandwidth)
       chosen.erase("muxed");
-    else if (option->get(PREF_MEDIA_AUDIO) == "best" ||
-             option->get(PREF_MEDIA_AUDIO) == chosen.at("muxed").id)
+    else if (option->get("media-audio") == "best" ||
+             option->get("media-audio") == chosen.at("muxed").id)
       chosen.erase("audio");
     else
       throw Failure(FailureCode::UnsupportedSelection,
@@ -187,12 +183,12 @@ void MediaJob::selectTrack(const Track& track)
   if (gf_dash_group_select_quality(dash, group, nullptr, quality) != GF_OK)
     throw Failure(FailureCode::UnsupportedSelection,
                   "Cannot select the requested media quality");
-  const auto start = option->getAsInt(PREF_MEDIA_START_TIME);
-  const auto end = option->getAsInt(PREF_MEDIA_END_TIME);
+  const auto start = option->integer("media-start-time");
+  const auto end = option->integer("media-end-time");
   if (end && end <= start)
     throw Failure(FailureCode::UnsupportedSelection,
                   "Media range must end after its start");
-  if (!live && start > 0 && !option->getAsBool(PREF_MEDIA_PAUSE_AFTER_PROBE))
+  if (!live && start > 0 && !option->flag("media-pause-after-probe"))
     gf_dash_group_seek(dash, group, start);
   selected.push_back(group);
   const auto& identity = track.id;
@@ -205,7 +201,7 @@ void MediaJob::selectTrack(const Track& track)
       track.type, identity, "",
       static_cast<int64_t>(
           timescale ? gf_timestamp_rescale(offset, timescale, 1000000) : 0)};
-  if (!option->getAsBool(PREF_MEDIA_PAUSE_AFTER_PROBE)) {
+  if (!option->flag("media-pause-after-probe")) {
     auto previous =
         lastSegments.find({gf_dash_get_period_start(dash), identity});
     if (live && gf_dash_is_m3u8(dash) && previous != lastSegments.end() &&
@@ -248,7 +244,7 @@ GF_Err MediaJob::selectGroups()
     throw Failure(FailureCode::UnsupportedSelection,
                   "Select at least one audio or video track");
   store.saveTracks(value.tracks);
-  if (option->getAsBool(PREF_MEDIA_PAUSE_AFTER_PROBE)) {
+  if (option->flag("media-pause-after-probe")) {
     for (int group : selected)
       gf_dash_group_select(dash, group, GF_FALSE);
     value.state = "awaiting-selection";

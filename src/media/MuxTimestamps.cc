@@ -17,8 +17,8 @@ extern "C" {
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include "MuxInput.h"
-#include "MediaFiles.h"
+#include "media/MuxInput.h"
+#include "media/MediaFiles.h"
 #include <array>
 #include <charconv>
 #include <cstring>

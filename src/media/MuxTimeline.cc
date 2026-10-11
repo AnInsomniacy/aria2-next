@@ -7,7 +7,7 @@ extern "C" {
 #include <libavutil/rational.h>
 }
 
-#include "MuxTimeline.h"
+#include "media/MuxTimeline.h"
 #include "media/MuxInput.h"
 #include <cstdint>
 #include <stdexcept>

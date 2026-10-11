@@ -4,8 +4,8 @@
 #include <gpac/setup.h>
 #include <gpac/tools.h>
 #include <stdexcept>
-#include "MediaJob.h"
-#include "MediaFiles.h"
+#include "media/MediaJob.h"
+#include "media/MediaFiles.h"
 #include <filesystem>
 
 namespace aria2::media {

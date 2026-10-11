@@ -9,9 +9,9 @@ This file defines repository rules for AI coding agents. Human contributors shou
 
 | Area | Ownership |
 | --- | --- |
-| Core | C11 and C++17 aria2 command-line client and core implementation |
+| Core | C++20 download engine with the aria2 command line and JSON-RPC (`src/`, one static library `aria2_core`) |
 | Build | CMake 3.25+ with Ninja as the default generator |
-| Tests | CTest plus the doctest unit test suite (vendored in third_party/doctest) |
+| Tests | doctest unit tests under `tests/` (CTest) plus end-to-end `tools/transfer_validation` and `tools/bench` |
 | Packaging | Cross-platform release automation under `packaging/` and `.github/workflows/release.yml` |
 | Third-party source | Vendored dependency stack under `third_party/` with local ownership rules |
 
@@ -21,13 +21,10 @@ This file defines repository rules for AI coding agents. Human contributors shou
 | --- | --- |
 | `CMakeLists.txt` | Project declaration and CMake module entry point |
 | `CMakePresets.json` | Standard configure, build, and test presets |
-| `cmake/modules/` | Build options, probes, dependencies, targets, tests, and summary output |
-| `cmake/Sources.cmake` | Core source inventory |
-| `cmake/TestSources.cmake` | Test source inventory |
-| `src/` | aria2 core, CLI, protocol, disk, RPC, and platform code |
-| `src/includes/aria2/` | Public libaria2 headers |
-| `tests/` | doctest unit tests and fixtures |
-| `docs/` | Manual sources, completion tooling, and maintenance records |
+| `cmake/modules/` | Build options, dependencies, targets, tests, and summary output; sources are globbed from `src/` and `tests/` |
+| `src/` | The engine, by module: see [docs/architecture.md](docs/architecture.md) |
+| `tests/` | doctest unit tests |
+| `docs/` | Architecture, generated option reference and completion, maintenance records |
 | `packaging/` | Release dependencies, cross-build scripts, and package assets |
 | `packaging/dependencies.env` | Release dependency version source |
 | `third_party/` | Bundled third-party source |
@@ -39,7 +36,7 @@ CMake is the only supported build system for aria2-next. Do not restore Autotool
 
 Keep the top-level `CMakeLists.txt` small. New build logic belongs in the focused modules under `cmake/modules/`. Keep generated config headers, package metadata, CMake files, Ninja files, test output, binaries, and archives out of the source tree.
 
-Feature probes must match the source they guard. Prefer `check_symbol_exists`, `check_cxx_symbol_exists`, or small `check_*_source_compiles` snippets with the exact headers needed by the compiled branch. Windows and MinGW probes must include the correct Win32 headers and include order.
+Every library the engine uses is built by the superbuild from `third_party/`; do not add system or network dependency lookups. Platform differences belong in the code that needs them, guarded by the platform macros, not in configure-time probes.
 
 ## Version Management
 
@@ -161,7 +158,7 @@ If the release has been publicly consumed, do not delete the release, delete the
 
 ## CI and Verification
 
-Use the smallest verification set that covers the changed surface, then expand when changes touch shared build logic, platform probes, or packaging.
+Use the smallest verification set that covers the changed surface, then expand when changes touch shared build logic, threading, or packaging.
 
 When a Python environment is needed, use `source /opt/anaconda3/etc/profile.d/conda.sh && conda activate global`. Non-interactive shells may not have `conda` on `PATH`, so plain `conda activate global` can fail even though the environment exists.
 
@@ -183,19 +180,19 @@ Do not hide new test failures with `|| true`. Existing tolerated diagnostics mus
 
 Keep tests for public contracts, protocol boundaries, ownership, data integrity, and recovery. Organize them by behavior using native doctest fixtures; remove redundant or obsolete helpers without weakening coverage. Never delete assertions to make a failure disappear. See [tests/README.md](tests/README.md).
 
+When the option catalogue changes, regenerate `docs/options.md` and `docs/completion/aria2-next` (see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)).
+
 Run affected `tools/transfer_validation` modules when transfer behavior changes. Report the actual validation scope and unresolved failures; a successful rerun alone does not establish a root-cause fix.
 
 ## Source Conventions
 
-Follow the existing C and C++ style. Keep C++ at the repository's C++17 baseline unless the project intentionally raises the baseline. Avoid drive-by rewrites and broad formatting churn.
+Follow the existing C++20 style and `.clang-format`. Avoid drive-by rewrites and broad formatting churn. Add helpers only when they remove real duplication or contain platform-specific behavior cleanly.
 
-Prefer accurate CMake detection and existing config-header patterns over scattered compatibility macros. Add helpers only when they remove real duplication or contain platform-specific behavior cleanly.
-
-- **Readable responsibilities:** A function performs one logical operation; a file groups related behavior. Follow the [ownership map](docs/architecture.md). Split mixed responsibilities, not cohesive code merely to reduce line counts.
+- **Readable responsibilities:** A function performs one logical operation; a file groups related behavior. Follow the [architecture](docs/architecture.md). Split mixed responsibilities, not cohesive code merely to reduce line counts.
 - **Review signals:** Consider reviewing functions above roughly 40 lines, files above 800 lines, or nesting beyond three levels. These are project heuristics, not limits. Tables, protocol dispatch, and related test cases may reasonably be longer; do not add indirection to meet a metric.
 - **Native APIs first:** Prefer the standard library, OS APIs, and the existing libcurl, libtorrent, GPAC, FFmpeg, and SQLite integrations. Add abstractions only for demonstrated reuse or clearer ownership; avoid speculative frameworks and provider-specific workarounds for general protocol behavior.
-- **Explicit ownership and dependencies:** Use RAII and make resource lifetimes, thread boundaries, and persistence ordering clear. Include required headers directly. Review analyzer suggestions and preserve feature guards, complete-type requirements, and native C linkage.
-- **Complete cleanup:** When replacing an implementation, remove confirmed unused code, declarations, includes, and test helpers. Update CMake source inventories and relevant documentation in the same change; preserve public contracts unless explicitly authorized otherwise.
+- **Explicit ownership and dependencies:** Use RAII and make resource lifetimes, thread boundaries, and persistence ordering clear. Include required headers directly. Everything that touches task state runs on the control thread; other threads post completions to it.
+- **Complete cleanup:** When replacing an implementation, remove confirmed unused code, declarations, includes, and test helpers. Update the relevant documentation in the same change; preserve public contracts unless explicitly authorized otherwise.
 - **English comments:** Explain non-obvious reasons, invariants, units, ownership, and lifetime constraints. Keep contracts near declarations and protocol rationale near implementation. Remove stale commentary; do not narrate obvious statements.
 
 Further guidance: [Contributing](docs/CONTRIBUTING.md), [C++ Core Guidelines](https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines), and [Google C++ Style Guide](https://google.github.io/styleguide/cppguide.html). Adapt their principles to this repository rather than importing unrelated policies.

@@ -1,16 +1,16 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_MEDIA_STORE_H
-#define D_MEDIA_STORE_H
+#pragma once
 
-#include "MediaDownload.h"
+#include "media/Control.h"
+#include "state/Sqlite.h"
+
 #include <cstdint>
 #include <string>
 #include <optional>
 #include <vector>
 
-struct sqlite3;
-namespace aria2 {
-namespace media {
+namespace aria2::media {
+
 struct Segment {
   int64_t period = 0;
   std::string track;
@@ -32,7 +32,6 @@ struct Publication {
 class Store {
 public:
   Store(const std::string& directory, std::string gid);
-  ~Store();
   Store(const Store&) = delete;
   Store& operator=(const Store&) = delete;
   static void discard(const std::string& directory, const std::string& gid);
@@ -52,9 +51,7 @@ public:
   void remove();
 
 private:
-  sqlite3* db_ = nullptr;
+  sqlite::Database db_;
   std::string gid_;
 };
-} // namespace media
-} // namespace aria2
-#endif
+} // namespace aria2::media

@@ -9,9 +9,9 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include "MediaJob.h"
-#include "MediaFiles.h"
-#include "MediaMuxer.h"
+#include "media/MediaJob.h"
+#include "media/MediaFiles.h"
+#include "media/MediaMuxer.h"
 #include <algorithm>
 #include <array>
 #include <filesystem>
@@ -142,9 +142,9 @@ std::string MediaJob::localResource(const char* url, int64_t begin, int64_t end)
         static_cast<uint64_t>(end) >= std::filesystem::file_size(path))
       throw std::runtime_error(
           "Cached media resource does not contain the required byte range");
-    auto slice = root / Transport::fingerprint(path.u8string() + ":" +
-                                               std::to_string(begin) + ":" +
-                                               std::to_string(end));
+    auto slice =
+        root / Transport::fingerprint(utf8(path) + ":" + std::to_string(begin) +
+                                      ":" + std::to_string(end));
     std::ifstream input(path, std::ios::binary);
     input.seekg(begin);
     std::ofstream output(slice, std::ios::binary | std::ios::trunc);
@@ -160,9 +160,9 @@ std::string MediaJob::localResource(const char* url, int64_t begin, int64_t end)
       remaining -= count;
     }
     output.close();
-    return slice.u8string();
+    return utf8(slice);
   }
-  return path.u8string();
+  return utf8(path);
 }
 
 void MediaJob::progress()

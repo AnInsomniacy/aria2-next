@@ -57,20 +57,18 @@ find_package(OpenSSL ${ARIA2_MIN_OPENSSL_VERSION} CONFIG REQUIRED
   NO_DEFAULT_PATH
   NO_CMAKE_FIND_ROOT_PATH)
 
-if(ARIA2_ENABLE_BITTORRENT)
-  unset(LibtorrentRasterbar_DIR CACHE)
-  unset(Boost_DIR CACHE)
-  unset(Boost_INCLUDE_DIR CACHE)
-  set(Boost_NO_BOOST_CMAKE ON)
-  set(Boost_NO_SYSTEM_PATHS ON)
-  set(Boost_INCLUDE_DIR "${ARIA2_BOOST_ROOT}")
-  set(BOOST_ROOT "${ARIA2_BOOST_ROOT}")
-  find_package(LibtorrentRasterbar ${ARIA2_MIN_LIBTORRENT_VERSION}
-    CONFIG REQUIRED
-    PATHS "${ARIA2_DEPENDENCY_ROOT}/lib/cmake/LibtorrentRasterbar"
-    NO_DEFAULT_PATH
-    NO_CMAKE_FIND_ROOT_PATH)
-endif()
+unset(LibtorrentRasterbar_DIR CACHE)
+unset(Boost_DIR CACHE)
+unset(Boost_INCLUDE_DIR CACHE)
+set(Boost_NO_BOOST_CMAKE ON)
+set(Boost_NO_SYSTEM_PATHS ON)
+set(Boost_INCLUDE_DIR "${ARIA2_BOOST_ROOT}")
+set(BOOST_ROOT "${ARIA2_BOOST_ROOT}")
+find_package(LibtorrentRasterbar ${ARIA2_MIN_LIBTORRENT_VERSION}
+  CONFIG REQUIRED
+  PATHS "${ARIA2_DEPENDENCY_ROOT}/lib/cmake/LibtorrentRasterbar"
+  NO_DEFAULT_PATH
+  NO_CMAKE_FIND_ROOT_PATH)
 
 unset(CURL_DIR CACHE)
 set(CURL_DIR "${ARIA2_DEPENDENCY_ROOT}/lib/cmake/CURL")
@@ -94,3 +92,19 @@ get_target_property(aria2_curl_link_libraries CURL::libcurl_static
 list(FILTER aria2_curl_link_libraries EXCLUDE REGEX ".*ZLIB::ZLIB.*")
 set_property(TARGET CURL::libcurl_static PROPERTY INTERFACE_LINK_LIBRARIES
   "${aria2_curl_link_libraries}")
+
+find_package(Threads REQUIRED)
+add_library(aria2_spdlog INTERFACE)
+add_library(spdlog::spdlog_header_only ALIAS aria2_spdlog)
+target_include_directories(aria2_spdlog INTERFACE
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog/include)
+target_compile_definitions(aria2_spdlog INTERFACE
+  SPDLOG_DISABLE_DEFAULT_LOGGER
+  SPDLOG_NO_THREAD_ID
+  SPDLOG_PREVENT_CHILD_FD)
+target_link_libraries(aria2_spdlog INTERFACE Threads::Threads)
+if(WIN32)
+  target_compile_definitions(aria2_spdlog INTERFACE
+    SPDLOG_UTF8_TO_WCHAR_CONSOLE
+    SPDLOG_WCHAR_FILENAMES)
+endif()

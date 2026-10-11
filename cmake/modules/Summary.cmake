@@ -1,2 +1,2 @@
 message(STATUS "Target: ${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}")
-message(STATUS "Features: SSL=${ENABLE_SSL}; OpenSSL=${HAVE_OPENSSL}; BitTorrent=${ENABLE_BITTORRENT}; ED2K=${ENABLE_ED2K}; Media=HLS/DASH; Metalink=${ENABLE_METALINK}; XML-RPC=${ENABLE_XML_RPC}; WebSocket=${ENABLE_WEBSOCKET}; Async DNS=system; libaria2=${ENABLE_LIBARIA2}")
+message(STATUS "Protocols: HTTP(S), SFTP, BitTorrent, ED2K/Kad, Metalink, HLS/DASH; RPC: JSON-RPC over HTTP and WebSocket")

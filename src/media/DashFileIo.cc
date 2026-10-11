@@ -1,5 +1,5 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#include "DashFileIo.h"
+#include "media/DashFileIo.h"
 #include "media/MediaTransport.h"
 #include <cstdint>
 #include <curl/curl.h>
@@ -8,8 +8,8 @@
 #include <gpac/setup.h>
 #include <gpac/tools.h>
 #include <string>
-#include "MediaJob.h"
-#include "MediaFiles.h"
+#include "media/MediaJob.h"
+#include "media/MediaFiles.h"
 #include <algorithm>
 
 namespace aria2::media {

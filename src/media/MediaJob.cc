@@ -1,6 +1,7 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#include "MediaJob.h"
-#include "media/MediaDownload.h"
+#include "options/Options.h"
+#include "media/MediaJob.h"
+#include "media/Control.h"
 #include <chrono>
 #include <gpac/dash.h>
 #include <gpac/setup.h>
@@ -11,16 +12,14 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-#include "MediaFiles.h"
-#include "Option.h"
-#include "prefs.h"
+#include "media/MediaFiles.h"
 #include <filesystem>
 #include <fstream>
 #include <algorithm>
 
 namespace aria2::media {
 
-MediaJob::MediaJob(std::shared_ptr<Option> op, std::string source,
+MediaJob::MediaJob(std::shared_ptr<const Options> op, std::string source,
                    std::string id, std::string root,
                    std::shared_ptr<Control> ctl)
     : option(std::move(op)),
@@ -28,22 +27,20 @@ MediaJob::MediaJob(std::shared_ptr<Option> op, std::string source,
       uri(std::move(source)),
       gid(std::move(id)),
       directory(std::move(root)),
-      taskDirectory((nativePath(directory) / "tasks" / gid).u8string()),
+      taskDirectory(utf8(nativePath(directory) / "tasks" / gid)),
       store(directory, gid),
       transport(option.get(), uri, taskDirectory, control),
       io(*this)
 {
   live = control->snapshot.live;
   auto identity = Transport::fingerprint(
-      uri + "\n" + option->get(PREF_MEDIA_VIDEO) + "\n" +
-      option->get(PREF_MEDIA_AUDIO) + "\n" + option->get(PREF_MEDIA_SUBTITLES) +
-      "\n" + option->get(PREF_MEDIA_FORMAT) + "\n" +
-      option->get(PREF_MEDIA_REQUEST_CONTEXTS) + "\n" +
-      option->get(PREF_MEDIA_INPUT) + "\n" +
-      option->get(PREF_MEDIA_START_TIME) + "\n" +
-      option->get(PREF_MEDIA_END_TIME) + "\n" + option->get(PREF_HEADER) +
-      "\n" + option->get(PREF_HTTP_USER) + "\n" +
-      option->get(PREF_HTTP_PASSWD));
+      uri + "\n" + option->get("media-video") + "\n" +
+      option->get("media-audio") + "\n" + option->get("media-subtitles") +
+      "\n" + option->get("media-format") + "\n" +
+      option->get("media-request-contexts") + "\n" +
+      option->get("media-input") + "\n" + option->get("media-start-time") +
+      "\n" + option->get("media-end-time") + "\n" + option->get("header") +
+      "\n" + option->get("http-user") + "\n" + option->get("http-passwd"));
   if (store.identity(identity)) {
     std::lock_guard<std::mutex> lock(control->mutex);
     control->snapshot.downloadedLength = 0;

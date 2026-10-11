@@ -1,2 +1,0 @@
-http://fromfile1
-http://fromfile2

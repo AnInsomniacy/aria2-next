@@ -1,19 +1,17 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#include "MediaTransport.h"
-#include "MediaRequest.h"
-#include "BufferedFile.h"
-#include "Option.h"
-#include "Log.h"
-#include "fmt.h"
-#include "prefs.h"
-#include "transport/CurlOptions.h"
-#include "transport/HttpHeaders.h"
+#include "options/Options.h"
+#include "media/MediaTransport.h"
+#include "media/MediaRequest.h"
+#include "base/Log.h"
+#include "base/Uri.h"
+#include "http/Request.h"
+#include "media/MediaFiles.h"
 #include <algorithm>
 #include <chrono>
 #include <curl/header.h>
 #include <memory>
 #include <optional>
-#include <sstream>
+#include <utility>
 
 namespace aria2::media {
 
@@ -33,13 +31,32 @@ HttpError::HttpError(long status, CURLcode result, curl_off_t delay)
 {
 }
 
-Request::Request(CURLM* multi, Control* control, const std::string& path,
-                 std::map<CURL*, CURLcode>& completed)
+void Throttle::resume()
+{
+  if (paused.empty() || !bucket.available())
+    return;
+  // Resuming may deliver data that pauses a handle again.
+  for (auto* handle : std::exchange(paused, {}))
+    curl_easy_pause(handle, CURLPAUSE_CONT);
+}
+
+void Throttle::forget(CURL* handle)
+{
+  paused.erase(std::remove(paused.begin(), paused.end(), handle), paused.end());
+}
+
+Request::Request(CURLM* multi, Control* control, Throttle& throttle,
+                 const std::string& path, std::map<CURL*, CURLcode>& completed)
     : multi_(multi),
       control_(control),
-      completed_(completed),
-      output_(path.c_str(), "wb")
+      throttle_(throttle),
+      completed_(completed)
 {
+#ifdef _WIN32
+  output_.reset(_wfopen(nativePath(path).c_str(), L"wb"));
+#else
+  output_.reset(std::fopen(path.c_str(), "wb"));
+#endif
   if (!easy_ || !output_)
     throw std::runtime_error("Cannot open media HTTP request");
   std::lock_guard<std::mutex> lock(control_->mutex);
@@ -59,6 +76,7 @@ void Request::detach() noexcept
     return;
   curl_multi_remove_handle(multi_, handle());
   completed_.erase(handle());
+  throttle_.forget(handle());
   started_ = false;
 }
 
@@ -98,6 +116,8 @@ void Request::perform()
     done = completed_.find(handle());
     if (done != completed_.end())
       break;
+    throttle_.bucket.setRate(control_->downloadLimit);
+    throttle_.resume();
     multiResult = curl_multi_poll(multi_, nullptr, 0, 100, nullptr);
     if (multiResult != CURLM_OK)
       break;
@@ -105,7 +125,7 @@ void Request::perform()
   const auto result =
       done == completed_.end() ? CURLE_ABORTED_BY_CALLBACK : done->second;
   detach();
-  if (output_.close() != 0)
+  if (std::fclose(output_.release()) != 0)
     throw std::runtime_error("Cannot close media cache file");
   if (metadataTooLarge_)
     throw Failure(FailureCode::UnsupportedSource,
@@ -133,8 +153,13 @@ size_t Request::write(char* data, size_t size, size_t count,
     request.metadataTooLarge_ = true;
     return CURL_WRITEFUNC_ERROR;
   }
-  if (request.output_.write(data, length) != length)
+  if (!request.throttle_.bucket.available()) {
+    request.throttle_.paused.push_back(request.handle());
+    return CURL_WRITEFUNC_PAUSE;
+  }
+  if (std::fwrite(data, 1, length, request.output_.get()) != length)
     return CURL_WRITEFUNC_ERROR;
+  request.throttle_.bucket.charge(static_cast<int64_t>(length));
   request.bytes_ += length;
   request.control_->received.fetch_add(length);
   return length;
@@ -147,107 +172,56 @@ int Request::progress(void* opaque, curl_off_t, curl_off_t, curl_off_t,
 }
 
 namespace {
-void configureNetwork(Request& request, const Option* option,
-                      const std::string& url, CURLSH* share,
-                      std::string& loadedCookies)
+
+// A 206 response must carry exactly the requested bytes.
+bool matchesRange(CURL* handle, int64_t begin, int64_t end, size_t bytes)
 {
-  request.set(CURLOPT_URL, url.c_str());
-  request.set(CURLOPT_SHARE, share);
-  request.set(CURLOPT_PROTOCOLS_STR, "http,https");
-  request.set(CURLOPT_DISALLOW_USERNAME_IN_URL, 1L);
-  request.set(CURLOPT_FOLLOWLOCATION, 0L);
-  request.set(CURLOPT_FAILONERROR, 1L);
-  request.set(CURLOPT_NOSIGNAL, 1L);
-  request.set(CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS);
-  request.set(CURLOPT_TCP_KEEPALIVE, 1L);
-  request.set(CURLOPT_COOKIEFILE, "");
-  request.set(CURLOPT_CONNECTTIMEOUT,
-              static_cast<long>(option->getAsInt(PREF_CONNECT_TIMEOUT)));
-  request.set(CURLOPT_LOW_SPEED_TIME,
-              static_cast<long>(option->getAsInt(PREF_TIMEOUT)));
-  request.set(CURLOPT_LOW_SPEED_LIMIT, 1L);
-  request.set(CURLOPT_USERAGENT, option->get(PREF_USER_AGENT).c_str());
-  const auto tls = http::configureTls(request.handle(), option);
-  if (tls != CURLE_OK)
-    throw std::runtime_error(curl_easy_strerror(tls));
-  if (!option->blank(PREF_INTERFACE))
-    request.set(CURLOPT_INTERFACE, option->get(PREF_INTERFACE).c_str());
-  if (option->getAsBool(PREF_DISABLE_IPV6))
-    request.set(CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
-  const auto proxy =
-      url.rfind("https:", 0) == 0 ? PREF_HTTPS_PROXY : PREF_HTTP_PROXY;
-  const bool useAll = option->blank(proxy);
-  const auto& proxyUrl = option->get(useAll ? PREF_ALL_PROXY : proxy);
-  if (!proxyUrl.empty())
-    request.set(CURLOPT_PROXY, proxyUrl.c_str());
-  const auto user = useAll                      ? PREF_ALL_PROXY_USER
-                    : proxy == PREF_HTTPS_PROXY ? PREF_HTTPS_PROXY_USER
-                                                : PREF_HTTP_PROXY_USER;
-  const auto password = useAll                      ? PREF_ALL_PROXY_PASSWD
-                        : proxy == PREF_HTTPS_PROXY ? PREF_HTTPS_PROXY_PASSWD
-                                                    : PREF_HTTP_PROXY_PASSWD;
-  if (!option->blank(user)) {
-    request.set(CURLOPT_PROXYUSERNAME, option->get(user).c_str());
-    request.set(CURLOPT_PROXYPASSWORD, option->get(password).c_str());
-  }
-  if (!option->blank(PREF_NO_PROXY)) {
-    const auto bypass = http::noProxyFor(option->get(PREF_NO_PROXY), url);
-    request.set(CURLOPT_NOPROXY, bypass.c_str());
-  }
-  if (!option->blank(PREF_REFERER))
-    request.set(CURLOPT_REFERER, option->get(PREF_REFERER).c_str());
-  if (const auto result =
-          http::loadCookies(request.handle(), option, loadedCookies);
-      result != CURLE_OK)
-    throw std::runtime_error(std::string("Unable to load cookies: ") +
-                             curl_easy_strerror(result));
+  curl_header* field = nullptr;
+  if (curl_easy_header(handle, "Content-Range", 0, CURLH_HEADER, -1, &field) !=
+      CURLHE_OK)
+    return false;
+  const auto range = http::parseContentRange(field->value);
+  return range && range->first == begin && (end < 0 || range->last == end) &&
+         range->last - range->first + 1 == static_cast<int64_t>(bytes);
 }
 
-void configureHeaders(Request& request, const Option* option,
-                      const std::string& source, const std::string& url,
-                      const std::vector<RequestContext>& contexts)
-{
-  const auto context =
-      std::find_if(contexts.begin(), contexts.end(), [&](const auto& item) {
-        return http::sameOrigin(item.url, url);
-      });
-  if (context != contexts.end()) {
-    for (const auto& [name, value] : context->headers) {
-      if (name == "cookie")
-        request.set(CURLOPT_COOKIE, value.c_str());
-      else if (name == "referer")
-        request.set(CURLOPT_REFERER, value.c_str());
-      else if (name == "user-agent")
-        request.set(CURLOPT_USERAGENT, value.c_str());
-      else
-        request.header(name + (value.empty() ? ";" : ": " + value));
-    }
-    return;
-  }
-  if (!http::sameOrigin(source, url))
-    return;
-  std::istringstream configured(option->get(PREF_HEADER));
-  std::string line;
-  while (std::getline(configured, line))
-    if (!line.empty() && !http::startsWithHeader(line, "Range:") &&
-        !http::startsWithHeader(line, "Host:"))
-      request.header(line);
-  if (!option->blank(PREF_HTTP_USER)) {
-    request.set(CURLOPT_HTTPAUTH, CURLAUTH_ANY);
-    request.set(CURLOPT_USERNAME, option->get(PREF_HTTP_USER).c_str());
-    request.set(CURLOPT_PASSWORD, option->get(PREF_HTTP_PASSWD).c_str());
-  }
-}
 } // namespace
 
 std::unique_ptr<Request> Transport::open(const std::string& url, int64_t begin,
                                          int64_t end,
                                          const std::string& temporary)
 {
-  auto transfer =
-      std::make_unique<Request>(multi_, control_.get(), temporary, completed_);
-  configureNetwork(*transfer, option_, url, share_, loadedCookies_);
-  configureHeaders(*transfer, option_, source_, url, contexts_);
+  auto transfer = std::make_unique<Request>(multi_, control_.get(), *throttle_,
+                                            temporary, completed_);
+  // Captured browser headers replace the configured ones for their origin.
+  const auto context =
+      std::find_if(contexts_.begin(), contexts_.end(), [&](const auto& item) {
+        return uri::sameOrigin(item.url, url);
+      });
+  http::configureRequest(transfer->handle(), share_, loadedCookies_, *option_,
+                         url, source_, [&](const std::string& line) {
+                           if (context == contexts_.end())
+                             transfer->header(line);
+                         });
+  // The media client follows redirects itself so each hop is checked.
+  transfer->set(CURLOPT_PROTOCOLS_STR, "http,https");
+  transfer->set(CURLOPT_FOLLOWLOCATION, 0L);
+  transfer->set(CURLOPT_DISALLOW_USERNAME_IN_URL, 1L);
+  transfer->set(CURLOPT_NOSIGNAL, 1L);
+  transfer->set(CURLOPT_HTTP_VERSION,
+                static_cast<long>(CURL_HTTP_VERSION_2TLS));
+  if (context != contexts_.end()) {
+    for (const auto& [name, value] : context->headers) {
+      if (name == "cookie")
+        transfer->set(CURLOPT_COOKIE, value.c_str());
+      else if (name == "referer")
+        transfer->set(CURLOPT_REFERER, value.c_str());
+      else if (name == "user-agent")
+        transfer->set(CURLOPT_USERAGENT, value.c_str());
+      else
+        transfer->header(name + (value.empty() ? ";" : ": " + value));
+    }
+  }
   const auto range =
       begin || end >= 0
           ? std::to_string(begin) + "-" + (end >= 0 ? std::to_string(end) : "")
@@ -255,11 +229,6 @@ std::unique_ptr<Request> Transport::open(const std::string& url, int64_t begin,
   transfer->set(CURLOPT_ACCEPT_ENCODING, range.empty() ? "" : "identity");
   if (!range.empty())
     transfer->set(CURLOPT_RANGE, range.c_str());
-  // Concurrent segment requests share the task's rate limit.
-  transfer->set(CURLOPT_MAX_RECV_SPEED_LARGE,
-                static_cast<curl_off_t>(control_->downloadLimit.load() /
-                                        static_cast<int64_t>(
-                                            prefetchLimit_ + 1)));
   return transfer;
 }
 
@@ -274,8 +243,7 @@ Resource Transport::describe(Request& transfer, const std::string& url,
     throw HttpError(status, CURLE_OK, 0);
   const bool ranged = begin || end >= 0;
   if ((ranged && status != 206) ||
-      (status == 206 &&
-       !http::matchesRange(handle, begin, end, transfer.bytes())))
+      (status == 206 && !matchesRange(handle, begin, end, transfer.bytes())))
     throw std::runtime_error("Server returned an incorrect media byte range");
   char* mime = nullptr;
   curl_easy_getinfo(handle, CURLINFO_CONTENT_TYPE, &mime);
@@ -291,10 +259,8 @@ Resource Transport::describe(Request& transfer, const std::string& url,
   curl_header* field = nullptr;
   while ((field = curl_easy_nextheader(handle, CURLH_HEADER, -1, field)))
     resource.headers[field->name] = field->value;
-  A2_LOG_DEBUG(
-      fmt("component=media event=http_complete url=%s status=%ld bytes=%llu",
-          logging::sanitizeUri(url).c_str(), status,
-          static_cast<unsigned long long>(transfer.bytes())));
+  log::debug("media: {} status={} bytes={}", uri::redact(url), status,
+             transfer.bytes());
   return resource;
 }
 
@@ -342,9 +308,8 @@ std::optional<Resource> Transport::collect(const std::string& key,
     return describe(*transfer, url, begin, end, temporary);
   }
   catch (const std::exception& error) {
-    A2_LOG_DEBUG(fmt("component=media event=prefetch_discarded url=%s "
-                     "message=%s",
-                     logging::sanitizeUri(url).c_str(), error.what()));
+    log::debug("media: prefetch of {} discarded: {}", uri::redact(url),
+               error.what());
     return std::nullopt;
   }
 }

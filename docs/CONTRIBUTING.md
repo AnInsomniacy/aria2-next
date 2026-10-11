@@ -10,7 +10,7 @@ Maintained by [@AnInsomniacy](https://github.com/AnInsomniacy). Issues and pull 
 - Ninja
 - Make
 - Perl
-- A C11 and C++17 capable compiler
+- A C11 and C++20 capable compiler
 - No external library packages: all maintained dependencies are vendored under `third_party`
 
 ### Getting Started
@@ -26,7 +26,7 @@ build/default/aria2-next --version
 
 ## Scope
 
-aria2-next is a command-line engine and library with a libtorrent-backed BitTorrent implementation. The repository owns the C and C++ engine, protocol integrations, CMake build, tests, release packaging, Docker image definition, and maintenance records.
+aria2-next is a command-line and JSON-RPC download engine. The repository owns the C and C++ engine, protocol integrations, CMake build, tests, release packaging, Docker image definition, and maintenance records.
 
 Rayburst desktop UI issues belong in [rayburst](https://github.com/AnInsomniacy/rayburst). Browser download interception issues belong in [rayburst-connect](https://github.com/AnInsomniacy/rayburst-connect).
 
@@ -36,9 +36,9 @@ Keep changes focused. Avoid unrelated refactors, formatting churn, or compatibil
 
 The maintained build system is CMake. Do not restore Autotools files or add another maintained build system. Keep top-level `CMakeLists.txt` small and put build logic in focused modules under `cmake/modules/`.
 
-Follow the existing C and C++ style. Keep C++ at the repository's C++17 baseline unless the project intentionally raises it. Use existing helpers and config-header patterns before adding new abstractions.
+Follow the existing C++ style and `.clang-format`. The engine targets C++20. Use existing helpers before adding new abstractions.
 
-Use the [ownership map](architecture.md) when placing new behavior. A function
+Use the [architecture](architecture.md) when placing new behavior. A function
 should perform one logical operation; a file should have a coherent reason to
 change. Length is a review signal, not a quota: split mixed responsibilities,
 but keep related declarations, option tables and protocol cases together when
@@ -72,6 +72,18 @@ build/default/aria2-next --version
 Add focused tests for risky behavior: protocol parsing, state machines, data integrity, cross-platform path handling, RPC contracts, and regressions that could corrupt downloads or break compatibility.
 
 Do not add noisy tests for simple documentation, template, formatting, or mechanical cleanup changes. Do not add tests that depend on real external URLs.
+
+Transfer behaviour changes must also pass the affected
+`tools/transfer_validation` modules (`python tools/transfer_validation/run.py all`)
+and, for HTTP scheduling, `tools/bench/bench.py` compared with a saved baseline.
+
+When the option catalogue changes, regenerate the option reference and the
+bash completion:
+
+```bash
+python docs/make_options_doc.py build/default/aria2-next > docs/options.md
+python docs/completion/make_bash_completion.py build/default/aria2-next > docs/completion/aria2-next
+```
 
 Broad CMake option changes should run:
 

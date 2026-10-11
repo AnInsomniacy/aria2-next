@@ -12,7 +12,7 @@ extern "C" {
 #include <libavutil/mem.h>
 }
 
-#include "MuxInput.h"
+#include "media/MuxInput.h"
 #include <cerrno>
 #include <cstddef>
 #include <cstdint>
@@ -20,7 +20,7 @@ extern "C" {
 #include <gpac/list.h>
 #include <ios>
 #include <stdexcept>
-#include "MediaFiles.h"
+#include "media/MediaFiles.h"
 #include <gpac/webvtt.h>
 #include <algorithm>
 #include <filesystem>

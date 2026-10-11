@@ -1,8 +1,6 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_DASH_FILE_IO_H
-#define D_DASH_FILE_IO_H
+#pragma once
 
-#include "common.h"
 #include <gpac/dash.h>
 
 namespace aria2::media {
@@ -18,5 +16,3 @@ private:
   GF_DASHFileIO native_{};
 };
 } // namespace aria2::media
-
-#endif // D_DASH_FILE_IO_H

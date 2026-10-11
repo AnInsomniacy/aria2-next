@@ -503,7 +503,8 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             # Every connection through this proxy is cut after 3 MiB, so each
             # range ends early and its remainder must be requested again.
             short_port = proxy.create_proxy("short", caddy.port)
-            proxy.add_toxic("short", "cut", "limit_data", {"bytes": 3 * 1024 * 1024})
+            # Below any fan-out range size, so every connection is cut short.
+            proxy.add_toxic("short", "cut", "limit_data", {"bytes": 1024 * 1024})
             short_gid = check("short.bin", f"http://127.0.0.1:{short_port}/payload.bin",
                               {"retry-wait": "0"})
             for case in ("delayed", "tail", "retry-429", "retry-503"):
@@ -722,6 +723,39 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                 raise RuntimeError("Removed transfers remain in the engine")
             check("after-remove.bin", f"{caddy.base_url}/payload.bin")
             results["restartAndRemoval"] = "passed"
+
+            # A crash mid-transfer: the last checkpoint and the session written
+            # at an interval are all that survive.
+            engine.stop()
+            crash_options = [f"--save-session={session}", "--save-session-interval=1",
+                             "--state-save-interval=1"]
+            engine.start(crash_options)
+            crash_gid = engine.add_uri(
+                f"{caddy.base_url}/payload.bin",
+                {**options, "out": "crash.bin", "max-download-limit": "4M"},
+            )
+            deadline = time.monotonic() + 15
+            before = 0
+            while time.monotonic() < deadline:
+                before = int(engine.rpc.call("aria2.tellStatus", [crash_gid])["completedLength"])
+                if before >= 6 * 1024 * 1024:
+                    break
+                time.sleep(0.1)
+            time.sleep(1.5)  # a checkpoint and a session save after that point
+            engine.kill()
+            engine.start(crash_options + [f"--input-file={session}"])
+            resumed = engine.rpc.call("aria2.tellStatus", [crash_gid])
+            engine.rpc.wait_complete(crash_gid, 30)
+            if sha256(engine.download_dir / "crash.bin") != expected:
+                raise RuntimeError("Transfer resumed after a crash has the wrong digest")
+            restart_log = engine.engine_log.read_text(encoding="utf-8", errors="replace")
+            match = re.search(r"resuming .*crash\.bin at (\d+)/", restart_log)
+            if not match or int(match.group(1)) < 4 * 1024 * 1024:
+                raise RuntimeError(
+                    f"A crash lost the checkpointed progress ({before} bytes before the crash, "
+                    f"resumed: {match.group(1) if match else 'from zero'})")
+            results["crashRecovery"] = {"beforeCrash": before, "resumedAt": int(match.group(1)),
+                                        "statusAfterRestart": resumed.get("status")}
         finally:
             engine.stop()
 

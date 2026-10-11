@@ -8,11 +8,11 @@ source_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 BUILDDIR=${BUILDDIR:-"$source_dir/build/option-matrix"}
 
 if [ "$#" -eq 0 ]; then
-  set -- default nobt noml nobt_noml nowebsocket noepoll libaria2
+  set -- default werror size lto
 fi
 for name in "$@"; do
   case "$name" in
-    default|nobt|noml|nobt_noml|nowebsocket|noepoll|libaria2) ;;
+    default|werror|size|lto) ;;
     *) echo "Unknown matrix configuration: $name" >&2; exit 2 ;;
   esac
 done
@@ -47,11 +47,8 @@ build() {
 for name in "$@"; do
   case "$name" in
     default) build default ;;
-    nobt) build nobt -DARIA2_ENABLE_BITTORRENT=OFF ;;
-    noml) build noml -DARIA2_ENABLE_METALINK=OFF ;;
-    nobt_noml) build nobt_noml -DARIA2_ENABLE_BITTORRENT=OFF -DARIA2_ENABLE_METALINK=OFF ;;
-    nowebsocket) build nowebsocket -DARIA2_ENABLE_WEBSOCKET=OFF ;;
-    noepoll) build noepoll -DARIA2_ENABLE_EPOLL=OFF ;;
-    libaria2) build libaria2 -DARIA2_ENABLE_LIBARIA2=ON ;;
+    werror) build werror -DARIA2_ENABLE_WERROR=ON ;;
+    size) build size -DARIA2_RELEASE_SIZE_OPTIMIZED=ON ;;
+    lto) build lto -DARIA2_RELEASE_LTO=ON ;;
   esac
 done

@@ -7,8 +7,8 @@ extern "C" {
 #include <libavutil/rational.h>
 }
 
-#include "MediaMuxer.h"
-#include "media/MediaDownload.h"
+#include "media/MediaMuxer.h"
+#include "media/Control.h"
 #include "media/MediaStore.h"
 #include <cstdint>
 #include <memory>
@@ -17,11 +17,11 @@ extern "C" {
 #include <system_error>
 #include <utility>
 #include <vector>
-#include "MediaFiles.h"
-#include "MediaTransport.h"
-#include "MuxInput.h"
-#include "MuxOutput.h"
-#include "MuxTimeline.h"
+#include "media/MediaFiles.h"
+#include "media/MediaTransport.h"
+#include "media/MuxInput.h"
+#include "media/MuxOutput.h"
+#include "media/MuxTimeline.h"
 #include <algorithm>
 #include <filesystem>
 #include <map>
@@ -91,9 +91,8 @@ Muxer::stage(const std::vector<Segment>& segments, const std::string& output,
     if (segment.hls)
       presentationStart = std::min(presentationStart, segment.start);
   }
-  const auto temporary = output + "." +
-                         nativePath(directory).filename().u8string() +
-                         ".media-partial";
+  const auto temporary =
+      output + "." + utf8(nativePath(directory).filename()) + ".media-partial";
   struct Cleanup {
     std::string path;
     bool committed = false;

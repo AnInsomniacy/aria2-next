@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
 
 option(ARIA2_SUPERBUILD "Build the vendored dependency stack" ON)
-option(ARIA2_ENABLE_BITTORRENT "Enable BitTorrent support" ON)
-option(ARIA2_ENABLE_WEBSOCKET "Enable WebSocket support" ON)
 
 if(ARIA2_SUPERBUILD)
   project(aria2-superbuild LANGUAGES C CXX)
@@ -24,32 +22,13 @@ project(
   HOMEPAGE_URL "https://github.com/AnInsomniacy/aria2-next"
   LANGUAGES C CXX)
 
-if(APPLE)
-  enable_language(OBJCXX)
-endif()
-
-include(CheckCSourceCompiles)
-include(CheckCSourceRuns)
-include(CheckCXXSourceCompiles)
-include(CheckCXXSymbolExists)
-include(CheckFunctionExists)
-include(CheckIncludeFile)
-include(CheckIncludeFileCXX)
 include(CheckIPOSupported)
-include(CheckLibraryExists)
-include(CheckStructHasMember)
-include(CheckSymbolExists)
-include(CMakePushCheckState)
 include(CTest)
 include(GNUInstallDirs)
-include(TestBigEndian)
 
 include(cmake/modules/Options.cmake)
 include(cmake/modules/Dependencies.cmake)
-include(cmake/modules/FeatureChecks.cmake)
-include(cmake/modules/GeneratedFiles.cmake)
 include(cmake/modules/Targets.cmake)
-include(cmake/modules/Engine.cmake)
 if(BUILD_TESTING)
   include(cmake/modules/Tests.cmake)
 endif()

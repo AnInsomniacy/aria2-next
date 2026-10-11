@@ -1,6 +1,5 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
-#ifndef D_MEDIA_ERROR_H
-#define D_MEDIA_ERROR_H
+#pragma once
 
 #include <stdexcept>
 #include <string>
@@ -50,4 +49,3 @@ inline FailureCode failureCode(const std::exception& error)
 }
 
 } // namespace aria2::media
-#endif

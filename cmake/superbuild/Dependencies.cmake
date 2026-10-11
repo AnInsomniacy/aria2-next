@@ -348,37 +348,35 @@ ExternalProject_Add_Step(curl_project verify-trust-policy
   DEPENDEES configure
   DEPENDERS build)
 
-if(ARIA2_ENABLE_BITTORRENT)
-  ExternalProject_Add(libtorrent_project
-    DEPENDS openssl_project
-    SOURCE_DIR "${ARIA2_VENDOR_ROOT}/libtorrent"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/vendor/libtorrent"
-    CMAKE_ARGS
-      ${ARIA2_EXTERNAL_CMAKE_ARGS}
-      -DBUILD_SHARED_LIBS=OFF
-      -DBoost_INCLUDE_DIR=${ARIA2_VENDOR_ROOT}/boost
-      -DBoost_NO_BOOST_CMAKE=ON
-      -DOPENSSL_ROOT_DIR=${ARIA2_DEPENDENCY_PREFIX}
-      -DOPENSSL_USE_STATIC_LIBS=ON
-      -DOPENSSL_INCLUDE_DIR=${ARIA2_DEPENDENCY_PREFIX}/include
-      -DOPENSSL_CRYPTO_LIBRARY=${ARIA2_DEPENDENCY_PREFIX}/lib/libcrypto.a
-      -DOPENSSL_SSL_LIBRARY=${ARIA2_DEPENDENCY_PREFIX}/lib/libssl.a
-      -Dbuild_tests=OFF
-      -Dbuild_examples=OFF
-      -Dbuild_tools=OFF
-      -Dpython-bindings=OFF
-      -Ddeprecated-functions=OFF
-      -Dextensions=ON
-      -Dmutable-torrents=ON
-      -Dstreaming=ON
-      -Di2p=OFF
-      -Dwebtorrent=OFF
-      -Dlogging=ON
-      -Dencryption=ON
-      -Ddht=ON
-    UPDATE_COMMAND ""
-    TEST_COMMAND "")
-endif()
+ExternalProject_Add(libtorrent_project
+  DEPENDS openssl_project
+  SOURCE_DIR "${ARIA2_VENDOR_ROOT}/libtorrent"
+  BINARY_DIR "${CMAKE_BINARY_DIR}/vendor/libtorrent"
+  CMAKE_ARGS
+    ${ARIA2_EXTERNAL_CMAKE_ARGS}
+    -DBUILD_SHARED_LIBS=OFF
+    -DBoost_INCLUDE_DIR=${ARIA2_VENDOR_ROOT}/boost
+    -DBoost_NO_BOOST_CMAKE=ON
+    -DOPENSSL_ROOT_DIR=${ARIA2_DEPENDENCY_PREFIX}
+    -DOPENSSL_USE_STATIC_LIBS=ON
+    -DOPENSSL_INCLUDE_DIR=${ARIA2_DEPENDENCY_PREFIX}/include
+    -DOPENSSL_CRYPTO_LIBRARY=${ARIA2_DEPENDENCY_PREFIX}/lib/libcrypto.a
+    -DOPENSSL_SSL_LIBRARY=${ARIA2_DEPENDENCY_PREFIX}/lib/libssl.a
+    -Dbuild_tests=OFF
+    -Dbuild_examples=OFF
+    -Dbuild_tools=OFF
+    -Dpython-bindings=OFF
+    -Ddeprecated-functions=OFF
+    -Dextensions=ON
+    -Dmutable-torrents=ON
+    -Dstreaming=ON
+    -Di2p=OFF
+    -Dwebtorrent=OFF
+    -Dlogging=ON
+    -Dencryption=ON
+    -Ddht=ON
+  UPDATE_COMMAND ""
+  TEST_COMMAND "")
 
 include(${CMAKE_CURRENT_LIST_DIR}/Media.cmake)
 
@@ -398,11 +396,6 @@ set(ARIA2_INNER_CMAKE_ARGS
 foreach(variable
     BUILD_TESTING
     CMAKE_EXPORT_COMPILE_COMMANDS
-    ARIA2_ENABLE_BITTORRENT
-    ARIA2_ENABLE_METALINK
-    ARIA2_ENABLE_WEBSOCKET
-    ARIA2_ENABLE_EPOLL
-    ARIA2_ENABLE_LIBARIA2
     ARIA2_ENABLE_WERROR
     ARIA2_RELEASE_SIZE_OPTIMIZED
     ARIA2_RELEASE_LTO)
@@ -420,10 +413,8 @@ set(ARIA2_PROJECT_DEPENDENCIES
   nghttp2_project
   curl_project
   ffmpeg_project
-  gpac_project)
-if(ARIA2_ENABLE_BITTORRENT)
-  list(APPEND ARIA2_PROJECT_DEPENDENCIES libtorrent_project)
-endif()
+  gpac_project
+  libtorrent_project)
 
 add_custom_target(aria2_dependencies DEPENDS ${ARIA2_PROJECT_DEPENDENCIES})
 

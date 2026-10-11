@@ -16,7 +16,7 @@ extern "C" {
 #include <memory>
 #include <stdexcept>
 #include <utility>
-#include "MuxInput.h"
+#include "media/MuxInput.h"
 #include <gpac/webvtt.h>
 #include <algorithm>
 #include <cstring>
