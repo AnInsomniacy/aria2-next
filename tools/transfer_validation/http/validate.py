@@ -11,7 +11,7 @@ import shutil
 import sys
 import time
 import urllib.request
-from email.utils import formatdate
+from email.utils import formatdate, parsedate_to_datetime
 from urllib.parse import quote
 from pathlib import Path
 
@@ -394,6 +394,25 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                     sha256(path) != expected for path in (held_path, second_path)):
                 raise RuntimeError(f"Two downloads shared one output file: {held_path.name}, {second_path.name}")
             results["sharedOutput"] = "passed"
+            # remote-time decides between the server's Last-Modified and the
+            # completion time; the default keeps the completion time.
+            server_time = "Fri, 24 Apr 2026 06:48:00 GMT"
+            wiremock.stub({
+                "priority": 1,
+                "request": {"method": "GET", "urlPath": "/payload.bin",
+                            "queryParameters": {"case": {"equalTo": "dated"}}},
+                "response": {"status": 200, "bodyFileName": "payload.bin",
+                             "headers": {"Last-Modified": server_time}},
+            })
+            started_at = time.time()
+            for name, remote in (("dated-server.bin", "true"), ("dated-local.bin", "false")):
+                check(name, f"{wiremock.base_url}/payload.bin?case=dated", {"remote-time": remote})
+            server_mtime = parsedate_to_datetime(server_time).timestamp()
+            if abs((engine.download_dir / "dated-server.bin").stat().st_mtime - server_mtime) > 2:
+                raise RuntimeError("remote-time=true did not apply the server time")
+            if (engine.download_dir / "dated-local.bin").stat().st_mtime < started_at - 2:
+                raise RuntimeError("remote-time=false kept the server time")
+            results["remoteTime"] = "passed"
             check("endpoint-once.bin", f"{wiremock.base_url}/entry?once")
             for expired_code in (401, 403, 404):
                 check(f"endpoint-refresh-{expired_code}.bin",
@@ -561,9 +580,11 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                   restart=True)
             ignored_done = time.time()
             # A file the task created is downloaded again when the remote
-            # representation changes under it.
+            # representation changes under it, so progress legitimately
+            # returns to zero.
             for case in ("changed-200", "changed-206", "changed-412", "416"):
-                check(f"owned-{case}.bin", f"{wiremock.base_url}/payload.bin?case={case}")
+                check(f"owned-{case}.bin", f"{wiremock.base_url}/payload.bin?case={case}",
+                      restart=True)
             # An existing file is only ever extended from the representation it
             # belongs to; otherwise the task fails and leaves it alone.
             for case in ("changed-200", "changed-206", "changed-412", "416", "ignored"):
