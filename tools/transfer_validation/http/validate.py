@@ -381,6 +381,19 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             if sha256(engine.download_dir / "changed-uri.bin") != expected:
                 raise RuntimeError("URI replacement did not reach the stream backend")
             results["changedUri"] = "replacement downloaded with matching SHA-256"
+            # A paused task keeps its chosen name; a second task for the
+            # same output must not adopt or share it.
+            shared_dir = engine.download_dir / "shared-output"
+            shared = {"dir": str(shared_dir), "out": "shared.bin", "continue": "true", "auto-file-renaming": "true"}
+            held = engine.add_uri(f"{caddy.base_url}/payload.bin?shared=held", {**options, **shared, "pause": "true"})
+            second = engine.add_uri(f"{caddy.base_url}/payload.bin?shared=second", {**options, **shared})
+            second_path = Path(engine.rpc.wait_complete(second, 30)["files"][0]["path"])
+            engine.rpc.call("aria2.unpause", [held])
+            held_path = Path(engine.rpc.wait_complete(held, 30)["files"][0]["path"])
+            if (held_path.name, second_path.name) != ("shared.bin", "shared.1.bin") or any(
+                    sha256(path) != expected for path in (held_path, second_path)):
+                raise RuntimeError(f"Two downloads shared one output file: {held_path.name}, {second_path.name}")
+            results["sharedOutput"] = "passed"
             check("endpoint-once.bin", f"{wiremock.base_url}/entry?once")
             for expired_code in (401, 403, 404):
                 check(f"endpoint-refresh-{expired_code}.bin",

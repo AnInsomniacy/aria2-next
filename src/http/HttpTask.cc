@@ -727,8 +727,13 @@ bool HttpTask::decidePath(Worker& worker)
     }
   }
   auto path = joinPath(options().get("dir"), name);
-  if (fileExists(path)) {
-    if (options().flag("continue")) {
+  const auto taken = [this](const std::string& candidate) {
+    return engine().writing(candidate, gid());
+  };
+  // Another task's file is never adopted, overwritten or shared.
+  const bool shared = taken(path);
+  if (shared || fileExists(path)) {
+    if (!shared && options().flag("continue")) {
       // An existing file is adopted as a prefix and never truncated.
       const auto size = fileSize(path);
       const auto length = planner_.length();
@@ -747,12 +752,14 @@ bool HttpTask::decidePath(Worker& worker)
       openOutput(false);
       return true;
     }
-    if (!options().flag("allow-overwrite")) {
+    if (shared || !options().flag("allow-overwrite")) {
       if (!options().flag("auto-file-renaming")) {
-        abort(ErrorCode::FileExists, fmt::format("{} already exists", path));
+        abort(ErrorCode::FileExists,
+              shared ? fmt::format("{} belongs to another download", path)
+                     : fmt::format("{} already exists", path));
         return false;
       }
-      auto numbered = numberedPath(path);
+      auto numbered = numberedPath(path, taken);
       if (!numbered) {
         abort(ErrorCode::FileExists, fmt::format("{} already exists", path));
         return false;

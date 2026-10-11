@@ -284,6 +284,23 @@ void Engine::purgeResults()
 
 std::vector<std::shared_ptr<Task>> Engine::active() const { return active_; }
 
+bool Engine::writing(const std::string& path, Gid except) const
+{
+  for (const auto& [gid, task] : tasks_) {
+    const auto state = task->state();
+    if (gid == except || state == TaskState::Complete ||
+        state == TaskState::Error || state == TaskState::Removed) {
+      continue;
+    }
+    for (const auto& file : task->files()) {
+      if (!file.path.empty() && samePath(file.path, path)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 GlobalStat Engine::stat() const
 {
   GlobalStat result;

@@ -24,6 +24,10 @@ std::string joinPath(std::string_view directory, std::string_view name);
 // the extension preserved. Returns empty for names that cannot be used.
 std::string safeFileName(std::string_view name);
 
+// Compares two paths for the same file: normalized, and case-insensitive on
+// Windows.
+bool samePath(std::string_view a, std::string_view b);
+
 // Rejects relative paths that escape their base ("..", absolute, drive).
 bool isContainedRelativePath(std::string_view path);
 

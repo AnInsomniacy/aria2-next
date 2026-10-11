@@ -3,6 +3,8 @@
 
 #include "base/Text.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <fstream>
 #include <system_error>
@@ -56,19 +58,20 @@ std::string safeFileName(std::string_view input)
     return {};
   }
   const auto stem = text::lower(name.substr(0, name.find('.')));
-  const bool device =
-      stem == "con" || stem == "prn" || stem == "aux" || stem == "nul" ||
-      (stem.size() == 4 && (stem.starts_with("com") || stem.starts_with("lpt")) &&
-       stem[3] >= '1' && stem[3] <= '9');
+  const bool device = stem == "con" || stem == "prn" || stem == "aux" ||
+                      stem == "nul" ||
+                      (stem.size() == 4 &&
+                       (stem.starts_with("com") || stem.starts_with("lpt")) &&
+                       stem[3] >= '1' && stem[3] <= '9');
   if (device) {
     name.insert(0, "_");
   }
   constexpr size_t limit = 240;
   if (name.size() > limit) {
     const auto dot = name.rfind('.');
-    std::string extension =
-        dot != std::string::npos && name.size() - dot < 32 ? name.substr(dot)
-                                                           : "";
+    std::string extension = dot != std::string::npos && name.size() - dot < 32
+                                ? name.substr(dot)
+                                : "";
     name.resize(limit - extension.size());
     while (!name.empty() && !text::isUtf8(name)) {
       name.pop_back();
@@ -76,6 +79,20 @@ std::string safeFileName(std::string_view input)
     name += extension;
   }
   return name;
+}
+
+bool samePath(std::string_view a, std::string_view b)
+{
+  auto key = [](std::string_view path) {
+    auto text = toUtf8(toPath(path).lexically_normal());
+#ifdef _WIN32
+    std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) {
+      return static_cast<char>(std::tolower(c));
+    });
+#endif
+    return text;
+  };
+  return key(a) == key(b);
 }
 
 bool isContainedRelativePath(std::string_view value)
@@ -111,9 +128,9 @@ std::string homeDirectory()
 std::string defaultConfigPath()
 {
   const auto* xdg = std::getenv("XDG_CONFIG_HOME");
-  const std::string base =
-      xdg && fs::path(xdg).is_absolute() ? std::string(xdg)
-                                         : homeDirectory() + "/.config";
+  const std::string base = xdg && fs::path(xdg).is_absolute()
+                               ? std::string(xdg)
+                               : homeDirectory() + "/.config";
   return base + "/aria2/aria2.conf";
 }
 

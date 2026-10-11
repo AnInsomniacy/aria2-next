@@ -61,5 +61,18 @@ TEST_CASE("numbered names skip existing files")
   std::ofstream(directory / "video.mp4") << "x";
   std::ofstream(directory / "video.1.mp4") << "x";
   CHECK(numberedPath(base) == toUtf8(directory / "video.2.mp4"));
+  const auto second = toUtf8(directory / "video.2.mp4");
+  CHECK(numberedPath(base, [&](const std::string& path) {
+          return samePath(path, second);
+        }) == toUtf8(directory / "video.3.mp4"));
   std::filesystem::remove_all(directory);
+}
+
+TEST_CASE("same paths")
+{
+  CHECK(samePath("/downloads/a/../file.zip", "/downloads/file.zip"));
+  CHECK_FALSE(samePath("/downloads/file.zip", "/downloads/file.zip.1"));
+#ifdef _WIN32
+  CHECK(samePath("C:/Downloads/File.ZIP", "c:/downloads/file.zip"));
+#endif
 }

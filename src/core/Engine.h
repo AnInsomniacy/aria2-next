@@ -82,6 +82,10 @@ public:
                 std::shared_ptr<Task> next);
   void purgeResults();
 
+  // Whether an unfinished task other than `except` writes, or will write,
+  // the file at `path`.
+  bool writing(const std::string& path, Gid except) const;
+
   std::vector<std::shared_ptr<Task>> active() const;
   const std::deque<std::shared_ptr<Task>>& waiting() const { return waiting_; }
   const std::deque<std::shared_ptr<Task>>& stopped() const { return stopped_; }

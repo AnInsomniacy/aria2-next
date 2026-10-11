@@ -334,14 +334,16 @@ bool fileExists(const std::string& path)
   return fs::exists(toPath(path), error);
 }
 
-std::optional<std::string> numberedPath(const std::string& path)
+std::optional<std::string>
+numberedPath(const std::string& path,
+             const std::function<bool(const std::string&)>& taken)
 {
   const auto full = toPath(path);
   const auto stem = toUtf8(full.parent_path() / full.stem());
   const auto extension = toUtf8(full.extension());
   for (int i = 1; i < 10000; ++i) {
     auto candidate = stem + '.' + std::to_string(i) + extension;
-    if (!fileExists(candidate)) {
+    if (!fileExists(candidate) && !(taken && taken(candidate))) {
       return candidate;
     }
   }
