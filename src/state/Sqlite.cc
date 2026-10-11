@@ -9,6 +9,8 @@
 namespace aria2::sqlite {
 
 namespace {
+constexpr int busyTimeoutMs = 5000;
+
 [[noreturn]] void raise(sqlite3* db, std::string_view what)
 {
   fail(ErrorCode::FileIo, "SQLite {}: {}", what,
@@ -29,8 +31,22 @@ Database::Database(const std::string& path)
     sqlite3_close_v2(db);
     fail(ErrorCode::FileIo, "Cannot open {}: {}", path, message);
   }
-  sqlite3_busy_timeout(db_, 5000);
-  execute("PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;");
+  sqlite3_busy_timeout(db_, busyTimeoutMs);
+  // Switching a new file to WAL needs an exclusive lock and SQLite does not
+  // call the busy handler for it, so connections opening the same new file
+  // together (media tasks sharing state.db) retry here instead.
+  for (int waited = 0;; waited += 10) {
+    const auto rc =
+        sqlite3_exec(db_, "PRAGMA journal_mode=WAL", nullptr, nullptr, nullptr);
+    if (rc == SQLITE_OK) {
+      break;
+    }
+    if ((rc & 0xff) != SQLITE_BUSY || waited >= busyTimeoutMs) {
+      raise(db_, "journal mode");
+    }
+    sqlite3_sleep(10);
+  }
+  execute("PRAGMA synchronous=NORMAL;");
 }
 
 Database::~Database()
@@ -137,7 +153,13 @@ std::string Statement::blob(int column) const
               : std::string();
 }
 
-Transaction::Transaction(Database& db) : db_(db) { db_.execute("BEGIN"); }
+// IMMEDIATE takes the write lock up front, where the busy timeout applies.
+// A deferred transaction that reads and then writes fails at once when
+// another connection wrote in between, e.g. two media tasks sharing state.db.
+Transaction::Transaction(Database& db) : db_(db)
+{
+  db_.execute("BEGIN IMMEDIATE");
+}
 
 Transaction::~Transaction()
 {
