@@ -474,6 +474,9 @@ struct __dash_group
 	u32 last_error_time;
 
 	u32 hls_start_num;
+	//segments purged from the head of a live playlist; unlike hls_start_num,
+	//which may be inferred from segment file names, this only tracks removals
+	u32 hls_purged;
 
 	//cross-AdaptationSet switching:
 	//list of other groups switchable with this group
@@ -1990,9 +1993,9 @@ static u64 gf_dash_get_segment_start_time_with_timescale(GF_DASH_Group *group, u
 		period, set, rep,
 		&start_time, segment_duration, scale);
 
-	//adjust start time for HLS, assuming roughly constant duration
-	if (group->hls_start_num && segment_duration) {
-		start_time += group->hls_start_num * (*segment_duration);
+	//adjust start time for HLS segments purged from the playlist head, assuming roughly constant duration
+	if (group->hls_purged && segment_duration) {
+		start_time += group->hls_purged * (*segment_duration);
 	}
 
 	if (current_pto) {
@@ -3319,6 +3322,7 @@ process_m3u8_manifest:
 						if (group->download_segment_index) {
 							group->download_segment_index--;
 							group->hls_start_num++;
+							group->hls_purged++;
 						}
 					}
 				} else {

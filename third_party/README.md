@@ -48,8 +48,10 @@ media codecs, or independent TLS and cryptography backends. Its public DASH clie
 libcurl I/O adapter. The retained upstream source and build support cover this
 configuration. A local client fix preserves the first queued segment's timing
 and discontinuity and uses parsed HLS media sequence numbers instead of numbers
-inferred from filenames. Terminal manifest I/O errors return to the caller,
-including cancellation, instead of retrying the same xlink indefinitely.
+inferred from filenames; HLS segment times advance only for segments purged from
+a live playlist, never by such an inferred number. Terminal manifest I/O errors
+return to the caller, including cancellation, instead of retrying the same xlink
+indefinitely.
 Its threading header includes the standard integer
 types required by its native atomic helpers.
 The Windows socket header uses the MinGW filename casing for cross-compilation

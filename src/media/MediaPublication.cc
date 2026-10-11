@@ -28,6 +28,9 @@ void MediaJob::complete(const Publication& publication)
   // Once publication succeeded, cleanup errors cannot turn valid output
   // into a failed download. The publication record makes cleanup retryable.
   try {
+    // Segments fetched ahead past a range end are still open, and Windows
+    // cannot delete open files.
+    transport.invalidate();
     std::filesystem::remove_all(nativePath(taskDirectory));
     store.remove();
   }

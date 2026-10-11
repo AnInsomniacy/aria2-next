@@ -159,6 +159,28 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict:
                 args += ["-hls_key_info_file", str(key_info)]
             args += [(directory / "index.m3u8").as_posix()]
         command(*args)
+    numbered = run.fixtures / "hls-numbered"
+    numbered.mkdir()
+    command(
+        ffmpeg,
+        "-v",
+        "error",
+        "-i",
+        str(source),
+        "-map",
+        "0",
+        "-c",
+        "copy",
+        "-f",
+        "hls",
+        "-hls_time",
+        "2",
+        "-hls_list_size",
+        "0",
+        "-hls_segment_filename",
+        (numbered / "part%d_7.ts").as_posix(),
+        (numbered / "index.m3u8").as_posix(),
+    )
     hls_manifest = run.fixtures / "hls/index.m3u8"
     hls_manifest.write_text(
         hls_manifest.read_text(encoding="utf-8").replace(
@@ -664,6 +686,22 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict:
         info = probe(ffprobe, status["files"][0]["path"], "-show_streams")
         assert {s["codec_type"] for s in info["streams"]} == {"audio"}, info
         results["selection"] = "audio only"
+
+        # GPAC infers a start number from digits in segment names; it once
+        # shifted every later segment time by it and ended ranges too early.
+        gid = engine.add_uri(
+            f"{server.base_url}/hls-numbered/index.m3u8",
+            {"out": "range.mp4", "media-end-time": "4"},
+        )
+        status = wait(engine, gid)
+        info = probe(ffprobe, status["files"][0]["path"], "-show_format")
+        assert 3.5 <= float(info["format"]["duration"]) <= 4.5, info
+        # Segments fetched ahead of the range end must not keep the
+        # recovery directory open.
+        assert not (engine.root / "media/tasks" / gid).exists(), gid
+        results["rangeEnd"] = (
+            "an HLS range ends at its end time and leaves no recovery data"
+        )
 
         gid = engine.add_uri(
             f"{server.base_url}/hls/master.m3u8",
