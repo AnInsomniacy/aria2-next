@@ -40,5 +40,6 @@ private:
 
 // Registers every method of the aria2 interface and its extensions.
 void registerMethods(Dispatcher& dispatcher, Engine& engine);
+void registerBtMethods(Dispatcher& dispatcher, Engine& engine);
 
 } // namespace aria2::rpc

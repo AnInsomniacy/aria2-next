@@ -31,4 +31,7 @@ std::vector<std::shared_ptr<Task>>
 createMetalinkTasks(Engine& engine, const std::string& metalink,
                     std::shared_ptr<Options> options);
 
+// Starts downloaded .torrent files as tasks according to follow-torrent.
+void installFollower(Engine& engine);
+
 } // namespace aria2

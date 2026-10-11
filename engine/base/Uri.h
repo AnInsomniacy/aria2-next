@@ -12,6 +12,7 @@ namespace aria2::uri {
 struct Parts {
   std::string scheme; // lower case
   std::string user;
+  std::string password;
   std::string host;
   std::string port; // effective port, including the scheme default
   std::string path;

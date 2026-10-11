@@ -45,6 +45,7 @@ std::optional<Parts> parse(std::string_view text)
   }
   return Parts{text::lower(get(url.get(), CURLUPART_SCHEME)),
                get(url.get(), CURLUPART_USER),
+               get(url.get(), CURLUPART_PASSWORD),
                get(url.get(), CURLUPART_HOST),
                get(url.get(), CURLUPART_PORT, CURLU_DEFAULT_PORT),
                get(url.get(), CURLUPART_PATH),

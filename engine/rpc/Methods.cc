@@ -463,6 +463,8 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
     return json::string(name.empty() ? "index.html" : name);
   });
 
+  registerBtMethods(d, e);
+
   d.add("system.listMethods", [&d](json::array&) -> json::value {
     json::array out;
     for (const auto& name : d.methods()) {

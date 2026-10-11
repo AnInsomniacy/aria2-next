@@ -75,6 +75,35 @@ distinguishes received from persisted bytes; checkpoints store only persisted
 ranges. When unpersisted bytes exceed the write budget, transfers pause until
 the pool catches up.
 
+## BitTorrent
+
+One libtorrent session serves all tasks. Its alerts are drained on the
+control thread; `post_torrent_updates()` refreshes every running torrent's
+cached status once a second, so status queries never wait for libtorrent.
+
+1. The engine queue decides what runs. A stopping task pauses its torrent,
+   saves resume data (with the info dictionary), waits until the file is on
+   disk, then removes the torrent from the session. Starting adds it again
+   from that resume data. No torrent is auto-managed.
+2. Magnet links are added with every file deselected, so no payload arrives
+   before the selection is known. With `pause-metadata` over RPC the task
+   pauses once metadata arrives and reports `fileSelectionState=awaiting`
+   until a client sets `select-file` and unpauses it.
+3. A finished download stays active while seeding and completes when
+   `seed-time` or `seed-ratio` is reached, whichever comes first;
+   `seed-time=0` completes it immediately. Both are live options, so a client
+   ends seeding with `changeOption`.
+4. `check-integrity` adds no work: libtorrent verifies resume data and hashes
+   existing files when there is none. `hash-check-only` drops the resume data
+   so every existing piece is hashed, then completes.
+5. Global speed limits apply to libtorrent and to HTTP separately.
+
+State below `--state-dir/bittorrent` keeps the layout of earlier releases:
+`session` (DHT nodes), `torrents/<sha1>.torrent` (metainfo of tasks added
+from torrent data, named in the session file) and
+`torrents/<gid>.fastresume`. Resume files that earlier releases named after
+the info hash are used only for the same task in the same directory.
+
 ## RPC
 
 aria2 JSON-RPC over HTTP POST and WebSocket, with `system.multicall`,
@@ -84,6 +113,6 @@ Extension methods keep their existing names and fields.
 ## State
 
 - Session file: aria2 input-file format, written atomically.
-- `state.db` (SQLite): per-task resume records (ranges, validators, identity
-  of the output file), ED2K identity and part metadata, BitTorrent resume
-  data references.
+- `stream/state.db` (SQLite): HTTP/SFTP resume records (ranges, validators,
+  identity of the output file).
+- `bittorrent/`: see above. `ed2k/state.db`: ED2K identity and part metadata.

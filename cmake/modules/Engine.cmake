@@ -24,10 +24,8 @@ target_link_libraries(aria2-next-engine PRIVATE
   OpenSSL::Crypto
   aria2::gpac aria2::avformat aria2::avcodec aria2::swresample aria2::avutil
   aria2::zlib
+  LibtorrentRasterbar::torrent-rasterbar
   Threads::Threads)
-if(ENABLE_BITTORRENT)
-  target_link_libraries(aria2-next-engine PRIVATE LibtorrentRasterbar::torrent-rasterbar)
-endif()
 if(WIN32)
   target_compile_definitions(aria2-next-engine PRIVATE
     WINVER=${ARIA2_WINDOWS_VERSION}

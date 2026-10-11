@@ -316,7 +316,7 @@ void HttpTask::launch()
     return;
   }
   const auto now = Clock::now();
-  if (now < holdUntil_) {
+  if (now < holdUntil_ || planner_.complete()) {
     return;
   }
   if (phase_ == Phase::Probing) {

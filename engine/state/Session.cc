@@ -4,13 +4,18 @@
 #include "base/Text.h"
 #include "core/Task.h"
 
+#include <algorithm>
+
 namespace aria2 {
 
 std::vector<SessionEntry> parseSession(std::string_view content)
 {
   std::vector<SessionEntry> entries;
-  for (const auto& raw : text::split(content, '\n', true)) {
-    auto line = std::string_view(raw);
+  // Leading whitespace marks option lines, so lines are not trimmed.
+  for (size_t begin = 0; begin < content.size();) {
+    const auto end = std::min(content.find('\n', begin), content.size());
+    auto line = content.substr(begin, end - begin);
+    begin = end + 1;
     if (line.ends_with('\r')) {
       line.remove_suffix(1);
     }
@@ -52,8 +57,12 @@ std::string serializeSession(const std::vector<std::shared_ptr<Task>>& tasks)
 {
   std::string out;
   for (const auto& task : tasks) {
+    // A fetched .torrent or .metalink lives on as the tasks it started.
+    if (!task->followedBy.empty() || !saved(*task)) {
+      continue;
+    }
     const auto uris = task->sessionUris();
-    if (uris.empty() || !saved(*task)) {
+    if (uris.empty()) {
       continue;
     }
     out += text::join(uris, "\t") + '\n';

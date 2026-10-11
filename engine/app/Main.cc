@@ -178,6 +178,7 @@ int run(const std::vector<std::string>& args)
 
   Engine engine(global);
   installHooks(engine);
+  installFollower(engine);
   std::unique_ptr<rpc::Dispatcher> dispatcher;
   std::unique_ptr<rpc::Server> server;
   if (rpc) {
@@ -190,6 +191,8 @@ int run(const std::vector<std::string>& args)
     });
   }
   addInput(engine, line);
+  // -Z applied to the command line; per task it means sequential pieces.
+  global->erase("force-sequential");
 
   boost::asio::signal_set signals(engine.io(), SIGINT, SIGTERM);
   int interrupts = 0;
