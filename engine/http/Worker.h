@@ -22,6 +22,7 @@ public:
   const int64_t begin;
   const int64_t requestEnd;
   bool redirected = false; // requested through a cached redirect
+  int family = 0;          // forced address family (4 or 6), 0: any
 
   // Final response of this request.
   long status = 0;
@@ -29,6 +30,7 @@ public:
   bool done = false; // assignment complete; an abort is not a failure
   std::string etag;
   std::string lastModified;
+  std::string date;
   std::string contentRange;
   std::string disposition;
   std::string contentType;
@@ -43,6 +45,7 @@ public:
   Clock::time_point started = Clock::now();
   Clock::time_point lastData = Clock::now();
   int64_t tickBytes = 0;
+  int64_t received = 0;
   bool receiving = false;
 
 private:

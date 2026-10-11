@@ -39,6 +39,7 @@ has no locks. Other threads communicate by posting completions to it.
 | `rpc/` | Beast HTTP/WebSocket server, JSON-RPC dispatch, methods |
 | `bt/` | libtorrent session and `BtTask` |
 | `ed2k/` | protocol codec and client, server, Kad, queues |
+| `net/` | UPnP IGD port mapping (`PortMapper`) |
 | `media/` | HLS/DASH tasks |
 | `app/` | command-line entry point, console readout, daemon |
 
@@ -103,6 +104,54 @@ State below `--state-dir/bittorrent` keeps the layout of earlier releases:
 from torrent data, named in the session file) and
 `torrents/<gid>.fastresume`. Resume files that earlier releases named after
 the info hash are used only for the same task in the same directory.
+
+## Media
+
+An HLS or DASH presentation is one task with one output file. GPAC's DASH
+client reads manifests and schedules segments; FFmpeg remuxes them. Both run
+on a worker thread per task with a frozen copy of the task options. The
+worker owns its libcurl multi handle (segment prefetch, request contexts,
+captured manifests) and shares nothing with the control thread except a
+`Control` block: atomics for cancel, finish and counters, plus a snapshot
+under a mutex that the task polls.
+
+1. A URI is media when `media` names a protocol, or when `media=auto` and
+   its path ends in `.m3u8`/`.mpd`. An HTTP task whose first response has a
+   manifest Content-Type hands its slot to a media task with the same GID.
+2. Segments are committed to `media/state.db` only after their bytes are
+   durable, so a pause, crash or restart resumes from the last segment.
+   Publication renames a staged file into place and is recorded first, so it
+   is also restartable.
+3. With `media-pause-after-probe` the task pauses with
+   `media.state=awaiting-selection` once tracks are known; a client chooses
+   tracks with `changeOption` and unpauses it.
+4. `aria2.finishMedia` ends a live recording after its current segment;
+   `aria2.retryMedia` requeues a failed task, keeping its segments.
+
+## ED2K
+
+One `Network` per engine, started by the first ED2K task: TCP and UDP
+listeners, the server session, Kad, the upload queue and keyword searches.
+aMule is the behavioural reference; checked against it on the wire in both
+directions (plain, compressed, obfuscated).
+
+1. Files are split into 9.28 MB parts hashed with MD4; sources claim 180 KB
+   blocks, rarest part first, and duplicate a block only in the endgame. A
+   complete local file without a part hash set hashes its parts and adopts
+   them when their root matches the file hash.
+2. Uploads deflate each block on the disk thread and send it compressed when
+   it shrinks; incompressible files are probed only every 32 blocks.
+3. A few servers are dialled at once, one more per second, and the first to
+   connect logs in. Searches wait until the server or Kad can take them.
+4. Kad lookups walk until the closest 8 contacts that did not fail have
+   answered, search contacts within tolerance as soon as they answer, and
+   widen when no answer came for 2 s. The routing table splits the far half
+   of the ID space into 8 buckets, the next quarter into 4 and the eighth
+   after it into 2, as eMule's zones do down to level 4.
+5. A known client that calls in is identified by its hello; the existing
+   object takes the connection over and the reading coroutine forwards to it.
+6. With `ed2k-port-mapping` the TCP and UDP ports are forwarded by UPnP
+   (`net/PortMapper`); mappings are removed before the engine stops.
 
 ## RPC
 

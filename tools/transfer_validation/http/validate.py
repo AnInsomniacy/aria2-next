@@ -11,6 +11,7 @@ import shutil
 import sys
 import time
 import urllib.request
+from email.utils import formatdate
 from urllib.parse import quote
 from pathlib import Path
 
@@ -32,8 +33,6 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
     shutil.copyfile(payload, run.fixtures / automatic_name)
     with payload.open("rb") as source:
         block = source.read(1024 * 1024)
-        source.seek(4 * 1024 * 1024)
-        response_body = source.read(1024 * 1024)
     (run.fixtures / "empty.bin").touch()
     (run.fixtures / "tiny.bin").write_bytes(block[:60651])
     large = run.fixtures / "large.bin"
@@ -53,38 +52,26 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             "request": {"method": "GET", "urlPath": "/payload.bin"},
             "response": {"proxyBaseUrl": caddy.base_url},
         })
-        begin, end = 4 * 1024 * 1024, 5 * 1024 * 1024
-        requested = f"bytes={begin}-{end - 1}"
-        for case in ("short", "tail", "tail-retry"):
-            body = response_body if case == "tail" else response_body[:-65536]
-            response = {
-                "status": 206,
-                "base64Body": base64.b64encode(body).decode(),
-                "headers": {
-                    "Content-Range":
-                        f"bytes {begin}-{begin + len(body) - 1}/{payload.stat().st_size}"
-                },
-            }
-            if case == "tail":
-                response["chunkedDribbleDelay"] = {
-                    "numberOfChunks": 16, "totalDuration": 8000,
-                }
-            wiremock.stub({
-                "priority": 1,
-                "request": {
-                    "method": "GET", "url": f"/payload.bin?case={case}",
-                    "headers": {"Range": {"equalTo": requested}},
-                },
-                "response": response,
-            })
-        # Replacement requests also pay response latency. Changing the Range
-        # must not turn every slow-tail test into an instant healthy response.
+        # Fault cases match any ranged request rather than a fixed byte range:
+        # the engine sizes ranges adaptively. Scenario states make each fault
+        # happen once.
+        size = payload.stat().st_size
+        tail_range = rf"bytes=[1-9][0-9]*-{size - 1}"
+        # A slow tail: the first ranged request that reaches the end of the
+        # file stalls, so only a duplicate of that range can finish it in time.
         wiremock.stub({
-            "priority": 5,
-            "request": {"method": "GET", "url": "/payload.bin?case=tail"},
-            "response": {"proxyBaseUrl": caddy.base_url,
-                         "fixedDelayMilliseconds": 1000},
+            "priority": 1,
+            "scenarioName": "tail",
+            "requiredScenarioState": "Started",
+            "newScenarioState": "Raced",
+            "request": {
+                "method": "GET", "url": "/payload.bin?case=tail",
+                "headers": {"Range": {"matches": tail_range}},
+            },
+            "response": {"proxyBaseUrl": caddy.base_url, "fixedDelayMilliseconds": 12000},
         })
+        # A refused suffix: the first ranged request that reaches the end of
+        # the file gets 503 with Retry-After 1; retry-wait=10 must still apply.
         wiremock.stub({
             "priority": 1,
             "scenarioName": "tail-retry",
@@ -92,7 +79,7 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             "newScenarioState": "Recovered",
             "request": {
                 "method": "GET", "url": "/payload.bin?case=tail-retry",
-                "headers": {"Range": {"matches": rf"bytes=(?!{begin}-)[0-9]+-{end - 1}"}},
+                "headers": {"Range": {"matches": tail_range}},
             },
             "response": {"status": 503, "headers": {"Retry-After": "1"}},
         })
@@ -114,7 +101,7 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                 "newScenarioState": "Recovered",
                 "request": {
                     "method": "GET", "url": f"/payload.bin?case=retry-{code}",
-                    "headers": {"Range": {"equalTo": requested}},
+                    "headers": {"Range": {"matches": "bytes=[1-9][0-9]*-.*"}},
                 },
                 "response": {
                     "status": code, "headers": {"Retry-After": "1"},
@@ -154,27 +141,50 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             "request": {"method": "GET", "url": "/payload.bin?case=redirect"},
             "response": {"status": 401},
         })
+        # First responses are slow, so ranges are requested while they run
+        # instead of loopback finishing the whole file first.
+        def dribbled(headers: dict[str, str]) -> dict[str, object]:
+            return {
+                "status": 206, "bodyFileName": "payload.bin",
+                "headers": {**headers, "Accept-Ranges": "bytes",
+                            "Content-Range": f"bytes 0-{size - 1}/{size}"},
+                "chunkedDribbleDelay": {"numberOfChunks": 64, "totalDuration": 2000},
+            }
+
         wiremock.stub({
-            "priority": 1,
-            "request": {"method": "GET", "url": "/payload.bin?case=date"},
-            "response": {"proxyBaseUrl": caddy.base_url,
-                         "headers": {"ETag": 'W/"weak"'}},
+            "priority": 9,
+            "request": {"method": "GET", "urlPath": "/payload.bin",
+                        "headers": {"Range": {"equalTo": "bytes=0-"}}},
+            "response": dribbled({"ETag": etag, "Last-Modified": modified,
+                                  "Date": formatdate(usegmt=True)}),
         })
+
         for nonzero in (False, True):
+            ranges_only = "bytes=[1-9][0-9]*-.*" if nonzero else "bytes=0-.*"
+            date_headers = {"ETag": 'W/"weak"'}
+            wiremock.stub({
+                "priority": 1,
+                "request": {
+                    "method": "GET", "url": "/payload.bin?case=date",
+                    "headers": {"Range": {"matches": ranges_only}},
+                },
+                "response": {"proxyBaseUrl": caddy.base_url, "headers": date_headers}
+                if nonzero else dribbled({**date_headers, "Last-Modified": modified,
+                                          "Date": formatdate(usegmt=True)}),
+            })
             # Dynamic endpoints sometimes stamp each response with its current
             # time. Such dates must not become strong range validators.
             fresh_date = f"Tue, 08 Sep 2026 23:00:0{int(nonzero)} GMT"
+            fresh_headers = {"ETag": 'W/"weak"', "Date": fresh_date,
+                             "Last-Modified": fresh_date}
             wiremock.stub({
                 "priority": 1,
                 "request": {
                     "method": "GET", "url": "/payload.bin?case=fresh-date",
-                    "headers": {"Range": {"matches":
-                        "bytes=[1-9][0-9]*-.*" if nonzero else "bytes=0-.*"}},
+                    "headers": {"Range": {"matches": ranges_only}},
                 },
-                "response": {"proxyBaseUrl": caddy.base_url, "headers": {
-                    "ETag": 'W/"weak"', "Date": fresh_date,
-                    "Last-Modified": fresh_date,
-                }},
+                "response": {"proxyBaseUrl": caddy.base_url, "headers": fresh_headers}
+                if nonzero else dribbled(fresh_headers),
             })
             wiremock.stub({
                 "priority": 1,
@@ -187,10 +197,10 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                     "proxyBaseUrl": caddy.base_url,
                     "headers": {
                         "ETag": etag.strip('"'),
-                        "Last-Modified": ("Fri, 24 Apr 2026 06:48:00 GMT" if nonzero
-                                          else modified),
+                        "Last-Modified": "Fri, 24 Apr 2026 06:48:00 GMT",
                     },
-                },
+                } if nonzero else dribbled({"ETag": etag.strip('"'),
+                                            "Last-Modified": modified}),
             })
         for case in ("ignored", "changed-200", "changed-206", "changed-412", "416"):
             response = whole
@@ -210,6 +220,9 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
 
         # A signed entry point is not a range server. Reuse its validated
         # destination, and serialize refresh when that destination expires.
+        # The first stream from the old destination is slow, so the ranged
+        # requests meet the expiry while it runs.
+        size = payload.stat().st_size
         for expired_code in (401, 403, 404):
             entry = f"/entry?refresh={expired_code}"
             old = f"/payload.bin?case=endpoint-old-{expired_code}"
@@ -230,6 +243,15 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                 "request": {"method": "GET", "url": old,
                             "headers": {"Range": {"matches": "bytes=[1-9][0-9]*-.*"}}},
                 "response": {"status": expired_code},
+            })
+            wiremock.stub({
+                "priority": 2,
+                "request": {"method": "GET", "url": old},
+                "response": {
+                    "status": 206, "bodyFileName": "payload.bin",
+                    "headers": {"Content-Range": f"bytes 0-{size - 1}/{size}"},
+                    "chunkedDribbleDelay": {"numberOfChunks": 64, "totalDuration": 4000},
+                },
             })
             wiremock.stub({
                 "priority": 20, "request": {"method": "GET", "url": entry},
@@ -448,7 +470,7 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                 if sha256(bound.download_dir / "payload.bin") != expected:
                     raise RuntimeError("Address-family-bound destination corrupted the payload")
                 results["familyBoundEndpoint"] = round(time.monotonic() - started, 3)
-            if not re.search(r"event=range_finished .*http=403 ",
+            if not re.search(r"over IPv[46] failed \(HTTP 403\)",
                              bound.engine_log.read_text(encoding="utf-8")):
                 raise RuntimeError("The unavailable address family was not exercised")
             for connections in (1, 64):
@@ -478,14 +500,22 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                   {"stream-max-connections": "1"})
             check("tls.bin", f"{wiremock.https_base_url}/payload.bin",
                   {"check-certificate": "false"})
-            for case in ("short", "delayed", "tail", "retry-429", "retry-503"):
+            # Every connection through this proxy is cut after 3 MiB, so each
+            # range ends early and its remainder must be requested again.
+            short_port = proxy.create_proxy("short", caddy.port)
+            proxy.add_toxic("short", "cut", "limit_data", {"bytes": 3 * 1024 * 1024})
+            short_gid = check("short.bin", f"http://127.0.0.1:{short_port}/payload.bin",
+                              {"retry-wait": "0"})
+            for case in ("delayed", "tail", "retry-429", "retry-503"):
                 check(f"{case}.bin",
                       f"{wiremock.base_url}/payload.bin?case={case}")
+            if results["tail.bin"] >= 12:
+                raise RuntimeError("The stalled tail was waited out instead of raced")
+            # Bytes may still arrive on running connections, but no new
+            # request may reach the server before retry-wait has passed.
             tail_gid = check(
                 "tail-retry.bin", f"{wiremock.base_url}/payload.bin?case=tail-retry",
                 {"retry-wait": "10", "stream-max-connections": "256"})
-            if results["tail-retry.bin"] < 10:
-                raise RuntimeError("Tail recovery ignored the configured retry wait")
 
             for connections in (1, 2, 64, 256):
                 check(f"conditional-{connections}.bin",
@@ -494,12 +524,18 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             check("date.bin", f"{wiremock.base_url}/payload.bin?case=date")
             check("ignored.bin", f"{wiremock.base_url}/payload.bin?case=ignored",
                   restart=True)
+            ignored_done = time.time()
+            # A file the task created is downloaded again when the remote
+            # representation changes under it.
+            for case in ("changed-200", "changed-206", "changed-412", "416"):
+                check(f"owned-{case}.bin", f"{wiremock.base_url}/payload.bin?case={case}")
+            # An existing file is only ever extended from the representation it
+            # belongs to; otherwise the task fails and leaves it alone.
             for case in ("changed-200", "changed-206", "changed-412", "416", "ignored"):
                 name = f"protected-{case}.bin"
                 path = engine.download_dir / name
                 prefix = payload.read_bytes()[:4 * 1024 * 1024]
-                if case == "ignored":
-                    path.write_bytes(prefix)
+                path.write_bytes(prefix)
                 gid = engine.add_uri(
                     f"{wiremock.base_url}/payload.bin?case={case}",
                     {**options, "out": name, "continue": "true"},
@@ -516,7 +552,7 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                     for i in range(0, len(saved), block))
                 if (status.get("errorCode") != "8" or not saved
                         or len(saved) > len(original) or foreign
-                        or (case == "ignored" and saved != prefix)):
+                        or saved[:len(prefix)] != prefix):
                     raise RuntimeError(f"Unsafe range failure: {case}: {status}")
             results["conditionalResponses"] = "passed"
 
@@ -542,10 +578,20 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             # Keep only the request evidence needed to detect lost or repeated
             # work; do not duplicate WireMock response bodies in the report.
             requests = []
-            for entry in post_json(f"{wiremock.base_url}/__admin/requests/find",
-                                   {"method": "GET"})["requests"]:
+            with urllib.request.urlopen(f"{wiremock.base_url}/__admin/requests",
+                                        timeout=5) as response:
+                events = json.load(response)["requests"]
+            for event in events:
+                entry = event["request"]
+                if entry["method"] != "GET":
+                    continue
                 headers = {k.lower(): v for k, v in entry["headers"].items()}
+                logged = entry["loggedDate"] / 1000
                 requests.append({"url": entry["url"], "range": headers.get("range"),
+                                 "time": logged,
+                                 "status": event.get("response", {}).get("status"),
+                                 "answered": logged
+                                 + event.get("timing", {}).get("totalTime", 0) / 1000,
                                  "ifMatch": headers.get("if-match"),
                                  "ifRange": headers.get("if-range"),
                                  "ifUnmodifiedSince": headers.get("if-unmodified-since")})
@@ -557,8 +603,11 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                 return [r["range"] for r in requests
                         if r["url"] == f"/payload.bin?case={case}"]
 
-            entry_counts = {"/entry?once": 1, "/entry?credentials": 2,
-                            "/entry?family-bound": 2}
+            # Credentials given for the entry point are never sent to its
+            # redirect destination, so that destination stays usable; a
+            # destination refused on one address family is kept for the other.
+            entry_counts = {"/entry?once": 1, "/entry?credentials": 1,
+                            "/entry?family-bound": 1}
             entry_counts.update({f"/entry?refresh={code}": 3 for code in (401, 403, 404)})
             for path, expected_count in entry_counts.items():
                 if sum(r["url"] == path for r in requests) != expected_count:
@@ -572,33 +621,45 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                 if not partial or any(r["ifRange"] != value or r["ifMatch"]
                                       or r["ifUnmodifiedSince"] for r in partial):
                     raise RuntimeError(f"Incorrect range precondition: {case}")
-            if sum(r["url"] == "/payload.bin?case=ignored" and not r["range"]
+            # Ranges answered with the whole representation: the connection
+            # from byte 0 carries on alone, so the file is fetched only once.
+            if sum(r["url"] == "/payload.bin?case=ignored"
+                   and r["time"] <= ignored_done
+                   and (not r["range"] or r["range"].startswith("bytes=0-"))
                    for r in requests) != 1:
-                raise RuntimeError("Range fallback did not issue exactly one complete GET")
-            if any(r["ifRange"] or r["ifMatch"] or r["ifUnmodifiedSince"]
-                   for r in requests if r["url"] == "/payload.bin?case=fresh-date"):
+                raise RuntimeError("Range fallback fetched the file more than once")
+            fresh = [r for r in requests if r["url"] == "/payload.bin?case=fresh-date"]
+            if (not any(r["range"] and not r["range"].startswith("bytes=0-") for r in fresh)
+                    or any(r["ifRange"] or r["ifMatch"] or r["ifUnmodifiedSince"]
+                           for r in fresh)):
                 raise RuntimeError("An unqualified date became a range validator")
 
-            short = ranges("short")
-            suffix_pattern = rf"bytes=(?!{begin}-)[0-9]+-{end - 1}"
-            if short.count(requested) != 1 or not any(
-                    re.fullmatch(suffix_pattern, value) for value in short if value):
-                raise RuntimeError("Short response left its final suffix unrecovered")
-            retried = ranges("tail-retry")
-            if not any(re.fullmatch(suffix_pattern, value) and retried.count(value) == 2
-                       for value in retried if value):
-                raise RuntimeError("The failed suffix was not retried exactly once")
+            # Requests of the same fan-out may reach the server shortly after
+            # the refusal was answered; connection setup gets this much slack.
+            setup = 0.1
+            refused = sorted(r["answered"] for r in requests
+                             if r["url"] == "/payload.bin?case=tail-retry"
+                             and r["range"] and re.fullmatch(tail_range, r["range"]))
+            later = [r["time"] for r in requests if r["url"] == "/payload.bin?case=tail-retry"
+                     and refused and r["time"] > refused[0] + setup]
+            if not refused or any(time < refused[0] + 10 for time in later):
+                raise RuntimeError("A request was sent before the configured retry wait")
+            # No new request reaches the server within Retry-After; a running
+            # connection may still extend over the refused range.
             for code in (429, 503):
-                if ranges(f"retry-{code}").count(requested) != 2:
-                    raise RuntimeError(f"HTTP {code} retry was not exercised exactly once")
-            # The first request is open-ended (bytes=N-); it covers the tail.
-            tail = [(int(first), int(last) if last else payload.stat().st_size - 1)
-                    for first, _, last in (value.removeprefix("bytes=").partition("-")
-                                           for value in ranges("tail") if value)]
-            if not any(begin < first <= last < end for first, last in tail):
+                url = f"/payload.bin?case=retry-{code}"
+                answered = sorted(r["answered"] for r in requests
+                                  if r["url"] == url and r["status"] == code)
+                if not answered or any(
+                        answered[0] + setup < r["time"] < answered[0] + 1
+                        for r in requests if r["url"] == url):
+                    raise RuntimeError(f"HTTP {code} retry was not honoured")
+            stalled = [value for value in ranges("tail")
+                       if value and re.fullmatch(tail_range, value)]
+            if len(stalled) < 2:
                 raise RuntimeError("Slow tail work was not reassigned")
-            if len([r for r in tail if begin <= r[0] < end]) > 2 * (end - begin) // 65536:
-                raise RuntimeError("Tail requests exceeded the bounded split and reassignment budget")
+            if len(ranges("tail")) > 2 * 64:
+                raise RuntimeError("Tail requests exceeded the split and race budget")
 
             bare_gid = engine.add_uri(
                 f"{wiremock.base_url}/payload.bin?case=bare-etag",
@@ -624,7 +685,9 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             bare_restored = engine.rpc.wait_status(bare_gid, "paused")
             if any(bare_restored[k] != bare_paused[k]
                    for k in ("totalLength", "completedLength")):
-                raise RuntimeError("Bare ETag progress changed across restart")
+                raise RuntimeError(
+                    "Bare ETag progress changed across restart: "
+                    f"{bare_paused['completedLength']} -> {bare_restored['completedLength']}")
             engine.rpc.call("aria2.changeOption", [bare_gid, {"max-download-limit": "0"}])
             engine.rpc.call("aria2.unpause", [bare_gid])
             engine.rpc.wait_complete(bare_gid, 30)
@@ -665,17 +728,20 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
         # The logger buffers debug output. Check the flushed pre-restart log,
         # rather than racing the logger immediately after RPC completion.
         retry_log = (run.logs / "before-restart.engine.log").read_text(encoding="utf-8")
-        if not re.search(rf"event=route_payload gid={dual_gid} "
-                         r"family=ipv6 bytes=[1-9][0-9]*", retry_log):
+        if not re.search(rf"{dual_gid}: connection \d+ received [1-9][0-9]* bytes over IPv6",
+                         retry_log):
             raise RuntimeError("The slow IPv6 body path was not exercised")
-        for family in ("ipv4", "ipv6"):
+        for family in ("4", "6"):
             if not re.search(
-                rf"event=route_payload gid={delayed_gid} "
-                rf"family={family} bytes=[1-9][0-9]*", retry_log
+                rf"{delayed_gid}: connection \d+ received [1-9][0-9]* bytes over IPv{family}",
+                retry_log,
             ):
                 raise RuntimeError(f"The delayed-family case did not receive {family} payload")
-        delay = re.search(rf"event=range_retry gid={tail_gid} .*retry_in_ms=(\d+)",
-                          retry_log)
+        if not re.search(rf"{short_gid}: connection failed \((?:Transferred a partial file|"
+                         r"The connection closed before|end of response with \d+ bytes missing)",
+                         retry_log):
+            raise RuntimeError("The short-response case was not exercised")
+        delay = re.search(rf"{tail_gid}: .*retry in (\d+) ms", retry_log)
         if not delay or int(delay[1]) < 10000:
             raise RuntimeError("Retry diagnostics omit the actual scheduled wait")
 

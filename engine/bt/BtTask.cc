@@ -30,12 +30,16 @@ namespace {
 std::string hexBits(const lt::bitfield& bits)
 {
   return bits.empty() ? std::string()
-                      : text::toHex({bits.data(), static_cast<size_t>(bits.num_bytes())});
+                      : text::toHex({bits.data(),
+                                     static_cast<size_t>(bits.num_bytes())});
 }
 
 std::string flag(bool value) { return value ? "true" : "false"; }
 
-int limit(int64_t value) { return value > 0 ? static_cast<int>(std::min<int64_t>(value, INT32_MAX)) : -1; }
+int limit(int64_t value)
+{
+  return value > 0 ? static_cast<int>(std::min<int64_t>(value, INT32_MAX)) : -1;
+}
 
 ErrorCode storageError(const lt::error_code& error)
 {
@@ -52,7 +56,9 @@ ErrorCode storageError(const lt::error_code& error)
 std::string peerFlags(const lt::peer_info& peer)
 {
   std::string out;
-  const auto has = [&peer](lt::peer_flags_t bit) { return bool(peer.flags & bit); };
+  const auto has = [&peer](lt::peer_flags_t bit) {
+    return bool(peer.flags & bit);
+  };
   if (has(lt::peer_info::interesting)) {
     out += has(lt::peer_info::remote_choked) ? 'd' : 'D';
   }
@@ -99,9 +105,12 @@ json::array peerSources(const lt::peer_info& peer)
 {
   json::array out;
   const std::pair<lt::peer_source_flags_t, const char*> names[] = {
-      {lt::peer_info::tracker, "tracker"}, {lt::peer_info::dht, "dht"},
-      {lt::peer_info::pex, "pex"},         {lt::peer_info::lsd, "lsd"},
-      {lt::peer_info::resume_data, "resume"}, {lt::peer_info::incoming, "incoming"}};
+      {lt::peer_info::tracker, "tracker"},
+      {lt::peer_info::dht, "dht"},
+      {lt::peer_info::pex, "pex"},
+      {lt::peer_info::lsd, "lsd"},
+      {lt::peer_info::resume_data, "resume"},
+      {lt::peer_info::incoming, "incoming"}};
   for (const auto& [bit, name] : names) {
     if (peer.source & bit) {
       out.push_back(json::string(name));
@@ -152,15 +161,17 @@ lt::add_torrent_params BtTask::addParams()
 {
   auto params = params_;
   params.save_path = savePath();
-  params.flags &= ~(lt::torrent_flags::paused | lt::torrent_flags::auto_managed |
-                    lt::torrent_flags::stop_when_ready | lt::torrent_flags::upload_mode |
-                    lt::torrent_flags::seed_mode);
+  params.flags &=
+      ~(lt::torrent_flags::paused | lt::torrent_flags::auto_managed |
+        lt::torrent_flags::stop_when_ready | lt::torrent_flags::upload_mode |
+        lt::torrent_flags::seed_mode);
   const auto set = [&params](lt::torrent_flags_t bit, bool on) {
     params.flags = on ? params.flags | bit : params.flags & ~bit;
   };
   // Resume data does not keep the subscription to post_torrent_updates().
   set(lt::torrent_flags::update_subscribe, true);
-  set(lt::torrent_flags::sequential_download, options().flag("force-sequential"));
+  set(lt::torrent_flags::sequential_download,
+      options().flag("force-sequential"));
   set(lt::torrent_flags::super_seeding, options().flag("bt-super-seeding"));
   set(lt::torrent_flags::disable_pex, !options().flag("enable-peer-exchange"));
   set(lt::torrent_flags::disable_dht, !options().flag("enable-dht"));
@@ -171,7 +182,8 @@ lt::add_torrent_params BtTask::addParams()
     params.verified_pieces.clear();
     params.unfinished_pieces.clear();
   }
-  else if (params.ti && params.have_pieces.empty() && options().flag("bt-seed-unverified")) {
+  else if (params.ti && params.have_pieces.empty() &&
+           options().flag("bt-seed-unverified")) {
     set(lt::torrent_flags::seed_mode, true);
   }
   params.upload_limit = limit(options().integer("max-upload-limit"));
@@ -211,7 +223,8 @@ void BtTask::start()
   }
   auto params = addParams();
   phase_ = Phase::Adding;
-  engine().bt().add(std::static_pointer_cast<BtTask>(shared_from_this()), std::move(params));
+  engine().bt().add(std::static_pointer_cast<BtTask>(shared_from_this()),
+                    std::move(params));
 }
 
 void BtTask::attached(const lt::torrent_handle& handle)
@@ -270,7 +283,8 @@ void BtTask::finish(Outcome outcome, ErrorCode code, std::string message)
   failureMessage_ = std::move(message);
   phase_ = Phase::Saving;
   handle_.pause();
-  saveResume(lt::torrent_handle::flush_disk_cache | lt::torrent_handle::save_info_dict);
+  saveResume(lt::torrent_handle::flush_disk_cache |
+             lt::torrent_handle::save_info_dict);
 }
 
 void BtTask::saveResume(lt::resume_data_flags_t flags)
@@ -296,7 +310,8 @@ void BtTask::resumeSaved(const lt::add_torrent_params& params)
       [this, self = shared_from_this()](bool ok) {
         --pendingWrites_;
         if (!ok) {
-          log::warn("{}: cannot write the resume data {}", gidText(gid()), resumePath());
+          log::warn("{}: cannot write the resume data {}", gidText(gid()),
+                    resumePath());
         }
         maybeRemove();
       });
@@ -338,10 +353,12 @@ void BtTask::handle(lt::alert* alert)
     --pendingSaves_;
     resumeSaved(saved->params);
   }
-  else if (auto* unsaved = lt::alert_cast<lt::save_resume_data_failed_alert>(alert)) {
+  else if (auto* unsaved =
+               lt::alert_cast<lt::save_resume_data_failed_alert>(alert)) {
     --pendingSaves_;
     if (unsaved->error != lt::errors::resume_data_not_modified) {
-      log::warn("{}: resume data not saved: {}", gidText(gid()), unsaved->error.message());
+      log::warn("{}: resume data not saved: {}", gidText(gid()),
+                unsaved->error.message());
     }
     maybeRemove();
   }
@@ -358,14 +375,18 @@ void BtTask::handle(lt::alert* alert)
   }
   else if (auto* fileError = lt::alert_cast<lt::file_error_alert>(alert)) {
     finish(Outcome::Fail, storageError(fileError->error),
-           fmt::format("{}: {}", fileError->filename(), fileError->error.message()));
+           fmt::format("{}: {}", fileError->filename(),
+                       fileError->error.message()));
   }
-  else if (auto* torrentError = lt::alert_cast<lt::torrent_error_alert>(alert)) {
-    finish(Outcome::Fail, storageError(torrentError->error), torrentError->error.message());
+  else if (auto* torrentError =
+               lt::alert_cast<lt::torrent_error_alert>(alert)) {
+    finish(Outcome::Fail, storageError(torrentError->error),
+           torrentError->error.message());
   }
-  else if (auto* rejected = lt::alert_cast<lt::fastresume_rejected_alert>(alert)) {
-    log::info("{}: resume data rejected ({}); checking the files", gidText(gid()),
-              rejected->error.message());
+  else if (auto* rejected =
+               lt::alert_cast<lt::fastresume_rejected_alert>(alert)) {
+    log::info("{}: resume data rejected ({}); checking the files",
+              gidText(gid()), rejected->error.message());
   }
 }
 
@@ -377,8 +398,8 @@ void BtTask::metadataReceived()
   }
   info_ = info;
   params_.ti = std::make_shared<lt::torrent_info>(*info);
-  log::notice("{}: metadata of {} received ({} files)", gidText(gid()), info->name(),
-              info->layout().num_files());
+  log::notice("{}: metadata of {} received ({} files)", gidText(gid()),
+              info->name(), info->layout().num_files());
   if (awaitingSelection()) {
     // Pausing saves the metadata with the resume data.
     engine().pause(shared_from_this(), false);
@@ -411,11 +432,14 @@ void BtTask::applyPriorities()
   for (const auto index : layout.file_range()) {
     const auto size = layout.file_size(index);
     if (size == 0 || layout.pad_file_at(index) ||
-        wanted[static_cast<size_t>(static_cast<int>(index))] == lt::dont_download) {
+        wanted[static_cast<size_t>(static_cast<int>(index))] ==
+            lt::dont_download) {
       continue;
     }
-    handle_.piece_priority(layout.map_file(index, 0, 0).piece, lt::top_priority);
-    handle_.piece_priority(layout.map_file(index, size - 1, 0).piece, lt::top_priority);
+    handle_.piece_priority(layout.map_file(index, 0, 0).piece,
+                           lt::top_priority);
+    handle_.piece_priority(layout.map_file(index, size - 1, 0).piece,
+                           lt::top_priority);
   }
 }
 
@@ -424,11 +448,16 @@ void BtTask::applyLimits()
   handle_.set_upload_limit(limit(options().integer("max-upload-limit")));
   handle_.set_download_limit(limit(options().integer("max-download-limit")));
   handle_.set_max_connections(limit(options().integer("bt-max-peers")));
-  handle_.set_max_uploads(limit(options().integer("bt-max-uploads-per-torrent")));
+  handle_.set_max_uploads(
+      limit(options().integer("bt-max-uploads-per-torrent")));
 }
 
 void BtTask::updated(const lt::torrent_status& status)
 {
+  // A torrent that is leaving the session keeps its last running view.
+  if (phase_ == Phase::Saving || phase_ == Phase::Removing) {
+    return;
+  }
   const bool first = !hasStatus_;
   status_ = status;
   hasStatus_ = true;
@@ -439,13 +468,15 @@ void BtTask::updated(const lt::torrent_status& status)
     wantFileProgress_ = false;
     handle_.post_file_progress(lt::torrent_handle::piece_granularity);
   }
-  const bool checking = status.state == lt::torrent_status::checking_files ||
-                        status.state == lt::torrent_status::checking_resume_data;
+  const bool checking =
+      status.state == lt::torrent_status::checking_files ||
+      status.state == lt::torrent_status::checking_resume_data;
   if (checking) {
     return;
   }
   const bool done = status.has_metadata && status.total_wanted > 0 &&
-                    (status.is_finished || status.is_seeding) && !awaitingSelection();
+                    (status.is_finished || status.is_seeding) &&
+                    !awaitingSelection();
   if (done && !finished_) {
     finished_ = true;
     // A torrent that was already complete when it started is not announced
@@ -469,7 +500,8 @@ void BtTask::evaluateSeeding()
   }
   bool enough = false;
   if (!options().blank("seed-time")) {
-    enough = status_.finished_duration.count() >= options().number("seed-time") * 60;
+    enough =
+        status_.finished_duration.count() >= options().number("seed-time") * 60;
   }
   const auto ratio = options().number("seed-ratio");
   if (ratio > 0 && status_.total_wanted > 0) {
@@ -484,7 +516,8 @@ void BtTask::evaluateSeeding()
 void BtTask::checkpoint()
 {
   if (phase_ == Phase::Running) {
-    saveResume(lt::torrent_handle::save_info_dict | lt::torrent_handle::only_if_modified);
+    saveResume(lt::torrent_handle::save_info_dict |
+               lt::torrent_handle::only_if_modified);
   }
 }
 
@@ -523,8 +556,9 @@ void BtTask::optionChanged(std::string_view name)
                         lt::torrent_flags::super_seeding);
     }
     else if (name == "force-sequential") {
-      handle_.set_flags(options().flag(name) ? lt::torrent_flags::sequential_download
-                                             : lt::torrent_flags_t{},
+      handle_.set_flags(options().flag(name)
+                            ? lt::torrent_flags::sequential_download
+                            : lt::torrent_flags_t{},
                         lt::torrent_flags::sequential_download);
     }
     else if (name == "seed-ratio" || name == "seed-time") {
@@ -532,7 +566,8 @@ void BtTask::optionChanged(std::string_view name)
     }
   }
   catch (const Error& error) {
-    log::warn("{}: option {} not applied: {}", gidText(gid()), name, error.what());
+    log::warn("{}: option {} not applied: {}", gidText(gid()), name,
+              error.what());
   }
 }
 
@@ -544,7 +579,8 @@ bool BtTask::countsTowardConcurrency() const
 const lt::torrent_handle& BtTask::running() const
 {
   if (phase_ != Phase::Running || !handle_.is_valid()) {
-    fail(ErrorCode::Unknown, "The torrent of GID {} is not running", gidText(gid()));
+    fail(ErrorCode::Unknown, "The torrent of GID {} is not running",
+         gidText(gid()));
   }
   return handle_;
 }
@@ -566,7 +602,8 @@ int64_t BtTask::wantedLength() const
   int64_t total = 0;
   for (const auto index : layout.file_range()) {
     const auto i = static_cast<size_t>(static_cast<int>(index));
-    if (!layout.pad_file_at(index) && (wanted.empty() || wanted[i] != lt::dont_download)) {
+    if (!layout.pad_file_at(index) &&
+        (wanted.empty() || wanted[i] != lt::dont_download)) {
       total += layout.file_size(index);
     }
   }
@@ -584,22 +621,33 @@ int64_t BtTask::storedCompleted() const
 
 int64_t BtTask::totalLength() const
 {
-  return hasStatus_ && phase_ != Phase::Idle ? status_.total_wanted : wantedLength();
+  return hasStatus_ && phase_ != Phase::Idle ? status_.total_wanted
+                                             : wantedLength();
 }
 
 int64_t BtTask::completedLength() const
 {
-  return hasStatus_ && phase_ != Phase::Idle ? status_.total_wanted_done : storedCompleted();
+  // While libtorrent checks resume data or files it reports nothing done yet;
+  // the stored pieces are the better answer until the check ends.
+  const bool checking =
+      status_.state == lt::torrent_status::checking_files ||
+      status_.state == lt::torrent_status::checking_resume_data;
+  if (!hasStatus_ || phase_ == Phase::Idle || checking) {
+    return storedCompleted();
+  }
+  return status_.total_wanted_done;
 }
 
 int64_t BtTask::downloadSpeed() const
 {
-  return hasStatus_ && phase_ == Phase::Running ? status_.download_payload_rate : 0;
+  return hasStatus_ && phase_ == Phase::Running ? status_.download_payload_rate
+                                                : 0;
 }
 
 int64_t BtTask::uploadSpeed() const
 {
-  return hasStatus_ && phase_ == Phase::Running ? status_.upload_payload_rate : 0;
+  return hasStatus_ && phase_ == Phase::Running ? status_.upload_payload_rate
+                                                : 0;
 }
 
 int64_t BtTask::uploadLength() const
@@ -618,7 +666,8 @@ std::vector<TaskFile> BtTask::files() const
   if (!info_) {
     TaskFile file;
     file.path = joinPath(options().get("dir"),
-                         params_.name.empty() ? infoHash() : safeFileName(params_.name));
+                         params_.name.empty() ? infoHash()
+                                              : safeFileName(params_.name));
     return {file};
   }
   std::vector<lt::download_priority_t> wanted;
@@ -638,9 +687,10 @@ std::vector<TaskFile> BtTask::files() const
     const auto renamed = params_.renamed_files.find(index);
     TaskFile file;
     file.index = static_cast<int>(i) + 1;
-    file.path = joinPath(root, toUtf8(toPath(renamed != params_.renamed_files.end()
-                                                 ? renamed->second
-                                                 : layout.file_path(index))));
+    file.path =
+        joinPath(root, toUtf8(toPath(renamed != params_.renamed_files.end()
+                                         ? renamed->second
+                                         : layout.file_path(index))));
     file.length = layout.file_size(index);
     file.selected = wanted.empty() || wanted[i] != lt::dont_download;
     file.completed = i < fileProgress_.size()
@@ -712,13 +762,15 @@ void BtTask::status(json::object& out, const StatusKeys& keys) const
     put("pieceLength", json::string(std::to_string(info_->piece_length())));
     put("numPieces", json::string(std::to_string(info_->num_pieces())));
     if (keys.want("bitfield")) {
-      out["bitfield"] = hexBits(live ? static_cast<const lt::bitfield&>(status_.pieces)
-                                     : static_cast<const lt::bitfield&>(params_.have_pieces));
+      out["bitfield"] =
+          hexBits(live ? static_cast<const lt::bitfield&>(status_.pieces)
+                       : static_cast<const lt::bitfield&>(params_.have_pieces));
     }
   }
   if (live && status_.state == lt::torrent_status::checking_files) {
-    put("verifiedLength", json::string(std::to_string(static_cast<int64_t>(
-                              static_cast<double>(status_.total_wanted) * status_.progress))));
+    put("verifiedLength",
+        json::string(std::to_string(static_cast<int64_t>(
+            static_cast<double>(status_.total_wanted) * status_.progress))));
     put("verifyIntegrityPending", json::string("true"));
   }
   if (!keys.want("bittorrent")) {
@@ -727,7 +779,8 @@ void BtTask::status(json::object& out, const StatusKeys& keys) const
   json::object bt;
   std::map<int, json::array> tiers;
   for (size_t i = 0; i < params_.trackers.size(); ++i) {
-    const auto tier = i < params_.tracker_tiers.size() ? params_.tracker_tiers[i] : 0;
+    const auto tier =
+        i < params_.tracker_tiers.size() ? params_.tracker_tiers[i] : 0;
     tiers[tier].push_back(json::string(params_.trackers[i]));
   }
   json::array announceList;
@@ -793,12 +846,15 @@ json::array BtTask::peers() const
   running().get_peer_info(list);
   json::array out;
   for (const auto& peer : list) {
-    const auto has = [&peer](lt::peer_flags_t bit) { return bool(peer.flags & bit); };
+    const auto has = [&peer](lt::peer_flags_t bit) {
+      return bool(peer.flags & bit);
+    };
     json::object entry;
     const auto remote = peer.remote_endpoint();
     entry["ip"] = remote.address().to_string();
     entry["port"] = std::to_string(remote.port());
-    entry["peerId"] = text::percentEncode(std::string_view(peer.pid.data(), static_cast<size_t>(peer.pid.size())));
+    entry["peerId"] = text::percentEncode(std::string_view(
+        peer.pid.data(), static_cast<size_t>(peer.pid.size())));
     entry["peerClientName"] = peer.client;
     entry["bitfield"] = hexBits(peer.pieces);
     entry["amChoking"] = flag(has(lt::peer_info::choked));
@@ -809,14 +865,15 @@ json::array BtTask::peers() const
     entry["uploaded"] = std::to_string(peer.total_upload);
     entry["progress"] = fmt::format("{:.6f}", peer.progress_ppm / 1e6);
     entry["seeder"] = flag(has(lt::peer_info::seed));
-    entry["state"] = has(lt::peer_info::connecting) ? "connecting"
+    entry["state"] = has(lt::peer_info::connecting)  ? "connecting"
                      : has(lt::peer_info::handshake) ? "handshaking"
                                                      : "connected";
     entry["transport"] = has(lt::peer_info::utp_socket) ? "utp" : "tcp";
-    entry["encryption"] = has(lt::peer_info::ssl_socket)            ? "tls"
-                          : has(lt::peer_info::rc4_encrypted)       ? "rc4"
-                          : has(lt::peer_info::plaintext_encrypted) ? "encryptedHandshake"
-                                                                    : "plain";
+    entry["encryption"] = has(lt::peer_info::ssl_socket)      ? "tls"
+                          : has(lt::peer_info::rc4_encrypted) ? "rc4"
+                          : has(lt::peer_info::plaintext_encrypted)
+                              ? "encryptedHandshake"
+                              : "plain";
     entry["incoming"] = flag(!has(lt::peer_info::outgoing_connection));
     entry["flags"] = peerFlags(peer);
     entry["sources"] = peerSources(peer);
@@ -852,31 +909,34 @@ json::array BtTask::trackers() const
           error = hash.last_error.message();
         }
         if (hash.next_announce > now) {
-          const auto seconds =
-              std::chrono::duration_cast<std::chrono::seconds>(hash.next_announce - now).count();
+          const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(
+                                   hash.next_announce - now)
+                                   .count();
           next = next < 0 ? seconds : std::min<int64_t>(next, seconds);
         }
       }
     }
-    const auto status = updating             ? "updating"
-                        : tracker.verified   ? "working"
-                        : !error.empty()     ? "error"
-                                             : "notContacted";
-    const auto source = (tracker.source & lt::announce_entry::source_torrent)       ? "torrent"
-                        : (tracker.source & lt::announce_entry::source_magnet_link) ? "magnet"
-                        : (tracker.source & lt::announce_entry::source_tex)         ? "exchange"
-                                                                                    : "user";
-    json::object entry{{"url", tracker.url},
-                       {"tier", std::to_string(tracker.tier)},
-                       {"source", source},
-                       {"status", status},
-                       {"failures", std::to_string(fails)},
-                       {"seeders", std::to_string(seeders)},
-                       {"leechers", std::to_string(leechers)},
-                       {"downloads", std::to_string(downloads)},
-                       {"nextAnnounce", std::to_string(std::max<int64_t>(next, 0))},
-                       {"updating", flag(updating)},
-                       {"verified", flag(tracker.verified)}};
+    const auto status = updating           ? "updating"
+                        : tracker.verified ? "working"
+                        : !error.empty()   ? "error"
+                                           : "notContacted";
+    const auto source =
+        (tracker.source & lt::announce_entry::source_torrent)       ? "torrent"
+        : (tracker.source & lt::announce_entry::source_magnet_link) ? "magnet"
+        : (tracker.source & lt::announce_entry::source_tex)         ? "exchange"
+                                                                    : "user";
+    json::object entry{
+        {"url", tracker.url},
+        {"tier", std::to_string(tracker.tier)},
+        {"source", source},
+        {"status", status},
+        {"failures", std::to_string(fails)},
+        {"seeders", std::to_string(seeders)},
+        {"leechers", std::to_string(leechers)},
+        {"downloads", std::to_string(downloads)},
+        {"nextAnnounce", std::to_string(std::max<int64_t>(next, 0))},
+        {"updating", flag(updating)},
+        {"verified", flag(tracker.verified)}};
     if (!error.empty() || !message.empty()) {
       entry["message"] = error.empty() ? message : error;
     }
@@ -885,7 +945,8 @@ json::array BtTask::trackers() const
   return out;
 }
 
-void BtTask::replaceTrackers(const std::vector<std::pair<std::string, int>>& trackers)
+void BtTask::replaceTrackers(
+    const std::vector<std::pair<std::string, int>>& trackers)
 {
   std::vector<lt::announce_entry> entries;
   params_.trackers.clear();
@@ -923,15 +984,17 @@ std::pair<int, int> BtTask::addPeers(const std::vector<std::string>& peers)
     if (host.size() > 2 && host.front() == '[' && host.back() == ']') {
       host = host.substr(1, host.size() - 2);
     }
-    const auto port = colon == std::string::npos
-                          ? std::nullopt
-                          : text::toInt(std::string_view(peer).substr(colon + 1));
+    const auto port =
+        colon == std::string::npos
+            ? std::nullopt
+            : text::toInt(std::string_view(peer).substr(colon + 1));
     boost::system::error_code error;
     const auto address = boost::asio::ip::make_address(host, error);
     if (error || !port || *port < 1 || *port > 65535) {
       continue;
     }
-    const lt::tcp::endpoint endpoint(address, static_cast<unsigned short>(*port));
+    const lt::tcp::endpoint endpoint(address,
+                                     static_cast<unsigned short>(*port));
     if (phase_ == Phase::Running) {
       handle_.connect_peer(endpoint);
     }

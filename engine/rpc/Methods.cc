@@ -40,7 +40,8 @@ std::optional<int64_t> integer(const json::array& params, size_t index)
       return number;
     }
     if (value->as_string().starts_with("-")) {
-      if (const auto number = text::toInt(std::string_view(value->as_string()).substr(1))) {
+      if (const auto number =
+              text::toInt(std::string_view(value->as_string()).substr(1))) {
         return -*number;
       }
     }
@@ -104,7 +105,8 @@ OptionPairs optionPairs(const json::array& params, size_t index)
   return pairs;
 }
 
-std::shared_ptr<Task> task(Engine& engine, const json::array& params, size_t index)
+std::shared_ptr<Task> task(Engine& engine, const json::array& params,
+                           size_t index)
 {
   const auto gid = text(params, index, "GID");
   auto found = engine.find(std::string_view(gid));
@@ -173,7 +175,8 @@ std::map<std::string, std::string> effectiveOptions(const Options& options,
 {
   std::map<std::string, std::string> values;
   for (const auto& spec : optionCatalog()) {
-    if ((spec.scope & scope::Secret) || (wantedScope && !(spec.scope & wantedScope))) {
+    if ((spec.scope & scope::Secret) ||
+        (wantedScope && !(spec.scope & wantedScope))) {
       continue;
     }
     auto value = options.get(spec.name);
@@ -217,7 +220,8 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
     if (!metalink) {
       invalid("metalink must be base64");
     }
-    auto tasks = createMetalinkTasks(e, *metalink, taskOptions(e, optionPairs(p, 1)));
+    auto tasks =
+        createMetalinkTasks(e, *metalink, taskOptions(e, optionPairs(p, 1)));
     const auto at = position(p, 2);
     json::array gids;
     for (size_t i = 0; i < tasks.size(); ++i) {
@@ -234,18 +238,20 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
       if (target->state() == TaskState::Complete ||
           target->state() == TaskState::Error ||
           target->state() == TaskState::Removed) {
-        invalid(fmt::format("Active download not found for GID {}", gidOf(*target)));
+        invalid(fmt::format("Active download not found for GID {}",
+                            gidOf(*target)));
       }
       e.remove(target, force);
       return json::string(gidOf(*target));
     });
   }
 
-  for (const auto& [name, force] : {std::pair{"aria2.pause", false},
-                                    std::pair{"aria2.forcePause", true}}) {
+  for (const auto& [name, force] :
+       {std::pair{"aria2.pause", false}, std::pair{"aria2.forcePause", true}}) {
     d.add(name, [&e, force = force](json::array& p) -> json::value {
       auto target = task(e, p);
-      if (target->state() != TaskState::Active && target->state() != TaskState::Waiting) {
+      if (target->state() != TaskState::Active &&
+          target->state() != TaskState::Waiting) {
         invalid(fmt::format("GID {} cannot be paused now", gidOf(*target)));
       }
       e.pause(target, force);
@@ -281,7 +287,8 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
     const auto files = task(e, p)->files();
     if (!files.empty()) {
       for (const auto& uri : files.front().uris) {
-        out.push_back(json::object{{"uri", uri.uri}, {"status", uri.used ? "used" : "waiting"}});
+        out.push_back(json::object{{"uri", uri.uri},
+                                   {"status", uri.used ? "used" : "waiting"}});
       }
     }
     return out;
@@ -297,8 +304,9 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
       json::array servers;
       for (const auto& uri : file.uris) {
         if (uri.used) {
-          servers.push_back(json::object{
-              {"uri", uri.uri}, {"currentUri", uri.uri}, {"downloadSpeed", "0"}});
+          servers.push_back(json::object{{"uri", uri.uri},
+                                         {"currentUri", uri.uri},
+                                         {"downloadSpeed", "0"}});
         }
       }
       out.push_back(json::object{{"index", std::to_string(file.index)},
@@ -314,22 +322,24 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
     return out;
   });
   d.add("aria2.tellWaiting", [&e](json::array& p) -> json::value {
-    return page(e.waiting(), integer(p, 0).value_or(0), integer(p, 1).value_or(0),
-                keys(p, 2));
+    return page(e.waiting(), integer(p, 0).value_or(0),
+                integer(p, 1).value_or(0), keys(p, 2));
   });
   d.add("aria2.tellStopped", [&e](json::array& p) -> json::value {
-    return page(e.stopped(), integer(p, 0).value_or(0), integer(p, 1).value_or(0),
-                keys(p, 2));
+    return page(e.stopped(), integer(p, 0).value_or(0),
+                integer(p, 1).value_or(0), keys(p, 2));
   });
 
   d.add("aria2.changePosition", [&e](json::array& p) -> json::value {
     const auto how = text(p, 2, "how");
     const auto mode = how == "POS_SET"   ? Position::Set
                       : how == "POS_CUR" ? Position::Current
-                      : how == "POS_END" ? Position::End
-                                         : (invalid("how must be POS_SET, POS_CUR or POS_END"),
-                                            Position::Set);
-    return static_cast<int64_t>(e.move(task(e, p), integer(p, 1).value_or(0), mode));
+                      : how == "POS_END"
+                          ? Position::End
+                          : (invalid("how must be POS_SET, POS_CUR or POS_END"),
+                             Position::Set);
+    return static_cast<int64_t>(
+        e.move(task(e, p), integer(p, 1).value_or(0), mode));
   });
   d.add("aria2.changeUri", [&e](json::array& p) -> json::value {
     auto target = task(e, p);
@@ -376,7 +386,8 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
         e.global().set(name, value); // maps or reports retired names
         continue;
       }
-      if (!(spec->scope & (scope::Global | scope::Task)) && name != "save-session") {
+      if (!(spec->scope & (scope::Global | scope::Task)) &&
+          name != "save-session") {
         continue;
       }
       e.global().set(name, value);
@@ -388,12 +399,13 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
 
   d.add("aria2.getGlobalStat", [&e](json::array&) -> json::value {
     const auto stat = e.stat();
-    return json::object{{"downloadSpeed", std::to_string(stat.downloadSpeed)},
-                        {"uploadSpeed", std::to_string(stat.uploadSpeed)},
-                        {"numActive", std::to_string(stat.numActive)},
-                        {"numWaiting", std::to_string(stat.numWaiting)},
-                        {"numStopped", std::to_string(stat.numStopped)},
-                        {"numStoppedTotal", std::to_string(stat.numStoppedTotal)}};
+    return json::object{
+        {"downloadSpeed", std::to_string(stat.downloadSpeed)},
+        {"uploadSpeed", std::to_string(stat.uploadSpeed)},
+        {"numActive", std::to_string(stat.numActive)},
+        {"numWaiting", std::to_string(stat.numWaiting)},
+        {"numStopped", std::to_string(stat.numStopped)},
+        {"numStoppedTotal", std::to_string(stat.numStoppedTotal)}};
   });
   d.add("aria2.purgeDownloadResult", [&e](json::array&) -> json::value {
     e.purgeResults();
@@ -402,7 +414,8 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
   d.add("aria2.removeDownloadResult", [&e](json::array& p) -> json::value {
     auto target = task(e, p);
     if (!e.removeResult(target->gid())) {
-      invalid(fmt::format("Could not remove download result of GID {}", gidOf(*target)));
+      invalid(fmt::format("Could not remove download result of GID {}",
+                          gidOf(*target)));
     }
     return "OK";
   });
@@ -412,17 +425,19 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
     for (const auto* feature : enabledFeatures()) {
       features.push_back(json::string(feature));
     }
-    return json::object{{"version", engineVersion()},
-                        {"product", "aria2-next"},
-                        {"rpcVersion", "1.1.0"},
-                        {"enabledFeatures", std::move(features)},
-                        {"mediaFeatures", json::array{"request-contexts", "stable-track-ids",
-                                                      "structured-errors", "captured-inputs"}}};
+    return json::object{
+        {"version", engineVersion()},
+        {"product", "aria2-next"},
+        {"rpcVersion", "1.1.0"},
+        {"enabledFeatures", std::move(features)},
+        {"mediaFeatures", json::array{"request-contexts", "stable-track-ids",
+                                      "structured-errors", "captured-inputs"}}};
   });
   d.add("aria2.getSessionInfo", [](json::array&) -> json::value {
     static const auto session = [] {
       std::random_device random;
-      return fmt::format("{:08x}{:08x}{:08x}{:08x}", random(), random(), random(), random());
+      return fmt::format("{:08x}{:08x}{:08x}{:08x}", random(), random(),
+                         random(), random());
     }();
     return json::object{{"sessionId", session}};
   });
@@ -464,6 +479,8 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
   });
 
   registerBtMethods(d, e);
+  registerMediaMethods(d, e);
+  registerEd2kMethods(d, e);
 
   d.add("system.listMethods", [&d](json::array&) -> json::value {
     json::array out;

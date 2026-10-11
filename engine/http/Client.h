@@ -17,7 +17,7 @@
 namespace aria2 {
 class Engine;
 class Options;
-}
+} // namespace aria2
 
 namespace aria2::http {
 
@@ -49,6 +49,8 @@ public:
   void header(const std::string& line);
   long responseCode() const;
   std::string effectiveUrl() const;
+  // Address family of the last connection: 4, 6, or 0 before connecting.
+  int connectedFamily() const;
   const char* errorText() const { return errorBuffer_.data(); }
 
 protected:

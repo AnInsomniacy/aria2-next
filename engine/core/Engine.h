@@ -74,6 +74,12 @@ public:
   void unpauseAll();
   size_t move(const std::shared_ptr<Task>& task, int64_t offset, Position how);
   bool removeResult(Gid gid);
+  // Moves a stopped task back to the end of the queue, keeping its GID.
+  void requeue(const std::shared_ptr<Task>& task);
+  // An active task gives its slot to a task of another kind with the same
+  // GID, e.g. HTTP to media once a response reveals a manifest.
+  void handOver(const std::shared_ptr<Task>& current,
+                std::shared_ptr<Task> next);
   void purgeResults();
 
   std::vector<std::shared_ptr<Task>> active() const;
@@ -111,6 +117,7 @@ private:
   void retire(const std::shared_ptr<Task>& task, TaskState state);
   void tick();
   void finishShutdown();
+  void stopLoop();
   size_t activeCount() const;
 
   boost::asio::io_context io_;

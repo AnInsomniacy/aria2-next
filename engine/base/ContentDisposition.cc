@@ -3,6 +3,7 @@
 
 #include "base/Text.h"
 
+#include <algorithm>
 #include <optional>
 
 namespace aria2 {
@@ -22,8 +23,8 @@ std::vector<Parameter> parameters(std::string_view header)
     ++at;
     const auto equals = header.find('=', at);
     const auto next = header.find(';', at);
-    if (equals == std::string_view::npos || (next != std::string_view::npos &&
-                                             next < equals)) {
+    if (equals == std::string_view::npos ||
+        (next != std::string_view::npos && next < equals)) {
       at = next;
       continue;
     }
@@ -112,9 +113,16 @@ std::string plainValue(const std::string& value)
   if (auto word = encodedWord(value)) {
     return *word;
   }
+  // RFC 6266 does not percent-decode filename=, but many servers send
+  // percent-encoded UTF-8 there. Only that case is decoded; ASCII escapes
+  // such as "%20" are kept as the server wrote them.
   if (value.find('%') != std::string::npos) {
     auto decoded = text::percentDecode(value);
-    if (decoded != value && text::isUtf8(decoded)) {
+    const bool multibyte =
+        std::any_of(decoded.begin(), decoded.end(), [](char c) {
+          return static_cast<unsigned char>(c) >= 0x80;
+        });
+    if (multibyte && text::isUtf8(decoded)) {
       return decoded;
     }
   }
@@ -137,7 +145,8 @@ std::string contentDispositionFileName(std::string_view header)
   std::string plain;
   for (const auto& parameter : parameters(header)) {
     if (parameter.name == "filename*") {
-      if (auto value = extendedValue(parameter.value); value && !value->empty()) {
+      if (auto value = extendedValue(parameter.value);
+          value && !value->empty()) {
         return baseName(*value);
       }
     }

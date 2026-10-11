@@ -88,6 +88,16 @@ Statement& Statement::bind(int index, std::string_view value)
   return *this;
 }
 
+Statement& Statement::bindBlob(int index, std::string_view value)
+{
+  if (sqlite3_bind_blob(statement_, index, value.data(),
+                        static_cast<int>(value.size()),
+                        SQLITE_TRANSIENT) != SQLITE_OK) {
+    raise(db_, "bind");
+  }
+  return *this;
+}
+
 Statement& Statement::bind(int index, int64_t value)
 {
   if (sqlite3_bind_int64(statement_, index, value) != SQLITE_OK) {
@@ -121,7 +131,8 @@ int64_t Statement::integer(int column) const
 
 std::string Statement::blob(int column) const
 {
-  const auto* data = static_cast<const char*>(sqlite3_column_blob(statement_, column));
+  const auto* data =
+      static_cast<const char*>(sqlite3_column_blob(statement_, column));
   return data ? std::string(data, sqlite3_column_bytes(statement_, column))
               : std::string();
 }

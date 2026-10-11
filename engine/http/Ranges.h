@@ -15,6 +15,7 @@ using Range = std::pair<int64_t, int64_t>; // [begin, end)
 class RangeSet {
 public:
   void add(int64_t begin, int64_t end);
+  void remove(int64_t begin, int64_t end);
   void clear() { ranges_.clear(); }
   bool contains(int64_t begin, int64_t end) const;
   int64_t total() const;

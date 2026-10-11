@@ -5,6 +5,7 @@
 #include "base/Uri.h"
 #include "http/Client.h"
 #include "http/Cookies.h"
+#include "http/Request.h"
 #include "options/Options.h"
 
 #include <regex>
@@ -25,7 +26,8 @@ std::string noProxyFor(const std::string& rules, const std::string& host)
           pattern += ".*";
           continue;
         }
-        if (std::string_view(".^$|()[]{}+?\\").find(c) != std::string_view::npos) {
+        if (std::string_view(".^$|()[]{}+?\\").find(c) !=
+            std::string_view::npos) {
           pattern += '\\';
         }
         pattern += c;
@@ -48,10 +50,11 @@ const char* proxyKind(const std::string& scheme)
 
 } // namespace
 
-void Client::configure(Transfer& transfer, const Options& options,
-                       const std::string& url, const std::string& originalUrl)
+void configureRequest(CURL* easy, CURLSH* share, std::string& loadedCookies,
+                      const Options& options, const std::string& url,
+                      const std::string& originalUrl,
+                      const std::function<void(const std::string&)>& header)
 {
-  auto* easy = transfer.easy();
   const auto set = [easy](CURLoption option, auto value) {
     if (curl_easy_setopt(easy, option, value) != CURLE_OK) {
       fail(ErrorCode::Unknown, "Unsupported transfer setting {}",
@@ -63,7 +66,7 @@ void Client::configure(Transfer& transfer, const Options& options,
   const bool sameOrigin = uri::sameOrigin(url, originalUrl);
 
   set(CURLOPT_URL, url.c_str());
-  set(CURLOPT_SHARE, share_);
+  set(CURLOPT_SHARE, share);
   set(CURLOPT_PROTOCOLS_STR, "http,https,sftp");
   set(CURLOPT_REDIR_PROTOCOLS_STR, "http,https,sftp");
   set(CURLOPT_FOLLOWLOCATION, 1L);
@@ -74,11 +77,12 @@ void Client::configure(Transfer& transfer, const Options& options,
   set(CURLOPT_BUFFERSIZE, 512L * 1024);
   set(CURLOPT_TCP_KEEPALIVE, 1L);
   set(CURLOPT_HTTPAUTH, static_cast<long>(CURLAUTH_ANY));
-  set(CURLOPT_CONNECTTIMEOUT, static_cast<long>(options.integer("connect-timeout")));
+  set(CURLOPT_CONNECTTIMEOUT,
+      static_cast<long>(options.integer("connect-timeout")));
   // A hard idle limit; HttpTask detects stalls much earlier while other
   // connections make progress.
-  set(CURLOPT_LOW_SPEED_LIMIT,
-      static_cast<long>(std::max<int64_t>(1, options.integer("lowest-speed-limit"))));
+  set(CURLOPT_LOW_SPEED_LIMIT, static_cast<long>(std::max<int64_t>(
+                                   1, options.integer("lowest-speed-limit"))));
   set(CURLOPT_LOW_SPEED_TIME, static_cast<long>(options.integer("timeout")));
   set(CURLOPT_FORBID_REUSE, options.flag("enable-http-keep-alive") ? 0L : 1L);
   set(CURLOPT_FILETIME, 1L);
@@ -98,11 +102,11 @@ void Client::configure(Transfer& transfer, const Options& options,
                         text::istartsWith(line, "cookie:"))) {
       continue;
     }
-    transfer.header(line);
+    header(line);
   }
   if (options.flag("http-no-cache")) {
-    transfer.header("Cache-Control: no-cache");
-    transfer.header("Pragma: no-cache");
+    header("Cache-Control: no-cache");
+    header("Pragma: no-cache");
   }
 
   // TLS
@@ -113,7 +117,8 @@ void Client::configure(Transfer& transfer, const Options& options,
   set(CURLOPT_PROXY_SSL_VERIFYHOST, verify ? 2L : 0L);
 #ifdef _WIN32
   set(CURLOPT_SSL_OPTIONS, static_cast<long>(CURLSSLOPT_REVOKE_BEST_EFFORT));
-  set(CURLOPT_PROXY_SSL_OPTIONS, static_cast<long>(CURLSSLOPT_REVOKE_BEST_EFFORT));
+  set(CURLOPT_PROXY_SSL_OPTIONS,
+      static_cast<long>(CURLSSLOPT_REVOKE_BEST_EFFORT));
 #endif
   const auto tls = options.get("min-tls-version");
   set(CURLOPT_SSLVERSION,
@@ -192,11 +197,11 @@ void Client::configure(Transfer& transfer, const Options& options,
   if (const auto cookies = options.get("load-cookies"); !cookies.empty()) {
     if (isSqliteCookieFile(cookies)) {
       const auto revision = cookies + '|' + fileRevision(cookies);
-      if (loadedCookies_ != revision) {
+      if (loadedCookies != revision) {
         for (const auto& line : sqliteCookieLines(cookies)) {
           set(CURLOPT_COOKIELIST, line.c_str());
         }
-        loadedCookies_ = revision;
+        loadedCookies = revision;
       }
     }
     else {
@@ -206,6 +211,35 @@ void Client::configure(Transfer& transfer, const Options& options,
   if (const auto jar = options.get("save-cookies"); !jar.empty()) {
     set(CURLOPT_COOKIEJAR, jar.c_str());
   }
+}
+
+void Client::configure(Transfer& transfer, const Options& options,
+                       const std::string& url, const std::string& originalUrl)
+{
+  configureRequest(
+      transfer.easy(), share_, loadedCookies_, options, url, originalUrl,
+      [&transfer](const std::string& line) { transfer.header(line); });
+}
+
+std::optional<ContentRange> parseContentRange(std::string_view value)
+{
+  if (!text::istartsWith(value, "bytes")) {
+    return std::nullopt;
+  }
+  value = text::trim(value.substr(5));
+  const auto dash = value.find('-');
+  const auto slash = value.find('/');
+  if (dash == std::string_view::npos || slash == std::string_view::npos ||
+      dash > slash) {
+    return std::nullopt;
+  }
+  const auto first = text::toInt(value.substr(0, dash));
+  const auto last = text::toInt(value.substr(dash + 1, slash - dash - 1));
+  if (!first || !last || *first < 0 || *last < *first) {
+    return std::nullopt;
+  }
+  const auto total = text::toInt(value.substr(slash + 1));
+  return ContentRange{*first, *last, total.value_or(-1)};
 }
 
 } // namespace aria2::http

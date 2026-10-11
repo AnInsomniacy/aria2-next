@@ -95,6 +95,16 @@ long Transfer::responseCode() const
   return code;
 }
 
+int Transfer::connectedFamily() const
+{
+  char* ip = nullptr;
+  curl_easy_getinfo(easy_, CURLINFO_PRIMARY_IP, &ip);
+  if (!ip || !*ip) {
+    return 0;
+  }
+  return std::string_view(ip).find(':') != std::string_view::npos ? 6 : 4;
+}
+
 std::string Transfer::effectiveUrl() const
 {
   char* url = nullptr;
@@ -149,7 +159,8 @@ Client::~Client() { close(); }
 
 void Client::optionsChanged()
 {
-  downloadLimit_.setRate(engine_.global().integer("max-overall-download-limit"));
+  downloadLimit_.setRate(
+      engine_.global().integer("max-overall-download-limit"));
 }
 
 void Client::close()
@@ -229,8 +240,7 @@ int Client::closeCallback(void* self, curl_socket_t fd)
   return 0;
 }
 
-int Client::socketCallback(CURL*, curl_socket_t fd, int what, void* self,
-                           void*)
+int Client::socketCallback(CURL*, curl_socket_t fd, int what, void* self, void*)
 {
   auto& client = *static_cast<Client*>(self);
   auto found = client.sockets_.find(fd);
@@ -272,7 +282,8 @@ void Client::watch(const std::shared_ptr<Socket>& socket)
     }
     pending = true;
     socket->socket.async_wait(
-        type, [this, socket, &pending, flag](const boost::system::error_code& error) {
+        type,
+        [this, socket, &pending, flag](const boost::system::error_code& error) {
           pending = false;
           if (error || !multi_ || !(socket->interest & flag)) {
             return;

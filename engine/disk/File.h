@@ -2,6 +2,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <system_error>
 
@@ -51,6 +52,8 @@ private:
 std::error_code removeFile(const std::string& path);
 std::error_code renameFile(const std::string& from, const std::string& to);
 bool fileExists(const std::string& path);
+// The first free "name.N.ext" beside `path` (auto-file-renaming), if any.
+std::optional<std::string> numberedPath(const std::string& path);
 int64_t fileSize(const std::string& path); // -1 when missing
 void setModificationTime(const std::string& path, int64_t unixSeconds);
 

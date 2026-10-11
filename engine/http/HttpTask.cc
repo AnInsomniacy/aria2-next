@@ -10,9 +10,13 @@
 #include "disk/Output.h"
 #include "http/Checksum.h"
 #include "http/Client.h"
+#include "http/Request.h"
 #include "http/Worker.h"
+#include "media/MediaTask.h"
 #include "state/StateStore.h"
 
+#include <boost/asio/ip/address.hpp>
+#include <boost/asio/post.hpp>
 #include <boost/json/array.hpp>
 
 #include <algorithm>
@@ -26,8 +30,11 @@ using namespace std::chrono_literals;
 namespace {
 
 constexpr auto tickInterval = 500ms;
-constexpr double tickSeconds = std::chrono::duration<double>(tickInterval).count();
-constexpr size_t flushSize = 1 << 20;
+constexpr double tickSeconds =
+    std::chrono::duration<double>(tickInterval).count();
+// Data reaches the disk in chunks of this size per connection.
+constexpr int64_t minFlushSize = 64 << 10;
+constexpr int64_t maxFlushSize = 1 << 20;
 // Unwritten bytes a task may hold before its connections pause.
 constexpr int64_t writeBudget = 64 << 20;
 // A connection that delivered data and then nothing for this long is stalled.
@@ -36,30 +43,26 @@ constexpr auto stallAfter = 8s;
 constexpr auto calmPeriod = 30s;
 constexpr int maxRestarts = 3;
 
-int64_t contentRangeStart(std::string_view value, int64_t& total)
-{
-  // bytes 100-199/1000, bytes 100-199/*
-  total = -1;
-  if (!text::istartsWith(value, "bytes")) {
-    return -1;
-  }
-  value.remove_prefix(5);
-  value = text::trim(value);
-  const auto dash = value.find('-');
-  const auto slash = value.find('/');
-  if (dash == std::string_view::npos || slash == std::string_view::npos) {
-    return -1;
-  }
-  if (const auto length = text::toInt(value.substr(slash + 1))) {
-    total = *length;
-  }
-  return text::toInt(value.substr(0, dash)).value_or(-1);
-}
-
-// Weak entity tags cannot validate byte ranges (RFC 9110 13.1.5).
+// Weak entity tags cannot validate byte ranges (RFC 9110 13.1.5). Servers
+// that omit the quotes get them, as If-Range requires an entity-tag.
 std::string strongTag(const std::string& etag)
 {
-  return etag.starts_with("W/") ? std::string() : etag;
+  if (etag.empty() || etag.starts_with("W/")) {
+    return {};
+  }
+  return etag.front() == '"' ? etag : '"' + etag + '"';
+}
+
+// A client may only use a modification date as a range validator when the
+// response was dated at least a minute later (RFC 9110 8.8.2.2).
+std::string strongDate(const std::string& modified, const std::string& date)
+{
+  if (modified.empty() || date.empty()) {
+    return {};
+  }
+  const auto at = curl_getdate(modified.c_str(), nullptr);
+  const auto now = curl_getdate(date.c_str(), nullptr);
+  return at >= 0 && now - at >= 60 ? modified : std::string();
 }
 
 Clock::duration backoff(int failures, int64_t retryWait)
@@ -138,6 +141,7 @@ void Worker::onHeader(std::string_view line)
     status = text::toInt(text::trim(line.substr(space + 1, 3))).value_or(0);
     etag.clear();
     lastModified.clear();
+    date.clear();
     contentRange.clear();
     disposition.clear();
     contentType.clear();
@@ -166,6 +170,9 @@ void Worker::onHeader(std::string_view line)
   }
   else if (name == "last-modified") {
     lastModified = field;
+  }
+  else if (name == "date") {
+    date = field;
   }
   else if (name == "content-range") {
     contentRange = field;
@@ -211,8 +218,8 @@ HttpTask::HttpTask(Engine& engine, Gid gid, std::shared_ptr<Options> options,
 {
   for (auto& uri : uris) {
     const auto parts = uri::parse(uri);
-    sources_.push_back({std::move(uri), {}, parts ? parts->host : "", 0, 0,
-                        false, false});
+    sources_.push_back(
+        Source{.uri = std::move(uri), .host = parts ? parts->host : ""});
   }
 }
 
@@ -254,12 +261,14 @@ void HttpTask::reset()
   held_.clear();
   pendingWrites_ = 0;
   unflushed_ = 0;
-  holdUntil_ = {};
-  cap_ = static_cast<int>(std::min(options().integer("split"),
-                                   options().integer("max-connection-per-server")));
+  cap_ = static_cast<int>(
+      std::min(options().integer("split"),
+               options().integer("max-connection-per-server")));
   slots_.assign(static_cast<size_t>(std::max(1, cap_)), Slot{});
   for (auto& source : sources_) {
     source.active = 0;
+    source.failures = 0;
+    source.readyAt = {};
   }
 }
 
@@ -294,20 +303,146 @@ void HttpTask::start()
   launch();
 }
 
+// The mirror with the fewest recent failures, then the fewest connections.
+// Mirrors that are backing off (Retry-After, failures) are skipped.
 std::optional<size_t> HttpTask::pickSource()
 {
   const auto perHost = options().integer("max-connection-per-server");
+  const auto now = Clock::now();
   std::optional<size_t> best;
   for (size_t i = 0; i < sources_.size(); ++i) {
     const auto& source = sources_[i];
-    if (source.dead || source.active >= perHost) {
+    if (source.dead || source.active >= perHost || now < source.readyAt) {
       continue;
     }
-    if (!best || source.active < sources_[*best].active) {
+    if (source.refreshing &&
+        std::any_of(workers_.begin(), workers_.end(), [i](const auto& entry) {
+          const auto& worker = *entry.second;
+          return worker.source == i && !worker.redirected && !worker.accepted;
+        })) {
+      continue; // its entry point is being asked already
+    }
+    if (!best ||
+        std::pair(source.failures, source.active) <
+            std::pair(sources_[*best].failures, sources_[*best].active)) {
       best = i;
     }
   }
   return best;
+}
+
+namespace {
+bool ipLiteral(const std::string& url)
+{
+  const auto parts = uri::parse(url);
+  boost::system::error_code error;
+  auto host = parts ? parts->host : std::string();
+  if (host.size() > 2 && host.front() == '[') {
+    host = host.substr(1, host.size() - 2);
+  }
+  boost::asio::ip::make_address(host, error);
+  return !error;
+}
+} // namespace
+
+int HttpTask::familyFor(const Source& source, size_t slot, int avoid) const
+{
+  const auto& url = source.redirect.empty() ? source.uri : source.redirect;
+  if (options().flag("disable-ipv6") || ipLiteral(url)) {
+    return 0;
+  }
+  const auto& v4 = source.families[0];
+  const auto& v6 = source.families[1];
+  if (v4.failed != v6.failed) {
+    return v4.failed ? 6 : 4;
+  }
+  if (v4.failed) {
+    return 0;
+  }
+  // A duplicate of a slow connection tries the other route.
+  if (avoid) {
+    return avoid == 4 ? 6 : 4;
+  }
+  if (!source.primary) {
+    return 0; // nothing known yet: libcurl's Happy Eyeballs decides
+  }
+  // A family several times slower per connection gets no new connections.
+  if (v4.speed > 0 && v6.speed > 0) {
+    if (v4.speed > 4 * v6.speed) {
+      return 4;
+    }
+    if (v6.speed > 4 * v4.speed) {
+      return 6;
+    }
+  }
+  // Until speeds tell them apart, alternate so both families are measured.
+  const int other = source.primary == 4 ? 6 : 4;
+  return slot % 2 == 0 ? source.primary : other;
+}
+
+// A failure on one address family while the other is untried or works is
+// the route's fault rather than the server's: the family is avoided and the
+// connection retries at once without spending a try.
+bool HttpTask::blameFamily(Worker& worker, Source& source, int code)
+{
+  const auto status = worker.responseCode();
+  const bool pathError =
+      code == CURLE_COULDNT_CONNECT || code == CURLE_COULDNT_RESOLVE_HOST ||
+      code == CURLE_OPERATION_TIMEDOUT || code == CURLE_RECV_ERROR ||
+      code == CURLE_SEND_ERROR || code == CURLE_SSL_CONNECT_ERROR ||
+      (code == CURLE_HTTP_RETURNED_ERROR &&
+       (status == 401 || status == 403 || status == 404 || status == 421));
+  const auto effective = worker.effectiveUrl();
+  const int family =
+      worker.connectedFamily() ? worker.connectedFamily() : worker.family;
+  if (!pathError || !family || options().flag("disable-ipv6") ||
+      ipLiteral(effective.empty() ? source.uri : effective)) {
+    return false;
+  }
+  auto& mine = source.families[family == 6];
+  const auto& other = source.families[family == 4];
+  if (mine.worked || other.failed) {
+    return false;
+  }
+  if (mine.failed) {
+    return true; // started before the family was blamed
+  }
+  mine.failed = true;
+  // The next request goes straight to the destination that failed here, so
+  // that it can be pinned to the other family.
+  if (!effective.empty() && effective != source.uri) {
+    source.redirect = effective;
+  }
+  log::info("{}: {} over IPv{} failed ({}); using IPv{}", gidText(gid()),
+            uri::redact(effective), family,
+            status >= 400
+                ? fmt::format("HTTP {}", status)
+                : std::string(curl_easy_strerror(static_cast<CURLcode>(code))),
+            family == 4 ? 6 : 4);
+  return true;
+}
+
+void HttpTask::measureFamilies()
+{
+  for (size_t index = 0; index < sources_.size(); ++index) {
+    std::array<double, 2> sum{};
+    std::array<int, 2> count{};
+    for (const auto& [id, worker] : workers_) {
+      const auto family = worker->connectedFamily();
+      const auto* planned = planner_.worker(id);
+      if (worker->source != index || !family || !worker->receiving ||
+          !planned || planned->age < 2) {
+        continue;
+      }
+      sum[family == 6] += planned->speed;
+      ++count[family == 6];
+    }
+    for (size_t f = 0; f < 2; ++f) {
+      if (count[f]) {
+        sources_[index].families[f].speed = sum[f] / count[f];
+      }
+    }
+  }
 }
 
 void HttpTask::launch()
@@ -316,7 +451,7 @@ void HttpTask::launch()
     return;
   }
   const auto now = Clock::now();
-  if (now < holdUntil_ || planner_.complete()) {
+  if (planner_.complete()) {
     return;
   }
   if (phase_ == Phase::Probing) {
@@ -337,8 +472,9 @@ void HttpTask::launch()
   const auto maxTries = options().integer("max-tries");
   for (size_t slot = 0; slot < target; ++slot) {
     auto& entry = slots_[slot];
+    // With mirrors, max-tries is spent per mirror instead.
     if (entry.worker || now < entry.readyAt ||
-        (maxTries > 0 && entry.failures >= maxTries)) {
+        (maxTries > 0 && entry.failures >= maxTries && sources_.size() == 1)) {
       continue;
     }
     const auto source = pickSource();
@@ -351,7 +487,8 @@ void HttpTask::launch()
       if (!workers_.empty()) {
         break;
       }
-      planner_.place(id, 0, planner_.length() >= 0 ? planner_.length() : unbounded);
+      planner_.place(id, 0,
+                     planner_.length() >= 0 ? planner_.length() : unbounded);
       ++nextWorkerId_;
       startWorker(id, slot, *source, 0, unbounded);
       break;
@@ -360,17 +497,26 @@ void HttpTask::launch()
     if (!range) {
       break;
     }
+    // A raced range shares its end with the copy it duplicates.
+    int avoid = 0;
+    for (const auto& [other, worker] : workers_) {
+      const auto* planned = planner_.worker(other);
+      if (planned && planned->end == range->second &&
+          worker->source == *source) {
+        avoid = worker->connectedFamily();
+      }
+    }
     ++nextWorkerId_;
-    startWorker(id, slot, *source, range->first, range->second);
+    startWorker(id, slot, *source, range->first, range->second, avoid);
   }
 }
 
 void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
-                           int64_t begin, int64_t requestEnd)
+                           int64_t begin, int64_t requestEnd, int avoid)
 {
   auto& source = sources_[sourceIndex];
-  auto worker = std::make_shared<Worker>(*this, id, slot, sourceIndex, begin,
-                                         requestEnd);
+  auto worker =
+      std::make_shared<Worker>(*this, id, slot, sourceIndex, begin, requestEnd);
   const auto& url = source.redirect.empty() ? source.uri : source.redirect;
   worker->redirected = !source.redirect.empty();
   try {
@@ -382,6 +528,12 @@ void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
     return;
   }
   auto* easy = worker->easy();
+  worker->family = familyFor(source, slot, avoid);
+  if (worker->family) {
+    curl_easy_setopt(easy, CURLOPT_IPRESOLVE,
+                     worker->family == 4 ? CURL_IPRESOLVE_V4
+                                         : CURL_IPRESOLVE_V6);
+  }
   // Parallel ranges use separate TCP connections rather than one HTTP/2
   // connection whose flow control would cap them all.
   curl_easy_setopt(easy, CURLOPT_HTTP_VERSION,
@@ -397,7 +549,8 @@ void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
   const bool decode = !ranged_ && options().flag("http-accept-gzip");
   curl_easy_setopt(easy, CURLOPT_ACCEPT_ENCODING, decode ? "" : "identity");
   curl_easy_setopt(easy, CURLOPT_HTTP_CONTENT_DECODING, decode ? 1L : 0L);
-  const auto validator = strongTag(etag_).empty() ? lastModified_ : strongTag(etag_);
+  const auto validator =
+      strongTag(etag_).empty() ? lastModified_ : strongTag(etag_);
   if (ranged_ && !validator.empty()) {
     worker->header("If-Range: " + validator);
   }
@@ -409,16 +562,33 @@ void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
   source.used = true;
   workers_[id] = worker;
   worker->start();
-  log::debug("{}: connection {} requests {} from {}", gidText(gid()), id,
-             ranged_ ? range : std::string("everything"), uri::redact(url));
+  log::debug("{}: connection {} requests {} from {}{}", gidText(gid()), id,
+             ranged_ ? range : std::string("everything"), uri::redact(url),
+             worker->family ? fmt::format(" over IPv{}", worker->family)
+                            : std::string());
 }
 
 // A 200 answer to a ranged request. With a validator attached it means the
 // file changed; otherwise the server does not serve ranges.
+// A 200 to a ranged request with If-Range means the representation changed,
+// unless it carries the validators we sent: then the server ignores ranges,
+// and the connection that started at byte 0 carries on alone.
 bool HttpTask::rangesIgnored(Worker& worker)
 {
-  if (!etag_.empty() || !lastModified_.empty()) {
+  const bool same = !etag_.empty() ? strongTag(worker.etag) == etag_
+                    : !lastModified_.empty()
+                        ? worker.lastModified == lastModified_
+                        : true;
+  if (!same) {
     changed("validator mismatch");
+    return true;
+  }
+  // Without ranges the only way forward rewrites from byte 0, which would
+  // destroy a prefix this task does not own.
+  if (!owned_ && !path_.empty()) {
+    abort(ErrorCode::CannotResume,
+          fmt::format("The server ignores byte ranges; {} was left unchanged",
+                      path_));
     return true;
   }
   log::notice("{}: server ignores byte ranges; using one connection",
@@ -437,10 +607,12 @@ void HttpTask::accept(Worker& worker)
   int64_t total = -1;
   int64_t start = 0;
   if (worker.status == 206) {
-    start = contentRangeStart(worker.contentRange, total);
+    const auto range = parseContentRange(worker.contentRange);
+    start = range ? range->first : -1;
+    total = range ? range->total : -1;
     if (start != worker.begin) {
-      log::warn("{}: response range starts at {} instead of {}",
-                gidText(gid()), start, worker.begin);
+      log::warn("{}: response range starts at {} instead of {}", gidText(gid()),
+                start, worker.begin);
       const auto slot = worker.slot;
       cancelWorker(worker.id);
       slotFailed(slot, ErrorCode::HttpProtocol, "Mismatched Content-Range");
@@ -450,7 +622,8 @@ void HttpTask::accept(Worker& worker)
   else if (worker.status == 0) {
     // SFTP: the size of the remaining file, ranges always honoured.
     curl_off_t length = -1;
-    curl_easy_getinfo(worker.easy(), CURLINFO_CONTENT_LENGTH_DOWNLOAD_T, &length);
+    curl_easy_getinfo(worker.easy(), CURLINFO_CONTENT_LENGTH_DOWNLOAD_T,
+                      &length);
     total = length >= 0 ? worker.begin + length : -1;
   }
   else {
@@ -466,14 +639,23 @@ void HttpTask::accept(Worker& worker)
   const bool tagChanged = sources_.size() == 1 && !single_ && !etag_.empty() &&
                           !tag.empty() && tag != etag_;
   const bool timeChanged = sources_.size() == 1 && !single_ && etag_.empty() &&
-                           !lastModified_.empty() && !worker.lastModified.empty() &&
+                           !lastModified_.empty() &&
+                           !worker.lastModified.empty() &&
                            worker.lastModified != lastModified_;
   if (lengthChanged || tagChanged || timeChanged) {
     changed(lengthChanged ? "length changed" : "validator changed");
     return;
   }
   worker.accepted = true;
+  source.failures = 0;
+  if (const auto family = worker.connectedFamily()) {
+    source.families[family == 6].worked = true;
+    if (!source.primary) {
+      source.primary = family;
+    }
+  }
   if (!worker.redirected) {
+    source.refreshing = false;
     if (auto effective = worker.effectiveUrl();
         !effective.empty() && effective != source.uri) {
       source.redirect = std::move(effective);
@@ -486,12 +668,18 @@ void HttpTask::accept(Worker& worker)
   if (total >= 0) {
     planner_.setLength(total);
   }
-  if (worker.status == 200 &&
-      (worker.contentLength < 0 || !text::iequals(worker.acceptRanges, "bytes"))) {
+  if (worker.status == 200 && (worker.contentLength < 0 ||
+                               !text::iequals(worker.acceptRanges, "bytes"))) {
     ranged_ = false;
   }
+  if (options().get("media") == "auto" &&
+      media::MediaTask::manifestType(worker.contentType) &&
+      !options().flag("dry-run")) {
+    handOverToMedia();
+    return;
+  }
   etag_ = tag;
-  lastModified_ = worker.lastModified;
+  lastModified_ = strongDate(worker.lastModified, worker.date);
   contentType_ = worker.contentType;
   if (!worker.lastModified.empty()) {
     remoteTime_ = curl_getdate(worker.lastModified.c_str(), nullptr);
@@ -564,20 +752,12 @@ bool HttpTask::decidePath(Worker& worker)
         abort(ErrorCode::FileExists, fmt::format("{} already exists", path));
         return false;
       }
-      const auto full = toPath(path);
-      const auto stem = toUtf8(full.parent_path() / full.stem());
-      const auto extension = toUtf8(full.extension());
-      for (int i = 1;; ++i) {
-        auto candidate = fmt::format("{}.{}{}", stem, i, extension);
-        if (!fileExists(candidate)) {
-          path = std::move(candidate);
-          break;
-        }
-        if (i == 9999) {
-          abort(ErrorCode::FileExists, fmt::format("{} already exists", path));
-          return false;
-        }
+      auto numbered = numberedPath(path);
+      if (!numbered) {
+        abort(ErrorCode::FileExists, fmt::format("{} already exists", path));
+        return false;
       }
+      path = std::move(*numbered);
     }
   }
   path_ = path;
@@ -621,11 +801,18 @@ void HttpTask::outputReady(std::error_code error)
 
 size_t HttpTask::receive(Worker& worker, const char* data, size_t size)
 {
-  if (phase_ == Phase::Stopping || phase_ == Phase::Done || worker.done) {
+  if (phase_ == Phase::Stopping || phase_ == Phase::Done ||
+      phase_ == Phase::Restarting || worker.done) {
     return 0;
   }
   auto& global = engine().http().downloadLimit();
   if (unflushed_ > writeBudget || !limit_.available() || !global.available()) {
+    if (unflushed_ > writeBudget) {
+      // Buffered bytes count against the budget too; only writing frees it.
+      for (const auto& [id, other] : workers_) {
+        flush(*other);
+      }
+    }
     return CURL_WRITEFUNC_PAUSE; // tick() resumes it
   }
   size_t consumed = 0;
@@ -656,6 +843,7 @@ size_t HttpTask::receive(Worker& worker, const char* data, size_t size)
   worker.lastData = now;
   worker.receiving = true;
   worker.tickBytes += amount;
+  worker.received += amount;
   slots_[worker.slot].failures = 0;
   speed_.add(amount, now);
   limit_.charge(amount, now);
@@ -670,12 +858,18 @@ size_t HttpTask::receive(Worker& worker, const char* data, size_t size)
       cancelWorker(id);
     }
   }
-  if (worker.buffer.size() >= flushSize || worker.done) {
+  // Many connections share the budget, so each buffers less.
+  const auto threshold = std::clamp<int64_t>(
+      writeBudget /
+          (4 * static_cast<int64_t>(std::max<size_t>(workers_.size(), 1))),
+      minFlushSize, maxFlushSize);
+  if (static_cast<int64_t>(worker.buffer.size()) >= threshold || worker.done) {
     flush(worker);
   }
   if (worker.done) {
     tryFinish();
-    return consumed == size && planner_.worker(worker.id)->position >= worker.requestEnd
+    return consumed == size &&
+                   planner_.worker(worker.id)->position >= worker.requestEnd
                ? size // the response ends here by itself
                : 0;   // abort; finished() treats it as success
   }
@@ -685,6 +879,11 @@ size_t HttpTask::receive(Worker& worker, const char* data, size_t size)
 void HttpTask::flush(Worker& worker)
 {
   if (worker.buffer.empty()) {
+    return;
+  }
+  if (phase_ == Phase::Restarting) {
+    unflushed_ -= static_cast<int64_t>(worker.buffer.size());
+    worker.buffer.clear();
     return;
   }
   const auto offset = worker.bufferOffset;
@@ -704,15 +903,18 @@ void HttpTask::write(int64_t offset, std::string data)
   const auto size = data.size();
   ++pendingWrites_;
   output_->write(offset, std::move(data),
-                 [this, self = shared_from_this(), offset, size](std::error_code error) {
-                   written(offset, size, error);
-                 });
+                 [this, self = shared_from_this(), offset, size](
+                     std::error_code error) { written(offset, size, error); });
 }
 
 void HttpTask::written(int64_t offset, size_t size, std::error_code error)
 {
   --pendingWrites_;
   unflushed_ -= static_cast<int64_t>(size);
+  if (phase_ == Phase::Restarting) {
+    restartWhenQuiet();
+    return;
+  }
   if (error) {
     abort(ErrorCode::FileIo,
           fmt::format("Cannot write {}: {}", path_, error.message()));
@@ -730,12 +932,14 @@ void HttpTask::finished(Worker& worker, int code)
 {
   flush(worker);
   const auto* planned = planner_.worker(worker.id);
-  if (phase_ == Phase::Stopping || phase_ == Phase::Done) {
+  if (phase_ == Phase::Stopping || phase_ == Phase::Done ||
+      phase_ == Phase::Restarting) {
     retireWorker(worker);
     quiesce();
     return;
   }
-  const bool ok = code == CURLE_OK || (worker.done && code == CURLE_WRITE_ERROR);
+  const bool ok =
+      code == CURLE_OK || (worker.done && code == CURLE_WRITE_ERROR);
   if (!ok) {
     failedResponse(worker, code);
     return;
@@ -764,35 +968,74 @@ void HttpTask::failedResponse(Worker& worker, int code)
   auto& source = sources_[worker.source];
   const bool redirected = worker.redirected;
   const auto retryAfter = worker.retryAfter;
+  if (blameFamily(worker, source, code)) {
+    retireWorker(worker);
+    slots_[slot].readyAt = {};
+    launch();
+    return;
+  }
   retireWorker(worker);
+  if (code == CURLE_HTTP_RETURNED_ERROR && redirected &&
+      (status == 401 || status == 403 || status == 404 || status == 410)) {
+    // An expired signed destination: go back through the original URI, one
+    // request at a time until it hands out a new destination.
+    if (!source.redirect.empty()) {
+      log::info("{}: {} expired (HTTP {}); resolving {} again", gidText(gid()),
+                uri::redact(source.redirect), status, uri::redact(source.uri));
+      source.redirect.clear();
+      source.refreshing = true;
+    }
+    launch();
+    return;
+  }
+  // A mirror that keeps failing is given up for the others (max-tries per
+  // mirror); a single source is governed by the connection slots.
+  const bool mirrors = sources_.size() > 1;
+  const auto maxTries = options().integer("max-tries");
+  ++source.failures;
+  if (mirrors) {
+    source.readyAt = Clock::now() +
+                     backoff(source.failures, options().integer("retry-wait"));
+    if (maxTries > 0 && source.failures >= maxTries) {
+      source.dead = true;
+    }
+  }
   const auto allDead = [this] {
     return std::all_of(sources_.begin(), sources_.end(),
                        [](const Source& s) { return s.dead; });
   };
   if (code == CURLE_HTTP_RETURNED_ERROR) {
-    if (redirected && (status == 401 || status == 403 || status == 404 ||
-                       status == 410)) {
-      // An expired signed destination: go back through the original URI.
-      source.redirect.clear();
-      launch();
-      return;
-    }
     if (status == 429 || status == 503) {
       int transferring = 0;
       for (const auto& [id, other] : workers_) {
         transferring += other->receiving ? 1 : 0;
       }
-      cap_ = std::max(1, transferring);
-      calmSince_ = Clock::now();
-      auto wait = backoff(slots_[slot].failures, options().integer("retry-wait"));
-      if (const auto seconds = text::toInt(retryAfter)) {
-        wait = std::chrono::seconds(std::min<int64_t>(*seconds, 600));
+      // An entry point handing out destinations is not the server that
+      // carries the transfers; its overload leaves their number alone.
+      if (!source.refreshing || redirected) {
+        cap_ = std::max(1, transferring);
+        calmSince_ = Clock::now();
       }
-      log::info("{}: server overloaded (HTTP {}); {} connection(s)",
-                gidText(gid()), status, cap_);
+      auto wait =
+          backoff(slots_[slot].failures, options().integer("retry-wait"));
+      if (const auto seconds = text::toInt(retryAfter)) {
+        // Retry-After raises the configured wait, never shortens it.
+        wait = std::max<Clock::duration>(
+            wait, std::chrono::seconds(std::min<int64_t>(*seconds, 600)));
+      }
+      // The server asked for a pause: no new request reaches it before the
+      // wait; running transfers continue.
+      source.readyAt = Clock::now() + wait;
+      log::info(
+          "{}: server overloaded (HTTP {}); {} connection(s), retry in {} ms",
+          gidText(gid()), status, cap_,
+          std::chrono::duration_cast<std::chrono::milliseconds>(wait).count());
+      if (allDead()) {
+        abort(ErrorCode::ServiceUnavailable, fmt::format("HTTP {}", status));
+        return;
+      }
       if (transferring == 0) {
         // Nothing gets through: this counts as a failed attempt.
-        holdUntil_ = Clock::now() + wait;
         slotFailed(slot, ErrorCode::ServiceUnavailable,
                    fmt::format("HTTP {}", status), wait);
       }
@@ -805,8 +1048,13 @@ void HttpTask::failedResponse(Worker& worker, int code)
       changed("range not satisfiable");
       return;
     }
+    if (status == 412 && planner_.length() >= 0) {
+      changed("precondition failed");
+      return;
+    }
     if (status == 404 || status == 410) {
-      if (++source.notFound >= std::max<int64_t>(options().integer("max-file-not-found"), 1) ||
+      if (++source.notFound >=
+              std::max<int64_t>(options().integer("max-file-not-found"), 1) ||
           sources_.size() > 1) {
         source.dead = true;
       }
@@ -814,14 +1062,17 @@ void HttpTask::failedResponse(Worker& worker, int code)
         abort(ErrorCode::ResourceNotFound, fmt::format("HTTP {}", status));
         return;
       }
-      slotFailed(slot, ErrorCode::ResourceNotFound, fmt::format("HTTP {}", status));
+      slotFailed(slot, ErrorCode::ResourceNotFound,
+                 fmt::format("HTTP {}", status));
       return;
     }
     if (status == 401 || status == 407) {
-      abort(ErrorCode::HttpAuth, fmt::format("HTTP {}: authorization failed", status));
+      abort(ErrorCode::HttpAuth,
+            fmt::format("HTTP {}: authorization failed", status));
       return;
     }
-    slotFailed(slot, status >= 500 ? ErrorCode::Network : ErrorCode::HttpProtocol,
+    slotFailed(slot,
+               status >= 500 ? ErrorCode::Network : ErrorCode::HttpProtocol,
                fmt::format("HTTP {}", status));
     return;
   }
@@ -841,10 +1092,26 @@ void HttpTask::failedResponse(Worker& worker, int code)
 
 void HttpTask::retireWorker(Worker& worker)
 {
+  if (worker.received > 0) {
+    const auto family = worker.connectedFamily();
+    log::debug("{}: connection {} received {} bytes over IPv{}", gidText(gid()),
+               worker.id, worker.received, family);
+    const auto seconds =
+        std::chrono::duration<double>(Clock::now() - worker.started).count();
+    if (seconds > 0) {
+      const auto rate = static_cast<double>(worker.received) / seconds;
+      planner_.noteSpeed(rate);
+      if (family) {
+        auto& measured = sources_[worker.source].families[family == 6].speed;
+        measured = measured > 0 ? (measured + rate) / 2 : rate;
+      }
+    }
+  }
   planner_.release(worker.id);
   auto& source = sources_[worker.source];
   source.active = std::max(0, source.active - 1);
-  if (worker.slot < slots_.size() && slots_[worker.slot].worker.get() == &worker) {
+  if (worker.slot < slots_.size() &&
+      slots_[worker.slot].worker.get() == &worker) {
     slots_[worker.slot].worker.reset();
   }
   workers_.erase(worker.id);
@@ -857,20 +1124,35 @@ void HttpTask::slotFailed(size_t slot, ErrorCode code, std::string message,
   lastMessage_ = std::move(message);
   auto& entry = slots_[slot];
   ++entry.failures;
-  entry.readyAt =
-      Clock::now() +
-      (wait.count() ? wait : backoff(entry.failures, options().integer("retry-wait")));
-  log::info("{}: connection failed ({}), attempt {}", gidText(gid()),
-            lastMessage_, entry.failures);
+  const auto delay =
+      wait.count() ? wait
+                   : backoff(entry.failures, options().integer("retry-wait"));
+  entry.readyAt = Clock::now() + delay;
+  log::info(
+      "{}: connection failed ({}), attempt {}, retry in {} ms", gidText(gid()),
+      lastMessage_, entry.failures,
+      std::chrono::duration_cast<std::chrono::milliseconds>(delay).count());
   const auto maxTries = options().integer("max-tries");
   if (maxTries <= 0) {
     return;
   }
+  if (sources_.size() > 1) {
+    // Mirrors fail individually; the task fails with the last of them.
+    if (workers_.empty() &&
+        std::all_of(sources_.begin(), sources_.end(),
+                    [](const Source& s) { return s.dead; })) {
+      abort(lastError_, lastMessage_);
+    }
+    return;
+  }
   // The task fails once no connection has tries left and none is running.
-  const auto exhausted = [maxTries](const Slot& s) { return s.failures >= maxTries; };
+  const auto exhausted = [maxTries](const Slot& s) {
+    return s.failures >= maxTries;
+  };
   if (workers_.empty() &&
-      (phase_ == Phase::Probing ? exhausted(slots_[0])
-                                : std::all_of(slots_.begin(), slots_.end(), exhausted))) {
+      (phase_ == Phase::Probing
+           ? exhausted(slots_[0])
+           : std::all_of(slots_.begin(), slots_.end(), exhausted))) {
     abort(lastError_, lastMessage_);
   }
 }
@@ -905,15 +1187,44 @@ void HttpTask::changed(const std::string& why)
   log::notice("{}: {}; restarting from the beginning", gidText(gid()), why);
   // Sources that disagree with each other are served by one stream from now.
   single_ = single_ || restarts_ > 1;
-  const auto path = path_;
-  reset();
-  etag_.clear();
-  lastModified_.clear();
-  ranged_ = true;
+  phase_ = Phase::Restarting;
+  for (const auto& [id, worker] : std::map(workers_)) {
+    worker->cancel();
+    retireWorker(*worker);
+  }
   engine().state().removeTransfer(gid());
-  path_ = path; // reopened with truncation by the next first response
-  phase_ = Phase::Probing;
-  launch();
+  restartWhenQuiet();
+}
+
+// Bytes of the old representation still queued for the disk must land before
+// the file is truncated for the new one.
+void HttpTask::restartWhenQuiet()
+{
+  if (phase_ != Phase::Restarting || pendingWrites_ > 0) {
+    return;
+  }
+  auto restart = [this, self = shared_from_this()](std::error_code) {
+    if (phase_ != Phase::Restarting) {
+      quiesce();
+      return;
+    }
+    const auto path = path_;
+    reset();
+    etag_.clear();
+    lastModified_.clear();
+    ranged_ = true;
+    path_ = path; // reopened with truncation by the next first response
+    phase_ = Phase::Probing;
+    launch();
+  };
+  if (output_) {
+    output_->close(std::move(restart));
+  }
+  else {
+    // Called from a response callback, where curl refuses new handles.
+    boost::asio::post(engine().io(),
+                      [restart = std::move(restart)] { restart({}); });
+  }
 }
 
 void HttpTask::tryFinish()
@@ -963,10 +1274,11 @@ void HttpTask::verifyAndComplete()
     done(std::nullopt);
     return;
   }
-  verifyChecksum(engine().disk(), path_, checksum,
-                 [self = shared_from_this(), done](std::optional<std::string> failure) {
-                   done(std::move(failure));
-                 });
+  verifyChecksum(
+      engine().disk(), path_, checksum,
+      [self = shared_from_this(), done](std::optional<std::string> failure) {
+        done(std::move(failure));
+      });
 }
 
 void HttpTask::abort(ErrorCode code, std::string message)
@@ -985,6 +1297,25 @@ void HttpTask::abort(ErrorCode code, std::string message)
     output_->close([](std::error_code) {});
   }
   failed(code, std::move(message));
+}
+
+// The response is an HLS or DASH manifest: the presentation is downloaded
+// and remuxed by a media task with the same GID instead.
+void HttpTask::handOverToMedia()
+{
+  log::info("{}: {} is a media manifest", gidText(gid()),
+            uri::redact(sources_.front().uri));
+  phase_ = Phase::Done;
+  ticker_.cancel();
+  for (const auto& [id, worker] : std::map(workers_)) {
+    cancelWorker(id);
+  }
+  auto next = std::make_shared<media::MediaTask>(
+      engine(), gid(), sharedOptions(), sources_.front().uri);
+  auto& owner = engine();
+  boost::asio::post(owner.io(), [&owner, self = shared_from_this(), next] {
+    owner.handOver(self, next);
+  });
 }
 
 void HttpTask::stop(bool, std::function<void()> done)
@@ -1028,13 +1359,14 @@ void HttpTask::scheduleTick()
   }
   tickScheduled_ = true;
   ticker_.expires_after(tickInterval);
-  ticker_.async_wait([this, self = weak_from_this()](const boost::system::error_code& error) {
-    if (error || self.expired()) {
-      return;
-    }
-    tickScheduled_ = false;
-    tick();
-  });
+  ticker_.async_wait(
+      [this, self = weak_from_this()](const boost::system::error_code& error) {
+        if (error || self.expired()) {
+          return;
+        }
+        tickScheduled_ = false;
+        tick();
+      });
 }
 
 void HttpTask::tick()
@@ -1045,12 +1377,14 @@ void HttpTask::tick()
   }
   const auto now = Clock::now();
   auto& global = engine().http().downloadLimit();
+  measureFamilies();
   for (const auto& [id, worker] : std::map(workers_)) {
-    planner_.updateSpeed(id, static_cast<double>(worker->tickBytes) / tickSeconds,
-                         tickSeconds);
+    planner_.updateSpeed(
+        id, static_cast<double>(worker->tickBytes) / tickSeconds, tickSeconds);
     worker->tickBytes = 0;
     if (worker->paused()) {
-      if (unflushed_ <= writeBudget && limit_.available() && global.available()) {
+      if (unflushed_ <= writeBudget && limit_.available() &&
+          global.available()) {
         worker->pause(false);
         worker->lastData = now;
       }
@@ -1063,8 +1397,9 @@ void HttpTask::tick()
       slotFailed(slot, ErrorCode::TimedOut, "Connection stalled", 1s);
     }
   }
-  const auto configured = static_cast<int>(std::min(
-      options().integer("split"), options().integer("max-connection-per-server")));
+  const auto configured = static_cast<int>(
+      std::min(options().integer("split"),
+               options().integer("max-connection-per-server")));
   if (cap_ < configured && now - calmSince_ > calmPeriod) {
     ++cap_;
     calmSince_ = now;
@@ -1076,12 +1411,27 @@ void HttpTask::tick()
 void HttpTask::checkpoint()
 {
   if (path_.empty() || planner_.length() <= 0 || options().flag("dry-run") ||
+      phase_ == Phase::Restarting ||
       (phase_ == Phase::Done && state() == TaskState::Complete)) {
     return;
   }
   engine().state().saveTransfer({gid(), sources_.front().uri, path_, etag_,
                                  lastModified_, planner_.length(),
                                  persisted_.ranges()});
+}
+
+void HttpTask::loadProgress()
+{
+  if (options().flag("remove-control-file") || options().flag("dry-run")) {
+    return;
+  }
+  if (const auto record = engine().state().loadTransfer(gid());
+      record && record->totalLength > 0 && fileExists(record->path)) {
+    path_ = record->path;
+    owned_ = true;
+    planner_.setLength(record->totalLength);
+    planner_.restore(record->completed);
+  }
 }
 
 void HttpTask::discardState() { engine().state().removeTransfer(gid()); }
@@ -1100,8 +1450,9 @@ bool HttpTask::changeUris(int fileIndex, const std::vector<std::string>& remove,
     return false;
   }
   for (const auto& uri : remove) {
-    const auto found = std::find_if(sources_.begin(), sources_.end(),
-                                    [&uri](const Source& s) { return s.uri == uri; });
+    const auto found =
+        std::find_if(sources_.begin(), sources_.end(),
+                     [&uri](const Source& s) { return s.uri == uri; });
     if (found != sources_.end() && found->active == 0) {
       sources_.erase(found);
     }
@@ -1112,7 +1463,7 @@ bool HttpTask::changeUris(int fileIndex, const std::vector<std::string>& remove,
   for (const auto& uri : add) {
     const auto parts = uri::parse(uri);
     sources_.insert(sources_.begin() + at++,
-                    Source{uri, {}, parts ? parts->host : "", 0, 0, false, false});
+                    Source{.uri = uri, .host = parts ? parts->host : ""});
   }
   if (state() == TaskState::Active) {
     launch();
@@ -1125,15 +1476,18 @@ int64_t HttpTask::totalLength() const
   return std::max<int64_t>(planner_.length(), 0);
 }
 
-int64_t HttpTask::completedLength() const { return planner_.received().total(); }
+int64_t HttpTask::completedLength() const
+{
+  return planner_.received().total();
+}
 
 int64_t HttpTask::downloadSpeed() const { return speed_.rate(); }
 
 int HttpTask::connections() const
 {
-  return static_cast<int>(std::count_if(
-      workers_.begin(), workers_.end(),
-      [](const auto& entry) { return entry.second->receiving; }));
+  return static_cast<int>(
+      std::count_if(workers_.begin(), workers_.end(),
+                    [](const auto& entry) { return entry.second->receiving; }));
 }
 
 std::vector<TaskFile> HttpTask::files() const
@@ -1173,8 +1527,10 @@ void HttpTask::status(json::object& out, const StatusKeys& keys) const
     std::string bits(static_cast<size_t>((pieces + 7) / 8), '\0');
     for (int64_t piece = 0; piece < pieces; ++piece) {
       const auto begin = piece * pieceLength;
-      if (planner_.received().contains(begin, std::min(length, begin + pieceLength))) {
-        bits[piece / 8] = static_cast<char>(bits[piece / 8] | (0x80 >> (piece % 8)));
+      if (planner_.received().contains(begin,
+                                       std::min(length, begin + pieceLength))) {
+        bits[piece / 8] =
+            static_cast<char>(bits[piece / 8] | (0x80 >> (piece % 8)));
       }
     }
     out["bitfield"] = text::toHex(bits);

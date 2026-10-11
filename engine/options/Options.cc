@@ -17,68 +17,173 @@ namespace {
 // aria2 and earlier aria2-next options that no longer have a counterpart.
 // They are accepted so existing configurations, scripts and frontends keep
 // working; each one is reported once.
-constexpr std::array retired{
-    "allow-piece-length-change", "always-resume", "async-dns",
-    "async-dns-server", "bt-announce-all-tiers", "bt-announce-all-trackers",
-    "bt-checking-memory", "bt-connection-speed", "bt-detach-seed-only",
-    "bt-disk-io", "bt-disk-queue-size", "bt-disk-read-cache",
-    "bt-disk-write-cache", "bt-enable-hook-after-hash-check",
-    "bt-hash-check-seed", "bt-hashing-threads", "bt-io-threads",
-    "bt-keep-alive-interval", "bt-load-saved-metadata", "bt-lpd-interface",
-    "bt-max-concurrent-http-announces", "bt-max-in-request-queue",
-    "bt-max-open-files", "bt-max-out-request-queue", "bt-metadata-only",
-    "bt-min-crypto-level", "bt-mixed-mode", "bt-peer-turnover",
-    "bt-peer-turnover-cutoff", "bt-peer-turnover-interval",
-    "bt-piece-extent-affinity", "bt-prioritize-piece",
-    "bt-remove-unselected-file", "bt-request-peer-speed-limit",
-    "bt-request-timeout", "bt-resume-save-interval", "bt-save-metadata",
-    "bt-seed-choking-algorithm", "bt-seeding-outgoing-connections",
-    "bt-send-buffer-low-watermark", "bt-send-buffer-watermark",
-    "bt-send-buffer-watermark-factor", "bt-stop-timeout",
-    "bt-stop-tracker-timeout", "bt-timeout", "bt-tracker-completion-timeout",
-    "bt-tracker-connect-timeout", "bt-tracker-interval",
-    "bt-tracker-receive-timeout", "bt-tracker-timeout",
-    "bt-upload-slot-algorithm", "bt-upload-suggestions", "conditional-get",
-    "content-disposition-default-utf8", "deferred-input", "dht-entry-point",
-    "dht-entry-point-host", "dht-entry-point-host6", "dht-entry-point-port",
-    "dht-entry-point-port6", "dht-entry-point6", "dht-file-path",
-    "dht-file-path6", "dht-listen-addr", "dht-listen-addr6", "dht-listen-port",
-    "dht-message-timeout", "disk-cache", "download-result", "dscp",
-    "ed2k-min-split-size", "ed2k-piece-selector", "enable-async-dns6",
-    "enable-dht6", "enable-http-pipelining", "enable-mmap", "event-poll",
-    "ftp-passwd", "ftp-pasv", "ftp-proxy", "ftp-proxy-passwd",
-    "ftp-proxy-user", "ftp-reuse-connection", "ftp-type", "ftp-user",
-    "http-auth-challenge", "human-readable", "max-http-pipelining",
-    "max-mmap-limit", "metalink-base-uri", "metalink-enable-unique-protocol",
-    "metalink-language", "metalink-location", "metalink-os",
-    "metalink-preferred-protocol", "metalink-version", "multiple-interface",
-    "no-file-allocation-limit", "no-want-digest-header",
-    "optimize-concurrent-downloads", "parameterized-uri", "peer-agent",
-    "peer-connection-timeout", "peer-id-prefix", "piece-length",
-    "proxy-method", "realtime-chunk-checksum", "reuse-uri", "rlimit-nofile",
-    "rpc-certificate", "rpc-passwd", "rpc-private-key", "rpc-secure",
-    "rpc-user", "select-least-used-host", "server-stat-if", "server-stat-of",
-    "server-stat-timeout", "socket-recv-buffer-size", "ssh-host-key-md",
-    "startup-idle-time", "stderr", "stream-max-range-size",
-    "stream-piece-selector", "truncate-console-readout", "uri-selector",
-    "use-head"};
+constexpr std::array retired{"allow-piece-length-change",
+                             "always-resume",
+                             "async-dns",
+                             "async-dns-server",
+                             "bt-announce-all-tiers",
+                             "bt-announce-all-trackers",
+                             "bt-checking-memory",
+                             "bt-connection-speed",
+                             "bt-detach-seed-only",
+                             "bt-disk-io",
+                             "bt-disk-queue-size",
+                             "bt-disk-read-cache",
+                             "bt-disk-write-cache",
+                             "bt-enable-hook-after-hash-check",
+                             "bt-hash-check-seed",
+                             "bt-hashing-threads",
+                             "bt-io-threads",
+                             "bt-keep-alive-interval",
+                             "bt-load-saved-metadata",
+                             "bt-lpd-interface",
+                             "bt-max-concurrent-http-announces",
+                             "bt-max-in-request-queue",
+                             "bt-max-open-files",
+                             "bt-max-out-request-queue",
+                             "bt-metadata-only",
+                             "bt-min-crypto-level",
+                             "bt-mixed-mode",
+                             "bt-peer-turnover",
+                             "bt-peer-turnover-cutoff",
+                             "bt-peer-turnover-interval",
+                             "bt-piece-extent-affinity",
+                             "bt-prioritize-piece",
+                             "bt-remove-unselected-file",
+                             "bt-request-peer-speed-limit",
+                             "bt-request-timeout",
+                             "bt-resume-save-interval",
+                             "bt-save-metadata",
+                             "bt-seed-choking-algorithm",
+                             "bt-seeding-outgoing-connections",
+                             "bt-send-buffer-low-watermark",
+                             "bt-send-buffer-watermark",
+                             "bt-send-buffer-watermark-factor",
+                             "bt-stop-timeout",
+                             "bt-stop-tracker-timeout",
+                             "bt-timeout",
+                             "bt-tracker-completion-timeout",
+                             "bt-tracker-connect-timeout",
+                             "bt-tracker-interval",
+                             "bt-tracker-receive-timeout",
+                             "bt-tracker-timeout",
+                             "bt-upload-slot-algorithm",
+                             "bt-upload-suggestions",
+                             "conditional-get",
+                             "content-disposition-default-utf8",
+                             "deferred-input",
+                             "dht-entry-point",
+                             "dht-entry-point-host",
+                             "dht-entry-point-host6",
+                             "dht-entry-point-port",
+                             "dht-entry-point-port6",
+                             "dht-entry-point6",
+                             "dht-file-path",
+                             "dht-file-path6",
+                             "dht-listen-addr",
+                             "dht-listen-addr6",
+                             "dht-listen-port",
+                             "dht-message-timeout",
+                             "disk-cache",
+                             "download-result",
+                             "dscp",
+                             "ed2k-min-split-size",
+                             "ed2k-piece-selector",
+                             "enable-async-dns6",
+                             "enable-dht6",
+                             "enable-http-pipelining",
+                             "enable-mmap",
+                             "event-poll",
+                             "ftp-passwd",
+                             "ftp-pasv",
+                             "ftp-proxy",
+                             "ftp-proxy-passwd",
+                             "ftp-proxy-user",
+                             "ftp-reuse-connection",
+                             "ftp-type",
+                             "ftp-user",
+                             "http-auth-challenge",
+                             "human-readable",
+                             "max-http-pipelining",
+                             "max-mmap-limit",
+                             "metalink-base-uri",
+                             "metalink-enable-unique-protocol",
+                             "metalink-language",
+                             "metalink-location",
+                             "metalink-os",
+                             "metalink-preferred-protocol",
+                             "metalink-version",
+                             "multiple-interface",
+                             "no-file-allocation-limit",
+                             "no-want-digest-header",
+                             "optimize-concurrent-downloads",
+                             "parameterized-uri",
+                             "peer-agent",
+                             "peer-connection-timeout",
+                             "peer-id-prefix",
+                             "piece-length",
+                             "proxy-method",
+                             "realtime-chunk-checksum",
+                             "reuse-uri",
+                             "rlimit-nofile",
+                             "rpc-certificate",
+                             "rpc-passwd",
+                             "rpc-private-key",
+                             "rpc-secure",
+                             "rpc-user",
+                             "select-least-used-host",
+                             "server-stat-if",
+                             "server-stat-of",
+                             "server-stat-timeout",
+                             "socket-recv-buffer-size",
+                             "ssh-host-key-md",
+                             "startup-idle-time",
+                             "stderr",
+                             "stream-max-range-size",
+                             "stream-piece-selector",
+                             "truncate-console-readout",
+                             "uri-selector",
+                             "use-head"};
 
-constexpr std::array retiredFlags{
-    "allow-piece-length-change", "always-resume", "async-dns",
-    "bt-announce-all-tiers", "bt-announce-all-trackers",
-    "bt-detach-seed-only", "bt-enable-hook-after-hash-check",
-    "bt-force-encryption", "bt-hash-check-seed", "bt-load-saved-metadata",
-    "bt-metadata-only", "bt-piece-extent-affinity",
-    "bt-remove-unselected-file", "bt-require-crypto", "bt-save-metadata",
-    "bt-seeding-outgoing-connections", "bt-upload-suggestions",
-    "conditional-get", "content-disposition-default-utf8", "deferred-input",
-    "enable-async-dns6", "enable-dht6", "enable-http-pipelining",
-    "enable-mmap", "ftp-pasv", "ftp-reuse-connection", "http-auth-challenge",
-    "human-readable", "metalink-enable-unique-protocol",
-    "no-want-digest-header", "optimize-concurrent-downloads",
-    "parameterized-uri", "realtime-chunk-checksum", "reuse-uri", "rpc-secure",
-    "select-least-used-host", "stderr", "truncate-console-readout",
-    "use-head"};
+constexpr std::array retiredFlags{"allow-piece-length-change",
+                                  "always-resume",
+                                  "async-dns",
+                                  "bt-announce-all-tiers",
+                                  "bt-announce-all-trackers",
+                                  "bt-detach-seed-only",
+                                  "bt-enable-hook-after-hash-check",
+                                  "bt-force-encryption",
+                                  "bt-hash-check-seed",
+                                  "bt-load-saved-metadata",
+                                  "bt-metadata-only",
+                                  "bt-piece-extent-affinity",
+                                  "bt-remove-unselected-file",
+                                  "bt-require-crypto",
+                                  "bt-save-metadata",
+                                  "bt-seeding-outgoing-connections",
+                                  "bt-upload-suggestions",
+                                  "conditional-get",
+                                  "content-disposition-default-utf8",
+                                  "deferred-input",
+                                  "enable-async-dns6",
+                                  "enable-dht6",
+                                  "enable-http-pipelining",
+                                  "enable-mmap",
+                                  "ftp-pasv",
+                                  "ftp-reuse-connection",
+                                  "http-auth-challenge",
+                                  "human-readable",
+                                  "metalink-enable-unique-protocol",
+                                  "no-want-digest-header",
+                                  "optimize-concurrent-downloads",
+                                  "parameterized-uri",
+                                  "realtime-chunk-checksum",
+                                  "reuse-uri",
+                                  "rpc-secure",
+                                  "select-least-used-host",
+                                  "stderr",
+                                  "truncate-console-readout",
+                                  "use-head"};
 
 void reportRetired(std::string_view name, std::string_view outcome)
 {
@@ -108,7 +213,8 @@ std::string normalizeInteger(const OptionSpec& spec, std::string_view value)
   const auto text = text::trim(value);
   const auto [end, error] =
       std::from_chars(text.data(), text.data() + text.size(), number);
-  if (text.empty() || error != std::errc() || end != text.data() + text.size()) {
+  if (text.empty() || error != std::errc() ||
+      end != text.data() + text.size()) {
     invalid(spec.name, value, "not an integer");
   }
   if (number < spec.min || number > spec.max) {
@@ -148,9 +254,8 @@ std::string normalizeOption(const OptionSpec& spec, std::string_view value)
     const auto text = text::trim(value);
     const auto [end, error] =
         std::from_chars(text.data(), text.data() + text.size(), number);
-    if (!text.empty() &&
-        (error != std::errc() || end != text.data() + text.size() ||
-         number < 0)) {
+    if (!text.empty() && (error != std::errc() ||
+                          end != text.data() + text.size() || number < 0)) {
       invalid(spec.name, value, "expected a non-negative number");
     }
     return std::string(text);
@@ -210,6 +315,9 @@ void Options::set(std::string_view name, std::string_view value)
   if (name == "log-level" || name == "console-log-level") {
     if (value == "warning") {
       value = "warn";
+    }
+    else if (value == "trace") {
+      value = "debug";
     }
   }
   values_[std::string(name)] = normalizeOption(*spec, value);
@@ -281,6 +389,15 @@ std::map<std::string, std::string> Options::visible() const
     }
   }
   return result;
+}
+
+std::shared_ptr<Options> Options::snapshot() const
+{
+  auto copy = parent_ ? parent_->snapshot() : std::make_shared<Options>();
+  for (const auto& [name, value] : values_) {
+    copy->values_[name] = value;
+  }
+  return copy;
 }
 
 } // namespace aria2

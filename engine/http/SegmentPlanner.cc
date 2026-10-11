@@ -2,6 +2,7 @@
 #include "http/SegmentPlanner.h"
 
 #include <algorithm>
+#include <map>
 
 namespace aria2::http {
 namespace {
@@ -9,6 +10,8 @@ namespace {
 constexpr int64_t alignment = 4096;
 // A connection is raced only when it would otherwise hold the download back.
 constexpr double raceSeconds = 2.0;
+// Copies of one range, including the original.
+constexpr int maxCopies = 3;
 } // namespace
 
 void SegmentPlanner::setLength(int64_t length)
@@ -136,33 +139,48 @@ std::optional<Range> SegmentPlanner::split(int id)
   return range;
 }
 
+// The endgame: a range that would hold the download back gets another copy;
+// the first copy to finish wins. A copy that turns out slow as well (another
+// bad route) may be raced again, up to maxCopies.
 std::optional<Range> SegmentPlanner::race(int id)
 {
-  const Worker* slowest = nullptr;
-  double longest = raceSeconds;
+  struct Group {
+    int leader = -1; // the copy with the earliest expected finish
+    double time = 0;
+    int copies = 0;
+    bool young = false;
+  };
+  std::map<int64_t, Group> groups; // by end
   for (const auto& [other, worker] : workers_) {
     const auto remaining = worker.end - worker.position;
+    if (remaining <= 0 || worker.end == unbounded) {
+      continue;
+    }
+    auto& group = groups[worker.end];
+    ++group.copies;
     // A new connection gets time to connect and show its speed.
-    if (remaining <= 0 || worker.end == unbounded || worker.age < raceSeconds) {
-      continue;
-    }
-    // A range that already has a duplicate is not raced again.
-    const auto copies = std::count_if(
-        workers_.begin(), workers_.end(), [&worker](const auto& entry) {
-          return entry.second.end == worker.end;
-        });
-    if (copies > 1) {
-      continue;
-    }
+    group.young = group.young || worker.age < raceSeconds;
     const auto speed = worker.receiving ? worker.speed : 0;
-    const auto time = speed > 0 ? remaining / speed : 1e9;
-    // Raced only when it is markedly slower than its siblings or, as the last
-    // connection, than this download managed before.
-    const auto others = typicalSpeed(other);
-    const auto reference = others > 0 ? others : peakSpeed_;
-    if (time > longest && (reference <= 0 || speed < reference / 2)) {
-      slowest = &worker;
-      longest = time;
+    const auto time = speed > 0 ? static_cast<double>(remaining) / speed : 1e9;
+    if (group.leader < 0 || time < group.time) {
+      group.leader = other;
+      group.time = time;
+    }
+  }
+  const Worker* slowest = nullptr;
+  double longest = raceSeconds;
+  for (const auto& [end, group] : groups) {
+    if (group.young || group.copies >= maxCopies || group.time <= longest) {
+      continue;
+    }
+    const auto& leader = workers_.at(group.leader);
+    const auto speed = leader.receiving ? leader.speed : 0;
+    // Raced only when it is markedly slower than its siblings or than other
+    // connections of this download managed before.
+    const auto reference = std::max(typicalSpeed(group.leader), peakSpeed_);
+    if (reference <= 0 || speed < reference / 2) {
+      slowest = &leader;
+      longest = group.time;
     }
   }
   if (!slowest) {
@@ -176,7 +194,8 @@ std::optional<Range> SegmentPlanner::race(int id)
 int64_t SegmentPlanner::receive(int id, int64_t bytes)
 {
   auto& worker = workers_.at(id);
-  const auto usable = std::clamp<int64_t>(worker.end - worker.position, 0, bytes);
+  const auto usable =
+      std::clamp<int64_t>(worker.end - worker.position, 0, bytes);
   received_.add(worker.position, worker.position + usable);
   worker.position += usable;
   worker.receiving = true;
@@ -216,8 +235,8 @@ bool SegmentPlanner::extend(int id, std::optional<int>& cancelled)
       owned.add(next.position, next.end);
     }
   }
-  const auto limit = length_ >= 0 ? std::min(worker.requestEnd, length_)
-                                  : worker.requestEnd;
+  const auto limit =
+      length_ >= 0 ? std::min(worker.requestEnd, length_) : worker.requestEnd;
   if (const auto gap = owned.firstGap(worker.end, limit);
       gap && gap->first == worker.end) {
     worker.end = gap->second;

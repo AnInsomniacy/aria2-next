@@ -79,10 +79,10 @@ std::error_code File::open(const std::string& path, bool truncate)
 std::error_code File::openReadOnly(const std::string& path)
 {
   close();
-  const auto handle = CreateFileW(
-      toPath(path).c_str(), GENERIC_READ,
-      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr,
-      OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
+  const auto handle =
+      CreateFileW(toPath(path).c_str(), GENERIC_READ,
+                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                  nullptr, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, nullptr);
   if (handle == INVALID_HANDLE_VALUE) {
     return lastError();
   }
@@ -125,8 +125,9 @@ std::error_code File::read(int64_t offset, char* data, size_t size,
   position.Offset = static_cast<DWORD>(offset);
   position.OffsetHigh = static_cast<DWORD>(offset >> 32);
   DWORD read = 0;
-  if (!ReadFile(handle_, data, static_cast<DWORD>(std::min<size_t>(size, 1u << 30)),
-                &read, &position) &&
+  if (!ReadFile(handle_, data,
+                static_cast<DWORD>(std::min<size_t>(size, 1u << 30)), &read,
+                &position) &&
       GetLastError() != ERROR_HANDLE_EOF) {
     return lastError();
   }
@@ -184,10 +185,10 @@ std::error_code removeFile(const std::string& path)
 
 void setModificationTime(const std::string& path, int64_t unixSeconds)
 {
-  const auto handle = CreateFileW(toPath(path).c_str(), FILE_WRITE_ATTRIBUTES,
-                                  FILE_SHARE_READ | FILE_SHARE_WRITE |
-                                      FILE_SHARE_DELETE,
-                                  nullptr, OPEN_EXISTING, 0, nullptr);
+  const auto handle =
+      CreateFileW(toPath(path).c_str(), FILE_WRITE_ATTRIBUTES,
+                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                  nullptr, OPEN_EXISTING, 0, nullptr);
   if (handle == INVALID_HANDLE_VALUE) {
     return;
   }
@@ -270,13 +271,14 @@ std::error_code File::read(int64_t offset, char* data, size_t size,
 std::error_code File::resize(int64_t length)
 {
   return ::ftruncate(fd_, static_cast<off_t>(length)) == 0 ? std::error_code()
-                                                            : lastError();
+                                                           : lastError();
 }
 
 std::error_code File::allocate(int64_t length)
 {
 #  if defined(__APPLE__)
-  fstore_t store{F_ALLOCATECONTIG, F_PEOFPOSMODE, 0, static_cast<off_t>(length), 0};
+  fstore_t store{F_ALLOCATECONTIG, F_PEOFPOSMODE, 0, static_cast<off_t>(length),
+                 0};
   if (fcntl(fd_, F_PREALLOCATE, &store) == -1) {
     store.fst_flags = F_ALLOCATEALL;
     fcntl(fd_, F_PREALLOCATE, &store);
@@ -330,6 +332,20 @@ bool fileExists(const std::string& path)
 {
   std::error_code error;
   return fs::exists(toPath(path), error);
+}
+
+std::optional<std::string> numberedPath(const std::string& path)
+{
+  const auto full = toPath(path);
+  const auto stem = toUtf8(full.parent_path() / full.stem());
+  const auto extension = toUtf8(full.extension());
+  for (int i = 1; i < 10000; ++i) {
+    auto candidate = stem + '.' + std::to_string(i) + extension;
+    if (!fileExists(candidate)) {
+      return candidate;
+    }
+  }
+  return std::nullopt;
 }
 
 int64_t fileSize(const std::string& path)

@@ -137,23 +137,26 @@ constexpr std::array catalog{
   OptionSpec{"follow-metalink", 0, Choice, "true", TG, "metalink", "Start downloaded .metalink files as tasks.", 0, 0, "true|mem|false"},
 
   // ED2K
-  OptionSpec{"ed2k-server", 0, Text, "", Task, "ed2k", "Comma-separated HOST:PORT servers."},
-  OptionSpec{"ed2k-server-list", 0, Path, "", Task, "ed2k", "server.met file or list of servers."},
-  OptionSpec{"ed2k-node-list", 0, Path, "", Task, "ed2k", "nodes.dat Kad bootstrap file."},
-  OptionSpec{"ed2k-listen-port", 0, Integer, "4662", Task, "ed2k", "TCP port for clients.", 0, 65535},
-  OptionSpec{"ed2k-udp-listen-port", 0, Integer, "4672", Task, "ed2k", "UDP port for servers and Kad.", 0, 65535},
-  OptionSpec{"ed2k-upload-slots", 0, Integer, "3", Task, "ed2k", "Upload slots.", 1, 1000},
-  OptionSpec{"ed2k-max-connections", 0, Integer, "20", Task, "ed2k", "Client connections per file.", 1, 1024},
-  OptionSpec{"ed2k-preview-priority", 0, Flag, "false", Task, "ed2k", "Download the first and last parts first."},
+  OptionSpec{"ed2k-server", 0, Text, "", TG, "ed2k", "Comma-separated HOST:PORT servers."},
+  OptionSpec{"ed2k-server-list", 0, Path, "", TG, "ed2k", "server.met file or a list of HOST:PORT lines."},
+  OptionSpec{"ed2k-node-list", 0, Path, "", TG, "ed2k", "nodes.dat file to bootstrap Kad."},
+  OptionSpec{"ed2k-listen-port", 0, Integer, "4662", Global, "ed2k", "TCP port for clients (0: any).", 0, 65535},
+  OptionSpec{"ed2k-udp-listen-port", 0, Integer, "4672", Global, "ed2k", "UDP port for Kad and clients (0: any).", 0, 65535},
+  OptionSpec{"ed2k-port-mapping", 0, Flag, "true", Global, "ed2k", "Forward the ED2K ports with UPnP."},
+  OptionSpec{"ed2k-upload-slots", 0, Integer, "3", Global, "ed2k", "Upload slots in total.", 1, 1000},
+  OptionSpec{"ed2k-max-connections", 0, Integer, "100", Global, "ed2k", "Client connections in total.", 1, 4096},
+  OptionSpec{"ed2k-preview-priority", 0, Flag, "false", TLG, "ed2k", "Download the first and last parts first."},
 
   // Media
   OptionSpec{"media", 0, Choice, "auto", TG, "media", "auto detects HLS/DASH; file downloads the raw resource.", 0, 0, "auto|file|hls|dash|collection"},
   OptionSpec{"media-format", 0, Choice, "mp4", TG, "media", "Output container.", 0, 0, "mp4|mkv|vtt"},
-  OptionSpec{"media-video", 0, Text, "", Task, "media", "Video track ID, 'best' or 'none'."},
-  OptionSpec{"media-audio", 0, Text, "", Task, "media", "Audio track ID, 'best' or 'none'."},
-  OptionSpec{"media-subtitles", 0, Text, "", Task, "media", "Comma-separated subtitle track IDs."},
-  OptionSpec{"media-pause-after-probe", 0, Flag, "false", Task, "media", "Pause after the presentation is read so tracks can be chosen."},
-  OptionSpec{"media-record-time", 0, Integer, "0", Task, "media", "Stop a live recording after this many seconds (0: until the end).", 0, INT32_MAX},
+  OptionSpec{"media-video", 0, Text, "best", TG, "media", "Video track: best, none, a language or a track ID from media.tracks."},
+  OptionSpec{"media-audio", 0, Text, "best", TG, "media", "Audio track: best, none, a language or a track ID from media.tracks."},
+  OptionSpec{"media-subtitles", 0, Text, "none", TG, "media", "Subtitle tracks: best, none, a language or a track ID from media.tracks."},
+  OptionSpec{"media-pause-after-probe", 0, Flag, "false", TG, "media", "Pause after the presentation is read so tracks can be chosen."},
+  OptionSpec{"media-record-time", 0, Integer, "0", TG, "media", "Stop a live recording after this many seconds (0: until the end).", 0, 31536000},
+  OptionSpec{"media-start-time", 0, Integer, "0", Task, "media", "Start of the downloaded range in seconds (0: the beginning).", 0, 31536000},
+  OptionSpec{"media-end-time", 0, Integer, "0", Task, "media", "End of the downloaded range in seconds (0: the end).", 0, 31536000},
   OptionSpec{"media-request-contexts", 0, Text, "", Task | Secret, "media", "JSON request headers per origin."},
   OptionSpec{"media-input", 0, Text, "", Task | Secret, "media", "JSON manifests captured by the browser."},
 
@@ -199,9 +202,9 @@ std::span<const OptionSpec> optionCatalog() { return catalog; }
 
 const OptionSpec* findOption(std::string_view name)
 {
-  const auto found =
-      std::find_if(catalog.begin(), catalog.end(),
-                   [name](const OptionSpec& spec) { return spec.name == name; });
+  const auto found = std::find_if(
+      catalog.begin(), catalog.end(),
+      [name](const OptionSpec& spec) { return spec.name == name; });
   return found == catalog.end() ? nullptr : &*found;
 }
 

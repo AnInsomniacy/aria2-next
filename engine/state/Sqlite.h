@@ -34,6 +34,7 @@ public:
   Statement& operator=(const Statement&) = delete;
 
   Statement& bind(int index, std::string_view value);
+  Statement& bindBlob(int index, std::string_view value);
   Statement& bind(int index, int64_t value);
   // Returns true while a row is available.
   bool step();

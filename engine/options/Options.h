@@ -30,7 +30,8 @@ inline constexpr unsigned Task = 1;
 inline constexpr unsigned Live = 2;
 // changeGlobalOption may modify it.
 inline constexpr unsigned Global = 4;
-// Never echoed by getOption/getGlobalOption or saved to the session file.
+// Never echoed by getOption/getGlobalOption. Task values are still saved to
+// the session file, which a restarted task needs to resume.
 inline constexpr unsigned Secret = 8;
 } // namespace scope
 
@@ -81,6 +82,9 @@ public:
   const std::shared_ptr<const Options>& parent() const { return parent_; }
   // Own values merged over the parent chain, secrets excluded.
   std::map<std::string, std::string> visible() const;
+  // A parentless copy of every value set along the chain, for worker threads
+  // that must not observe later changes.
+  std::shared_ptr<Options> snapshot() const;
 
 private:
   std::shared_ptr<const Options> parent_;

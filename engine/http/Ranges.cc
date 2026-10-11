@@ -22,6 +22,32 @@ void RangeSet::add(int64_t begin, int64_t end)
   ranges_.emplace(begin, end);
 }
 
+void RangeSet::remove(int64_t begin, int64_t end)
+{
+  if (begin >= end) {
+    return;
+  }
+  auto it = ranges_.upper_bound(begin);
+  if (it != ranges_.begin()) {
+    --it;
+  }
+  while (it != ranges_.end() && it->first < end) {
+    const auto [first, last] = *it;
+    if (last <= begin) {
+      ++it;
+      continue;
+    }
+    it = ranges_.erase(it);
+    if (first < begin) {
+      ranges_.emplace(first, begin);
+    }
+    if (last > end) {
+      ranges_.emplace(end, last);
+      break;
+    }
+  }
+}
+
 bool RangeSet::contains(int64_t begin, int64_t end) const
 {
   if (begin >= end) {
@@ -48,8 +74,8 @@ int64_t RangeSet::covered(int64_t begin, int64_t end) const
     --it;
   }
   for (; it != ranges_.end() && it->first < end; ++it) {
-    sum += std::max<int64_t>(
-        0, std::min(end, it->second) - std::max(begin, it->first));
+    sum += std::max<int64_t>(0, std::min(end, it->second) -
+                                    std::max(begin, it->first));
   }
   return sum;
 }

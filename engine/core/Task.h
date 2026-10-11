@@ -84,6 +84,8 @@ public:
   virtual std::vector<std::string> sessionUris() const = 0;
   // Persists resume data; called periodically and when stopping.
   virtual void checkpoint() {}
+  // Shows stored progress of a task added paused, before it ever starts.
+  virtual void loadProgress() {}
   // Called once when the result is discarded or the task is removed.
   virtual void discardState() {}
   // An option in scope::Live changed while active.

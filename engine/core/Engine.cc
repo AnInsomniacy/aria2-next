@@ -56,7 +56,17 @@ int Engine::run()
 {
   tick();
   schedule();
-  io_.run();
+  // A failing handler is a bug, but it must not take the other downloads
+  // and the RPC server down with it.
+  for (;;) {
+    try {
+      io_.run();
+      break;
+    }
+    catch (const std::exception& error) {
+      log::error("Unhandled error: {}", error.what());
+    }
+  }
   return exitStatus_;
 }
 
@@ -73,6 +83,9 @@ void Engine::globalOptionsChanged(const std::vector<std::string>& names)
   if (bt_) {
     bt_->optionsChanged(names);
   }
+  if (ed2k_) {
+    ed2k_->globalOptionsChanged();
+  }
 }
 
 Gid Engine::add(std::shared_ptr<Task> task, std::optional<size_t> position)
@@ -82,6 +95,9 @@ Gid Engine::add(std::shared_ptr<Task> task, std::optional<size_t> position)
   task->state_ =
       task->options().flag("pause") ? TaskState::Paused : TaskState::Waiting;
   task->options().erase("pause");
+  if (task->state_ == TaskState::Paused) {
+    task->loadProgress();
+  }
   const auto at = std::min(position.value_or(waiting_.size()), waiting_.size());
   waiting_.insert(waiting_.begin() + static_cast<ptrdiff_t>(at), task);
   schedule();
@@ -100,7 +116,8 @@ std::shared_ptr<Task> Engine::find(std::string_view text) const
     return find(*gid);
   }
   if (text.empty() || text.size() > 16 ||
-      text.find_first_not_of("0123456789abcdefABCDEF") != std::string_view::npos) {
+      text.find_first_not_of("0123456789abcdefABCDEF") !=
+          std::string_view::npos) {
     return nullptr;
   }
   std::shared_ptr<Task> match;
@@ -217,6 +234,45 @@ bool Engine::removeResult(Gid gid)
   return true;
 }
 
+void Engine::requeue(const std::shared_ptr<Task>& task)
+{
+  const auto found = std::find(stopped_.begin(), stopped_.end(), task);
+  if (found == stopped_.end()) {
+    fail(ErrorCode::Unknown, "GID {} is not a stopped task",
+         gidText(task->gid()));
+  }
+  stopped_.erase(found);
+  task->state_ = TaskState::Waiting;
+  task->errorCode_ = ErrorCode::Finished;
+  task->errorMessage_.clear();
+  waiting_.push_back(task);
+  schedule();
+}
+
+void Engine::handOver(const std::shared_ptr<Task>& current,
+                      std::shared_ptr<Task> next)
+{
+  const auto found = std::find(active_.begin(), active_.end(), current);
+  if (found == active_.end() || next->gid() != current->gid()) {
+    return;
+  }
+  *found = next;
+  tasks_[next->gid()] = next;
+  next->state_ = TaskState::Active;
+  next->following = current->following;
+  next->belongsTo = current->belongsTo;
+  current->state_ = TaskState::Removed;
+  try {
+    next->start();
+  }
+  catch (const Error& error) {
+    next->failed(error.code(), error.what());
+  }
+  catch (const std::exception& error) {
+    next->failed(ErrorCode::Unknown, error.what());
+  }
+}
+
 void Engine::purgeResults()
 {
   for (const auto& task : stopped_) {
@@ -272,8 +328,10 @@ void Engine::fill()
   if (shuttingDown_) {
     return;
   }
-  const auto limit = static_cast<size_t>(global_->integer("max-concurrent-downloads"));
-  for (auto it = waiting_.begin(); it != waiting_.end() && activeCount() < limit;) {
+  const auto limit =
+      static_cast<size_t>(global_->integer("max-concurrent-downloads"));
+  for (auto it = waiting_.begin();
+       it != waiting_.end() && activeCount() < limit;) {
     if ((*it)->state_ != TaskState::Waiting) {
       ++it;
       continue;
@@ -282,9 +340,10 @@ void Engine::fill()
     it = waiting_.erase(it);
     startTask(task);
   }
-  const bool queued = std::any_of(waiting_.begin(), waiting_.end(), [](const auto& task) {
-    return task->state_ == TaskState::Waiting;
-  });
+  const bool queued =
+      std::any_of(waiting_.begin(), waiting_.end(), [](const auto& task) {
+        return task->state_ == TaskState::Waiting;
+      });
   if (active_.empty() && !queued && !global_->flag("enable-rpc")) {
     shutdown(false); // command-line mode ends when the queue drains
   }
@@ -351,9 +410,11 @@ void Engine::retire(const std::shared_ptr<Task>& task, TaskState state)
        : state == TaskState::Error  ? Event::Error
                                     : Event::Stop,
        *task);
-  const auto limit = static_cast<size_t>(global_->integer("max-download-result"));
+  const auto limit =
+      static_cast<size_t>(global_->integer("max-download-result"));
   const bool keepUnfinished = global_->flag("keep-unfinished-download-result");
-  for (auto it = stopped_.begin(); stopped_.size() > limit && it != stopped_.end();) {
+  for (auto it = stopped_.begin();
+       stopped_.size() > limit && it != stopped_.end();) {
     if (keepUnfinished && (*it)->state_ != TaskState::Complete) {
       ++it;
       continue;
@@ -398,7 +459,8 @@ void Engine::tick()
     }
   }
   const auto sessionEvery = global_->integer("save-session-interval");
-  if (sessionEvery > 0 && now - lastSessionSave_ >= std::chrono::seconds(sessionEvery)) {
+  if (sessionEvery > 0 &&
+      now - lastSessionSave_ >= std::chrono::seconds(sessionEvery)) {
     lastSessionSave_ = now;
     saveSession();
   }
@@ -448,9 +510,16 @@ void Engine::finishShutdown()
   if (bt_) {
     bt_->close();
   }
+  // The ED2K network removes its port mappings before the loop stops.
   if (ed2k_) {
-    ed2k_->close();
+    ed2k_->close([this] { stopLoop(); });
+    return;
   }
+  stopLoop();
+}
+
+void Engine::stopLoop()
+{
   if (http_) {
     http_->close();
   }

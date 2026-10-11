@@ -44,6 +44,7 @@ SCENARIOS = {
     "norange": (f"rate={8 * RATE}&norange=1", 128 * MIB, 16, 180),
     "expiring": (f"rate={RATE}&expire=3", 128 * MIB, 16, 180),
     "iprate": (f"iprate={16 * MIB}", 256 * MIB, 16, 180),
+    "fanout": (f"rate={2 * MIB}", 256 * MIB, 256, 180),
 }
 
 

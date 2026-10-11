@@ -57,6 +57,7 @@ class EngineProcess:
             f"--ed2k-listen-port={self.ed2k_port}",
             f"--ed2k-udp-listen-port={self.ed2k_udp_port}",
             "--bt-port-mapping=false",
+            "--ed2k-port-mapping=false",
             "--enable-dht=false",
             "--bt-enable-lpd=false",
             "--enable-peer-exchange=false",

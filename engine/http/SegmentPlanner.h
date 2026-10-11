@@ -3,6 +3,7 @@
 
 #include "http/Ranges.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <limits>
@@ -49,6 +50,12 @@ public:
   int64_t receive(int id, int64_t bytes);
   // Called periodically with the rate over the last `seconds`.
   void updateSpeed(int id, double bytesPerSecond, double seconds);
+  // The average rate of a finished connection, which may have been too short
+  // for periodic samples.
+  void noteSpeed(double bytesPerSecond)
+  {
+    peakSpeed_ = std::max(peakSpeed_, bytesPerSecond);
+  }
 
   // After a worker reached its end: if its request continues into a range of a
   // worker that has not received anything, it takes that range over and the
