@@ -93,6 +93,19 @@ bool spawnDetached(const std::string& program,
     argv.push_back(const_cast<char*>(argument.c_str()));
   }
   argv.push_back(nullptr);
+#  if defined(__ANDROID__) && __ANDROID_API__ < 28
+  // Bionic has posix_spawn only from API 28; the release targets API 24.
+  // Between fork and exec only async-signal-safe calls are made.
+  const auto child = fork();
+  if (child == 0) {
+    if (const auto null = open("/dev/null", O_WRONLY); null >= 0) {
+      dup2(null, STDOUT_FILENO);
+    }
+    execvp(program.c_str(), argv.data());
+    _exit(127);
+  }
+  return child > 0;
+#  else
   posix_spawn_file_actions_t actions;
   posix_spawn_file_actions_init(&actions);
   posix_spawn_file_actions_addopen(&actions, STDOUT_FILENO, "/dev/null",
@@ -102,6 +115,7 @@ bool spawnDetached(const std::string& program,
                                    argv.data(), environ);
   posix_spawn_file_actions_destroy(&actions);
   return result == 0;
+#  endif
 }
 
 bool daemonize()
