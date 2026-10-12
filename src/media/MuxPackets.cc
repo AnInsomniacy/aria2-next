@@ -36,6 +36,7 @@ bool Input::openRun()
   file.clear();
   files.clear();
   starts.clear();
+  skips.clear();
   position = size = 0;
   index = 0;
   const auto& first = segments[nextSegment];
@@ -57,8 +58,8 @@ bool Input::openRun()
            context->streams[0]->codecpar->codec_id == AV_CODEC_ID_WEBVTT;
   clockOffset = first.hls ? (webvtt ? subtitleOffset(first.path) : 0)
                           : first.period * 1000 - first.timeOffset;
-  if (first.hls && std::strcmp(context->iformat->name, "aac") == 0)
-    transportClock = packedAudioClock(context);
+  if (first.hls && packedClock)
+    transportClock = packedClock;
   if (!first.hls)
     boundary = first.period * 1000 + shift;
   clipStart = first.hls ? (first.start - presentationStart) * 1000 : 0;
@@ -153,14 +154,18 @@ void Input::next()
         packet->pts += offset;
       if (packet->dts != AV_NOPTS_VALUE)
         packet->dts += offset;
-      const bool preroll =
-          allowPreroll &&
-          !(trimAudio &&
-            context->streams[packet->stream_index]->codecpar->codec_type ==
-                AVMEDIA_TYPE_AUDIO);
+      const bool audio =
+          context->streams[packet->stream_index]->codecpar->codec_type ==
+          AVMEDIA_TYPE_AUDIO;
+      const bool preroll = allowPreroll && !(trimAudio && audio);
+      // A later DASH Period's audio that starts before the boundary was
+      // taken from the preceding Period already; repeating that frame breaks
+      // decoders that carry state across frames (HE-AAC v2).
+      const bool before = !allowPreroll && audio && !segments.front().hls
+                              ? packet->pts < boundary
+                              : packet->pts + packet->duration <= boundary;
       if (!(webvtt && segments.front().hls) && packet->pts != AV_NOPTS_VALUE &&
-          ((!preroll && packet->pts + packet->duration <= boundary) ||
-           packet->pts >= end)) {
+          ((!preroll && before) || packet->pts >= end)) {
         // Initialization can expose a complete encoder-priming packet before
         // the Period. It must not overlap the preceding Period's audio.
         av_packet_unref(packet);

@@ -74,39 +74,48 @@ bool sameCodec(const AVCodecParameters* a, const AVCodecParameters* b)
          (!a->extradata_size ||
           !std::memcmp(a->extradata, b->extradata, a->extradata_size));
 }
-int64_t packedAudioClock(AVFormatContext* context)
+// Packed audio segments start with an ID3v2 tag whose PRIV frame carries
+// the MPEG-2 transport timestamp of the first sample. FFmpeg exposes it only
+// for AAC and hands the tags of later segments to other decoders as data,
+// so the tag is read here and skipped by Input::read.
+PackedAudioTag packedAudioTag(const std::string& path)
 {
-  // FFmpeg parses ID3 PRIV frames and exposes their bytes as escaped metadata.
-  const auto tag = av_dict_get(
-      context->metadata,
-      "id3v2_priv.com.apple.streaming.transportStreamTimestamp", nullptr, 0);
-  if (!tag)
-    throw std::runtime_error("Packed HLS audio has no transport timestamp");
-  std::string_view value(tag->value);
-  std::array<unsigned char, 8> bytes{};
-  for (auto& byte : bytes) {
-    if (value.empty())
-      throw std::runtime_error("Invalid packed HLS audio timestamp");
-    if (value.front() == '\\') {
-      unsigned number = 0;
-      if (value.size() < 4 || value[1] != 'x')
-        throw std::runtime_error("Invalid packed HLS audio timestamp");
-      const auto parsed =
-          std::from_chars(value.data() + 2, value.data() + 4, number, 16);
-      if (parsed.ec != std::errc() || parsed.ptr != value.data() + 4)
-        throw std::runtime_error("Invalid packed HLS audio timestamp");
-      byte = static_cast<unsigned char>(number);
-      value.remove_prefix(4);
+  std::ifstream input(nativePath(path), std::ios::binary);
+  std::array<unsigned char, 10> header{};
+  if (!input.read(reinterpret_cast<char*>(header.data()), header.size()) ||
+      std::memcmp(header.data(), "ID3", 3) != 0)
+    return {};
+  const auto syncsafe = [](const unsigned char* b) {
+    return int64_t{b[0] & 0x7f} << 21 | int64_t{b[1] & 0x7f} << 14 |
+           int64_t{b[2] & 0x7f} << 7 | int64_t{b[3] & 0x7f};
+  };
+  const auto version = header[3];
+  const auto body = syncsafe(&header[6]);
+  PackedAudioTag tag{10 + body + ((header[5] & 0x10) ? 10 : 0)};
+  if (body > (1 << 20))
+    return tag;
+  std::string frames(static_cast<size_t>(body), '\0');
+  if (!input.read(frames.data(), body))
+    return tag;
+  constexpr std::string_view owner =
+      "com.apple.streaming.transportStreamTimestamp";
+  for (size_t at = 0; at + 10 <= frames.size();) {
+    const auto* frame = reinterpret_cast<const unsigned char*>(&frames[at]);
+    const auto length = static_cast<size_t>(
+        version >= 4 ? syncsafe(frame + 4) : int64_t{AV_RB32(frame + 4)});
+    if (frame[0] == 0 || length > frames.size() - at - 10)
+      break;
+    const std::string_view data(&frames[at + 10], length);
+    if (std::memcmp(frame, "PRIV", 4) == 0 &&
+        data.size() == owner.size() + 9 &&
+        data.substr(0, owner.size()) == owner && data[owner.size()] == '\0') {
+      const auto clock = AV_RB64(data.data() + owner.size() + 1);
+      if (clock < (uint64_t{1} << 33))
+        tag.clock = static_cast<int64_t>(clock);
     }
-    else {
-      byte = static_cast<unsigned char>(value.front());
-      value.remove_prefix(1);
-    }
+    at += 10 + length;
   }
-  const auto clock = AV_RB64(bytes.data());
-  if (!value.empty() || clock >= (uint64_t{1} << 33))
-    throw std::runtime_error("Invalid packed HLS audio timestamp");
-  return static_cast<int64_t>(clock);
+  return tag;
 }
 
 } // namespace aria2::media::muxing

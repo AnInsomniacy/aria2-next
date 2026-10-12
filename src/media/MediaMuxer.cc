@@ -63,7 +63,8 @@ Muxer::stage(const std::vector<Segment>& segments, const std::string& output,
              const std::string& directory, const std::string& format,
              bool video, bool audio, bool subtitles,
              const std::shared_ptr<Control>& control,
-             int64_t presentationDuration, bool live, bool collection)
+             int64_t presentationDuration, bool live, bool collection,
+             bool ranged)
 {
   if (segments.empty())
     throw std::runtime_error("No complete media segments were received");
@@ -109,6 +110,7 @@ Muxer::stage(const std::vector<Segment>& segments, const std::string& output,
   for (const auto& period : periods) {
     std::vector<std::unique_ptr<Input>> inputs;
     int64_t end = 0;
+    int64_t commonEnd = INT64_MAX; // where the first audio or video track ends
     for (const auto& track : period.second) {
       auto input = std::make_unique<Input>();
       input->control = control.get();
@@ -116,10 +118,18 @@ Muxer::stage(const std::vector<Segment>& segments, const std::string& output,
       input->segments = track.second;
       input->presentationStart = presentationStart;
       input->openRun();
+      int64_t trackEnd = 0;
       for (const auto& segment : track.second)
-        end = std::max(end, segment.start + segment.duration);
+        trackEnd = std::max(trackEnd, segment.start + segment.duration);
+      end = std::max(end, trackEnd);
+      if (input->type != "subtitle")
+        commonEnd = std::min(commonEnd, trackEnd);
       inputs.push_back(std::move(input));
     }
+    // Segments are chosen whole, so in a range the tracks with longer
+    // segments overhang the others by up to one segment.
+    if (ranged && !live && commonEnd != INT64_MAX)
+      end = commonEnd;
     if (collection) {
       int64_t origin = INT64_MAX;
       for (const auto& input : inputs)
@@ -143,18 +153,23 @@ Muxer::stage(const std::vector<Segment>& segments, const std::string& output,
               std::min(nextBoundary,
                        (track.second.front().start - presentationStart) * 1000);
       alignHls(inputs, presentationStart, nextBoundary, liveOrigin,
-               period.first == periods.begin()->first, live, format);
+               period.first == periods.begin()->first, live, format, ranged);
     }
     else {
-      if (live && liveOrigin == INT64_MIN) {
+      // Live recordings and ranges start the output at zero, as a range
+      // keeps the source clock and players would show the time before it.
+      const bool zeroBased = live || ranged;
+      if (zeroBased && liveOrigin == INT64_MIN) {
         int64_t origin = INT64_MAX;
         for (const auto& input : inputs)
           if (!input->webvtt && input->context->start_time != AV_NOPTS_VALUE)
             origin = std::min(origin,
                               input->context->start_time + input->clockOffset);
-        if (origin == INT64_MAX)
+        if (origin == INT64_MAX && live)
           throw std::runtime_error("Live media has no presentation timestamp");
-        liveOrigin = av_rescale_q(origin, AV_TIME_BASE_Q, AVRational{1, 1000});
+        liveOrigin = origin == INT64_MAX ? 0
+                                         : av_rescale_q(origin, AV_TIME_BASE_Q,
+                                                        AVRational{1, 1000});
       }
       const auto next = periods.upper_bound({period.first.first, INT64_MAX});
       const auto boundary = next == periods.end()
@@ -167,7 +182,7 @@ Muxer::stage(const std::vector<Segment>& segments, const std::string& output,
             1000;
         if (boundary <= 0 && end <= 0)
           input->end = INT64_MAX;
-        if (live) {
+        if (zeroBased) {
           input->shift = -liveOrigin * 1000;
           input->boundary -= liveOrigin * 1000;
           input->end -= liveOrigin * 1000;

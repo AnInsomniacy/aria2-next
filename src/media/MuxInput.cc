@@ -56,7 +56,7 @@ int Input::read(void* opaque, uint8_t* data, int length) noexcept
         s.file.open(nativePath(s.files[s.index]), std::ios::binary);
         if (!s.file)
           return AVERROR(EIO);
-        s.file.seekg(s.position - s.starts[s.index]);
+        s.file.seekg(s.position - s.starts[s.index] + s.skips[s.index]);
       }
       s.file.read(reinterpret_cast<char*>(data), length);
       const auto count = static_cast<int>(s.file.gcount());
@@ -106,8 +106,13 @@ void Input::open()
   if (!packet || !subtitlePacket)
     throw std::bad_alloc();
   for (const auto& path : files) {
+    const auto tag = packedAudioTag(path);
+    if (starts.empty())
+      packedClock = tag.clock;
     starts.push_back(size);
-    size += std::filesystem::file_size(nativePath(path));
+    skips.push_back(tag.size);
+    size += static_cast<int64_t>(std::filesystem::file_size(nativePath(path))) -
+            tag.size;
   }
   auto buffer = static_cast<unsigned char*>(av_malloc(65536));
   if (!buffer)

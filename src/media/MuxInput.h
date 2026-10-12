@@ -24,6 +24,7 @@ struct Input {
   GF_List* cues = nullptr;
   std::vector<std::string> files;
   std::vector<int64_t> starts;
+  std::vector<int64_t> skips; // leading ID3 tag bytes of each file
   std::vector<int> mapping;
   std::ifstream file;
   int64_t position = 0, size = 0;
@@ -42,6 +43,7 @@ struct Input {
   bool webvtt = false;
   bool boxedWebvtt = false;
   std::optional<int64_t> transportClock;
+  std::optional<int64_t> packedClock; // of the first file of the run
   bool allowPreroll = false;
   bool trimAudio = false;
   std::vector<AVCodecParameters*> parameters;
@@ -58,5 +60,11 @@ using Inputs = std::vector<std::unique_ptr<Input>>;
 void check(int result);
 bool sameCodec(const AVCodecParameters*, const AVCodecParameters*);
 int64_t subtitleOffset(const std::string& path);
-int64_t packedAudioClock(AVFormatContext*);
+// The leading ID3 tag of a packed audio segment (RFC 8216 3.4): its size in
+// bytes (0 without one) and the transport timestamp of its PRIV frame.
+struct PackedAudioTag {
+  int64_t size = 0;
+  std::optional<int64_t> clock;
+};
+PackedAudioTag packedAudioTag(const std::string& path);
 } // namespace aria2::media::muxing

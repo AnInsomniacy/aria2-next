@@ -6178,8 +6178,10 @@ static int mov_read_sidx(MOVContext *c, AVIOContext *pb, MOVAtom atom)
         uint32_t size = avio_rb32(pb);
         uint32_t duration = avio_rb32(pb);
         if (size & 0x80000000) {
-            avpriv_request_sample(c->fc, "sidx reference_type 1");
-            return AVERROR_PATCHWELCOME;
+            /* aria2-next: a hierarchical index points at further sidx boxes,
+             * which are read on their own; this level adds nothing. */
+            av_log(c->fc, AV_LOG_DEBUG, "skipping sidx with reference_type 1\n");
+            return 0;
         }
         avio_rb32(pb); // sap_flags
         timestamp = av_rescale_q(pts, timescale, st->time_base);

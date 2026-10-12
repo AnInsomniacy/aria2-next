@@ -74,6 +74,8 @@ trimmed timelines and their end. Timeline selection retains the actual segment
 count and handles a first audio sample just after the Period start. The adapter reports delivery outcomes to GPAC;
 bounded live retries cannot silently skip media, and ordinary HLS reloads respect
 the parsed target duration.
+An index found by scanning boxes (no declared index range) ends the
+initialization range where the first `sidx` box starts, not 8 bytes into it.
 SegmentTimeline recovery retains the MPD/UTC availability epoch. The upstream
 startup heuristic that moved this epoch based on the selected segment is removed:
 with a negative clock correction and an epoch-based MPD, it underflowed the
@@ -90,5 +92,7 @@ FFmpeg is built without programs, network protocols, encoders, devices, or
 filters. Only media demuxers, MP4/Matroska muxers, codec parsers, the audio
 decoders and libswresample needed for reliable stream probing, and required bitstream filters
 are enabled. Its upstream makefile support remains intact, while unused FATE
-reference data and integration fixtures are omitted. Dependency source commits
+reference data and integration fixtures are omitted. The MP4 demuxer skips a
+hierarchical `sidx` (reference_type 1) instead of rejecting the file; the boxes
+it points at are read on their own. Dependency source commits
 are recorded in `packaging/dependencies.env`.

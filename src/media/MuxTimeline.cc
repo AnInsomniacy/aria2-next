@@ -79,21 +79,27 @@ void seekLiveKeyframe(Inputs& inputs, int64_t& liveOrigin, int64_t beginning,
 
 void alignHls(Inputs& inputs, int64_t presentationStart, int64_t nextBoundary,
               int64_t& liveOrigin, bool firstEpoch, bool live,
-              const std::string& format)
+              const std::string& format, bool ranged)
 {
   const auto origin = hlsClockOrigin(inputs);
   int64_t beginning = INT64_MAX;
   for (const auto& input : inputs)
     beginning = std::min(beginning, input->segments.front().start);
   int64_t commonEnd = INT64_MAX;
+  if (live || ranged) {
+    // Segments are chosen whole, so tracks with other segment lengths
+    // overhang a requested end by up to one segment.
+    for (const auto& input : inputs)
+      if (!input->webvtt)
+        commonEnd = std::min(commonEnd, input->segments.back().start +
+                                            input->segments.back().duration);
+  }
   if (live) {
     for (const auto& input : inputs) {
       if (input->webvtt)
         continue;
       if (firstEpoch)
         liveOrigin = std::max(liveOrigin, input->segments.front().start);
-      const auto& last = input->segments.back();
-      commonEnd = std::min(commonEnd, last.start + last.duration);
     }
     if (liveOrigin == INT64_MIN)
       throw std::runtime_error("Live media has no audio or video timeline");
@@ -107,6 +113,9 @@ void alignHls(Inputs& inputs, int64_t presentationStart, int64_t nextBoundary,
     // Complete HLS fragments own their packet boundary. Millisecond-rounded
     // playlist durations must not truncate audio after many short segments.
     input->end = nextBoundary;
+    if (ranged && commonEnd != INT64_MAX)
+      input->end =
+          std::min(input->end, (commonEnd - presentationStart) * 1000);
     input->shift = (beginning - presentationStart) * 1000 - origin;
     if (live) {
       // Native MP4 edit lists retain decoder preroll while exposing only

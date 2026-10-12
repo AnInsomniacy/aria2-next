@@ -188,8 +188,11 @@ void MediaJob::selectTrack(const Track& track)
   if (end && end <= start)
     throw Failure(FailureCode::UnsupportedSelection,
                   "Media range must end after its start");
-  if (!live && start > 0 && !option->flag("media-pause-after-probe"))
-    gf_dash_group_seek(dash, group, start);
+  // Seeks are relative to the Period; later Periods start inside the range.
+  const auto into =
+      static_cast<double>(start) - gf_dash_get_period_start(dash) / 1000.0;
+  if (!live && into > 0 && !option->flag("media-pause-after-probe"))
+    gf_dash_group_seek(dash, group, into);
   selected.push_back(group);
   const auto& identity = track.id;
   u64 offset = 0;

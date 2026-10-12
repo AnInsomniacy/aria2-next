@@ -6315,7 +6315,8 @@ retry_rep:
 							}
 
 							if (group->box_type == GF_ISOM_BOX_TYPE_SIDX) {
-								if (!group->sidx_start) group->sidx_start = group->sidx_offset;
+								/* sidx_offset is past the box header; the initialization range ends before the box */
+								if (!group->sidx_start) group->sidx_start = group->sidx_offset - 8;
 							} else if (group->sidx_start)
 								break;
 						}

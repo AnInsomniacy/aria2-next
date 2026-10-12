@@ -62,12 +62,16 @@ DashFileIo::DashFileIo(MediaJob& job)
     }
   };
   native_.set_range = [](GF_DASHFileIO*, void* handle, u64 first, u64 last,
-                         Bool) -> GF_Err {
+                         Bool discontinue) -> GF_Err {
     if (first > static_cast<u64>(INT64_MAX) ||
         last > static_cast<u64>(INT64_MAX) || last < first)
       return GF_BAD_PARAM;
     auto& h = *static_cast<Io*>(handle);
-    h.begin = first;
+    // GPAC reads an index box by box and expects each range appended to the
+    // cache (hierarchical SIDX): the cache then holds the whole run again.
+    const bool append = !discontinue && h.fetched && h.end >= 0 &&
+                        static_cast<int64_t>(first) == h.end + 1;
+    h.begin = append ? h.begin : static_cast<int64_t>(first);
     h.end = last;
     h.fetched = false;
     return GF_OK;

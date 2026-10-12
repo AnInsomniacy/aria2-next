@@ -1,4 +1,5 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
+#include "base/Log.h"
 #include "options/Options.h"
 #include "media/MediaTransport.h"
 #include <cstdint>
@@ -69,6 +70,9 @@ MediaJob::SegmentResult MediaJob::consumeSegment(int group)
   const auto endTime = option->integer("media-end-time");
   const auto position =
       start.den ? gf_timestamp_rescale_signed(start.num, start.den, 1000) : 0;
+  log::debug("media: segment {} of group {} at {} ms (offset {} us, period {} ms)",
+             number, group, position, groups[group].timeOffset,
+             gf_dash_get_period_start(dash));
   if (!live && endTime > 0 &&
       position + gf_dash_get_period_start(dash) >= endTime * 1000) {
     gf_dash_set_group_done(dash, group, GF_TRUE);

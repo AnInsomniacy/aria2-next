@@ -81,7 +81,9 @@ void MediaJob::finalize()
       option->get("media-video") != "none",
       option->get("media-audio") != "none",
       option->get("media-subtitles") != "none", control, value.duration,
-      value.live, value.protocol == "collection");
+      value.live, value.protocol == "collection",
+      option->integer("media-start-time") > 0 ||
+          option->integer("media-end-time") > 0);
   Publication publication{
       value.path, staging, Transport::digest(staging),
       static_cast<int64_t>(std::filesystem::file_size(nativePath(staging)))};
