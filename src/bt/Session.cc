@@ -20,6 +20,7 @@
 #include <libtorrent/session_stats.hpp>
 
 #include <algorithm>
+#include <utility>
 #include <thread>
 
 namespace aria2::bt {
@@ -29,6 +30,32 @@ namespace json = boost::json;
 using namespace std::chrono_literals;
 
 namespace {
+
+// getBtSessionStatus fields backed by libtorrent's session counters. Every key
+// Rayburst requires is here; counters are strings, as in aria2's status.
+constexpr std::pair<const char*, const char*> statusMetrics[] = {
+    {"dhtNodes", "dht.dht_nodes"},
+    {"dhtReplacementNodes", "dht.dht_node_cache"},
+    {"dhtActiveRequests", "dht.dht_allocated_observers"},
+    {"dhtDownloaded", "dht.dht_bytes_in"},
+    {"dhtUploaded", "dht.dht_bytes_out"},
+    {"peerSockets", "peer.num_peers_connected"},
+    {"establishedPeers", "peer.num_peers_connected"},
+    {"halfOpenPeers", "peer.num_peers_half_open"},
+    {"tcpPeers", "peer.num_tcp_peers"},
+    {"utpPeers", "peer.num_utp_peers"},
+    {"connectionAttempts", "peer.connection_attempts"},
+    {"connectionTimeouts", "peer.connect_timeouts"},
+    {"queuedTrackerAnnounces", "tracker.num_queued_tracker_announces"},
+    {"payloadDownloaded", "net.recv_payload_bytes"},
+    {"payloadUploaded", "net.sent_payload_bytes"},
+    {"trackerDownloaded", "net.recv_tracker_bytes"},
+    {"trackerUploaded", "net.sent_tracker_bytes"},
+    {"ipOverheadDownloaded", "net.recv_ip_overhead_bytes"},
+    {"ipOverheadUploaded", "net.sent_ip_overhead_bytes"},
+    {"diskBlocksInUse", "disk.disk_blocks_in_use"},
+    {"queuedDiskJobs", "disk.queued_disk_jobs"},
+};
 
 std::vector<std::string> interfaces(const Options& options)
 {
@@ -235,10 +262,9 @@ Session::Session(Engine& engine) : engine_(engine), ticker_(engine.io())
   session_->set_alert_notify([this] { schedule(); });
   const auto& metrics = lt::session_stats_metrics();
   counters_.resize(metrics.size());
-  dhtNodesMetric_ = lt::find_metric_idx("dht.dht_nodes");
-  peersMetric_ = lt::find_metric_idx("peer.num_peers_connected");
-  downloadedMetric_ = lt::find_metric_idx("net.recv_payload_bytes");
-  uploadedMetric_ = lt::find_metric_idx("net.sent_payload_bytes");
+  for (const auto& [key, metric] : statusMetrics) {
+    metrics_.emplace_back(key, lt::find_metric_idx(metric));
+  }
   loadBlocklist();
   tick();
 }
@@ -355,6 +381,9 @@ void Session::dispatch(lt::alert* alert)
   else if (auto* warning = lt::alert_cast<lt::performance_alert>(alert)) {
     log::info("BitTorrent: {}", warning->message());
   }
+  else if (auto* dropped = lt::alert_cast<lt::alerts_dropped_alert>(alert)) {
+    droppedAlerts_ += dropped->dropped_alerts.count();
+  }
 }
 
 void Session::tick()
@@ -466,7 +495,6 @@ json::object Session::status() const
                ? std::to_string(counters_[static_cast<size_t>(index)])
                : std::string("0");
   };
-  const auto dhtNodes = counter(dhtNodesMetric_);
   const auto announcePort = engine_.global().integer("bt-external-port");
   out["listenPort"] = std::to_string(listenPort);
   out["announcePort"] = std::to_string(announcePort > 0 ? announcePort : listenPort);
@@ -477,11 +505,13 @@ json::object Session::status() const
   if (!portMappingError_.empty()) {
     out["portMappingError"] = portMappingError_;
   }
-  out["dhtNodes"] = dhtNodes;
-  out["dhtStateHealthy"] = dhtNodes != "0" ? "true" : "false";
-  out["peerSockets"] = counter(peersMetric_);
-  out["payloadDownloaded"] = counter(downloadedMetric_);
-  out["payloadUploaded"] = counter(uploadedMetric_);
+  for (const auto& [key, index] : metrics_) {
+    out[key] = counter(index);
+  }
+  // libtorrent counts no separate handshake state; its peers are half-open or connected.
+  out["handshakingPeers"] = "0";
+  out["droppedAlerts"] = std::to_string(droppedAlerts_);
+  out["dhtStateHealthy"] = out["dhtNodes"].as_string() != "0" ? "true" : "false";
   out["blocklistRules"] = std::to_string(blocklistRules_);
   return out;
 }

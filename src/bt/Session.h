@@ -76,10 +76,8 @@ private:
   std::string portMappingError_;
   std::string externalAddress_;
   std::vector<std::int64_t> counters_;
-  int dhtNodesMetric_ = -1;
-  int peersMetric_ = -1;
-  int downloadedMetric_ = -1;
-  int uploadedMetric_ = -1;
+  std::vector<std::pair<const char*, int>> metrics_; // status key -> counter index
+  std::uint64_t droppedAlerts_ = 0;
   size_t blocklistRules_ = 0;
   int ticks_ = 0;
 };
