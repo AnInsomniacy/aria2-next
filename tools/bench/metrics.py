@@ -34,7 +34,8 @@ def summarize(samples: list[tuple[float, int]], total: int) -> dict:
 
     ttfb      first payload byte
     ramp80    moving rate first reaches 80% of the steady rate
-    steady    median moving rate while 10%..90% of the bytes arrive
+    steady    median moving rate while 10%..90% of the bytes arrive (the
+              last third of a run stopped before 10%)
     peak      highest moving rate
     dips      spells of at least DIP_SECONDS below DIP_RATIO * steady
               between 5% and 95% of the bytes
@@ -47,6 +48,8 @@ def summarize(samples: list[tuple[float, int]], total: int) -> dict:
     rates = _rates(samples)
     ttfb = next((t for t, done in samples if done > 0), None)
     middle = [r for t, done, r in rates if total * 0.1 <= done <= total * 0.9]
+    if not middle:  # stopped early: the last third of the run
+        middle = [r for t, done, r in rates if t >= end * 2 / 3]
     steady = median(middle) if middle else 0.0
     ramp = next((t for t, _, r in rates if steady and r >= steady * 0.8), None)
     dips, spell = 0, None

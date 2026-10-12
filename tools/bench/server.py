@@ -15,6 +15,7 @@ Faults are selected per request through query parameters:
   slowtail=F      responses starting in the last fraction F run at rate/20
   badrange=1      the first ranged response reports a shifted Content-Range
   norange=1       ignore Range and always send 200 with the full body
+  corrupt=O       every response flips the 8 bytes at offset O (a bad mirror)
   expire=S        /signed/... redirects to a token valid for S seconds
 
 One-shot faults trip once per path; benchmarks use a fresh path per run.
@@ -186,6 +187,7 @@ class Origin:
         if "iprate" in query:
             shared = self.ip_buckets.setdefault((local, float(query["iprate"])), Bucket(float(query["iprate"])))
         stall = int(query.get("stallat", "-1"))
+        corrupt = int(query.get("corrupt", "-1"))
         reset = int(query.get("resetat", "-1"))
 
         self.active[key] = self.active.get(key, 0) + 1
@@ -204,7 +206,11 @@ class Origin:
                     await own.take(count)
                 if shared:
                     await shared.take(count)
-                writer.write(payload(offset, count))
+                data = payload(offset, count)
+                if offset <= corrupt < offset + count:
+                    at = corrupt - offset
+                    data = data[:at] + bytes(b ^ 0xFF for b in data[at : at + 8]) + data[at + 8 :]
+                writer.write(data)
                 await writer.drain()
                 offset += count
                 self.stats["bytes"] += count

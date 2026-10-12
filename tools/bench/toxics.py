@@ -50,7 +50,10 @@ def walk(kbps: int, seed: str, until: float = 180) -> list:
     for second in range(int(until)):
         value = min(1.0, max(0.05, value * 2 ** rng.uniform(-1, 1)))
         rate = max(1, int(kbps * value))
-        steps.append((second, "add" if second == 0 else "update", toxic("walk", "bandwidth", rate=rate)))
+        # Updating a toxic in place resets the connections; replacing it does not.
+        if second:
+            steps.append(remove(second, "walk"))
+        steps.append(add(second, toxic("walk", "bandwidth", rate=rate)))
     return steps
 
 
@@ -94,9 +97,6 @@ class Toxiproxy:
     def _apply(self, action: str, spec: dict) -> None:
         if action == "add":
             self._call("POST", "/proxies/origin/toxics", spec)
-        elif action == "update":
-            self._call("POST", f"/proxies/origin/toxics/{spec['name']}",
-                       {"attributes": spec["attributes"], "toxicity": spec["toxicity"]})
         else:
             self._call("DELETE", f"/proxies/origin/toxics/{spec['name']}")
 
