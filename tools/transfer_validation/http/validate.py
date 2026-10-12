@@ -302,6 +302,17 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             "response": {"status": 200, "base64Body": base64.b64encode(block).decode(),
                          "headers": {"Content-Disposition": "attachment; filename=fallback.bin; filename*=UTF-8''report-%E4%B8%AD%E6%96%87%2520.bin"}},
         })
+        # URLs without a file name take their extension from the response type.
+        for path, content_type in [
+            ("/typed/video/?mime_type=video_mp4", "video/mp4"),
+            ("/typed/song", 'audio/mpeg; codecs="mp3"'),
+            ("/typed/page/", "text/html"),
+        ]:
+            wiremock.stub({
+                "request": {"method": "GET", "url": path},
+                "response": {"status": 200, "base64Body": base64.b64encode(block).decode(),
+                             "headers": {"Content-Type": content_type}},
+            })
         wiremock.stub({
             "request": {"method": "GET", "url": "/name-redirect"},
             "response": {"status": 302, "headers": {"Location": wiremock.base_url + "/named-download"}},
@@ -373,6 +384,21 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                     raise RuntimeError(f"Response filename or payload mismatch: {label}")
                 if (directory / "name-redirect").exists():
                     raise RuntimeError("A provisional filename was written before response naming")
+                results["filename-" + label] = "passed"
+            for label, path, overrides, expected_name in [
+                ("typed-index", "/typed/video/?mime_type=video_mp4", {}, "index.mp4"),
+                ("typed-stem", "/typed/song", {}, "song.mp3"),
+                ("typed-page", "/typed/page/", {}, "index.html"),
+                ("typed-hint", "/typed/video/?mime_type=video_mp4",
+                 {"filename-hint": "Night snack", "filename-hint-source": "suggested"}, "Night snack.mp4"),
+            ]:
+                directory = engine.download_dir / ("naming-" + label)
+                gid = engine.add_uri(wiremock.base_url + path, {
+                    **options, "dir": str(directory), "stream-max-connections": "1", **overrides,
+                })
+                task = engine.rpc.wait_complete(gid, 30)
+                if Path(task["files"][0]["path"]) != directory / expected_name:
+                    raise RuntimeError(f"Typed response filename mismatch: {label}: {task['files'][0]['path']}")
                 results["filename-" + label] = "passed"
             resume_dir = engine.download_dir / "naming-resume"
             resume_dir.mkdir()

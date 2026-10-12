@@ -173,7 +173,8 @@ int Request::progress(void* opaque, curl_off_t, curl_off_t, curl_off_t,
 
 namespace {
 
-// A 206 response must carry exactly the requested bytes.
+// A 206 response must carry exactly the requested bytes, or stop short only
+// where the resource ends (RFC 9110 14.1.1: a range past the end is clamped).
 bool matchesRange(CURL* handle, int64_t begin, int64_t end, size_t bytes)
 {
   curl_header* field = nullptr;
@@ -181,8 +182,11 @@ bool matchesRange(CURL* handle, int64_t begin, int64_t end, size_t bytes)
       CURLHE_OK)
     return false;
   const auto range = http::parseContentRange(field->value);
-  return range && range->first == begin && (end < 0 || range->last == end) &&
-         range->last - range->first + 1 == static_cast<int64_t>(bytes);
+  if (!range || range->first != begin ||
+      range->last - range->first + 1 != static_cast<int64_t>(bytes))
+    return false;
+  return end < 0 || range->last == end ||
+         (range->last < end && range->total == range->last + 1);
 }
 
 } // namespace

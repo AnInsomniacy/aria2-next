@@ -159,6 +159,18 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict:
                 args += ["-hls_key_info_file", str(key_info)]
             args += [(directory / "index.m3u8").as_posix()]
         command(*args)
+    # Separate fragmented track files, as sites serve split audio and video.
+    tracks = run.fixtures / "tracks"
+    tracks.mkdir()
+    for name, selection in (
+        ("v90.m4s", ["-map", "0:v", "-c", "copy"]),
+        ("v45.m4s", ["-map", "0:v", "-vf", "scale=96:54", "-c:v", "libx264", "-preset", "ultrafast", "-g", "30"]),
+        ("a.m4s", ["-map", "0:a", "-c", "copy"]),
+    ):
+        command(
+            ffmpeg, "-v", "error", "-i", str(source), *selection,
+            "-f", "mp4", "-movflags", "+dash+global_sidx", (tracks / name).as_posix(),
+        )
     numbered = run.fixtures / "hls-numbered"
     numbered.mkdir()
     command(
@@ -686,6 +698,43 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict:
         info = probe(ffprobe, status["files"][0]["path"], "-show_streams")
         assert {s["codec_type"] for s in info["streams"]} == {"audio"}, info
         results["selection"] = "audio only"
+
+        # Track files are told apart by their content, not the declared types.
+        listed = [
+            {"id": "big", "type": "video", "urls": [f"{server.base_url}/tracks/v90.m4s"]},
+            {"id": "small", "type": "video", "urls": [f"{server.base_url}/tracks/v45.m4s"]},
+            {"id": "sound", "type": "video", "urls": [f"{server.base_url}/tracks/a.m4s"]},
+        ]
+        gid = engine.add_uri(
+            f"{server.base_url}/tracks/v90.m4s",
+            {
+                "out": "tracks.mp4",
+                "media": "collection",
+                "media-pause-after-probe": "true",
+                "media-input": json.dumps({"manifests": [], "keys": [], "tracks": listed}),
+            },
+        )
+        paused = wait(engine, gid, "paused")
+        inspected = {track["id"]: track for track in paused["media"]["tracks"]}
+        assert set(inspected) == {"big", "small", "sound"}, paused["media"]["tracks"]
+        assert inspected["sound"]["type"] == "audio", inspected
+        assert (inspected["big"]["height"], inspected["small"]["height"]) == ("90", "54"), inspected
+        assert all(int(track["bandwidth"]) > 0 for track in inspected.values()), inspected
+        assert {k for k, t in inspected.items() if t["selected"] == "true"} == {"big", "sound"}, inspected
+        engine.rpc.call(
+            "aria2.changeOption",
+            [gid, {"media-video": "small", "media-pause-after-probe": "false"}],
+        )
+        engine.rpc.call("aria2.unpause", [gid])
+        status = wait(engine, gid)
+        info = probe(ffprobe, status["files"][0]["path"], "-show_streams", "-show_format")
+        video = next(s for s in info["streams"] if s["codec_type"] == "video")
+        assert {s["codec_type"] for s in info["streams"]} == {"video", "audio"}, info
+        assert (video["width"], video["height"]) == (96, 54), video
+        assert abs(float(info["format"]["duration"]) - 6) < 0.3, info
+        results["trackFiles"] = (
+            "split track files inspected by content; chosen video and audio muxed"
+        )
 
         # GPAC infers a start number from digits in segment names; it once
         # shifted every later segment time by it and ended ranges too early.
