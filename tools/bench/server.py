@@ -80,7 +80,8 @@ class Bucket:
     async def take(self, amount: int) -> None:
         while True:
             now = time.monotonic()
-            self.tokens = min(self.rate / 4, self.tokens + (now - self.stamp) * self.rate)
+            # At least one chunk, or rates under 4 * CHUNK/s would never send.
+            self.tokens = min(max(self.rate / 4, CHUNK), self.tokens + (now - self.stamp) * self.rate)
             self.stamp = now
             if self.tokens >= amount:
                 self.tokens -= amount

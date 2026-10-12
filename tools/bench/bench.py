@@ -1,11 +1,16 @@
 """HTTP download benchmark against the adversarial origin in server.py.
 
-Each scenario downloads one synthetic file through JSON-RPC and reports wall
-time, the 95% -> 100% tail time, engine CPU time, peak memory and payload
-correctness. Results are printed as a table and written as JSON.
+Fluctuating networks are scenarios with a Toxiproxy schedule (toxics.py) in
+front of the origin.
+
+Each scenario downloads one synthetic file through JSON-RPC and reports the
+timeline metrics of metrics.py (first byte, ramp, steady rate, dips, longest
+gap, 95%/99% tails), engine CPU time, peak memory and payload correctness.
+Results are printed as a table and written as JSON.
 
   python bench.py --engine build/default/aria2-next.exe
   python bench.py --engine NEW --compare results-old.json --scenario stall,reset
+  python bench.py --engine NEW --scenario wave,outage --toxiproxy C:/Tools/toxiproxy-server.exe
 """
 
 from __future__ import annotations
@@ -24,10 +29,13 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from metrics import summarize  # noqa: E402
 from server import verify  # noqa: E402
+from toxics import Toxiproxy, add, periodic, remove, toxic, walk  # noqa: E402
 
 MIB = 1 << 20
 RATE = 4 * MIB
+CONNECTIONS = 0  # --connections: replaces the usual 16 of a scenario
 
 # name -> (query, size, connections, timeout seconds)
 SCENARIOS = {
@@ -46,6 +54,29 @@ SCENARIOS = {
     "iprate": (f"iprate={16 * MIB}", 256 * MIB, 16, 180),
     "fanout": (f"rate={2 * MIB}", 256 * MIB, 256, 180),
 }
+
+# name -> Toxiproxy schedule; these scenarios run through the proxy.
+KBPS = RATE >> 10
+TOXICS = {
+    # The link alternates between full and 10% speed every 2 s.
+    "wave": periodic(toxic("wave", "bandwidth", rate=KBPS // 10), period=4, on=2),
+    # Each connection's bandwidth wanders between 5% and 100%.
+    "walk": walk(KBPS, "walk"),
+    # Every connection drops to 2.5% from 3 s to 7 s.
+    "dip": [add(3, toxic("dip", "bandwidth", rate=KBPS // 40)), remove(7, "dip")],
+    # Nothing arrives for 2 s out of every 5 s.
+    "outage": periodic(toxic("outage", "timeout", timeout=0), period=5, on=2),
+    # One connection in five runs at 5%.
+    "slowconn": [add(0, toxic("slow", "bandwidth", 0.2, rate=KBPS // 20))],
+    # One connection in five is accepted and then sends nothing.
+    "stallconn": [add(0, toxic("silent", "timeout", 0.2, timeout=0))],
+    # 300 ms each way with up to 200 ms jitter.
+    "latency": [add(0, toxic("latency", "latency", latency=300, jitter=200))],
+    # One connection in three is reset after 1.5 s.
+    "drops": [add(0, toxic("drop", "reset_peer", 0.33, timeout=1500))],
+}
+for _name in TOXICS:
+    SCENARIOS[_name] = (f"rate={RATE}", 256 * MIB, 16, 180)
 
 
 def free_port() -> int:
@@ -110,7 +141,8 @@ def process_usage(pid: int) -> tuple[float, int]:
         kernel.CloseHandle(handle)
 
 
-def run(engine: Path, base: str, name: str, extra: list[str], keep: bool = False) -> dict:
+def run(engine: Path, base: str, name: str, extra: list[str], keep: bool = False,
+        proxy: Toxiproxy | None = None) -> dict:
     query, size, connections, timeout = SCENARIOS[name]
     work = Path(tempfile.mkdtemp(prefix=f"bench-{name}-"))
     port, secret = free_port(), secrets.token_hex(8)
@@ -141,16 +173,19 @@ def run(engine: Path, base: str, name: str, extra: list[str], keep: bool = False
                 time.sleep(0.1)
         prefix = "signed/" if "expire" in query else ""
         url = f"{base}/{prefix}{secrets.token_hex(4)}/bench.bin?size={size}&{query}"
+        if CONNECTIONS and connections == 16:
+            connections = CONNECTIONS
         options = {"split": str(connections), "max-connection-per-server": str(connections)}
+        if proxy and name in TOXICS:
+            url = url.replace(base, f"http://127.0.0.1:{proxy.listen_port}")
+            proxy.start(TOXICS[name])
         started = time.monotonic()
         gid = rpc.call("aria2.addUri", [url], options)
-        tail_start = None
+        samples = []
         status = {}
         while time.monotonic() - started < timeout:
             status = rpc.call("aria2.tellStatus", gid, ["status", "completedLength", "files", "errorMessage"])
-            done = int(status["completedLength"])
-            if tail_start is None and done >= size * 0.95:
-                tail_start = time.monotonic()
+            samples.append((time.monotonic() - started, int(status["completedLength"])))
             if status["status"] in ("complete", "error", "removed"):
                 break
             time.sleep(0.05)
@@ -158,9 +193,7 @@ def run(engine: Path, base: str, name: str, extra: list[str], keep: bool = False
         cpu, peak = process_usage(process.pid)
         result.update(
             status=status.get("status", "timeout") if elapsed < timeout else "timeout",
-            seconds=round(elapsed, 2),
-            tail=round(time.monotonic() - tail_start, 2) if tail_start else None,
-            mibps=round(size / MIB / elapsed, 1),
+            **summarize(samples, size),
             cpu=round(cpu, 2),
             peak_mib=round(peak / MIB, 1),
         )
@@ -173,6 +206,8 @@ def run(engine: Path, base: str, name: str, extra: list[str], keep: bool = False
         else:
             result["error"] = status.get("errorMessage", "")
     finally:
+        if proxy:
+            proxy.stop()
         process.kill()
         process.wait()
         if keep:
@@ -190,8 +225,12 @@ def main() -> None:
     parser.add_argument("--out", type=Path)
     parser.add_argument("--compare", type=Path)
     parser.add_argument("--keep", action="store_true", help="keep work directories and engine logs")
+    parser.add_argument("--connections", type=int, default=0, help="connections instead of the usual 16")
+    parser.add_argument("--toxiproxy", help="toxiproxy-server executable for the fluctuation scenarios")
     parser.add_argument("extra", nargs="*", help="extra engine options")
     args = parser.parse_args()
+    global CONNECTIONS
+    CONNECTIONS = args.connections
 
     port = args.port or free_port()
     server = subprocess.Popen(
@@ -199,24 +238,30 @@ def main() -> None:
         stdout=subprocess.PIPE,
     )
     server.stdout.readline()
+    names = args.scenario.split(",")
+    proxy = Toxiproxy(f"127.0.0.1:{port}", args.toxiproxy) if any(n in TOXICS for n in names) else None
     baseline = {}
     if args.compare:
         baseline = {item["scenario"]: item for item in json.loads(args.compare.read_text())}
     results = []
     try:
-        for name in args.scenario.split(","):
-            result = run(args.engine, f"http://127.0.0.1:{port}", name, args.extra, args.keep)
+        for name in names:
+            result = run(args.engine, f"http://127.0.0.1:{port}", name, args.extra, args.keep, proxy)
             results.append(result)
             before = baseline.get(name)
-            versus = f"  (was {before['seconds']}s tail {before['tail']}s)" if before else ""
+            versus = f"  (was {before['seconds']}s tail99 {before.get('tail99')}s)" if before else ""
             print(
-                f"{name:14} {result['status']:8} {result.get('seconds', '-'):>7}s "
-                f"tail {result.get('tail')}s {result.get('mibps', '-')} MiB/s "
+                f"{name:12} {result['status']:8} {result.get('seconds', '-'):>6}s "
+                f"ttfb {result.get('ttfb')} ramp {result.get('ramp80')} "
+                f"{result.get('avg_mibps', '-')} MiB/s dips {result.get('dips')} gap {result.get('maxgap')} "
+                f"tail95 {result.get('tail95')} tail99 {result.get('tail99')} "
                 f"cpu {result.get('cpu')}s peak {result.get('peak_mib')} MiB "
                 f"ok={result.get('correct')} {result.get('error', '')}{versus} {result.get('work', '')}",
                 flush=True,
             )
     finally:
+        if proxy:
+            proxy.close()
         server.kill()
     if args.out:
         args.out.write_text(json.dumps(results, indent=2))
