@@ -2,6 +2,7 @@
 #pragma once
 
 #include "core/Task.h"
+#include "http/Metalink.h"
 #include "http/SegmentPlanner.h"
 
 #include <boost/asio/steady_timer.hpp>
@@ -45,6 +46,10 @@ public:
   void optionChanged(std::string_view name) override;
   bool changeUris(int fileIndex, const std::vector<std::string>& remove,
                   const std::vector<std::string>& add, int position) override;
+
+  // A Metalink's declared size, which mirrors must match, and piece hashes
+  // that let a corrupt download be repaired instead of failed.
+  void setMetalink(int64_t size, PieceHashes pieces);
 
   const std::string& path() const { return path_; }
   const std::string& contentType() const { return contentType_; }
@@ -125,6 +130,9 @@ private:
   void abort(ErrorCode code, std::string message);
   void tryFinish();
   void verifyAndComplete();
+  void checkPieces(std::string failure);
+  void repair(const std::vector<size_t>& bad);
+  void succeed();
   void tick();
   void scheduleTick();
   void quiesce();
@@ -152,6 +160,11 @@ private:
   // whole responses from then on.
   bool rangesDistrusted_ = false;
   int restarts_ = 0;
+  int64_t declared_ = -1; // the length a Metalink promised
+  PieceHashes pieces_;
+  // Per piece, a bit for each mirror (below 64) that delivered some of it.
+  std::vector<uint64_t> pieceSources_;
+  int repairs_ = 0;
   // Connections allowed now. They start at initialConnections and double
   // while each step raises the download rate; overload feedback lowers them
   // and then lets them recover one per calm period.

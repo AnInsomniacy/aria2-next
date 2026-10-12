@@ -72,6 +72,8 @@ public:
   std::vector<int> redundant() const;
 
   void release(int id) { workers_.erase(id); }
+  // Received bytes that turned out bad and are needed again.
+  void forget(int64_t begin, int64_t end) { received_.remove(begin, end); }
   const Worker* worker(int id) const;
   const std::map<int, Worker>& workers() const { return workers_; }
   bool complete() const;

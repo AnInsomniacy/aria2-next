@@ -51,7 +51,9 @@ A task keeps one interval set of received bytes and a list of workers. A
 worker is one libcurl transfer that owns `[position, end)` of the file.
 
 1. The first request asks for `bytes=0-`. Its response establishes length,
-   range support and the validator (strong ETag, else Last-Modified).
+   range support and the validator (strong ETag, else Last-Modified). A
+   first request without an answer after 2 s gets a second copy (a server
+   that accepts and stays silent); the first answer wins.
 2. Idle connection slots take the largest unowned interval, or split the
    worker with the longest expected remaining time. The split point balances
    both halves by their measured speeds. Small remainders are not split.
@@ -64,7 +66,9 @@ worker is one libcurl transfer that owns `[position, end)` of the file.
 5. Errors affect one worker. 429/503 lower the connection cap to the number
    of workers currently transferring and honour Retry-After; the cap probes
    upward again after a stable period. A task fails only after
-   `max-tries` consecutive failures without progress.
+   `max-tries` consecutive failures without progress. With several mirrors
+   (Metalink) a failing or overloaded mirror backs off alone and the
+   connection moves to another; `max-tries` applies per mirror.
 6. Every response is checked against the established length and validator,
    and Content-Range must match the request. A mismatching single response is
    retried; a changed representation restarts a task-owned file from zero and
@@ -72,6 +76,10 @@ worker is one libcurl transfer that owns `[position, end)` of the file.
    gets one connection from offset zero.
 7. Parallel ranges use HTTP/1.1 so each range has its own TCP window; single
    transfers may negotiate HTTP/2.
+8. A Metalink's `<size>` is binding: a mirror reporting another length is
+   dropped. When the whole-file hash fails and the Metalink has `<pieces>`,
+   only the failing pieces are downloaded again (up to three rounds), and a
+   mirror that alone delivered a failing piece is dropped.
 
 Bytes are buffered per worker and written by the disk pool. The interval set
 distinguishes received from persisted bytes; checkpoints store only persisted

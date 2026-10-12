@@ -38,6 +38,10 @@ TEST_CASE("metalink files keep mirror priority and the strongest hash")
         std::vector<std::string>{"http://one.example/a.bin",
                                  "https://two.example/a.bin",
                                  "http://unranked.example/a.bin"});
+  CHECK(files[0].pieces.type == "sha-1");
+  CHECK(files[0].pieces.length == 512);
+  CHECK(files[0].pieces.hashes == std::vector<std::string>{"cc", "dd"});
+  CHECK(files[1].pieces.hashes.empty());
   CHECK(files[1].checksum.empty());
 }
 
@@ -66,4 +70,19 @@ TEST_CASE("metalink documents are recognised by name or type")
   CHECK(http::isMetalink("/tmp/download",
                          "application/metalink4+xml; charset=utf-8"));
   CHECK_FALSE(http::isMetalink("/tmp/x.xml", "text/xml"));
+}
+
+TEST_CASE("metalink pieces that do not cover the file are ignored")
+{
+  const auto files = http::parseMetalink(document(R"(
+  <file name="a.bin">
+    <size>1025</size>
+    <pieces length="512" type="sha-1"><hash>aa</hash><hash>bb</hash></pieces>
+    <pieces length="1024" type="sha-256"><hash>cc</hash><hash>dd</hash></pieces>
+    <pieces length="512" type="crc32"><hash>1</hash><hash>2</hash><hash>3</hash></pieces>
+    <url>http://example/a.bin</url>
+  </file>)"));
+  REQUIRE(files.size() == 1);
+  CHECK(files[0].pieces.type == "sha-256");
+  CHECK(files[0].pieces.hashes.size() == 2);
 }

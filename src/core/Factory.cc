@@ -358,6 +358,9 @@ createMetalinkTasks(Engine& engine, const std::string& metalink,
       own->set("checksum", file.checksum);
     }
     for (auto& task : createTasks(engine, file.urls, std::move(own))) {
+      if (auto http = std::dynamic_pointer_cast<http::HttpTask>(task)) {
+        http->setMetalink(file.size, file.pieces);
+      }
       tasks.push_back(std::move(task));
     }
   }

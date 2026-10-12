@@ -181,6 +181,24 @@ TEST_CASE("copies that never deliver do not block another copy")
   CHECK_FALSE(planner.assign(next));
 }
 
+TEST_CASE("a short slow tail is raced when a copy finishes first")
+{
+  SegmentPlanner planner(MiB);
+  planner.setLength(2 * MiB);
+  planner.place(1, 0, MiB);
+  planner.place(2, MiB, 2 * MiB);
+  planner.receive(1, MiB);
+  planner.updateSpeed(1, 4e6, 3);
+  planner.release(1);
+  planner.noteStartup(0.2);
+  planner.receive(2, MiB - (60 << 10));
+  planner.updateSpeed(2, 40e3, 3);
+  // 60 KiB at 40 kB/s: 1.5 s; a copy needs 0.2 s plus 15 ms.
+  const auto range = planner.assign(3);
+  REQUIRE(range);
+  CHECK(range->first == planner.worker(2)->position);
+}
+
 TEST_CASE("restored ranges are not assigned again")
 {
   SegmentPlanner planner(MiB);

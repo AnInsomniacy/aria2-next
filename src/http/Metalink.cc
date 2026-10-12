@@ -73,12 +73,17 @@ public:
       file_ = MetalinkFile{attribute("name")};
       urls_.clear();
       hashes_.clear();
+      pieceSets_.clear();
     }
     else if (at({"metalink", "file", "hash"})) {
       hashType_ = text::lower(attribute("type"));
     }
     else if (at({"metalink", "file", "url"})) {
       priority_ = text::toInt(attribute("priority")).value_or(999999);
+    }
+    else if (at({"metalink", "file", "pieces"})) {
+      pieceSet_ = PieceHashes{text::lower(attribute("type")),
+                              text::toInt(attribute("length")).value_or(0)};
     }
   }
 
@@ -93,6 +98,12 @@ public:
     }
     else if (at({"metalink", "file", "hash"})) {
       hashes_.emplace_back(hashType_, text::lower(value));
+    }
+    else if (at({"metalink", "file", "pieces", "hash"})) {
+      pieceSet_.hashes.push_back(text::lower(value));
+    }
+    else if (at({"metalink", "file", "pieces"})) {
+      pieceSets_.push_back(std::move(pieceSet_));
     }
     else if (at({"metalink", "file", "url"})) {
       const auto parts = uri::parse(value);
@@ -145,6 +156,19 @@ private:
         break;
       }
     }
+    // Pieces must cover exactly the declared size to be of any use.
+    for (const auto* type : hashTypes) {
+      const auto found = std::find_if(
+          pieceSets_.begin(), pieceSets_.end(), [&](const PieceHashes& set) {
+            return set.type == type && set.length > 0 && file_.size > 0 &&
+                   static_cast<int64_t>(set.hashes.size()) ==
+                       (file_.size + set.length - 1) / set.length;
+          });
+      if (found != pieceSets_.end()) {
+        file_.pieces = std::move(*found);
+        break;
+      }
+    }
     files.push_back(std::move(file_));
   }
 
@@ -155,6 +179,8 @@ private:
   std::vector<std::pair<std::string, std::string>> hashes_;
   std::string hashType_;
   int64_t priority_ = 999999;
+  PieceHashes pieceSet_;
+  std::vector<PieceHashes> pieceSets_;
 };
 
 } // namespace

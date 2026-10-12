@@ -8,13 +8,15 @@ namespace aria2::http {
 namespace {
 // Splits land on page boundaries so writes stay aligned.
 constexpr int64_t alignment = 4096;
-// A connection is raced only when it would otherwise hold the download back.
+// A new connection gets this long to show its speed before it is raced.
 constexpr double raceSeconds = 2.0;
+// A copy is started only for a range that needs at least this long.
+constexpr double minRaceSeconds = 0.5;
 // Ranges are never split below this, however slow the connection.
 constexpr int64_t minSplitFloor = 64 << 10;
 // Copies of one range that are delivering or still starting, including the
-// original. Copies that stay silent past raceSeconds do not count; at most
-// 2 * maxCopies of those are tried.
+// original. Copies that stay silent do not count; at most 2 * maxCopies of
+// those are tried.
 constexpr int maxCopies = 3;
 } // namespace
 
@@ -176,6 +178,10 @@ std::optional<Range> SegmentPlanner::race(int id)
     bool young = false;
   };
   std::map<int64_t, Group> groups; // by end
+  // A copy without data after several usual start-ups is silent.
+  const auto silentAfter =
+      startup_ > 0 ? std::clamp(3 * startup_, minRaceSeconds, raceSeconds)
+                   : raceSeconds;
   for (const auto& [other, worker] : workers_) {
     const auto remaining = worker.end - worker.position;
     if (remaining <= 0 || worker.end == unbounded) {
@@ -184,14 +190,15 @@ std::optional<Range> SegmentPlanner::race(int id)
     auto& group = groups[worker.end];
     // A copy that never delivered (a server that accepted the request and
     // sends nothing) must not use up the copies that could replace it.
-    if (!worker.receiving && worker.age >= raceSeconds) {
+    if (!worker.receiving && worker.age >= silentAfter) {
       ++group.silent;
     }
     else {
       ++group.copies;
     }
     // A new connection gets time to connect and show its speed.
-    group.young = group.young || worker.age < raceSeconds;
+    group.young = group.young ||
+                  worker.age < (worker.receiving ? raceSeconds : silentAfter);
     const auto speed = worker.receiving ? worker.speed : 0;
     const auto time = speed > 0 ? static_cast<double>(remaining) / speed : 1e9;
     if (group.leader < 0 || time < group.time) {
@@ -200,7 +207,7 @@ std::optional<Range> SegmentPlanner::race(int id)
     }
   }
   const Worker* slowest = nullptr;
-  double longest = raceSeconds;
+  double longest = 0;
   for (const auto& [end, group] : groups) {
     if (group.young || group.copies >= maxCopies ||
         group.silent >= 2 * maxCopies || group.time <= longest) {
@@ -208,9 +215,17 @@ std::optional<Range> SegmentPlanner::race(int id)
     }
     const auto& leader = workers_.at(group.leader);
     const auto speed = leader.receiving ? leader.speed : 0;
+    const auto reference = std::max(typicalSpeed(group.leader), peakSpeed_);
+    // A copy needs a start-up and then the rest at a normal connection's
+    // speed; it is worth starting only if it would finish well first.
+    const auto remaining = static_cast<double>(leader.end - leader.position);
+    const auto copy = (startup_ > 0 ? startup_ : raceSeconds) +
+                      (reference > 0 ? remaining / reference : 0);
+    if (group.time <= std::max(minRaceSeconds, 1.5 * copy)) {
+      continue;
+    }
     // Raced only when it is markedly slower than its siblings or than other
     // connections of this download managed before.
-    const auto reference = std::max(typicalSpeed(group.leader), peakSpeed_);
     if (reference <= 0 || speed < reference / 2) {
       slowest = &leader;
       longest = group.time;

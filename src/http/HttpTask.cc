@@ -20,6 +20,7 @@
 #include <boost/json/array.hpp>
 
 #include <algorithm>
+#include <bit>
 #include <random>
 
 namespace aria2::http {
@@ -41,6 +42,9 @@ constexpr int64_t writeBudget = 64 << 20;
 // whether or not it delivered anything before. Connecting is bounded by
 // connect-timeout instead.
 constexpr auto stallAfter = 8s;
+// A probe without an answer after this long (a server that accepts and stays
+// silent, a lost SYN) gets a second copy; the first answer wins.
+constexpr auto probeHedge = 2s;
 // Overload feedback is relaxed one connection at a time after a calm period.
 constexpr auto calmPeriod = 30s;
 // A download starts with at most this many connections (aria2's per-server
@@ -50,6 +54,8 @@ constexpr int initialConnections = 16;
 constexpr auto growthPeriod = 2s;
 constexpr double growthGain = 1.1;
 constexpr int maxRestarts = 3;
+// Rounds of downloading pieces again that failed their hash.
+constexpr int maxRepairs = 3;
 
 // Weak entity tags cannot validate byte ranges (RFC 9110 13.1.5). Servers
 // that omit the quotes get them, as If-Range requires an entity-tag.
@@ -269,6 +275,7 @@ void HttpTask::reset()
   workers_.clear();
   planner_.reset();
   persisted_.clear();
+  std::fill(pieceSources_.begin(), pieceSources_.end(), 0);
   output_.reset();
   held_.clear();
   pendingWrites_ = 0;
@@ -378,15 +385,21 @@ int HttpTask::familyFor(const Source& source, int avoid) const
   }
   // Only a family that has carried a response is ever forced: networks with
   // global IPv6 addresses but no route to the server would otherwise hold
-  // every forced connection until connect-timeout. Otherwise libcurl's Happy
-  // Eyeballs picks the family that connects first.
+  // every forced connection until connect-timeout. Until one has, libcurl's
+  // Happy Eyeballs picks the family that connects first.
   // A duplicate of a slow connection tries the other route if it works.
   if (avoid) {
     const auto& other = source.families[avoid == 4];
     return other.worked ? (avoid == 4 ? 6 : 4) : 0;
   }
+  // The family that answered keeps the next connections, which then skip
+  // Happy Eyeballs' head start for the other one (200 ms per connection
+  // where IPv6 leads nowhere).
+  if (v4.worked != v6.worked) {
+    return v4.worked ? 4 : 6;
+  }
   // A family several times slower per connection gets no new connections.
-  if (v4.worked && v6.worked && v4.speed > 0 && v6.speed > 0) {
+  if (v4.worked && v4.speed > 0 && v6.speed > 0) {
     if (v4.speed > 4 * v6.speed) {
       return 4;
     }
@@ -482,13 +495,26 @@ void HttpTask::launch()
     return;
   }
   if (phase_ == Phase::Probing) {
-    // One request learns the length, validators and the name.
-    if (workers_.empty() && now >= slots_[0].readyAt) {
-      if (const auto source = pickSource()) {
-        const auto id = nextWorkerId_++;
-        planner_.place(id, 0, unbounded);
-        startWorker(id, 0, *source, 0, unbounded);
-      }
+    // One request learns the length, validators and the name. Its attempts
+    // and retry waits are kept on slot 0, also for the hedged copy.
+    const bool hedge = workers_.size() == 1 &&
+                       now - workers_.begin()->second->started >= probeHedge;
+    const auto maxTries = options().integer("max-tries");
+    if ((!workers_.empty() && !hedge) || now < slots_[0].readyAt ||
+        (maxTries > 0 && slots_[0].failures >= maxTries &&
+         sources_.size() == 1)) {
+      return;
+    }
+    if (slots_.size() < 2) {
+      slots_.resize(2);
+    }
+    const size_t slot = slots_[0].worker ? 1 : 0;
+    if (const auto source = pickSource(); source && !slots_[slot].worker) {
+      const auto avoid =
+          hedge ? workers_.begin()->second->connectedFamily() : 0;
+      const auto id = nextWorkerId_++;
+      planner_.place(id, 0, unbounded);
+      startWorker(id, slot, *source, 0, unbounded, avoid);
     }
     return;
   }
@@ -675,6 +701,23 @@ void HttpTask::accept(Worker& worker)
       return;
     }
   }
+  if (declared_ >= 0 && total >= 0 && total != declared_) {
+    // A mirror with another length than the Metalink states serves another
+    // file, such as an outdated copy.
+    log::warn("{}: {} has {} bytes instead of {}; not using it", gidText(gid()),
+              uri::redact(source.uri), total, declared_);
+    source.dead = true;
+    const auto slot = worker.slot;
+    cancelWorker(worker.id);
+    if (std::all_of(sources_.begin(), sources_.end(),
+                    [](const Source& s) { return s.dead; })) {
+      abort(ErrorCode::HttpProtocol,
+            fmt::format("No mirror has the stated length {}", declared_));
+      return;
+    }
+    slotFailed(slot, ErrorCode::HttpProtocol, "Mirror has another length");
+    return;
+  }
   if (compressedBody(worker)) {
     // The server compressed although identity was asked for. With
     // http-accept-gzip the file is fetched again as one decoded stream, as a
@@ -714,6 +757,11 @@ void HttpTask::accept(Worker& worker)
   }
   if (phase_ != Phase::Probing) {
     return;
+  }
+  for (const auto& [id, other] : std::map(workers_)) {
+    if (id != worker.id) {
+      cancelWorker(id); // the hedged probe that lost
+    }
   }
   // The first response defines the download.
   if (total >= 0) {
@@ -879,6 +927,15 @@ size_t HttpTask::receive(Worker& worker, const char* data, size_t size)
     const auto usable = static_cast<size_t>(
         planner_.receive(worker.id, static_cast<int64_t>(size - consumed)));
     if (usable > 0) {
+      if (!pieceSources_.empty() && worker.source < 64) {
+        const auto last = std::min<int64_t>(
+            (before + usable - 1) / pieces_.length,
+            static_cast<int64_t>(pieceSources_.size()) - 1);
+        for (auto piece = before / pieces_.length; piece <= last; ++piece) {
+          pieceSources_[static_cast<size_t>(piece)] |= uint64_t{1}
+                                                       << worker.source;
+        }
+      }
       if (worker.buffer.empty()) {
         worker.bufferOffset = before;
       }
@@ -1081,8 +1138,9 @@ void HttpTask::failedResponse(Worker& worker, int code)
         transferring += other->receiving ? 1 : 0;
       }
       // An entry point handing out destinations is not the server that
-      // carries the transfers; its overload leaves their number alone.
-      if (!source.refreshing || redirected) {
+      // carries the transfers, and one mirror's overload is not the
+      // others': only that source waits then.
+      if (!mirrors && (!source.refreshing || redirected)) {
         cap_ = std::max(1, transferring);
         growing_ = false;
         overloaded_ = true;
@@ -1111,7 +1169,7 @@ void HttpTask::failedResponse(Worker& worker, int code)
         slotFailed(slot, ErrorCode::ServiceUnavailable,
                    fmt::format("HTTP {}", status), wait);
       }
-      else {
+      else if (!mirrors) {
         slots_[slot].readyAt = Clock::now() + wait;
       }
       return;
@@ -1197,11 +1255,13 @@ void HttpTask::slotFailed(size_t slot, ErrorCode code, std::string message,
 {
   lastError_ = code;
   lastMessage_ = std::move(message);
-  auto& entry = slots_[slot];
+  auto& entry = slots_[phase_ == Phase::Probing ? 0 : slot];
   ++entry.failures;
+  // Mirrors back off individually; the connection moves on to another.
   const auto delay =
-      wait.count() ? wait
-                   : backoff(entry.failures, options().integer("retry-wait"));
+      sources_.size() > 1 ? Clock::duration{}
+      : wait.count()      ? wait
+                          : backoff(entry.failures, options().integer("retry-wait"));
   entry.readyAt = Clock::now() + delay;
   log::info(
       "{}: connection failed ({}), attempt {}, retry in {} ms", gidText(gid()),
@@ -1337,31 +1397,109 @@ void HttpTask::verifyAndComplete()
   if (remoteTime_ > 0 && options().flag("remote-time")) {
     setModificationTime(path_, remoteTime_);
   }
-  const auto done = [this](std::optional<std::string> failure) {
-    if (phase_ != Phase::Finishing) {
-      quiesce();
-      return;
-    }
-    if (failure) {
-      phase_ = Phase::Running;
-      abort(ErrorCode::Checksum, *failure);
-      return;
-    }
-    phase_ = Phase::Done;
-    engine().state().removeTransfer(gid());
-    log::notice("Download complete: {}", path_);
-    complete();
-  };
   const auto checksum = options().get("checksum");
   if (checksum.empty()) {
-    done(std::nullopt);
+    if (pieces_.hashes.empty()) {
+      succeed();
+    }
+    else {
+      checkPieces({});
+    }
     return;
   }
-  verifyChecksum(
-      engine().disk(), path_, checksum,
-      [self = shared_from_this(), done](std::optional<std::string> failure) {
-        done(std::move(failure));
+  verifyChecksum(engine().disk(), path_, checksum,
+                 [this, self = shared_from_this()](
+                     std::optional<std::string> failure) {
+                   if (phase_ != Phase::Finishing) {
+                     quiesce();
+                   }
+                   else if (!failure) {
+                     succeed();
+                   }
+                   else if (!pieces_.hashes.empty()) {
+                     checkPieces(std::move(*failure));
+                   }
+                   else {
+                     phase_ = Phase::Running;
+                     abort(ErrorCode::Checksum, *failure);
+                   }
+                 });
+}
+
+// Finds the pieces behind a failed (or absent) whole-file hash.
+void HttpTask::checkPieces(std::string failure)
+{
+  auto strand = engine().disk().strand();
+  engine().disk().run(
+      strand,
+      [path = path_, pieces = pieces_] { return badPieces(path, pieces); },
+      [this, self = shared_from_this(),
+       failure = std::move(failure)](std::optional<std::vector<size_t>> bad) {
+        if (phase_ != Phase::Finishing) {
+          quiesce();
+          return;
+        }
+        if (bad && bad->empty() && failure.empty()) {
+          succeed();
+          return;
+        }
+        if (bad && !bad->empty() && repairs_ < maxRepairs) {
+          repair(*bad);
+          return;
+        }
+        phase_ = Phase::Running;
+        abort(ErrorCode::Checksum,
+              !bad          ? fmt::format("Cannot check the {} piece hashes",
+                                          pieces_.type)
+              : bad->empty() ? failure
+                             : fmt::format("{} piece(s) failed their hash",
+                                           bad->size()));
       });
+}
+
+// Bad pieces are downloaded again. A mirror that alone delivered one is not
+// asked again while others remain.
+void HttpTask::repair(const std::vector<size_t>& bad)
+{
+  ++repairs_;
+  log::warn("{}: {} piece(s) failed their hash; downloading them again",
+            gidText(gid()), bad.size());
+  const auto length = planner_.length();
+  for (const auto piece : bad) {
+    const auto begin = static_cast<int64_t>(piece) * pieces_.length;
+    const auto end = std::min(begin + pieces_.length, length);
+    planner_.forget(begin, end);
+    persisted_.remove(begin, end);
+    const auto mask = std::exchange(pieceSources_[piece], 0);
+    if (std::popcount(mask) != 1) {
+      continue;
+    }
+    auto& source = sources_[static_cast<size_t>(std::countr_zero(mask))];
+    const auto alive = std::count_if(sources_.begin(), sources_.end(),
+                                     [](const Source& s) { return !s.dead; });
+    if (!source.dead && alive > 1) {
+      log::warn("{}: {} delivered a corrupt piece; not using it",
+                gidText(gid()), uri::redact(source.uri));
+      source.dead = true;
+    }
+  }
+  phase_ = Phase::Opening;
+  openOutput(false);
+}
+
+void HttpTask::succeed()
+{
+  phase_ = Phase::Done;
+  engine().state().removeTransfer(gid());
+  log::notice("Download complete: {}", path_);
+  complete();
+}
+
+void HttpTask::setMetalink(int64_t size, PieceHashes pieces)
+{
+  declared_ = size;
+  pieces_ = std::move(pieces);
+  pieceSources_.assign(pieces_.hashes.size(), 0);
 }
 
 void HttpTask::abort(ErrorCode code, std::string message)
