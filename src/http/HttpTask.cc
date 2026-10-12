@@ -43,6 +43,12 @@ constexpr int64_t writeBudget = 64 << 20;
 constexpr auto stallAfter = 8s;
 // Overload feedback is relaxed one connection at a time after a calm period.
 constexpr auto calmPeriod = 30s;
+// A download starts with at most this many connections (aria2's per-server
+// limit) and goes beyond only while more connections bring more speed: a step
+// is judged growthPeriod after it was taken and must add growthGain.
+constexpr int initialConnections = 16;
+constexpr auto growthPeriod = 2s;
+constexpr double growthGain = 1.1;
 constexpr int maxRestarts = 3;
 
 // Weak entity tags cannot validate byte ranges (RFC 9110 13.1.5). Servers
@@ -264,8 +270,13 @@ void HttpTask::reset()
   pendingWrites_ = 0;
   unflushed_ = 0;
   cap_ = static_cast<int>(
-      std::min(options().integer("split"),
-               options().integer("max-connection-per-server")));
+      std::min({options().integer("split"),
+                options().integer("max-connection-per-server"),
+                int64_t{initialConnections}}));
+  growing_ = true;
+  overloaded_ = false;
+  rate_ = rateAtStep_ = 0;
+  stepAt_ = Clock::now();
   slots_.assign(static_cast<size_t>(std::max(1, cap_)), Slot{});
   for (auto& source : sources_) {
     source.active = 0;
@@ -347,7 +358,7 @@ bool ipLiteral(const std::string& url)
 }
 } // namespace
 
-int HttpTask::familyFor(const Source& source, size_t slot, int avoid) const
+int HttpTask::familyFor(const Source& source, int avoid) const
 {
   const auto& url = source.redirect.empty() ? source.uri : source.redirect;
   if (options().flag("disable-ipv6") || ipLiteral(url)) {
@@ -361,15 +372,17 @@ int HttpTask::familyFor(const Source& source, size_t slot, int avoid) const
   if (v4.failed) {
     return 0;
   }
-  // A duplicate of a slow connection tries the other route.
+  // Only a family that has carried a response is ever forced: networks with
+  // global IPv6 addresses but no route to the server would otherwise hold
+  // every forced connection until connect-timeout. Otherwise libcurl's Happy
+  // Eyeballs picks the family that connects first.
+  // A duplicate of a slow connection tries the other route if it works.
   if (avoid) {
-    return avoid == 4 ? 6 : 4;
-  }
-  if (!source.primary) {
-    return 0; // nothing known yet: libcurl's Happy Eyeballs decides
+    const auto& other = source.families[avoid == 4];
+    return other.worked ? (avoid == 4 ? 6 : 4) : 0;
   }
   // A family several times slower per connection gets no new connections.
-  if (v4.speed > 0 && v6.speed > 0) {
+  if (v4.worked && v6.worked && v4.speed > 0 && v6.speed > 0) {
     if (v4.speed > 4 * v6.speed) {
       return 4;
     }
@@ -377,9 +390,7 @@ int HttpTask::familyFor(const Source& source, size_t slot, int avoid) const
       return 6;
     }
   }
-  // Until speeds tell them apart, alternate so both families are measured.
-  const int other = source.primary == 4 ? 6 : 4;
-  return slot % 2 == 0 ? source.primary : other;
+  return 0;
 }
 
 // A failure on one address family while the other is untried or works is
@@ -530,7 +541,7 @@ void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
     return;
   }
   auto* easy = worker->easy();
-  worker->family = familyFor(source, slot, avoid);
+  worker->family = familyFor(source, avoid);
   if (worker->family) {
     curl_easy_setopt(easy, CURLOPT_IPRESOLVE,
                      worker->family == 4 ? CURL_IPRESOLVE_V4
@@ -652,9 +663,6 @@ void HttpTask::accept(Worker& worker)
   source.failures = 0;
   if (const auto family = worker.connectedFamily()) {
     source.families[family == 6].worked = true;
-    if (!source.primary) {
-      source.primary = family;
-    }
   }
   if (!worker.redirected) {
     source.refreshing = false;
@@ -1031,6 +1039,8 @@ void HttpTask::failedResponse(Worker& worker, int code)
       // carries the transfers; its overload leaves their number alone.
       if (!source.refreshing || redirected) {
         cap_ = std::max(1, transferring);
+        growing_ = false;
+        overloaded_ = true;
         calmSince_ = Clock::now();
       }
       auto wait =
@@ -1403,9 +1413,13 @@ void HttpTask::tick()
   const auto now = Clock::now();
   auto& global = engine().http().downloadLimit();
   measureFamilies();
+  int64_t tickBytes = 0;
+  int transferring = 0;
   for (const auto& [id, worker] : std::map(workers_)) {
     planner_.updateSpeed(
         id, static_cast<double>(worker->tickBytes) / tickSeconds, tickSeconds);
+    tickBytes += worker->tickBytes;
+    transferring += worker->receiving && !worker->paused() ? 1 : 0;
     worker->tickBytes = 0;
     if (worker->paused()) {
       if (unflushed_ <= writeBudget && limit_.available() &&
@@ -1429,7 +1443,20 @@ void HttpTask::tick()
   const auto configured = static_cast<int>(
       std::min(options().integer("split"),
                options().integer("max-connection-per-server")));
-  if (cap_ < configured && now - calmSince_ > calmPeriod) {
+  const auto sample = static_cast<double>(tickBytes) / tickSeconds;
+  rate_ = rate_ > 0 ? rate_ * 0.5 + sample * 0.5 : sample;
+  if (growing_ && cap_ < configured && transferring >= cap_ &&
+      now - stepAt_ >= growthPeriod) {
+    if (rate_ >= rateAtStep_ * growthGain) {
+      rateAtStep_ = rate_;
+      cap_ = std::min(configured, cap_ * 2);
+      stepAt_ = now;
+    }
+    else {
+      growing_ = false; // the route is full; more connections only add load
+    }
+  }
+  if (overloaded_ && cap_ < configured && now - calmSince_ > calmPeriod) {
     ++cap_;
     calmSince_ = now;
   }

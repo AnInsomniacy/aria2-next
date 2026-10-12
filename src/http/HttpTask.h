@@ -71,7 +71,6 @@ private:
       double speed = 0; // average bytes per second of one connection
     };
     std::array<Family, 2> families{};
-    int primary = 0; // family of the first valid response, 0: unknown
     bool used = false;
   };
 
@@ -100,7 +99,7 @@ private:
   void startWorker(int id, size_t slot, size_t source, int64_t begin,
                    int64_t requestEnd, int avoid = 0);
   std::optional<size_t> pickSource();
-  int familyFor(const Source& source, size_t slot, int avoid) const;
+  int familyFor(const Source& source, int avoid) const;
   bool blameFamily(Worker& worker, Source& source, int code);
   void measureFamilies();
   void accept(Worker& worker);
@@ -151,7 +150,15 @@ private:
   // whole responses from then on.
   bool rangesDistrusted_ = false;
   int restarts_ = 0;
-  int cap_ = 1; // connections allowed after overload feedback
+  // Connections allowed now. They start at initialConnections and double
+  // while each step raises the download rate; overload feedback lowers them
+  // and then lets them recover one per calm period.
+  int cap_ = 1;
+  bool growing_ = true;
+  bool overloaded_ = false;
+  double rate_ = 0;       // smoothed download rate, bytes/s
+  double rateAtStep_ = 0; // rate when cap_ last grew
+  Clock::time_point stepAt_ = Clock::now();
   Clock::time_point calmSince_ = Clock::now();
   Phase phase_ = Phase::Idle;
   ErrorCode lastError_ = ErrorCode::Network;
