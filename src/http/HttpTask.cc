@@ -51,9 +51,11 @@ constexpr auto probeHedge = 2s;
 // Overload feedback is relaxed one connection at a time after a calm period.
 constexpr auto calmPeriod = 30s;
 // A download starts with at most this many connections (aria2's per-server
-// limit) and goes beyond only while more connections bring more speed: a step
-// is judged growthPeriod after it was taken and must add growthGain.
+// limit) and goes beyond only while more connections bring more speed: the
+// next step is taken once the last one added growthGain, after growthCheck
+// at the earliest; a step without that gain after growthPeriod ends growth.
 constexpr int initialConnections = 16;
+constexpr auto growthCheck = 1s;
 constexpr auto growthPeriod = 2s;
 constexpr double growthGain = 1.1;
 constexpr int maxRestarts = 3;
@@ -1683,13 +1685,13 @@ void HttpTask::tick()
   const auto sample = static_cast<double>(tickBytes) / tickSeconds;
   rate_ = rate_ > 0 ? rate_ * 0.5 + sample * 0.5 : sample;
   if (growing_ && cap_ < configured && transferring >= cap_ &&
-      now - stepAt_ >= growthPeriod) {
+      now - stepAt_ >= growthCheck) {
     if (rate_ >= rateAtStep_ * growthGain) {
       rateAtStep_ = rate_;
       cap_ = std::min(configured, cap_ * 2);
       stepAt_ = now;
     }
-    else {
+    else if (now - stepAt_ >= growthPeriod) {
       growing_ = false; // the route is full; more connections only add load
     }
   }
