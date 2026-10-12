@@ -37,7 +37,9 @@ constexpr int64_t minFlushSize = 64 << 10;
 constexpr int64_t maxFlushSize = 1 << 20;
 // Unwritten bytes a task may hold before its connections pause.
 constexpr int64_t writeBudget = 64 << 20;
-// A connection that delivered data and then nothing for this long is stalled.
+// A connection that is up but delivers nothing for this long is stalled,
+// whether or not it delivered anything before. Connecting is bounded by
+// connect-timeout instead.
 constexpr auto stallAfter = 8s;
 // Overload feedback is relaxed one connection at a time after a calm period.
 constexpr auto calmPeriod = 30s;
@@ -1413,7 +1415,11 @@ void HttpTask::tick()
       }
       continue;
     }
-    if (worker->receiving && now - worker->lastData > stallAfter) {
+    if (!worker->connected && worker->connectedFamily()) {
+      worker->connected = true;
+      worker->lastData = now;
+    }
+    if (worker->connected && now - worker->lastData > stallAfter) {
       log::info("{}: connection {} stalled", gidText(gid()), id);
       const auto slot = worker->slot;
       cancelWorker(id);

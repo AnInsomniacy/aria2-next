@@ -10,7 +10,9 @@ namespace {
 constexpr int64_t alignment = 4096;
 // A connection is raced only when it would otherwise hold the download back.
 constexpr double raceSeconds = 2.0;
-// Copies of one range, including the original.
+// Copies of one range that are delivering or still starting, including the
+// original. Copies that stay silent past raceSeconds do not count; at most
+// 2 * maxCopies of those are tried.
 constexpr int maxCopies = 3;
 } // namespace
 
@@ -148,6 +150,7 @@ std::optional<Range> SegmentPlanner::race(int id)
     int leader = -1; // the copy with the earliest expected finish
     double time = 0;
     int copies = 0;
+    int silent = 0;
     bool young = false;
   };
   std::map<int64_t, Group> groups; // by end
@@ -157,7 +160,14 @@ std::optional<Range> SegmentPlanner::race(int id)
       continue;
     }
     auto& group = groups[worker.end];
-    ++group.copies;
+    // A copy that never delivered (a server that accepted the request and
+    // sends nothing) must not use up the copies that could replace it.
+    if (!worker.receiving && worker.age >= raceSeconds) {
+      ++group.silent;
+    }
+    else {
+      ++group.copies;
+    }
     // A new connection gets time to connect and show its speed.
     group.young = group.young || worker.age < raceSeconds;
     const auto speed = worker.receiving ? worker.speed : 0;
@@ -170,7 +180,8 @@ std::optional<Range> SegmentPlanner::race(int id)
   const Worker* slowest = nullptr;
   double longest = raceSeconds;
   for (const auto& [end, group] : groups) {
-    if (group.young || group.copies >= maxCopies || group.time <= longest) {
+    if (group.young || group.copies >= maxCopies ||
+        group.silent >= 2 * maxCopies || group.time <= longest) {
       continue;
     }
     const auto& leader = workers_.at(group.leader);

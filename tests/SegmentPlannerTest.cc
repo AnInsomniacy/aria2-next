@@ -123,6 +123,42 @@ TEST_CASE(
   CHECK(planner.complete());
 }
 
+TEST_CASE("copies that never deliver do not block another copy")
+{
+  SegmentPlanner planner(MiB);
+  planner.setLength(2 * MiB);
+  planner.place(1, 0, MiB);
+  planner.place(2, MiB, 2 * MiB);
+  planner.receive(1, MiB);
+  planner.updateSpeed(1, 8e6, 1);
+  planner.release(1);
+  int next = 3;
+  // The original and two copies accept their requests but send nothing.
+  for (; next < 5; ++next) {
+    for (const auto& [id, worker] : planner.workers()) {
+      planner.updateSpeed(id, 0, 2);
+    }
+    REQUIRE(planner.assign(next));
+  }
+  for (const auto& [id, worker] : planner.workers()) {
+    planner.updateSpeed(id, 0, 2);
+  }
+  const auto range = planner.assign(next);
+  REQUIRE(range);
+  CHECK(*range == Range{MiB, 2 * MiB});
+  // Silent copies are bounded too.
+  for (++next; next < 8; ++next) {
+    for (const auto& [id, worker] : planner.workers()) {
+      planner.updateSpeed(id, 0, 2);
+    }
+    planner.assign(next);
+  }
+  for (const auto& [id, worker] : planner.workers()) {
+    planner.updateSpeed(id, 0, 2);
+  }
+  CHECK_FALSE(planner.assign(next));
+}
+
 TEST_CASE("restored ranges are not assigned again")
 {
   SegmentPlanner planner(MiB);

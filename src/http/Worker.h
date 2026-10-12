@@ -44,6 +44,7 @@ public:
 
   Clock::time_point started = Clock::now();
   Clock::time_point lastData = Clock::now();
+  bool connected = false; // the stall clock runs once the connection is up
   int64_t tickBytes = 0;
   int64_t received = 0;
   bool receiving = false;
