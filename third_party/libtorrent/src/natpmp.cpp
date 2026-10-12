@@ -823,6 +823,7 @@ void natpmp::on_reply(error_code const& e
 	{
 		m->expires = aux::time_now() + seconds(lifetime * 3 / 4);
 		m->external_port = public_port;
+		m->confirmed = true;
 		if (!external_addr.is_unspecified())
 			m->external_address = external_addr;
 	}
@@ -927,6 +928,14 @@ void natpmp::close_impl()
 	for (auto& m : m_mappings)
 	{
 		if (m.protocol == portmap_protocol::none) continue;
+		// aria2-next: a gateway that never granted a mapping has nothing to
+		// delete; asking it would hold shutdown for a timeout per mapping
+		if (!m.confirmed)
+		{
+			m.act = portmap_action::none;
+			m.protocol = portmap_protocol::none;
+			continue;
+		}
 		m.act = portmap_action::del;
 	}
 	m_refresh_timer.cancel();

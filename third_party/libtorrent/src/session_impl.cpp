@@ -578,6 +578,14 @@ bool ssl_server_name_callback(ssl::stream_handle_type stream_handle, std::string
 			session_log("SSL set_options failed: %s", ec.message().c_str());
 		ec.clear();
 #endif
+#ifdef TORRENT_USE_OPENSSL
+		// aria2-next: offer classic groups only. OpenSSL 3.5 adds a
+		// post-quantum key share that pushes the ClientHello past one TCP
+		// segment, and some networks drop such handshakes, which stalls web
+		// seeds and HTTPS trackers for the whole connect timeout. Pieces are
+		// hash-checked, so this costs no integrity.
+		SSL_CTX_set1_groups_list(m_ssl_ctx.native_handle(), "X25519:secp256r1:secp384r1");
+#endif
 		m_ssl_ctx.set_default_verify_paths(ec);
 #ifndef TORRENT_DISABLE_LOGGING
 		if (ec) session_log("SSL set_default verify_paths failed: %s", ec.message().c_str());

@@ -139,6 +139,10 @@ private:
 
 		// set to true while we're waiting for a response
 		bool outstanding_request = false;
+
+		// aria2-next: set once the gateway granted the mapping; only such
+		// mappings are deleted when closing
+		bool confirmed = false;
 	};
 
 #ifndef TORRENT_DISABLE_LOGGING

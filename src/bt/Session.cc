@@ -279,6 +279,10 @@ std::shared_ptr<BtTask> Session::taskFor(const lt::torrent_handle& handle) const
 
 void Session::dispatch(lt::alert* alert)
 {
+  // Web seed, tracker, peer and file errors explain a stalled swarm.
+  if (alert->category() & lt::alert_category::error) {
+    log::debug("BitTorrent: {}", alert->message());
+  }
   if (auto* added = lt::alert_cast<lt::add_torrent_alert>(alert)) {
     auto* owner = added->params.userdata.get<BtTask>();
     const auto found = adding_.find(owner);
@@ -329,8 +333,8 @@ void Session::dispatch(lt::alert* alert)
   else if (auto* listening = lt::alert_cast<lt::listen_succeeded_alert>(alert)) {
     const auto address = listening->address.to_string();
     listenPorts_[listening->address.is_v6() ? '[' + address + ']' : address] = listening->port;
-    log::info("BitTorrent: listening on {} port {}", listening->address.to_string(),
-              listening->port);
+    // Names the socket type: TCP and uTP listen on the same address and port.
+    log::info("BitTorrent: {}", listening->message());
   }
   else if (auto* failed = lt::alert_cast<lt::listen_failed_alert>(alert)) {
     log::warn("BitTorrent: cannot listen on {}: {}", failed->address.to_string(),

@@ -903,6 +903,11 @@ json::array BtTask::trackers() const
     int64_t next = -1;
     for (const auto& endpoint : tracker.endpoints) {
       for (const auto& hash : endpoint.info_hashes) {
+        // A listen address that cannot reach the tracker at all (IPv6 for
+        // an IPv4-only tracker) is skipped, not a failure of the tracker.
+        if (hash.last_error == lt::errors::announce_skipped) {
+          continue;
+        }
         fails = std::max(fails, static_cast<int>(hash.fails));
         seeders = std::max(seeders, hash.scrape_complete);
         leechers = std::max(leechers, hash.scrape_incomplete);

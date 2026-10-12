@@ -41,7 +41,12 @@ configuration. Disabled WebTorrent, I2P, and fallback cryptography include
 trees are excluded.
 
 The libtorrent tree carries an aria2-next setting extension for encrypted-first
-peer negotiation with libtorrent's native plaintext fallback.
+peer negotiation with libtorrent's native plaintext fallback. NAT-PMP deletes
+only mappings the gateway granted when closing; asking a silent gateway to
+delete the others held session shutdown for about 20 seconds. Outgoing TLS
+(web seeds, HTTPS trackers) offers classic groups only: OpenSSL 3.5's
+post-quantum key share makes ClientHellos that some networks drop, which held
+web seeds for the whole connect timeout.
 
 GPAC is configured without a player, renderer, JavaScript runtime, external
 media codecs, or independent TLS and cryptography backends. Its public DASH client uses aria2-next's
