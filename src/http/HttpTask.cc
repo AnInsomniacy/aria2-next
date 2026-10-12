@@ -36,6 +36,9 @@ constexpr double tickSeconds =
 // Data reaches the disk in chunks of this size per connection.
 constexpr int64_t minFlushSize = 64 << 10;
 constexpr int64_t maxFlushSize = 1 << 20;
+// Slow connections reach the disk at least this often, so a crash loses
+// little more than this (and the last state-save-interval).
+constexpr auto flushAfter = 1s;
 // Unwritten bytes a task may hold before its connections pause.
 constexpr int64_t writeBudget = 64 << 20;
 // A connection that is up but delivers nothing for this long is stalled,
@@ -973,6 +976,7 @@ size_t HttpTask::receive(Worker& worker, const char* data, size_t size)
       }
       if (worker.buffer.empty()) {
         worker.bufferOffset = before;
+        worker.bufferedSince = Clock::now();
       }
       worker.buffer.append(data + consumed, usable);
       consumed += usable;
@@ -1645,6 +1649,9 @@ void HttpTask::tick()
     tickBytes += worker->tickBytes;
     transferring += worker->receiving && !worker->paused() ? 1 : 0;
     worker->tickBytes = 0;
+    if (!worker->buffer.empty() && now - worker->bufferedSince >= flushAfter) {
+      flush(*worker);
+    }
     if (worker->paused()) {
       if (unflushed_ <= writeBudget && limit_.available() &&
           global.available()) {

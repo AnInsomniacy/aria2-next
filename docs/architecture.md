@@ -83,7 +83,8 @@ worker is one libcurl transfer that owns `[position, end)` of the file.
    only the failing pieces are downloaded again (up to three rounds), and a
    mirror that alone delivered a failing piece is dropped.
 
-Bytes are buffered per worker and written by the disk pool. The interval set
+Bytes are buffered per worker and written by the disk pool, in chunks or at
+least once a second, so slow connections do not hold unsaved data. The interval set
 distinguishes received from persisted bytes; checkpoints store only persisted
 ranges. When unpersisted bytes exceed the write budget, transfers pause until
 the pool catches up.

@@ -42,6 +42,7 @@ public:
   // Received bytes not yet handed to the disk pool.
   std::string buffer;
   int64_t bufferOffset = 0;
+  Clock::time_point bufferedSince;
 
   Clock::time_point started = Clock::now();
   Clock::time_point lastData = Clock::now();
