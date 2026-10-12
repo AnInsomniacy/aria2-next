@@ -766,7 +766,9 @@ void BtTask::status(json::object& out, const StatusKeys& keys) const
   };
   put("infoHash", json::string(infoHash()));
   put("numSeeders", json::string(std::to_string(live ? status_.num_seeds : 0)));
-  put("seeder", json::string(flag(live ? status_.is_seeding : false)));
+  // As in aria2, a torrent seeds once its selected files are complete;
+  // libtorrent counts it a seed only with every piece.
+  put("seeder", json::string(flag(live && finished_)));
   if (info_) {
     put("pieceLength", json::string(std::to_string(info_->piece_length())));
     put("numPieces", json::string(std::to_string(info_->num_pieces())));
@@ -837,7 +839,9 @@ void BtTask::status(json::object& out, const StatusKeys& keys) const
     bt["currentTracker"] = status_.current_tracker;
     bt["activeTime"] = std::to_string(status_.active_duration.count());
     bt["finishedTime"] = std::to_string(status_.finished_duration.count());
-    bt["seedingTime"] = std::to_string(status_.seeding_duration.count());
+    // libtorrent's seeding time skips torrents with unselected files.
+    bt["seedingTime"] = std::to_string(
+        finished_ ? status_.finished_duration.count() : 0);
   }
   out["bittorrent"] = std::move(bt);
 }
