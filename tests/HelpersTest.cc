@@ -49,6 +49,20 @@ TEST_CASE("sizes")
   CHECK(text::toSize(" 2M ") == 2 << 20);
   CHECK_FALSE(text::toSize("-1"));
   CHECK_FALSE(text::toSize("K"));
+  CHECK(text::toSize("1.5K") == 1536);
+  CHECK_FALSE(text::toSize("1.5.K"));
+}
+
+TEST_CASE("decimal numbers")
+{
+  CHECK(text::toDouble("0.5") == 0.5);
+  CHECK(text::toDouble("1e3") == 1000);
+  CHECK(text::toDouble("-2") == -2);
+  CHECK_FALSE(text::toDouble(""));
+  CHECK_FALSE(text::toDouble("+1"));
+  CHECK_FALSE(text::toDouble(" 1"));
+  CHECK_FALSE(text::toDouble("1x"));
+  CHECK_FALSE(text::toDouble("1,5"));
 }
 
 TEST_CASE("numbered names skip existing files")

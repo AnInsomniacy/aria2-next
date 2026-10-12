@@ -250,12 +250,9 @@ std::string normalizeOption(const OptionSpec& spec, std::string_view value)
     return std::to_string(*size);
   }
   case OptionType::Number: {
-    double number = 0;
     const auto text = text::trim(value);
-    const auto [end, error] =
-        std::from_chars(text.data(), text.data() + text.size(), number);
-    if (!text.empty() && (error != std::errc() ||
-                          end != text.data() + text.size() || number < 0)) {
+    const auto number = text::toDouble(text);
+    if (!text.empty() && (!number || *number < 0)) {
       invalid(spec.name, value, "expected a non-negative number");
     }
     return std::string(text);
@@ -371,9 +368,7 @@ int64_t Options::integer(std::string_view name) const
 double Options::number(std::string_view name) const
 {
   const auto value = get(name);
-  double number = 0;
-  std::from_chars(value.data(), value.data() + value.size(), number);
-  return number;
+  return text::toDouble(value).value_or(0);
 }
 
 std::map<std::string, std::string> Options::visible() const

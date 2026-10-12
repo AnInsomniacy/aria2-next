@@ -7,6 +7,8 @@
 #include <array>
 #include <charconv>
 #include <cmath>
+#include <locale>
+#include <sstream>
 
 namespace aria2::text {
 
@@ -332,14 +334,28 @@ std::optional<int64_t> toSize(std::string_view value)
   if (value.empty() || value.front() == '-' || value.front() == '+') {
     return std::nullopt;
   }
-  double number = 0;
-  const auto [end, error] =
-      std::from_chars(value.data(), value.data() + value.size(), number);
-  if (error != std::errc() || end != value.data() + value.size() ||
-      !std::isfinite(number) || number * unit > 9.2e18) {
+  const auto number = toDouble(value);
+  if (!number || !std::isfinite(*number) || *number * unit > 9.2e18) {
     return std::nullopt;
   }
-  return static_cast<int64_t>(number * static_cast<double>(unit));
+  return static_cast<int64_t>(*number * static_cast<double>(unit));
+}
+
+std::optional<double> toDouble(std::string_view value)
+{
+  // Apple's libc++ (Xcode 16) has no floating-point std::from_chars; a
+  // classic-locale stream parses the same way on every platform.
+  if (value.empty() || value.front() == '+' || trim(value) != value) {
+    return std::nullopt;
+  }
+  std::istringstream stream{std::string(value)};
+  stream.imbue(std::locale::classic());
+  double number = 0;
+  stream >> number;
+  if (stream.fail() || stream.peek() != std::char_traits<char>::eof()) {
+    return std::nullopt;
+  }
+  return number;
 }
 
 std::string formatSize(int64_t bytes)

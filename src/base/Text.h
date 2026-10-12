@@ -34,6 +34,8 @@ std::optional<std::string> base64Decode(std::string_view text);
 
 // Integers in base 10 without signs, spaces or overflow.
 std::optional<int64_t> toInt(std::string_view value);
+// Decimal or exponent notation in the C locale, without spaces or a '+'.
+std::optional<double> toDouble(std::string_view value);
 // "1048576", "1M", "1.5K" -> bytes; K and M are binary units.
 std::optional<int64_t> toSize(std::string_view value);
 // 1536 -> "1.5KiB"; used by console output and logs.
