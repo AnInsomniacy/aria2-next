@@ -545,8 +545,9 @@ void Network::describe(boost::json::object& out) const
 {
   server_->describe(out);
   kad_->describe(out);
-  out["searchActive"] = searches_->active() ? "true" : "false";
-  out["searchMoreResults"] = searches_->moreResults() ? "true" : "false";
+  // JSON booleans, as clients expect (unlike aria2's string flags).
+  out["searchActive"] = searches_->active();
+  out["searchMoreResults"] = searches_->moreResults();
   out["searchResultCount"] = std::to_string(searches_->resultCount());
   out["uploadingPeerCount"] = std::to_string(uploads_->uploading());
   out["waitingUploadPeerCount"] = std::to_string(uploads_->waiting());

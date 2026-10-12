@@ -172,7 +172,7 @@ void Kad::describe(boost::json::object& out) const
 {
   out["kadNodeCount"] = std::to_string(table_.liveSize());
   out["kadRouterCount"] = std::to_string(table_.getRouterContacts().size());
-  out["kadFirewalled"] = firewalled_ ? "true" : "false";
+  out["kadFirewalled"] = firewalled_; // JSON boolean, as clients expect
   out["kadObservedAddressCount"] = std::to_string(observed_.size());
 }
 
