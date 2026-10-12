@@ -161,7 +161,9 @@ def run(engine: Path, base: str, name: str, extra: list[str], keep: bool = False
         "--log-level=info",
         *extra,
     ]
-    process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    work.mkdir(exist_ok=True)
+    stderr = open(work / "stderr.txt", "wb")
+    process = subprocess.Popen(command, stdout=subprocess.DEVNULL, stderr=stderr)
     rpc = Rpc(port, secret)
     result = {"scenario": name, "size": size}
     try:
@@ -205,11 +207,16 @@ def run(engine: Path, base: str, name: str, extra: list[str], keep: bool = False
                 result["first_bad_offset"] = bad
         else:
             result["error"] = status.get("errorMessage", "")
+    except OSError as error:
+        result.update(status="no-rpc", error=repr(error))
     finally:
         if proxy:
             proxy.stop()
+        if process.poll() is not None:
+            result.update(status="exited", error=f"engine exited with code {process.returncode:#x}")
         process.kill()
         process.wait()
+        stderr.close()
         if keep:
             result["work"] = str(work)
         else:
