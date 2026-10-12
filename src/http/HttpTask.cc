@@ -31,6 +31,80 @@ using namespace std::chrono_literals;
 namespace {
 
 constexpr auto tickInterval = 500ms;
+
+// The extension a file of this media type takes when its name has none, as
+// browsers name such downloads; empty for types without a clear one.
+std::string_view extensionFor(std::string_view contentType)
+{
+  static constexpr std::pair<std::string_view, std::string_view> table[] = {
+      {"application/epub+zip", ".epub"},
+      {"application/gzip", ".gz"},
+      {"application/json", ".json"},
+      {"application/msword", ".doc"},
+      {"application/pdf", ".pdf"},
+      {"application/vnd.android.package-archive", ".apk"},
+      {"application/vnd.ms-excel", ".xls"},
+      {"application/vnd.ms-powerpoint", ".ppt"},
+      {"application/vnd.openxmlformats-officedocument.presentationml."
+       "presentation",
+       ".pptx"},
+      {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+       ".xlsx"},
+      {"application/vnd.openxmlformats-officedocument.wordprocessingml."
+       "document",
+       ".docx"},
+      {"application/vnd.rar", ".rar"},
+      {"application/x-7z-compressed", ".7z"},
+      {"application/x-bittorrent", ".torrent"},
+      {"application/x-iso9660-image", ".iso"},
+      {"application/x-msdownload", ".exe"},
+      {"application/x-msi", ".msi"},
+      {"application/x-rar-compressed", ".rar"},
+      {"application/x-tar", ".tar"},
+      {"application/xml", ".xml"},
+      {"application/zip", ".zip"},
+      {"audio/aac", ".aac"},
+      {"audio/flac", ".flac"},
+      {"audio/mp4", ".m4a"},
+      {"audio/mpeg", ".mp3"},
+      {"audio/ogg", ".ogg"},
+      {"audio/opus", ".opus"},
+      {"audio/wav", ".wav"},
+      {"audio/webm", ".weba"},
+      {"audio/x-flac", ".flac"},
+      {"audio/x-m4a", ".m4a"},
+      {"audio/x-wav", ".wav"},
+      {"image/avif", ".avif"},
+      {"image/gif", ".gif"},
+      {"image/jpeg", ".jpg"},
+      {"image/png", ".png"},
+      {"image/svg+xml", ".svg"},
+      {"image/webp", ".webp"},
+      {"text/csv", ".csv"},
+      {"text/html", ".html"},
+      {"text/plain", ".txt"},
+      {"text/vtt", ".vtt"},
+      {"video/mp2t", ".ts"},
+      {"video/mp4", ".mp4"},
+      {"video/mpeg", ".mpeg"},
+      {"video/ogg", ".ogv"},
+      {"video/quicktime", ".mov"},
+      {"video/webm", ".webm"},
+      {"video/x-flv", ".flv"},
+      {"video/x-matroska", ".mkv"},
+      {"video/x-msvideo", ".avi"},
+  };
+  auto type = contentType.substr(0, contentType.find(';'));
+  while (!type.empty() && (type.back() == ' ' || type.back() == '\t')) {
+    type.remove_suffix(1);
+  }
+  for (const auto& [name, extension] : table) {
+    if (text::iequals(name, type)) {
+      return extension;
+    }
+  }
+  return {};
+}
 constexpr double tickSeconds =
     std::chrono::duration<double>(tickInterval).count();
 // Data reaches the disk in chunks of this size per connection.
@@ -865,6 +939,15 @@ bool HttpTask::decidePath(Worker& worker)
       name = uri::fileName(sources_[worker.source].uri);
       if (name.empty()) {
         name = uri::fileName(worker.effectiveUrl());
+      }
+    }
+    // Like a browser, give a name without an extension the one its media
+    // type implies; a nameless page is still index.html.
+    if (name.find('.') == std::string::npos) {
+      const auto extension = extensionFor(worker.contentType);
+      if (!extension.empty()) {
+        name = (name.empty() ? std::string("index") : name) +
+               std::string(extension);
       }
     }
     if (name.empty()) {
