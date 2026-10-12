@@ -25,6 +25,7 @@ struct Client::Socket {
   int interest = CURL_POLL_NONE;
   bool reading = false;
   bool writing = false;
+  bool failing = false;
 };
 
 // ---------------------------------------------------------------- Transfer --
@@ -276,28 +277,32 @@ int Client::socketCallback(CURL*, curl_socket_t fd, int what, void* self, void*)
 void Client::watch(const std::shared_ptr<Socket>& socket)
 {
   const auto wait = [this, socket](Protocol::socket::wait_type type,
-                                   bool& pending, int flag) {
+                                   bool& pending, int flag, int event) {
     if (pending || !(socket->interest & flag)) {
       return;
     }
     pending = true;
-    socket->socket.async_wait(
-        type,
-        [this, socket, &pending, flag](const boost::system::error_code& error) {
-          pending = false;
-          if (error || !multi_ || !(socket->interest & flag)) {
-            return;
-          }
-          action(socket->fd,
-                 flag == CURL_POLL_IN ? CURL_CSELECT_IN : CURL_CSELECT_OUT);
-          // The socket may have been closed by the action.
-          if (sockets_.contains(socket->fd) && sockets_[socket->fd] == socket) {
-            watch(socket);
-          }
-        });
+    socket->socket.async_wait(type, [this, socket, &pending, flag, event](
+                                        const boost::system::error_code& error) {
+      pending = false;
+      if (error || !multi_ || !(socket->interest & flag)) {
+        return;
+      }
+      action(socket->fd, event);
+      // The socket may have been closed by the action.
+      if (sockets_.contains(socket->fd) && sockets_[socket->fd] == socket) {
+        watch(socket);
+      }
+    });
   };
-  wait(Protocol::socket::wait_read, socket->reading, CURL_POLL_IN);
-  wait(Protocol::socket::wait_write, socket->writing, CURL_POLL_OUT);
+  wait(Protocol::socket::wait_read, socket->reading, CURL_POLL_IN,
+       CURL_CSELECT_IN);
+  wait(Protocol::socket::wait_write, socket->writing, CURL_POLL_OUT,
+       CURL_CSELECT_OUT);
+  // Windows reports a refused or unreachable connect as an error condition,
+  // never as writable; without this the attempt runs into connect-timeout.
+  wait(Protocol::socket::wait_error, socket->failing, CURL_POLL_OUT,
+       CURL_CSELECT_ERR);
 }
 
 int Client::timerCallback(CURLM*, long timeoutMs, void* self)
