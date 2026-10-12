@@ -140,6 +140,7 @@ private:
   void checkPieces(std::string failure);
   void repair(const std::vector<size_t>& bad);
   void succeed();
+  int configuredConnections() const; // split and max-connection-per-server
   void tick();
   void scheduleTick();
   void quiesce();
@@ -172,15 +173,11 @@ private:
   // Per piece, a bit for each mirror (below 64) that delivered some of it.
   std::vector<uint64_t> pieceSources_;
   int repairs_ = 0;
-  // Connections allowed now. They start at initialConnections and double
-  // while each step raises the download rate; overload feedback lowers them
-  // and then lets them recover one per calm period.
+  // Connections allowed now. They start at the configured split and
+  // max-connection-per-server; overload feedback lowers them and then lets
+  // them recover one per calm period.
   int cap_ = 1;
-  bool growing_ = true;
   bool overloaded_ = false;
-  double rate_ = 0;       // smoothed download rate, bytes/s
-  double rateAtStep_ = 0; // rate when cap_ last grew
-  Clock::time_point stepAt_ = Clock::now();
   Clock::time_point calmSince_ = Clock::now();
   Phase phase_ = Phase::Idle;
   ErrorCode lastError_ = ErrorCode::Network;

@@ -54,7 +54,9 @@ worker is one libcurl transfer that owns `[position, end)` of the file.
    range support and the validator (strong ETag, else Last-Modified). A
    first request without an answer after 2 s gets a second copy (a server
    that accepts and stays silent); the first answer wins.
-2. Idle connection slots take the largest unowned interval, or split the
+2. Once the length is known, every configured connection opens at once
+   (`split`, at most `max-connection-per-server` per source). Idle
+   connection slots take the largest unowned interval, or split the
    worker with the longest expected remaining time. The split point balances
    both halves by their measured speeds. Small remainders are not split.
 3. A worker that reaches its end while the next worker has not received a

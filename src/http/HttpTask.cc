@@ -124,14 +124,6 @@ constexpr auto stallAfter = 8s;
 constexpr auto probeHedge = 2s;
 // Overload feedback is relaxed one connection at a time after a calm period.
 constexpr auto calmPeriod = 30s;
-// A download starts with at most this many connections (aria2's per-server
-// limit) and goes beyond only while more connections bring more speed: the
-// next step is taken once the last one added growthGain, after growthCheck
-// at the earliest; a step without that gain after growthPeriod ends growth.
-constexpr int initialConnections = 16;
-constexpr auto growthCheck = 1s;
-constexpr auto growthPeriod = 2s;
-constexpr double growthGain = 1.1;
 constexpr int maxRestarts = 3;
 // Rounds of downloading pieces again that failed their hash.
 constexpr int maxRepairs = 3;
@@ -359,14 +351,8 @@ void HttpTask::reset()
   held_.clear();
   pendingWrites_ = 0;
   unflushed_ = 0;
-  cap_ = static_cast<int>(
-      std::min({options().integer("split"),
-                options().integer("max-connection-per-server"),
-                int64_t{initialConnections}}));
-  growing_ = true;
+  cap_ = configuredConnections();
   overloaded_ = false;
-  rate_ = rateAtStep_ = 0;
-  stepAt_ = Clock::now();
   slots_.assign(static_cast<size_t>(std::max(1, cap_)), Slot{});
   for (auto& source : sources_) {
     source.active = 0;
@@ -1275,7 +1261,6 @@ void HttpTask::failedResponse(Worker& worker, int code)
       // others': only that source waits then.
       if (!mirrors && (!source.refreshing || redirected)) {
         cap_ = std::max(1, transferring);
-        growing_ = false;
         overloaded_ = true;
         calmSince_ = Clock::now();
       }
@@ -1723,6 +1708,13 @@ void HttpTask::scheduleTick()
       });
 }
 
+int HttpTask::configuredConnections() const
+{
+  return static_cast<int>(
+      std::min(options().integer("split"),
+               options().integer("max-connection-per-server")));
+}
+
 void HttpTask::tick()
 {
   if (phase_ != Phase::Probing && phase_ != Phase::Opening &&
@@ -1732,13 +1724,9 @@ void HttpTask::tick()
   const auto now = Clock::now();
   auto& global = engine().http().downloadLimit();
   measureFamilies();
-  int64_t tickBytes = 0;
-  int transferring = 0;
   for (const auto& [id, worker] : std::map(workers_)) {
     planner_.updateSpeed(
         id, static_cast<double>(worker->tickBytes) / tickSeconds, tickSeconds);
-    tickBytes += worker->tickBytes;
-    transferring += worker->receiving && !worker->paused() ? 1 : 0;
     worker->tickBytes = 0;
     if (!worker->buffer.empty() && now - worker->bufferedSince >= flushAfter) {
       flush(*worker);
@@ -1762,23 +1750,8 @@ void HttpTask::tick()
       slotFailed(slot, ErrorCode::TimedOut, "Connection stalled", 1s);
     }
   }
-  const auto configured = static_cast<int>(
-      std::min(options().integer("split"),
-               options().integer("max-connection-per-server")));
-  const auto sample = static_cast<double>(tickBytes) / tickSeconds;
-  rate_ = rate_ > 0 ? rate_ * 0.5 + sample * 0.5 : sample;
-  if (growing_ && cap_ < configured && transferring >= cap_ &&
-      now - stepAt_ >= growthCheck) {
-    if (rate_ >= rateAtStep_ * growthGain) {
-      rateAtStep_ = rate_;
-      cap_ = std::min(configured, cap_ * 2);
-      stepAt_ = now;
-    }
-    else if (now - stepAt_ >= growthPeriod) {
-      growing_ = false; // the route is full; more connections only add load
-    }
-  }
-  if (overloaded_ && cap_ < configured && now - calmSince_ > calmPeriod) {
+  if (overloaded_ && cap_ < configuredConnections() &&
+      now - calmSince_ > calmPeriod) {
     ++cap_;
     calmSince_ = now;
   }
