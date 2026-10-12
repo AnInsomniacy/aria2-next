@@ -399,9 +399,14 @@ int HttpTask::familyFor(const Source& source, int avoid) const
   }
   // The family that answered keeps the next connections, which then skip
   // Happy Eyeballs' head start for the other one (200 ms per connection
-  // where IPv6 leads nowhere).
+  // where IPv6 leads nowhere). One connection tries the other family once:
+  // the route that connects first may deliver slowly, and the speeds can
+  // only be compared once both have worked. A dead route costs that one
+  // connection and is then avoided.
   if (v4.worked != v6.worked) {
-    return v4.worked ? 4 : 6;
+    const int answered = v4.worked ? 4 : 6;
+    const auto& other = source.families[answered == 4];
+    return other.forced ? answered : (answered == 4 ? 6 : 4);
   }
   // A family several times slower per connection gets no new connections.
   if (v4.worked && v4.speed > 0 && v6.speed > 0) {
@@ -588,6 +593,7 @@ void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
   auto* easy = worker->easy();
   worker->family = familyFor(source, avoid);
   if (worker->family) {
+    source.families[worker->family == 6].forced = true;
     curl_easy_setopt(easy, CURLOPT_IPRESOLVE,
                      worker->family == 4 ? CURL_IPRESOLVE_V4
                                          : CURL_IPRESOLVE_V6);

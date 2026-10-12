@@ -73,6 +73,7 @@ private:
     struct Family {
       bool worked = false;
       bool failed = false;
+      bool forced = false; // a connection was made to use it
       double speed = 0; // average bytes per second of one connection
     };
     std::array<Family, 2> families{};
