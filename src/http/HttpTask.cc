@@ -153,6 +153,7 @@ void Worker::onHeader(std::string_view line)
     contentRange.clear();
     disposition.clear();
     contentType.clear();
+    contentEncoding.clear();
     acceptRanges.clear();
     retryAfter.clear();
     contentLength = -1;
@@ -190,6 +191,9 @@ void Worker::onHeader(std::string_view line)
   }
   else if (name == "content-type") {
     contentType = field;
+  }
+  else if (name == "content-encoding") {
+    contentEncoding = field;
   }
   else if (name == "content-length") {
     contentLength = text::toInt(field).value_or(-1);
@@ -399,12 +403,14 @@ int HttpTask::familyFor(const Source& source, int avoid) const
 bool HttpTask::blameFamily(Worker& worker, Source& source, int code)
 {
   const auto status = worker.responseCode();
+  const bool statusError =
+      code == CURLE_HTTP_RETURNED_ERROR &&
+      (status == 401 || status == 403 || status == 404 || status == 421);
   const bool pathError =
       code == CURLE_COULDNT_CONNECT || code == CURLE_COULDNT_RESOLVE_HOST ||
       code == CURLE_OPERATION_TIMEDOUT || code == CURLE_RECV_ERROR ||
       code == CURLE_SEND_ERROR || code == CURLE_SSL_CONNECT_ERROR ||
-      (code == CURLE_HTTP_RETURNED_ERROR &&
-       (status == 401 || status == 403 || status == 404 || status == 421));
+      statusError;
   const auto effective = worker.effectiveUrl();
   const int family =
       worker.connectedFamily() ? worker.connectedFamily() : worker.family;
@@ -414,7 +420,15 @@ bool HttpTask::blameFamily(Worker& worker, Source& source, int code)
   }
   auto& mine = source.families[family == 6];
   const auto& other = source.families[family == 4];
-  if (mine.worked || other.failed) {
+  if (other.failed) {
+    // Both routes failed: back to Happy Eyeballs, and the failure counts.
+    mine.failed = true;
+    return false;
+  }
+  // A status is the server's answer unless the other route has served this
+  // source; a host without addresses of that family must not lose its real
+  // answer to an endless detour.
+  if (mine.worked || (statusError && !other.worked)) {
     return false;
   }
   if (mine.failed) {
@@ -611,6 +625,22 @@ bool HttpTask::rangesIgnored(Worker& worker)
   return true;
 }
 
+bool HttpTask::compressedBody(const Worker& worker) const
+{
+  if (worker.contentEncoding.empty() ||
+      text::iequals(worker.contentEncoding, "identity") ||
+      !options().flag("http-accept-gzip") || planner_.length() >= 0) {
+    return false;
+  }
+  auto name = safeFileName(contentDispositionFileName(worker.disposition));
+  if (name.empty()) {
+    name = uri::fileName(worker.effectiveUrl());
+  }
+  const auto extension = text::lower(toPath(name).extension().string());
+  return extension != ".gz" && extension != ".tgz" && extension != ".br" &&
+         extension != ".zst" && extension != ".z";
+}
+
 void HttpTask::accept(Worker& worker)
 {
   if (worker.accepted || worker.cancelled()) {
@@ -644,6 +674,17 @@ void HttpTask::accept(Worker& worker)
     if (worker.begin > 0 && rangesIgnored(worker)) {
       return;
     }
+  }
+  if (compressedBody(worker)) {
+    // The server compressed although identity was asked for. With
+    // http-accept-gzip the file is fetched again as one decoded stream, as a
+    // browser would save it; an archive's own name keeps its bytes as sent.
+    if (ranged_) {
+      ranged_ = false;
+      cancelWorker(worker.id);
+      return;
+    }
+    total = -1; // Content-Length counts the compressed bytes
   }
   const auto tag = strongTag(worker.etag);
   const bool lengthChanged =
@@ -865,6 +906,10 @@ size_t HttpTask::receive(Worker& worker, const char* data, size_t size)
   }
   const auto now = Clock::now();
   const auto amount = static_cast<int64_t>(consumed);
+  if (!worker.receiving) {
+    planner_.noteStartup(
+        std::chrono::duration<double>(now - worker.started).count());
+  }
   worker.lastData = now;
   worker.receiving = true;
   worker.tickBytes += amount;
@@ -1079,18 +1124,21 @@ void HttpTask::failedResponse(Worker& worker, int code)
       changed("precondition failed");
       return;
     }
-    if (status == 404 || status == 410) {
+    // Client errors on a source are its answer: like aria2's 404 handling,
+    // max-file-not-found of them end the source even with unlimited tries.
+    if (status == 403 || status == 404 || status == 410 || status == 451) {
       if (++source.notFound >=
               std::max<int64_t>(options().integer("max-file-not-found"), 1) ||
           sources_.size() > 1) {
         source.dead = true;
       }
+      const auto error = status == 403 ? ErrorCode::HttpProtocol
+                                       : ErrorCode::ResourceNotFound;
       if (allDead()) {
-        abort(ErrorCode::ResourceNotFound, fmt::format("HTTP {}", status));
+        abort(error, fmt::format("HTTP {}", status));
         return;
       }
-      slotFailed(slot, ErrorCode::ResourceNotFound,
-                 fmt::format("HTTP {}", status));
+      slotFailed(slot, error, fmt::format("HTTP {}", status));
       return;
     }
     if (status == 401 || status == 407) {

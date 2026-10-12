@@ -67,6 +67,28 @@ TEST_CASE("the split point follows measured speeds")
   CHECK(kept * 2 == doctest::Approx(given * 3).epsilon(0.01));
 }
 
+TEST_CASE("slow connections split below min-split-size when it pays off")
+{
+  SegmentPlanner slow(MiB);
+  slow.setLength(2 * MiB);
+  slow.place(1, 0, 2 * MiB);
+  slow.receive(1, MiB / 2);
+  slow.updateSpeed(1, 100e3, 1);
+  slow.noteStartup(0.5);
+  // 1.5 MiB left at 100 kB/s: a new connection (0.5 s to start) wins.
+  const auto range = slow.assign(2);
+  REQUIRE(range);
+  CHECK(range->second == 2 * MiB);
+
+  SegmentPlanner fast(MiB);
+  fast.setLength(2 * MiB);
+  fast.place(1, 0, 2 * MiB);
+  fast.receive(1, MiB / 2);
+  fast.updateSpeed(1, 50e6, 1);
+  fast.noteStartup(0.5);
+  CHECK_FALSE(fast.assign(2)); // done in 30 ms; a new connection cannot win
+}
+
 TEST_CASE("small remainders are not split")
 {
   SegmentPlanner planner(MiB);

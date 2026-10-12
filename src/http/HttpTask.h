@@ -100,6 +100,8 @@ private:
                    int64_t requestEnd, int avoid = 0);
   std::optional<size_t> pickSource();
   int familyFor(const Source& source, int avoid) const;
+  // A first response compressed with Content-Encoding that is to be decoded.
+  bool compressedBody(const Worker& worker) const;
   bool blameFamily(Worker& worker, Source& source, int code);
   void measureFamilies();
   void accept(Worker& worker);

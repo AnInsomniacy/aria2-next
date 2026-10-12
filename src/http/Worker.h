@@ -34,6 +34,7 @@ public:
   std::string contentRange;
   std::string disposition;
   std::string contentType;
+  std::string contentEncoding;
   std::string acceptRanges;
   std::string retryAfter;
   int64_t contentLength = -1;

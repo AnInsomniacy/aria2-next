@@ -10,6 +10,8 @@ namespace {
 constexpr int64_t alignment = 4096;
 // A connection is raced only when it would otherwise hold the download back.
 constexpr double raceSeconds = 2.0;
+// Ranges are never split below this, however slow the connection.
+constexpr int64_t minSplitFloor = 64 << 10;
 // Copies of one range that are delivering or still starting, including the
 // original. Copies that stay silent past raceSeconds do not count; at most
 // 2 * maxCopies of those are tried.
@@ -70,6 +72,20 @@ double SegmentPlanner::typicalSpeed(int except) const
   return count ? sum / count : 0;
 }
 
+// Halving a range of R bytes at speed v saves R / 2v and costs a new
+// connection's start-up, so it pays off from R = 2 * v * startup. On fast
+// links that is more than min-split-size; on slow ones (0.1 MB/s overseas)
+// it lets the last megabytes spread over fresh connections instead of
+// trailing behind one.
+int64_t SegmentPlanner::minSplitFor(double speed) const
+{
+  if (speed <= 0 || startup_ <= 0) {
+    return minSplit_;
+  }
+  const auto worth = static_cast<int64_t>(2 * speed * startup_);
+  return std::clamp(worth, std::min(minSplitFloor, minSplit_), minSplit_);
+}
+
 std::optional<Range> SegmentPlanner::largestGap() const
 {
   if (length_ < 0) {
@@ -111,10 +127,15 @@ std::optional<Range> SegmentPlanner::split(int id)
   double longest = 0;
   for (auto& [other, worker] : workers_) {
     const auto remaining = worker.end - worker.position;
-    if (worker.end == unbounded || remaining < 2 * minSplit_) {
+    const auto speed = worker.speed > 0 ? worker.speed : typical;
+    if (worker.end == unbounded || remaining < 2 * minSplitFor(speed)) {
       continue;
     }
-    const auto speed = worker.speed > 0 ? worker.speed : typical;
+    // A connection far behind the others is raced, not split: splitting
+    // would leave it holding the start of its range.
+    if (worker.receiving && typicalSpeed(other) > 2 * worker.speed) {
+      continue;
+    }
     // Unknown speeds compare by size; any measured speed beats none.
     const auto time = speed > 0 ? remaining / speed : remaining * 1e-3;
     if (!victim || time > longest) {
@@ -130,9 +151,10 @@ std::optional<Range> SegmentPlanner::split(int id)
   const auto own = target.speed > 0 ? target.speed : typical;
   const auto fresh = typical > 0 ? typical : own;
   const auto share = own > 0 && fresh > 0 ? own / (own + fresh) : 0.5;
+  const auto least = minSplitFor(own);
   auto cut = target.position + static_cast<int64_t>(remaining * share);
-  cut = std::clamp(cut, target.position + minSplit_, target.end - minSplit_);
-  if (cut - cut % alignment > target.position + minSplit_) {
+  cut = std::clamp(cut, target.position + least, target.end - least);
+  if (cut - cut % alignment > target.position + least) {
     cut -= cut % alignment;
   }
   const Range range{cut, target.end};

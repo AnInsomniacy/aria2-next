@@ -30,6 +30,8 @@ public:
   };
 
   // `minSplit`: a range is split only if both halves get at least this much.
+  // Once connections show their speed and start-up time, the limit drops to
+  // what a new connection can still win (see minSplitFor).
   explicit SegmentPlanner(int64_t minSplit) : minSplit_(minSplit) {}
 
   // Also clamps workers placed before the length was known.
@@ -56,6 +58,11 @@ public:
   {
     peakSpeed_ = std::max(peakSpeed_, bytesPerSecond);
   }
+  // Seconds from a request to its first payload byte.
+  void noteStartup(double seconds)
+  {
+    startup_ = startup_ > 0 ? startup_ * 0.7 + seconds * 0.3 : seconds;
+  }
 
   // After a worker reached its end: if its request continues into a range of a
   // worker that has not received anything, it takes that range over and the
@@ -74,12 +81,14 @@ private:
   std::optional<Range> split(int id);
   std::optional<Range> race(int id);
   double typicalSpeed(int except = -1) const;
+  int64_t minSplitFor(double speed) const;
 
   int64_t minSplit_;
   int64_t length_ = -1;
   RangeSet received_;
   std::map<int, Worker> workers_;
   double peakSpeed_ = 0; // fastest smoothed connection speed seen
+  double startup_ = 0;   // smoothed request-to-first-byte seconds
 };
 
 } // namespace aria2::http
