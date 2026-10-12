@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <map>
+#include <set>
 
 namespace aria2::bt {
 
@@ -482,7 +483,8 @@ void BtTask::updated(const lt::torrent_status& status)
     // A torrent that was already complete when it started is not announced
     // again.
     if (!first) {
-      log::notice("Download complete: {}", status.name);
+      log::notice("Download complete: {}",
+                  info_ ? info_->name() : bt::hashText(status.info_hashes));
       engine().emit(Event::BtComplete, *this);
     }
     saveResume(lt::torrent_handle::save_info_dict);
@@ -885,6 +887,10 @@ json::array BtTask::peers() const
 json::array BtTask::trackers() const
 {
   json::array out;
+  std::set<std::string> userTrackers;
+  for (const auto& part : text::split(options().get("bt-tracker"), ',')) {
+    userTrackers.emplace(text::trim(part));
+  }
   const auto now = lt::clock_type::now();
   for (const auto& tracker : running().trackers()) {
     int fails = 0;
@@ -920,8 +926,11 @@ json::array BtTask::trackers() const
                         : tracker.verified ? "working"
                         : !error.empty()   ? "error"
                                            : "notContacted";
+    // libtorrent files every tracker given at add time under the magnet
+    // link, including those from --bt-tracker.
     const auto source =
-        (tracker.source & lt::announce_entry::source_torrent)       ? "torrent"
+        userTrackers.count(tracker.url)                             ? "user"
+        : (tracker.source & lt::announce_entry::source_torrent)     ? "torrent"
         : (tracker.source & lt::announce_entry::source_magnet_link) ? "magnet"
         : (tracker.source & lt::announce_entry::source_tex)         ? "exchange"
                                                                     : "user";
