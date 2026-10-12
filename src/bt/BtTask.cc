@@ -459,7 +459,6 @@ void BtTask::updated(const lt::torrent_status& status)
   if (phase_ == Phase::Saving || phase_ == Phase::Removing) {
     return;
   }
-  const bool first = !hasStatus_;
   status_ = status;
   hasStatus_ = true;
   if (phase_ != Phase::Running) {
@@ -480,9 +479,10 @@ void BtTask::updated(const lt::torrent_status& status)
                     !awaitingSelection();
   if (done && !finished_) {
     finished_ = true;
-    // A torrent that was already complete when it started is not announced
-    // again.
-    if (!first) {
+    // A torrent that was already complete when it started (resumed, or
+    // found on disk) downloaded nothing and is not announced again; one
+    // that finished before its first status update is.
+    if (status.total_payload_download > 0) {
       log::notice("Download complete: {}",
                   info_ ? info_->name() : bt::hashText(status.info_hashes));
       engine().emit(Event::BtComplete, *this);
