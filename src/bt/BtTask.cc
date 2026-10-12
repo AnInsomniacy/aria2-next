@@ -459,6 +459,15 @@ void BtTask::updated(const lt::torrent_status& status)
   if (phase_ == Phase::Saving || phase_ == Phase::Removing) {
     return;
   }
+  // The totals restart with every session of the torrent; a drop is no traffic.
+  if (hasStatus_) {
+    const auto now = Clock::now();
+    const auto down =
+        status.total_payload_download - status_.total_payload_download;
+    const auto up = status.total_payload_upload - status_.total_payload_upload;
+    downloadMeter_.add(std::max<int64_t>(down, 0), now);
+    uploadMeter_.add(std::max<int64_t>(up, 0), now);
+  }
   status_ = status;
   hasStatus_ = true;
   if (phase_ != Phase::Running) {
@@ -642,14 +651,12 @@ int64_t BtTask::completedLength() const
 
 int64_t BtTask::downloadSpeed() const
 {
-  return hasStatus_ && phase_ == Phase::Running ? status_.download_payload_rate
-                                                : 0;
+  return hasStatus_ && phase_ == Phase::Running ? downloadMeter_.rate() : 0;
 }
 
 int64_t BtTask::uploadSpeed() const
 {
-  return hasStatus_ && phase_ == Phase::Running ? status_.upload_payload_rate
-                                                : 0;
+  return hasStatus_ && phase_ == Phase::Running ? uploadMeter_.rate() : 0;
 }
 
 int64_t BtTask::uploadLength() const

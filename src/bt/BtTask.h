@@ -1,6 +1,7 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
 #pragma once
 
+#include "core/Speed.h"
 #include "core/Task.h"
 #include "disk/DiskPool.h"
 
@@ -96,6 +97,10 @@ private:
   lt::torrent_handle handle_;
   lt::torrent_status status_;
   bool hasStatus_ = false;
+  // libtorrent recomputes its rates once a second; metering the payload
+  // totals keeps BT speeds as live as HTTP and ED2K ones.
+  mutable SpeedMeter downloadMeter_;
+  mutable SpeedMeter uploadMeter_;
   Phase phase_ = Phase::Idle;
   Outcome outcome_ = Outcome::Stop;
   ErrorCode failure_ = ErrorCode::Finished;

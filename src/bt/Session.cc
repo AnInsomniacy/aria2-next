@@ -391,11 +391,16 @@ void Session::tick()
   if (!session_) {
     return;
   }
-  session_->post_torrent_updates(lt::torrent_handle::query_pieces);
-  if (ticks_++ % 5 == 0) {
+  // Rayburst reads twice a second while its window is open; libtorrent
+  // refreshes its rates on the same 500 ms tick.
+  // Accurate counters include finished blocks of partial pieces, so progress
+  // moves with the transfer rather than piece by piece.
+  session_->post_torrent_updates(lt::torrent_handle::query_pieces |
+                                 lt::torrent_handle::query_accurate_download_counters);
+  if (ticks_++ % 10 == 0) {
     session_->post_session_stats();
   }
-  ticker_.expires_after(1s);
+  ticker_.expires_after(500ms);
   ticker_.async_wait([this](const boost::system::error_code& error) {
     if (!error) {
       tick();
