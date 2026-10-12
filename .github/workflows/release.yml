@@ -236,13 +236,17 @@ jobs:
       - name: Resolve Android NDK
         run: |
           . packaging/dependencies.env
-          NDK_HOME=${ANDROID_NDK_LATEST_HOME:-}
-          test -d "$NDK_HOME"
-          version_major=$(awk -F'= *' '/^Pkg\.Revision/ { split($2, parts, "."); print parts[1]; exit }' "$NDK_HOME/source.properties")
-          if [ "$version_major" != "$ANDROID_NDK_VERSION" ]; then
-            echo "Unexpected Android NDK major version: $version_major" >&2
-            exit 1
+          # The runner's "latest" NDK moves with image updates; use the pinned
+          # major, installing its newest release when the image lacks it.
+          NDK_HOME=$(ls -d "${ANDROID_HOME:?}/ndk/$ANDROID_NDK_VERSION".* 2>/dev/null | sort -V | tail -n 1 || true)
+          if [ -z "$NDK_HOME" ]; then
+            sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+            package=$("$sdkmanager" --list 2>/dev/null | grep -o "ndk;$ANDROID_NDK_VERSION\.[0-9.]*" | sort -V | tail -n 1)
+            test -n "$package"
+            "$sdkmanager" --install "$package" > /dev/null
+            NDK_HOME="$ANDROID_HOME/ndk/${package#ndk;}"
           fi
+          test -f "$NDK_HOME/source.properties"
           echo "NDK=$NDK_HOME" >> "$GITHUB_ENV"
           echo "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> "$GITHUB_PATH"
 
