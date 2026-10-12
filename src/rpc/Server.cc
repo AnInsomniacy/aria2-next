@@ -19,6 +19,7 @@
 #include <boost/json/parse.hpp>
 #include <boost/json/serialize.hpp>
 
+#include <array>
 #include <deque>
 #include <set>
 
@@ -214,6 +215,9 @@ struct Server::State : std::enable_shared_from_this<State> {
       boost::system::error_code error;
       co_await http::async_read(stream, buffer, parser,
                                 asio::redirect_error(use_awaitable, error));
+      if (error == http::error::body_limit) {
+        co_await rejectTooLarge(stream);
+      }
       if (error) {
         co_return;
       }
@@ -229,6 +233,30 @@ struct Server::State : std::enable_shared_from_this<State> {
       if (error || !response.keep_alive()) {
         co_return;
       }
+    }
+  }
+
+  // Answers 413 instead of dropping the connection, then reads what the
+  // client is still sending so the answer is not lost to a reset.
+  static awaitable<void> rejectTooLarge(beast::tcp_stream& stream)
+  {
+    http::response<http::string_body> response{http::status::payload_too_large,
+                                               11};
+    response.set(http::field::connection, "close");
+    response.body() = "Request too large; see --rpc-max-request-size.";
+    response.prepare_payload();
+    boost::system::error_code error;
+    co_await http::async_write(stream, response,
+                               asio::redirect_error(use_awaitable, error));
+    if (error) {
+      co_return;
+    }
+    stream.socket().shutdown(tcp::socket::shutdown_send, error);
+    stream.expires_after(5s);
+    std::array<char, 64 << 10> discard;
+    while (!error) {
+      co_await stream.async_read_some(
+          asio::buffer(discard), asio::redirect_error(use_awaitable, error));
     }
   }
 
