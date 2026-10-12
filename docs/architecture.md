@@ -73,7 +73,9 @@ worker is one libcurl transfer that owns `[position, end)` of the file.
    and Content-Range must match the request. A mismatching single response is
    retried; a changed representation restarts a task-owned file from zero and
    fails a foreign file without modifying it. A server that ignores ranges
-   gets one connection from offset zero.
+   gets one connection from offset zero. Mirrors keep their own validators
+   (each mirror's ETag differs); a mirror that ignores ranges or changes the
+   file is dropped while another mirror remains.
 7. Parallel ranges use HTTP/1.1 so each range has its own TCP window; single
    transfers may negotiate HTTP/2.
 8. A Metalink's `<size>` is binding: a mirror reporting another length is

@@ -293,6 +293,8 @@ void HttpTask::reset()
     source.active = 0;
     source.failures = 0;
     source.readyAt = {};
+    source.etag.clear();
+    source.lastModified.clear();
   }
 }
 
@@ -602,8 +604,8 @@ void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
   const bool decode = !ranged_ && options().flag("http-accept-gzip");
   curl_easy_setopt(easy, CURLOPT_ACCEPT_ENCODING, decode ? "" : "identity");
   curl_easy_setopt(easy, CURLOPT_HTTP_CONTENT_DECODING, decode ? 1L : 0L);
-  const auto validator =
-      strongTag(etag_).empty() ? lastModified_ : strongTag(etag_);
+  const auto [etag, modified] = validators(source);
+  const auto validator = etag.empty() ? modified : etag;
   if (ranged_ && !validator.empty()) {
     worker->header("If-Range: " + validator);
   }
@@ -628,10 +630,13 @@ void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
 // and the connection that started at byte 0 carries on alone.
 bool HttpTask::rangesIgnored(Worker& worker)
 {
-  const bool same = !etag_.empty() ? strongTag(worker.etag) == etag_
-                    : !lastModified_.empty()
-                        ? worker.lastModified == lastModified_
-                        : true;
+  const auto [etag, modified] = validators(sources_[worker.source]);
+  const bool same = !etag.empty()       ? strongTag(worker.etag) == etag
+                    : !modified.empty() ? worker.lastModified == modified
+                                        : true;
+  if (dropMirror(worker, same ? "it ignores byte ranges" : "its file changed")) {
+    return true;
+  }
   if (!same) {
     changed("validator mismatch");
     return true;
@@ -704,18 +709,11 @@ void HttpTask::accept(Worker& worker)
   if (declared_ >= 0 && total >= 0 && total != declared_) {
     // A mirror with another length than the Metalink states serves another
     // file, such as an outdated copy.
-    log::warn("{}: {} has {} bytes instead of {}; not using it", gidText(gid()),
-              uri::redact(source.uri), total, declared_);
-    source.dead = true;
-    const auto slot = worker.slot;
-    cancelWorker(worker.id);
-    if (std::all_of(sources_.begin(), sources_.end(),
-                    [](const Source& s) { return s.dead; })) {
+    if (!dropMirror(worker,
+                    fmt::format("{} bytes instead of {}", total, declared_))) {
       abort(ErrorCode::HttpProtocol,
             fmt::format("No mirror has the stated length {}", declared_));
-      return;
     }
-    slotFailed(slot, ErrorCode::HttpProtocol, "Mirror has another length");
     return;
   }
   if (compressedBody(worker)) {
@@ -739,12 +737,19 @@ void HttpTask::accept(Worker& worker)
                            !lastModified_.empty() &&
                            !worker.lastModified.empty() &&
                            worker.lastModified != lastModified_;
+  if (lengthChanged && dropMirror(worker, "another length")) {
+    return;
+  }
   if (lengthChanged || tagChanged || timeChanged) {
     changed(lengthChanged ? "length changed" : "validator changed");
     return;
   }
   worker.accepted = true;
   source.failures = 0;
+  if (source.etag.empty() && source.lastModified.empty()) {
+    source.etag = tag;
+    source.lastModified = strongDate(worker.lastModified, worker.date);
+  }
   if (const auto family = worker.connectedFamily()) {
     source.families[family == 6].worked = true;
   }
@@ -797,6 +802,36 @@ void HttpTask::accept(Worker& worker)
     // Restart of a task that already chose its file.
     openOutput(owned_ && persisted_.empty());
   }
+}
+
+// A mirror that disagrees with the download (another length, ignored
+// ranges, a changed file) is dropped while others remain.
+bool HttpTask::dropMirror(Worker& worker, const std::string& why)
+{
+  auto& source = sources_[worker.source];
+  if (!std::any_of(sources_.begin(), sources_.end(), [&](const Source& s) {
+        return &s != &source && !s.dead;
+      })) {
+    return false;
+  }
+  log::warn("{}: not using {}: {}", gidText(gid()), uri::redact(source.uri),
+            why);
+  source.dead = true;
+  const auto slot = worker.slot;
+  cancelWorker(worker.id);
+  slotFailed(slot, ErrorCode::HttpProtocol, why);
+  return true;
+}
+
+// If-Range validators: a single source has the download's; a mirror only
+// its own, once it has answered.
+std::pair<std::string, std::string>
+HttpTask::validators(const Source& source) const
+{
+  if (sources_.size() > 1) {
+    return {source.etag, source.lastModified};
+  }
+  return {strongTag(etag_), lastModified_};
 }
 
 bool HttpTask::decidePath(Worker& worker)
@@ -994,11 +1029,14 @@ size_t HttpTask::receive(Worker& worker, const char* data, size_t size)
     flush(worker);
   }
   if (worker.done) {
+    // Decided before tryFinish(), which may complete the download and
+    // release every worker from the planner, this one included.
+    const auto* planned = planner_.worker(worker.id);
+    const bool ends = consumed == size && planned &&
+                      planned->position >= worker.requestEnd;
     tryFinish();
-    return consumed == size &&
-                   planner_.worker(worker.id)->position >= worker.requestEnd
-               ? size // the response ends here by itself
-               : 0;   // abort; finished() treats it as success
+    return ends ? size // the response ends here by itself
+                : 0;   // abort; finished() treats it as success
   }
   return consumed;
 }

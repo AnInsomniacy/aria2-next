@@ -16,6 +16,7 @@ Faults are selected per request through query parameters:
   badrange=1      the first ranged response reports a shifted Content-Range
   norange=1       ignore Range and always send 200 with the full body
   corrupt=O       every response flips the 8 bytes at offset O (a bad mirror)
+  etag=T          entity tag T instead of one derived from the size
   expire=S        /signed/... redirects to a token valid for S seconds
 
 One-shot faults trip once per path; benchmarks use a fresh path per run.
@@ -137,8 +138,14 @@ class Origin:
                 return await self.simple(writer, 403)
 
         size = int(query.get("size", str(256 << 20)))
+        etag = '"' + query.get("etag", f"bench-{size}") + '"'
+        modified = "Mon, 01 Jan 2024 00:00:00 GMT"
         start, end, partial = 0, size - 1, False
         spec = headers.get("range", "")
+        # If-Range that does not match (RFC 9110 13.1.5): the whole file.
+        condition = headers.get("if-range")
+        if condition and condition not in (etag, modified):
+            spec = ""
         if spec.startswith("bytes=") and query.get("norange") != "1":
             first, _, last = spec[6:].partition("-")
             start = int(first)
@@ -166,8 +173,8 @@ class Origin:
             f"HTTP/1.1 {status}",
             f"Content-Length: {length}",
             "Content-Type: application/octet-stream",
-            'ETag: "bench-' + str(size) + '"',
-            "Last-Modified: Mon, 01 Jan 2024 00:00:00 GMT",
+            f"ETag: {etag}",
+            f"Last-Modified: {modified}",
             "Accept-Ranges: bytes" if query.get("norange") != "1" else "Accept-Ranges: none",
             'Content-Disposition: attachment; filename="bench.bin"',
         ]

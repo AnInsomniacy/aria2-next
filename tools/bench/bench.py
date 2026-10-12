@@ -217,7 +217,7 @@ def run(engine: Path, base: str, name: str, extra: list[str], keep: bool = False
         process.kill()
         process.wait()
         stderr.close()
-        if keep:
+        if keep or result.get("status") != "complete":
             result["work"] = str(work)
         else:
             shutil.rmtree(work, ignore_errors=True)

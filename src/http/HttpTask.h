@@ -77,6 +77,10 @@ private:
     };
     std::array<Family, 2> families{};
     bool used = false;
+    // The validators this mirror answered with; one mirror's are meaningless
+    // to another.
+    std::string etag;
+    std::string lastModified;
   };
 
   // A connection position: workers come and go, a slot keeps its failure
@@ -114,6 +118,8 @@ private:
   void finished(Worker& worker, int curlCode);
   void failedResponse(Worker& worker, int curlCode);
   bool rangesIgnored(Worker& worker);
+  bool dropMirror(Worker& worker, const std::string& why);
+  std::pair<std::string, std::string> validators(const Source& source) const;
   void reset();
   void retireWorker(Worker& worker);
   void slotFailed(size_t slot, ErrorCode code, std::string message,
