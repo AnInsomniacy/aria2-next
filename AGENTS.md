@@ -30,6 +30,10 @@ This file defines repository rules for AI coding agents. Human contributors shou
 | `third_party/` | Bundled third-party source |
 | `tools/` | Local developer helpers |
 
+## Libraries and Tools
+
+Fixes and optimizations first look for a mature library or tool before writing code: the stack in `third_party/` (Boost.Asio/Beast/JSON, curl, libtorrent, SQLite, GPAC/FFmpeg) and, for tests, established tools such as doctest, pytest and Toxiproxy. Existing hand-written code may be replaced when a library does the job better. Write it yourself only when nothing suitable exists or the integration would cost more than it saves; never adopt a tool for its own sake.
+
 ## Build Rules
 
 CMake is the only supported build system for aria2-next. Do not restore Autotools files, add another maintained build system, or route release packaging through removed upstream build scripts.
