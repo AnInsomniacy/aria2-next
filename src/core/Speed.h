@@ -102,7 +102,9 @@ public:
   }
 
 private:
-  int64_t burst() const { return std::max<int64_t>(rate_ / 4, 16 << 10); }
+  // Paused transfers are resumed by periodic checks half a second apart; a
+  // smaller bucket would overflow while they wait and lose throughput.
+  int64_t burst() const { return std::max<int64_t>(rate_ / 2, 16 << 10); }
   void refill(Clock::time_point now)
   {
     const auto elapsed = std::chrono::duration<double>(now - stamp_).count();
