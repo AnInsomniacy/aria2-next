@@ -175,7 +175,7 @@ constexpr std::array catalog{
   OptionSpec{"state-dir", 0, Path, "", Global, "advanced", "Directory for resume data and engine state."},
   OptionSpec{"save-session", 0, Path, "", Global, "advanced", "Write unfinished tasks to FILE on exit."},
   OptionSpec{"save-session-interval", 0, Integer, "0", Global, "advanced", "Also write the session every SEC seconds (0: only on exit).", 0, INT32_MAX},
-  OptionSpec{"state-save-interval", 0, Integer, "60", Global, "advanced", "Checkpoint resume data every SEC seconds.", 1, 600},
+  OptionSpec{"state-save-interval", 0, Integer, "10", Global, "advanced", "Checkpoint resume data every SEC seconds.", 1, 600},
   OptionSpec{"max-download-result", 0, Integer, "1000", Global, "advanced", "Finished tasks kept in memory.", 0, INT32_MAX},
   OptionSpec{"keep-unfinished-download-result", 0, Flag, "true", Global, "advanced", "Keep unfinished results even beyond --max-download-result."},
   OptionSpec{"stop", 0, Integer, "0", Global, "advanced", "Exit after SEC seconds (0: never).", 0, INT32_MAX},

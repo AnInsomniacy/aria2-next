@@ -195,7 +195,7 @@ through RPC (`aria2.addUri` options, `aria2.changeOption`,
 | `--state-dir` | PATH |  | Directory for resume data and engine state. |
 | `--save-session` | PATH |  | Write unfinished tasks to FILE on exit. |
 | `--save-session-interval` | VALUE | `0` | Also write the session every SEC seconds (0: only on exit). |
-| `--state-save-interval` | VALUE | `60` | Checkpoint resume data every SEC seconds. |
+| `--state-save-interval` | VALUE | `10` | Checkpoint resume data every SEC seconds. |
 | `--max-download-result` | VALUE | `1000` | Finished tasks kept in memory. |
 | `--keep-unfinished-download-result` | flag | `true` | Keep unfinished results even beyond --max-download-result. |
 | `--stop` | VALUE | `0` | Exit after SEC seconds (0: never). |
