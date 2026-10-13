@@ -46,7 +46,7 @@ through RPC (`aria2.addUri` options, `aria2.changeOption`,
 | `--http-user` | VALUE |  | HTTP user name. |
 | `--http-passwd` | VALUE |  | HTTP password. |
 | `--http-no-cache` | flag | `false` | Send Cache-Control: no-cache. |
-| `--http-accept-gzip` | flag | `false` | Accept and decode gzip/deflate responses. |
+| `--http-accept-gzip` | flag | `true` | Accept and decode gzip/deflate responses. |
 | `--enable-http-keep-alive` | flag | `true` | Reuse connections. |
 | `--load-cookies` | PATH |  | Load cookies from a Netscape/Mozilla text or Firefox/Chrome SQLite file. |
 | `--save-cookies` | PATH |  | Save cookies to FILE in Netscape format. |

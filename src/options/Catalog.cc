@@ -47,7 +47,7 @@ constexpr std::array catalog{
   OptionSpec{"http-user", 0, Text, "", TG | Secret, "http", "HTTP user name."},
   OptionSpec{"http-passwd", 0, Text, "", TG | Secret, "http", "HTTP password."},
   OptionSpec{"http-no-cache", 0, Flag, "false", TG, "http", "Send Cache-Control: no-cache."},
-  OptionSpec{"http-accept-gzip", 0, Flag, "false", TG, "http", "Accept and decode gzip/deflate responses."},
+  OptionSpec{"http-accept-gzip", 0, Flag, "true", TG, "http", "Accept and decode gzip/deflate responses."},
   OptionSpec{"enable-http-keep-alive", 0, Flag, "true", TG, "http", "Reuse connections."},
   OptionSpec{"load-cookies", 0, Path, "", TG, "http", "Load cookies from a Netscape/Mozilla text or Firefox/Chrome SQLite file."},
   OptionSpec{"save-cookies", 0, Path, "", TG, "http", "Save cookies to FILE in Netscape format."},
