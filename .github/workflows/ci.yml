@@ -29,6 +29,7 @@ jobs:
           bash -n packaging/scripts/common.sh
           bash -n packaging/scripts/build-release
           bash -n packaging/scripts/check-runtime-deps
+          sh -n packaging/scripts/smoke-test
           bash -n packaging/scripts/verify-runner-tools
 
       - name: Verify runner tools
@@ -45,3 +46,6 @@ jobs:
 
       - name: Verify binary version
         run: build/default/aria2-next --version
+
+      - name: Smoke test binary
+        run: packaging/scripts/smoke-test build/default/aria2-next

@@ -354,6 +354,11 @@ ExternalProject_Add(libtorrent_project
   BINARY_DIR "${CMAKE_BINARY_DIR}/vendor/libtorrent"
   CMAKE_ARGS
     ${ARIA2_EXTERNAL_CMAKE_ARGS}
+    # Header-only Asio types change layout with the C++ standard, and the
+    # linker keeps one copy of each inline function for the whole binary, so
+    # libtorrent must be compiled as the same standard as the engine.
+    -DCMAKE_CXX_STANDARD=20
+    -DCMAKE_CXX_STANDARD_REQUIRED=ON
     -DBUILD_SHARED_LIBS=OFF
     -DBoost_INCLUDE_DIR=${ARIA2_VENDOR_ROOT}/boost
     -DBoost_NO_BOOST_CMAKE=ON

@@ -111,5 +111,6 @@ esac
 case "$platform" in
   linux|macos)
     "$binary" --version
+    packaging/scripts/smoke-test "$binary"
     ;;
 esac

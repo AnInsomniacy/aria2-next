@@ -5,6 +5,9 @@
 
 #include <doctest/doctest.h>
 #include <libtorrent/address.hpp>
+#include <libtorrent/session.hpp>
+#include <libtorrent/session_params.hpp>
+#include <libtorrent/settings_pack.hpp>
 
 using namespace aria2;
 
@@ -59,4 +62,21 @@ TEST_CASE("magnet links round-trip their identity")
   CHECK(bt::isMagnet(
       "MAGNET:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567"));
   CHECK_THROWS_AS(bt::parseMagnet("magnet:?dn=nothing"), Error);
+}
+
+TEST_CASE("a BitTorrent session starts on its own threads")
+{
+  // Starting registers sockets with Asio from libtorrent's own code, which
+  // crashed when libtorrent and the engine were built as different C++
+  // standards and so disagreed on the layout of Asio's reactor.
+  libtorrent::settings_pack pack;
+  pack.set_str(libtorrent::settings_pack::listen_interfaces, "127.0.0.1:0");
+  pack.set_bool(libtorrent::settings_pack::enable_dht, false);
+  pack.set_bool(libtorrent::settings_pack::enable_lsd, false);
+  pack.set_bool(libtorrent::settings_pack::enable_upnp, false);
+  pack.set_bool(libtorrent::settings_pack::enable_natpmp, false);
+  libtorrent::session session(libtorrent::session_params(std::move(pack)));
+  // A synchronous call runs after the session's own start-up on its thread.
+  CHECK_FALSE(session.get_settings().get_bool(libtorrent::settings_pack::enable_dht));
+  CHECK(session.is_listening());
 }

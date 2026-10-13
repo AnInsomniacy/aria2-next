@@ -37,6 +37,8 @@ Container images are published automatically after official release assets are u
 
 `packaging/scripts/check-runtime-deps` and `packaging/scripts/size-audit` remain available for manual release inspection.
 
+Linux and macOS release builds run `packaging/scripts/smoke-test`, which starts the binary, drives its BitTorrent session over RPC and requires a clean shutdown; CI runs it on every build.
+
 The release dependency boundary is platform-specific. Vendored libraries are built for every release target and linked statically. Linux binaries may use the system ELF loader and C/C++ runtime. macOS binaries may link only Apple system libraries and frameworks. Windows HTTPS uses libcurl with Schannel, secure RPC uses statically linked OpenSSL, and release binaries may link only Windows system DLLs. Android binaries may link only Android system runtime libraries and must not require `libc++_shared.so`.
 
 Maintained libtorrent builds explicitly enable DHT, peer encryption, protocol extensions, mutable torrents, and streaming priorities. I2P and WebTorrent are disabled because aria2-next does not expose those transports and the release artifacts do not ship their runtime dependencies.
