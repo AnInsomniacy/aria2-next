@@ -77,6 +77,20 @@ void Engine::globalOptionsChanged(const std::vector<std::string>& names)
       schedule();
     }
   }
+  // Running tasks that inherit a live option apply its new global value, as
+  // they would apply a change of their own (changeOption).
+  const auto running = active_;
+  for (const auto& name : names) {
+    const auto* spec = findOption(name);
+    if (!spec || !(spec->scope & scope::Live)) {
+      continue;
+    }
+    for (const auto& task : running) {
+      if (!task->options().hasOwn(name)) {
+        task->optionChanged(name);
+      }
+    }
+  }
   if (http_) {
     http_->optionsChanged();
   }
