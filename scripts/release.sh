@@ -79,4 +79,4 @@ git push
 git push origin "$TAG"
 
 echo "Published git tag: $TAG"
-echo "Next: review the release title and notes before creating the GitHub Release."
+echo "Next: create the GitHub Release with the release title and notes."
