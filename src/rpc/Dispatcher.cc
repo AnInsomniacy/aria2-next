@@ -220,6 +220,14 @@ void Dispatcher::handle(std::string_view body,
     done(encode(failure(nullptr, -32700, "Parse error.")));
     return;
   }
+  respond(request, [done = std::move(done)](json::value response) {
+    done(encode(std::move(response)));
+  });
+}
+
+void Dispatcher::respond(const json::value& request,
+                         std::function<void(json::value)> done)
+{
   const auto* object = request.if_object();
   const auto* method = object ? object->if_contains("method") : nullptr;
   const auto* params = object ? object->if_contains("params") : nullptr;
@@ -231,7 +239,7 @@ void Dispatcher::handle(std::string_view body,
                          })
           : asyncMethods_.end();
   if (found == asyncMethods_.end()) {
-    done(encode(handle(request)));
+    done(handle(request));
     return;
   }
   const auto* id = object->if_contains("id");
@@ -241,12 +249,12 @@ void Dispatcher::handle(std::string_view body,
   try {
     authorize(name, list);
     found->second(list, [requestId, done](json::value result) {
-      done(encode(reply(requestId, std::move(result))));
+      done(reply(requestId, std::move(result)));
     });
   }
   catch (const std::exception& error) {
     log::info("RPC {} failed: {}", name, error.what());
-    done(encode(failure(requestId, 1, error.what())));
+    done(failure(requestId, 1, error.what()));
   }
 }
 

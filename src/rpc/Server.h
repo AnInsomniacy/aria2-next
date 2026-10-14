@@ -16,7 +16,8 @@ namespace aria2::rpc {
 class Dispatcher;
 
 // aria2 JSON-RPC over HTTP POST (/jsonrpc) and WebSocket (/jsonrpc), with
-// notifications pushed to every WebSocket client.
+// notifications pushed to every WebSocket client, and aria2 XML-RPC over HTTP
+// POST (/rpc).
 class Server {
 public:
   Server(Engine& engine, Dispatcher& dispatcher);

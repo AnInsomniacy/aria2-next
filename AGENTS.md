@@ -9,7 +9,7 @@ This file defines repository rules for AI coding agents. Human contributors shou
 
 | Area | Ownership |
 | --- | --- |
-| Core | C++20 download engine with the aria2 command line and JSON-RPC (`src/`, one static library `aria2_core`) |
+| Core | C++20 download engine with the aria2 command line, JSON-RPC and XML-RPC (`src/`, one static library `aria2_core`) |
 | Build | CMake 3.25+ with Ninja as the default generator |
 | Tests | doctest unit tests under `tests/` (CTest) plus end-to-end `tools/transfer_validation` and `tools/bench` |
 | Packaging | Cross-platform release automation under `packaging/` and `.github/workflows/release.yml` |

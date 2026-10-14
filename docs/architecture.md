@@ -38,7 +38,7 @@ has no locks. Other threads communicate by posting completions to it.
 | `disk/` | `DiskPool`, `OutputFile`, output naming and conflicts |
 | `http/` | libcurl on Asio, `HttpTask`, `SegmentPlanner`, probe, Metalink |
 | `state/` | session file, SQLite resume store |
-| `rpc/` | Beast HTTP/WebSocket server, JSON-RPC dispatch, methods |
+| `rpc/` | Beast HTTP/WebSocket server, JSON-RPC dispatch, XML-RPC translation, methods |
 | `bt/` | libtorrent session and `BtTask` |
 | `ed2k/` | protocol codec and client, server, Kad, queues |
 | `net/` | UPnP IGD port mapping (`PortMapper`) |
@@ -171,7 +171,11 @@ directions (plain, compressed, obfuscated).
 ## RPC
 
 aria2 JSON-RPC over HTTP POST and WebSocket, with `system.multicall`,
-notifications and the token secret. XML-RPC and JSONP are not provided.
+notifications and the token secret. aria2 XML-RPC (HTTP POST to `/rpc`, as
+Sonarr and Radarr use) is translated to JSON-RPC requests for the same
+dispatcher; base64 values reach the methods still encoded, and failed calls
+in a `system.multicall` answer as faultCode/faultString structs. XML-RPC has
+no notifications. JSONP is not provided.
 Extension methods keep their existing names and fields.
 
 `aria2.probe(uri, options)` requests the first byte of an HTTP(S) URL with

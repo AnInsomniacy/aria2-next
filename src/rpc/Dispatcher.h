@@ -36,6 +36,10 @@ public:
   // passes the response document to `done`, at once or when an
   // asynchronous method answers.
   void handle(std::string_view body, std::function<void(std::string)> done);
+  // Handles a parsed request object or batch like handle(body, done) and
+  // passes the response document to `done` unserialized.
+  void respond(const boost::json::value& request,
+               std::function<void(boost::json::value)> done);
   std::vector<std::string> methods() const;
   static std::vector<std::string> notifications();
 

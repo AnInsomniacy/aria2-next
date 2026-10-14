@@ -6,6 +6,7 @@
 #include "base/Text.h"
 #include "core/Engine.h"
 #include "rpc/Dispatcher.h"
+#include "rpc/XmlRpc.h"
 
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/detached.hpp>
@@ -21,6 +22,7 @@
 
 #include <array>
 #include <deque>
+#include <optional>
 #include <set>
 
 namespace aria2::rpc {
@@ -112,6 +114,37 @@ struct Server::State : std::enable_shared_from_this<State> {
             use_awaitable);
   }
 
+  // Answers an XML-RPC call through the JSON-RPC dispatcher; nullopt when
+  // the body is not a methodCall.
+  awaitable<std::optional<std::string>> dispatchXml(const std::string& body)
+  {
+    boost::json::object request;
+    try {
+      request = xml::parseCall(body);
+    }
+    catch (const std::exception& error) {
+      log::info("RPC: rejected XML-RPC request: {}", error.what());
+      co_return std::nullopt;
+    }
+    const bool multicall =
+        request.at("method").as_string() == "system.multicall";
+    co_return co_await
+        asio::async_initiate<decltype(use_awaitable), void(std::string)>(
+            [this, &request, multicall](auto handler) {
+              auto shared =
+                  std::make_shared<decltype(handler)>(std::move(handler));
+              dispatcher.respond(
+                  request, [shared, multicall](boost::json::value response) {
+                    auto reply = xml::encodeResponse(response, multicall);
+                    asio::post(asio::get_associated_executor(*shared),
+                               [shared, reply = std::move(reply)]() mutable {
+                                 std::move (*shared)(std::move(reply));
+                               });
+                  });
+            },
+            use_awaitable);
+  }
+
   awaitable<http::response<http::string_body>>
   answer(const http::request<http::string_body>& request)
   {
@@ -121,7 +154,8 @@ struct Server::State : std::enable_shared_from_this<State> {
     response.keep_alive(request.keep_alive());
     const auto target = std::string_view(request.target());
     const auto path = target.substr(0, target.find('?'));
-    if (path != "/jsonrpc") {
+    const bool xmlRpc = path == "/rpc";
+    if (path != "/jsonrpc" && !xmlRpc) {
       response.result(http::status::not_found);
       response.prepare_payload();
       co_return response;
@@ -134,6 +168,9 @@ struct Server::State : std::enable_shared_from_this<State> {
       response.set(http::field::access_control_max_age, "1728000");
       response.prepare_payload();
       co_return response;
+    }
+    if (xmlRpc) {
+      co_return co_await answerXml(request, std::move(response));
     }
     std::string body;
     if (request.method() == http::verb::post) {
@@ -149,6 +186,29 @@ struct Server::State : std::enable_shared_from_this<State> {
     }
     response.set(http::field::content_type, "application/json-rpc");
     response.body() = std::move(body);
+    response.prepare_payload();
+    co_return response;
+  }
+
+  // XML-RPC is POST only, and a document that is not a call is a bad
+  // request, as in aria2.
+  awaitable<http::response<http::string_body>>
+  answerXml(const http::request<http::string_body>& request,
+            http::response<http::string_body> response)
+  {
+    if (request.method() != http::verb::post) {
+      response.result(http::status::method_not_allowed);
+      response.prepare_payload();
+      co_return response;
+    }
+    auto body = co_await dispatchXml(request.body());
+    if (!body) {
+      response.result(http::status::bad_request);
+      response.prepare_payload();
+      co_return response;
+    }
+    response.set(http::field::content_type, "text/xml");
+    response.body() = std::move(*body);
     response.prepare_payload();
     co_return response;
   }
