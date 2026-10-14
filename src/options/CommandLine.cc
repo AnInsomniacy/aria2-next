@@ -90,7 +90,14 @@ parseConfigFile(std::string_view content, std::string_view origin)
     }
     const auto equals = line.find('=');
     if (equals == std::string_view::npos) {
-      fail(ErrorCode::Option, "{}:{}: expected name=value", origin, number);
+      // aria2 reads a flag named alone as true, so files written for it
+      // often list them that way.
+      const auto name = std::string(line);
+      if (takesValue(name, findOption(name))) {
+        fail(ErrorCode::Option, "{}:{}: expected name=value", origin, number);
+      }
+      result.emplace_back(name, "true");
+      continue;
     }
     result.emplace_back(std::string(text::trim(line.substr(0, equals))),
                         std::string(text::trim(line.substr(equals + 1))));

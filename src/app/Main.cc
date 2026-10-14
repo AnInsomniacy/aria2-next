@@ -18,6 +18,9 @@
 
 #include <cstdio>
 #include <iostream>
+#include <optional>
+#include <string>
+#include <string_view>
 
 #ifdef _WIN32
 #  include <shellapi.h>
@@ -59,6 +62,19 @@ void configureLog(const Options& options)
   config.maxFiles = static_cast<size_t>(options.integer("log-max-files"));
   config.color = options.flag("enable-color");
   log::configure(config);
+}
+
+// The last value the command line gives an option, if any.
+std::optional<std::string> commandLineValue(const CommandLine& line,
+                                            std::string_view name)
+{
+  std::optional<std::string> found;
+  for (const auto& [option, value] : line.options) {
+    if (option == name) {
+      found = value;
+    }
+  }
+  return found;
 }
 
 std::shared_ptr<Options> globalOptions(const CommandLine& line)
@@ -156,15 +172,18 @@ void addInput(Engine& engine, const CommandLine& line)
 int run(const std::vector<std::string>& args)
 {
   const auto line = parseCommandLine(args);
-  auto global = globalOptions(line);
-  if (global->flag("version")) {
+  // As in aria2, -v and -h answer before the configuration file is read, so a
+  // file the engine rejects cannot hide them.
+  if (const auto version = commandLineValue(line, "version");
+      version && *version != "false") {
     std::fputs(versionText().c_str(), stdout);
     return 0;
   }
-  if (global->defined("help")) {
-    std::fputs(helpText(global->get("help")).c_str(), stdout);
+  if (const auto topic = commandLineValue(line, "help")) {
+    std::fputs(helpText(*topic).c_str(), stdout);
     return 0;
   }
+  auto global = globalOptions(line);
   if (global->flag("daemon") && !daemonize()) {
     fail(ErrorCode::Unknown, "Cannot run as a daemon");
   }

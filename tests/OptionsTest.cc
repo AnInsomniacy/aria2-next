@@ -97,3 +97,14 @@ TEST_CASE("config files report the failing line")
     CHECK(std::string(error.what()).find(":2") != std::string::npos);
   }
 }
+
+TEST_CASE("config files read a flag named alone as true, as aria2 does")
+{
+  const auto pairs =
+      parseConfigFile("continue\nbt-save-metadata\nsplit=4\n", "test.conf");
+  CHECK(pairs == std::vector<std::pair<std::string, std::string>>{
+                     {"continue", "true"},
+                     {"bt-save-metadata", "true"},
+                     {"split", "4"}});
+  CHECK_THROWS_AS(parseConfigFile("split\n", "test.conf"), Error);
+}
