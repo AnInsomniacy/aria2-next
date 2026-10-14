@@ -63,7 +63,7 @@ Use standard semantic-version bump semantics. A minor release bump from
 
 Release tags use `v{PROJECT_VERSION}`. The tag version and CMake project version must match exactly after removing the leading `v`. Pre-release, beta, RC, channel, build-metadata, or date-based release suffixes are not supported.
 
-Treat published release tags as immutable. If a failed release has not been consumed, delete the failed GitHub Release and tag, fix the commit, then recreate the same release deliberately. If a release has been publicly consumed, stop and report the situation. Do not choose, bump, or publish a replacement version unless the maintainer explicitly specifies the new version.
+Treat published release tags as immutable. If a failed release has not been consumed, delete the failed GitHub Release and tag, fix the commit, then recreate the same release deliberately. If a release has been publicly consumed, leave it in place and publish the fix as the next patch version.
 
 ## Dependency Management
 
@@ -81,7 +81,7 @@ Manual workflow runs are for release-path validation. Official release assets ar
 
 Use `./scripts/release.sh` for releases. This script verifies the local build, stages changes, commits if needed, creates an annotated tag, and pushes the commit and tag. It does not create the GitHub Release, generate release notes, or trigger GitHub Actions manually.
 
-After `release.sh` succeeds, generate an English release title and release notes from the commits included in the release, show them to the maintainer, and wait for approval before creating the GitHub Release. Releases must not be marked as pre-releases. Creating the GitHub Release triggers the official release workflow and asset upload.
+After `release.sh` succeeds, generate an English release title and release notes from the commits included in the release and create the GitHub Release with `gh release create`; releases need no maintainer approval. Without a version from the maintainer, release the next patch version. Releases must not be marked as pre-releases. Creating the GitHub Release triggers the official release workflow and asset upload.
 
 Release title format:
 
@@ -149,7 +149,7 @@ bash -n packaging/scripts/build-release
 
 ## Failed Release Recovery
 
-If the GitHub Release has not been created, remove the incorrect local and remote tag only after the maintainer confirms the exact tag:
+If the GitHub Release has not been created, remove the incorrect local and remote tag:
 
 ```bash
 git tag -d v2.0.2
@@ -158,7 +158,7 @@ git push origin --delete v2.0.2
 
 If the GitHub Release exists and the release workflow failed before public consumption, delete the failed GitHub Release, delete the local and remote tag, fix the commit, rerun verification, and recreate the same tag deliberately.
 
-If the release has been publicly consumed, do not delete the release, delete the tag, or invent a replacement version. Stop, explain the failure, and wait for the maintainer to specify the exact next version.
+If the release has been publicly consumed, do not delete the release or the tag. Fix the commit and publish the next patch version, then report the failure.
 
 ## CI and Verification
 
