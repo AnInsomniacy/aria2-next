@@ -8,7 +8,7 @@ Usage:
   ./scripts/release.sh
 
 This script stops after pushing the commit and annotated tag.
-Create the GitHub Release only after reviewing the release title and notes.
+Then create the GitHub Release with the agent-written title and notes.
 USAGE
 }
 
