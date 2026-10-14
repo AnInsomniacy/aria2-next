@@ -11,7 +11,8 @@ bool processAlive(int64_t pid);
 // Starts a program without waiting for it; its output is discarded.
 bool spawnDetached(const std::string& program,
                    const std::vector<std::string>& arguments);
-// Detaches from the terminal (POSIX). Returns false on failure.
+// Detaches from the terminal: forks on POSIX; on Windows starts a detached
+// copy of the process and exits. Returns false on failure.
 bool daemonize();
 
 } // namespace aria2

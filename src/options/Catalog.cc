@@ -24,7 +24,7 @@ constexpr std::array catalog{
   OptionSpec{"check-integrity", 'V', Flag, "false", TG, "basic", "Verify existing data with piece hashes or --checksum."},
   OptionSpec{"log", 'l', Path, "", Global, "basic", "Write the log to FILE ('-' for stdout)."},
   OptionSpec{"quiet", 'q', Flag, "false", 0, "basic", "Do not print to the console."},
-  OptionSpec{"daemon", 'D', Flag, "false", 0, "basic", "Run in the background (POSIX)."},
+  OptionSpec{"daemon", 'D', Flag, "false", 0, "basic", "Run in the background."},
   OptionSpec{"conf-path", 0, Path, "", 0, "basic", "Configuration file (default: $XDG_CONFIG_HOME/aria2/aria2.conf)."},
   OptionSpec{"no-conf", 0, Flag, "false", 0, "basic", "Do not load a configuration file."},
   OptionSpec{"version", 'v', Flag, "false", 0, "basic", "Print the version and exit."},

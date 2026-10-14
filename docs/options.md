@@ -20,7 +20,7 @@ through RPC (`aria2.addUri` options, `aria2.changeOption`,
 | `-V`, `--check-integrity` | flag | `false` | Verify existing data with piece hashes or --checksum. |
 | `-l`, `--log` | PATH |  | Write the log to FILE ('-' for stdout). |
 | `-q`, `--quiet` | flag | `false` | Do not print to the console. |
-| `-D`, `--daemon` | flag | `false` | Run in the background (POSIX). |
+| `-D`, `--daemon` | flag | `false` | Run in the background. |
 | `--conf-path` | PATH |  | Configuration file (default: $XDG_CONFIG_HOME/aria2/aria2.conf). |
 | `--no-conf` | flag | `false` | Do not load a configuration file. |
 | `-v`, `--version` | flag | `false` | Print the version and exit. |

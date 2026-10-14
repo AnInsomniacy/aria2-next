@@ -73,7 +73,45 @@ bool spawnDetached(const std::string& program,
   return true;
 }
 
-bool daemonize() { return false; }
+bool daemonize()
+{
+  // Windows has no fork: the process starts itself again, detached from the
+  // console, and exits. The copy, marked by the environment, carries on.
+  constexpr auto marker = L"ARIA2_NEXT_DAEMON";
+  if (GetEnvironmentVariableW(marker, nullptr, 0) > 0) {
+    SetEnvironmentVariableW(marker, nullptr);
+    return true;
+  }
+  std::wstring program(MAX_PATH, L'\0');
+  for (;;) {
+    const auto length = GetModuleFileNameW(
+        nullptr, program.data(), static_cast<DWORD>(program.size()));
+    if (length == 0) {
+      return false;
+    }
+    if (length < program.size()) {
+      program.resize(length);
+      break;
+    }
+    program.resize(program.size() * 2);
+  }
+  std::wstring command = GetCommandLineW();
+  STARTUPINFOW startup{};
+  startup.cb = sizeof(startup);
+  PROCESS_INFORMATION process{};
+  SetEnvironmentVariableW(marker, L"1");
+  const bool started = CreateProcessW(
+      program.c_str(), command.data(), nullptr, nullptr, FALSE,
+      DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP, nullptr, nullptr, &startup,
+      &process);
+  SetEnvironmentVariableW(marker, nullptr);
+  if (!started) {
+    return false;
+  }
+  CloseHandle(process.hThread);
+  CloseHandle(process.hProcess);
+  ExitProcess(0);
+}
 
 #else
 
