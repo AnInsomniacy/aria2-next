@@ -242,4 +242,17 @@ std::optional<ContentRange> parseContentRange(std::string_view value)
   return ContentRange{*first, *last, total.value_or(-1)};
 }
 
+std::optional<int64_t> unsatisfiedRangeLength(std::string_view value)
+{
+  if (!text::istartsWith(value, "bytes")) {
+    return std::nullopt;
+  }
+  value = text::trim(value.substr(5));
+  if (!value.starts_with("*/")) {
+    return std::nullopt;
+  }
+  const auto length = text::toInt(value.substr(2));
+  return length && *length >= 0 ? length : std::nullopt;
+}
+
 } // namespace aria2::http

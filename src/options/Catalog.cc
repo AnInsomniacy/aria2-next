@@ -84,7 +84,7 @@ constexpr std::array catalog{
   // Output files
   OptionSpec{"allow-overwrite", 0, Flag, "false", TG, "file", "Restart from scratch when the output file exists."},
   OptionSpec{"auto-file-renaming", 0, Flag, "true", TG, "file", "Use a numbered name when the output file exists."},
-  OptionSpec{"file-allocation", 'a', Choice, "none", TG, "file", "none: sparse; prealloc/falloc: reserve space; trunc: set size.", 0, 0, "none|prealloc|falloc|trunc"},
+  OptionSpec{"file-allocation", 'a', Choice, "none", TG, "file", "none/trunc: sparse file; prealloc/falloc: reserve its space before downloading.", 0, 0, "none|prealloc|falloc|trunc"},
   OptionSpec{"remove-control-file", 0, Flag, "false", TG, "file", "Ignore stored progress and start over."},
   OptionSpec{"force-save", 0, Flag, "false", TLG, "file", "Save the task in the session even when it is finished."},
   OptionSpec{"save-not-found", 0, Flag, "true", TLG, "file", "Save tasks that failed with 404 in the session."},

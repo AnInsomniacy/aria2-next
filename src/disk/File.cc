@@ -19,10 +19,8 @@ namespace aria2 {
 
 Allocation parseAllocation(std::string_view option)
 {
-  if (option == "prealloc" || option == "falloc") {
-    return Allocation::Preallocate;
-  }
-  return option == "trunc" ? Allocation::Truncate : Allocation::Sparse;
+  return option == "prealloc" || option == "falloc" ? Allocation::Reserve
+                                                    : Allocation::Sparse;
 }
 
 File::File(File&& other) noexcept { *this = std::move(other); }
@@ -135,7 +133,7 @@ std::error_code File::read(int64_t offset, char* data, size_t size,
   return {};
 }
 
-std::error_code File::resize(int64_t length)
+std::error_code File::setLength(int64_t length)
 {
   FILE_END_OF_FILE_INFO end{};
   end.EndOfFile.QuadPart = length;
@@ -146,23 +144,44 @@ std::error_code File::resize(int64_t length)
   return {};
 }
 
-std::error_code File::allocate(int64_t length)
+std::error_code File::extend(int64_t length, Allocation allocation)
 {
-  FILE_ALLOCATION_INFO allocation{};
-  allocation.AllocationSize.QuadPart = length;
-  if (!SetFileInformationByHandle(handle_, FileAllocationInfo, &allocation,
-                                  sizeof(allocation))) {
+  if (allocation == Allocation::Sparse) {
+    // FAT and exFAT have no sparse files; they zero-fill as before.
+    DWORD returned = 0;
+    DeviceIoControl(handle_, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0,
+                    &returned, nullptr);
+  }
+  const auto filled = size();
+  if (filled < 0) {
     return lastError();
   }
-  return resize(length);
-}
-
-void File::makeSparse()
-{
-  DWORD returned = 0;
-  // Without this NTFS zero-fills everything before a far offset on write.
-  DeviceIoControl(handle_, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, &returned,
-                  nullptr);
+  if (filled >= length) {
+    return {};
+  }
+  if (allocation == Allocation::Sparse) {
+    return setLength(length);
+  }
+  FILE_ALLOCATION_INFO reserved{};
+  reserved.AllocationSize.QuadPart = length;
+  if (!SetFileInformationByHandle(handle_, FileAllocationInfo, &reserved,
+                                  sizeof(reserved))) {
+    return lastError();
+  }
+  static const std::string zeros(4 << 20, '\0');
+  for (auto offset = filled; offset < length;
+       offset += static_cast<int64_t>(zeros.size())) {
+    if (stopExtending_) {
+      // Ends where the zeros end, so the next opening fills the rest.
+      return setLength(offset);
+    }
+    const auto count =
+        std::min<int64_t>(static_cast<int64_t>(zeros.size()), length - offset);
+    if (auto error = write(offset, zeros.data(), static_cast<size_t>(count))) {
+      return error;
+    }
+  }
+  return {};
 }
 
 std::error_code File::sync()
@@ -268,14 +287,22 @@ std::error_code File::read(int64_t offset, char* data, size_t size,
   return {};
 }
 
-std::error_code File::resize(int64_t length)
+std::error_code File::setLength(int64_t length)
 {
   return ::ftruncate(fd_, static_cast<off_t>(length)) == 0 ? std::error_code()
                                                            : lastError();
 }
 
-std::error_code File::allocate(int64_t length)
+// Files on the supported file systems are sparse without asking, and their
+// reservations take no zero-filling.
+std::error_code File::extend(int64_t length, Allocation allocation)
 {
+  if (size() >= length) {
+    return {};
+  }
+  if (allocation == Allocation::Sparse) {
+    return setLength(length);
+  }
 #  if defined(__APPLE__)
   fstore_t store{F_ALLOCATECONTIG, F_PEOFPOSMODE, 0, static_cast<off_t>(length),
                  0};
@@ -283,17 +310,15 @@ std::error_code File::allocate(int64_t length)
     store.fst_flags = F_ALLOCATEALL;
     fcntl(fd_, F_PREALLOCATE, &store);
   }
-  return resize(length);
+  return setLength(length);
 #  elif defined(__linux__) || defined(__ANDROID__)
   const auto result = ::posix_fallocate(fd_, 0, static_cast<off_t>(length));
   return result == 0 ? std::error_code()
                      : std::error_code(result, std::system_category());
 #  else
-  return resize(length);
+  return setLength(length);
 #  endif
 }
-
-void File::makeSparse() {}
 
 std::error_code File::sync()
 {

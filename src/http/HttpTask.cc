@@ -1220,7 +1220,16 @@ void HttpTask::failedResponse(Worker& worker, int code)
     launch();
     return;
   }
+  // An empty file has no byte to range over (RFC 9110 15.5.17).
+  const bool empty = code == CURLE_HTTP_RETURNED_ERROR && status == 416 &&
+                     ranged_ && planner_.length() < 0 &&
+                     unsatisfiedRangeLength(worker.contentRange) == 0;
   retireWorker(worker);
+  if (empty) {
+    ranged_ = false;
+    launch();
+    return;
+  }
   if (code == CURLE_HTTP_RETURNED_ERROR && redirected &&
       (status == 401 || status == 403 || status == 404 || status == 410)) {
     // An expired signed destination: go back through the original URI, one
@@ -1661,6 +1670,9 @@ void HttpTask::stop(bool, std::function<void()> done)
 {
   stopped_ = std::move(done);
   phase_ = Phase::Stopping;
+  if (output_) {
+    output_->stopExtending();
+  }
   ticker_.cancel();
   tickScheduled_ = false;
   for (const auto& [id, worker] : std::map(workers_)) {

@@ -1,6 +1,7 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
 #pragma once
 
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <optional>
@@ -9,8 +10,10 @@
 
 namespace aria2 {
 
-enum class Allocation { Sparse, Preallocate, Truncate };
-Allocation parseAllocation(std::string_view option); // file-allocation values
+// How a download's file takes its final size (file-allocation): sparse, so
+// unwritten ranges take no space yet, or with all its space reserved first.
+enum class Allocation { Sparse, Reserve };
+Allocation parseAllocation(std::string_view option);
 
 // A file opened for positional I/O. Methods block; the disk pool calls them.
 // Safe for concurrent reads and writes at different offsets.
@@ -33,16 +36,20 @@ public:
   std::error_code write(int64_t offset, const char* data, size_t size);
   // Reads up to `size` bytes; returns the count read or an error.
   std::error_code read(int64_t offset, char* data, size_t size, size_t& read);
-  std::error_code resize(int64_t length);
-  // Reserves space without writing zeros where the platform allows it.
-  std::error_code allocate(int64_t length);
-  // Marks the file sparse so unwritten regions cost no space (Windows only;
-  // other supported file systems are sparse by default).
-  void makeSparse();
+  // Grows the file to `length` bytes as `allocation` asks, keeping its
+  // content. NTFS makes a write beyond the written part of a file that is
+  // not sparse wait while it zero-fills the gap, so on Windows a sparse file
+  // is flagged sparse and a reserved one has its zeros written here.
+  // stopExtending() ends that early from any thread, at the size filled.
+  std::error_code extend(int64_t length, Allocation allocation);
+  void stopExtending() { stopExtending_ = true; }
   std::error_code sync();
   int64_t size() const;
 
 private:
+  std::error_code setLength(int64_t length);
+
+  std::atomic<bool> stopExtending_ = false;
 #ifdef _WIN32
   void* handle_ = nullptr;
 #else

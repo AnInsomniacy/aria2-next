@@ -22,6 +22,10 @@ TEST_CASE("content ranges")
   CHECK_FALSE(http::parseContentRange("bytes */1000"));
   CHECK_FALSE(http::parseContentRange("bytes 9-0/10"));
   CHECK_FALSE(http::parseContentRange("items 0-9/10"));
+  CHECK(http::unsatisfiedRangeLength("bytes */0") == 0);
+  CHECK(http::unsatisfiedRangeLength("bytes */1000") == 1000);
+  CHECK_FALSE(http::unsatisfiedRangeLength("bytes 0-9/10"));
+  CHECK_FALSE(http::unsatisfiedRangeLength("bytes */*"));
 }
 
 TEST_CASE("origins and redaction")
@@ -79,6 +83,51 @@ TEST_CASE("numbered names skip existing files")
   CHECK(numberedPath(base, [&](const std::string& path) {
           return samePath(path, second);
         }) == toUtf8(directory / "video.3.mp4"));
+  std::filesystem::remove_all(directory);
+}
+
+TEST_CASE("files grow sparse or reserved, keeping their content")
+{
+  CHECK(parseAllocation("none") == Allocation::Sparse);
+  CHECK(parseAllocation("trunc") == Allocation::Sparse);
+  CHECK(parseAllocation("prealloc") == Allocation::Reserve);
+  CHECK(parseAllocation("falloc") == Allocation::Reserve);
+
+  const auto directory =
+      std::filesystem::temp_directory_path() / "aria2-engine-test-extend";
+  std::filesystem::remove_all(directory);
+  std::filesystem::create_directories(directory);
+  // Not a multiple of the zero-filling chunk, and larger than one.
+  const int64_t length = (int64_t{9} << 20) + 5;
+  for (const auto allocation : {Allocation::Sparse, Allocation::Reserve}) {
+    File file;
+    REQUIRE_FALSE(file.open(toUtf8(directory / "grown.bin"), true));
+    REQUIRE_FALSE(file.write(0, "abc", 3));
+    REQUIRE_FALSE(file.extend(length, allocation));
+    CHECK(file.size() == length);
+    std::string head(3, ' ');
+    size_t read = 0;
+    REQUIRE_FALSE(file.read(0, head.data(), head.size(), read));
+    CHECK(head == "abc");
+    std::string tail(5, 'x');
+    REQUIRE_FALSE(file.read(length - 5, tail.data(), tail.size(), read));
+    CHECK(read == 5);
+    CHECK(tail == std::string(5, '\0'));
+    // Never shrinks or rewrites what a resumed download holds.
+    REQUIRE_FALSE(file.extend(length - 1, allocation));
+    CHECK(file.size() == length);
+  }
+  File stopped;
+  REQUIRE_FALSE(stopped.open(toUtf8(directory / "stopped.bin"), true));
+  stopped.stopExtending();
+  REQUIRE_FALSE(stopped.extend(length, Allocation::Reserve));
+#ifdef _WIN32
+  // Stopped before writing any zeros; the next opening fills them.
+  CHECK(stopped.size() == 0);
+#else
+  CHECK(stopped.size() == length);
+#endif
+  stopped.close();
   std::filesystem::remove_all(directory);
 }
 

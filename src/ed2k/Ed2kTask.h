@@ -126,6 +126,8 @@ private:
   ErrorCode failure_ = ErrorCode::Finished;
   std::string failureMessage_;
   std::shared_ptr<File> file_;
+  // The file while it opens, so stopping can end its allocation.
+  std::shared_ptr<File> opening_;
   std::optional<DiskPool::Strand> strand_;
   int pendingWrites_ = 0;
   int pendingHashes_ = 0;

@@ -17,20 +17,8 @@ void Output::open(bool truncate, Allocation allocation, int64_t length,
         if (auto error = file->open(path, truncate)) {
           return error;
         }
-        if (allocation == Allocation::Sparse) {
-          file->makeSparse();
-        }
-        if (length > 0 && file->size() < length) {
-          switch (allocation) {
-          case Allocation::Preallocate:
-            return file->allocate(length);
-          case Allocation::Truncate:
-            return file->resize(length);
-          case Allocation::Sparse:
-            break;
-          }
-        }
-        return std::error_code();
+        return length > 0 ? file->extend(length, allocation)
+                          : std::error_code();
       },
       std::move(done));
 }
@@ -48,6 +36,7 @@ void Output::write(int64_t offset, std::string data, Done done)
 
 void Output::close(Done done)
 {
+  stopExtending();
   pool_.run(
       strand_,
       [file = file_] {

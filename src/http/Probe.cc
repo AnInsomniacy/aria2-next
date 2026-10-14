@@ -86,7 +86,8 @@ private:
       result.size = range->total;
       result.resumable = true;
     }
-    else if (result.status == 416 && range && range->total == 0) {
+    else if (result.status == 416 &&
+             unsatisfiedRangeLength(contentRange_) == 0) {
       // An empty file cannot satisfy "bytes=0-0".
       result.status = 200;
       result.size = 0;

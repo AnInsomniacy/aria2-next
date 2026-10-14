@@ -33,5 +33,7 @@ struct ContentRange {
 
 // "bytes 100-199/1000" or "bytes 100-199/*".
 std::optional<ContentRange> parseContentRange(std::string_view value);
+// The length a 416 answer states: "bytes */1000".
+std::optional<int64_t> unsatisfiedRangeLength(std::string_view value);
 
 } // namespace aria2::http

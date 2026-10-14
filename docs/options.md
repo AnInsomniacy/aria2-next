@@ -86,7 +86,7 @@ through RPC (`aria2.addUri` options, `aria2.changeOption`,
 | --- | --- | --- | --- |
 | `--allow-overwrite` | flag | `false` | Restart from scratch when the output file exists. |
 | `--auto-file-renaming` | flag | `true` | Use a numbered name when the output file exists. |
-| `-a`, `--file-allocation` | `none` \| `prealloc` \| `falloc` \| `trunc` | `none` | none: sparse; prealloc/falloc: reserve space; trunc: set size. |
+| `-a`, `--file-allocation` | `none` \| `prealloc` \| `falloc` \| `trunc` | `none` | none/trunc: sparse file; prealloc/falloc: reserve its space before downloading. |
 | `--remove-control-file` | flag | `false` | Ignore stored progress and start over. |
 | `--force-save` | flag | `false` | Save the task in the session even when it is finished. |
 | `--save-not-found` | flag | `true` | Save tasks that failed with 404 in the session. |

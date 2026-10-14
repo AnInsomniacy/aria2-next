@@ -232,23 +232,14 @@ void Ed2kTask::open()
   }
   const auto allocation = parseAllocation(options().get("file-allocation"));
   auto file = std::make_shared<File>();
+  opening_ = file;
   engine().disk().run(
       *strand_,
       [file, path = path_, truncate, allocation, size = link_.size] {
-        auto error = file->open(path, truncate);
-        if (error) {
+        if (auto error = file->open(path, truncate)) {
           return error;
         }
-        if (allocation == Allocation::Sparse) {
-          file->makeSparse();
-        }
-        if (allocation == Allocation::Preallocate && file->size() < size) {
-          return file->allocate(size);
-        }
-        if (file->size() < size) {
-          return file->resize(size);
-        }
-        return std::error_code();
+        return file->extend(size, allocation);
       },
       [this, self = shared_from_this(), file, check](std::error_code error) {
         file_ = file;
@@ -258,6 +249,7 @@ void Ed2kTask::open()
 
 void Ed2kTask::opened(std::error_code error, bool check)
 {
+  opening_.reset();
   if (phase_ != Phase::Opening) {
     quiesce(); // stopped meanwhile
     return;
@@ -388,6 +380,9 @@ void Ed2kTask::finish(Outcome outcome, ErrorCode code, std::string message)
   }
   if (!opening) {
     quiesce(); // else opened() continues once the file is open
+  }
+  else if (opening_) {
+    opening_->stopExtending();
   }
 }
 

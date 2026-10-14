@@ -23,6 +23,8 @@ public:
   // is applied according to `allocation`.
   void open(bool truncate, Allocation allocation, int64_t length, Done done);
   void write(int64_t offset, std::string data, Done done);
+  // Ends a reservation still writing its zeros, ahead of queued writes.
+  void stopExtending() { file_->stopExtending(); }
   void close(Done done);
 
 private:
