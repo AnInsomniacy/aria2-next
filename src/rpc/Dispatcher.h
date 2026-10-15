@@ -19,7 +19,17 @@ namespace aria2::rpc {
 class Dispatcher {
 public:
   using Method = std::function<boost::json::value(boost::json::array& params)>;
-  using Reply = std::function<void(boost::json::value result)>;
+  // Answers an asynchronous call once, on the control thread, with a result
+  // or an error message.
+  struct Reply {
+    std::function<void(boost::json::value result)> result;
+    std::function<void(std::string message)> error;
+    void operator()(boost::json::value value) const
+    {
+      result(std::move(value));
+    }
+    void fail(std::string message) const { error(std::move(message)); }
+  };
   // Answers later through `reply`, called once on the control thread.
   // Throwing before that fails the call.
   using AsyncMethod =

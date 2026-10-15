@@ -178,12 +178,31 @@ in a `system.multicall` answer as faultCode/faultString structs. XML-RPC has
 no notifications. JSONP is not provided.
 Extension methods keep their existing names and fields.
 
+A Thunder link (`thunder://` and Base64 of `AA` + URI + `ZZ`) is unwrapped
+where a URI is accepted, by `aria2.addUri`, the command line, sessions and
+`aria2.probe`; the task then holds the URI it carried. Bytes outside printable
+ASCII are percent-encoded as they were written, whatever charset made them.
+
+A Thunder link (`thunder://` and Base64 of `AA` + URI + `ZZ`) is unwrapped
+wherever a URI is accepted, including `aria2.probe`; the task then holds the
+URI it carried. Bytes outside printable ASCII are percent-encoded as written,
+whatever charset made them.
+
 `aria2.probe(uri, options)` requests the first byte of an HTTP(S) URL with
 the request settings a task with `options` would use and answers
 `{status, finalUrl, contentType, filename?, totalLength?, resumable, error?}`
 once the response headers arrive (at most 20 s). Clients use it to decide
-whether the engine can take over a download a browser started. It is the
-only asynchronous method: it must be called alone, not in a batch or
+whether the engine can take over a download a browser started.
+
+`aria2.moveDownload(gid, dir)` moves the files of an unfinished HTTP, FTP,
+SFTP or BitTorrent download to `dir`, across volumes too, and stores the
+download there from then on, like "Set location" in BitTorrent clients. A
+running download pauses for the move and resumes after it; `aria2.pause` or
+`aria2.unpause` meanwhile decides which. It answers `OK` once the files are
+there, or an error when a target exists or a file cannot be moved; files
+already moved then go back. The download cannot be removed during the move.
+
+Both are asynchronous: they must be called alone, not in a batch or
 `system.multicall`, and other requests on the same connection are answered
 meanwhile only over WebSocket.
 

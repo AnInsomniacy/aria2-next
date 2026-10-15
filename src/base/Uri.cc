@@ -16,9 +16,9 @@ using Url = std::unique_ptr<CURLU, decltype(&curl_url_cleanup)>;
 Url load(std::string_view text)
 {
   Url url(curl_url(), curl_url_cleanup);
-  if (url && curl_url_set(url.get(), CURLUPART_URL, std::string(text).c_str(),
-                          CURLU_NON_SUPPORT_SCHEME | CURLU_URLENCODE) !=
-                 CURLUE_OK) {
+  if (url &&
+      curl_url_set(url.get(), CURLUPART_URL, std::string(text).c_str(),
+                   CURLU_NON_SUPPORT_SCHEME | CURLU_URLENCODE) != CURLUE_OK) {
     url.reset();
   }
   return url;
@@ -56,10 +56,9 @@ std::optional<std::string> resolve(std::string_view base,
                                    std::string_view reference)
 {
   const auto url = load(base);
-  if (!url || curl_url_set(url.get(), CURLUPART_URL,
-                           std::string(reference).c_str(),
-                           CURLU_NON_SUPPORT_SCHEME | CURLU_URLENCODE) !=
-                  CURLUE_OK) {
+  if (!url ||
+      curl_url_set(url.get(), CURLUPART_URL, std::string(reference).c_str(),
+                   CURLU_NON_SUPPORT_SCHEME | CURLU_URLENCODE) != CURLUE_OK) {
     return std::nullopt;
   }
   return get(url.get(), CURLUPART_URL);
@@ -106,6 +105,50 @@ std::string fileName(std::string_view text)
   const auto segment = parts->path.substr(slash + 1);
   auto decoded = text::percentDecode(segment);
   return safeFileName(text::isUtf8(decoded) ? decoded : segment);
+}
+
+bool isThunder(std::string_view link)
+{
+  return text::istartsWith(text::trim(link), "thunder://");
+}
+
+std::optional<std::string> unwrapThunder(std::string_view link)
+{
+  if (!isThunder(link)) {
+    return std::nullopt;
+  }
+  auto payload = std::string(text::trim(link).substr(10));
+  // Pages append a slash and escape the padding; neither is Base64 here, as
+  // an encoded "ZZ" never ends in '/'.
+  if (payload.find('%') != std::string::npos) {
+    payload = text::percentDecode(payload);
+  }
+  while (!payload.empty() && payload.back() == '/') {
+    payload.pop_back();
+  }
+  const auto decoded = text::base64Decode(payload);
+  if (!decoded || decoded->size() <= 4 || !decoded->starts_with("AA") ||
+      !decoded->ends_with("ZZ")) {
+    return std::nullopt;
+  }
+  static constexpr char digits[] = "0123456789ABCDEF";
+  std::string result;
+  for (const char ch :
+       text::trim(std::string_view(*decoded).substr(2, decoded->size() - 4))) {
+    const auto c = static_cast<unsigned char>(ch);
+    if (c > 0x20 && c < 0x7f) {
+      result += ch;
+    }
+    else {
+      result += '%';
+      result += digits[c >> 4];
+      result += digits[c & 0xf];
+    }
+  }
+  if (result.empty()) {
+    return std::nullopt;
+  }
+  return result;
 }
 
 } // namespace aria2::uri

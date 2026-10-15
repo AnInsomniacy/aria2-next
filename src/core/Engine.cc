@@ -6,6 +6,7 @@
 #include "base/Process.h"
 #include "bt/Session.h"
 #include "disk/DiskPool.h"
+#include "disk/File.h"
 #include "ed2k/Network.h"
 #include "http/Client.h"
 #include "state/Session.h"
@@ -148,6 +149,9 @@ std::shared_ptr<Task> Engine::find(std::string_view text) const
 
 void Engine::pause(const std::shared_ptr<Task>& task, bool force)
 {
+  if (const auto move = moving_.find(task->gid()); move != moving_.end()) {
+    move->second.resume = false;
+  }
   switch (task->state_) {
   case TaskState::Waiting:
     task->state_ = TaskState::Paused;
@@ -165,7 +169,10 @@ void Engine::pause(const std::shared_ptr<Task>& task, bool force)
 
 void Engine::unpause(const std::shared_ptr<Task>& task)
 {
-  if (task->state_ == TaskState::Paused) {
+  if (const auto move = moving_.find(task->gid()); move != moving_.end()) {
+    move->second.resume = true;
+  }
+  else if (task->state_ == TaskState::Paused) {
     task->state_ = TaskState::Waiting;
     schedule();
   }
@@ -173,6 +180,9 @@ void Engine::unpause(const std::shared_ptr<Task>& task)
 
 void Engine::remove(const std::shared_ptr<Task>& task, bool force)
 {
+  if (moving_.contains(task->gid())) {
+    fail(ErrorCode::Unknown, "Wait until the download has been moved");
+  }
   switch (task->state_) {
   case TaskState::Waiting:
   case TaskState::Paused:
@@ -194,6 +204,9 @@ void Engine::remove(const std::shared_ptr<Task>& task, bool force)
 
 void Engine::pauseAll(bool force)
 {
+  for (auto& [gid, move] : moving_) {
+    move.resume = false;
+  }
   for (const auto& task : std::vector(active_)) {
     pause(task, force);
   }
@@ -207,12 +220,73 @@ void Engine::pauseAll(bool force)
 
 void Engine::unpauseAll()
 {
+  for (auto& [gid, move] : moving_) {
+    move.resume = true;
+  }
   for (const auto& task : waiting_) {
-    if (task->state_ == TaskState::Paused) {
+    if (task->state_ == TaskState::Paused && !moving_.contains(task->gid())) {
       task->state_ = TaskState::Waiting;
     }
   }
   schedule();
+}
+
+void Engine::relocate(const std::shared_ptr<Task>& task, const std::string& dir,
+                      std::function<void(std::string error)> done)
+{
+  if (moving_.contains(task->gid())) {
+    fail(ErrorCode::Unknown, "This download is already being moved");
+  }
+  if (!task->relocation(dir)) {
+    fail(ErrorCode::Unknown, "This download cannot be moved");
+  }
+  auto& move = moving_[task->gid()];
+  move.dir = dir;
+  move.done = std::move(done);
+  switch (task->state_) {
+  case TaskState::Waiting:
+    move.resume = true;
+    task->state_ = TaskState::Paused;
+    [[fallthrough]];
+  case TaskState::Paused:
+    moveFilesOf(task);
+    break;
+  case TaskState::Active:
+    // The files are free once the transfers stop; stopTask() continues.
+    move.resume = true;
+    if (!task->stopping_) {
+      stopTask(task, true, TaskState::Paused);
+    }
+    break;
+  default:
+    moving_.erase(task->gid());
+    fail(ErrorCode::Unknown, "Only unfinished downloads can be moved");
+  }
+}
+
+void Engine::moveFilesOf(const std::shared_ptr<Task>& task)
+{
+  auto& move = moving_.at(task->gid());
+  move.started = true;
+  auto moves = task->relocation(move.dir).value_or(Task::Moves{});
+  auto strand = disk_->strand();
+  disk_->run(
+      strand,
+      [moves = std::move(moves), from = task->options().get("dir")] {
+        return moveFiles(moves, from);
+      },
+      [this, task](std::string error) {
+        auto node = moving_.extract(task->gid());
+        auto& move = node.mapped();
+        if (error.empty()) {
+          task->relocated(move.dir);
+          log::notice("{}: moved to {}", gidText(task->gid()), move.dir);
+        }
+        if (move.resume) {
+          unpause(task);
+        }
+        move.done(std::move(error));
+      });
 }
 
 size_t Engine::move(const std::shared_ptr<Task>& task, int64_t offset,
@@ -419,6 +493,16 @@ void Engine::stopTask(const std::shared_ptr<Task>& task, bool force,
       task->errorMessage_ = "Removed";
       retire(task, TaskState::Removed);
       break;
+    }
+    if (const auto move = moving_.find(task->gid());
+        move != moving_.end() && !move->second.started) {
+      if (task->state_ == TaskState::Paused && !shuttingDown_) {
+        moveFilesOf(task);
+      }
+      else {
+        auto node = moving_.extract(move);
+        node.mapped().done("The download stopped before it could be moved");
+      }
     }
     if (shuttingDown_ && active_.empty()) {
       finishShutdown();

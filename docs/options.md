@@ -20,7 +20,7 @@ through RPC (`aria2.addUri` options, `aria2.changeOption`,
 | `-V`, `--check-integrity` | flag | `false` | Verify existing data with piece hashes or --checksum. |
 | `-l`, `--log` | PATH |  | Write the log to FILE ('-' for stdout). |
 | `-q`, `--quiet` | flag | `false` | Do not print to the console. |
-| `-D`, `--daemon` | flag | `false` | Run in the background. |
+| `-D`, `--daemon` | flag | `false` | Run in the background. Leave it off under a service manager (systemd, NSSM, WinSW), which tracks the process it started. |
 | `--conf-path` | PATH |  | Configuration file (default: $XDG_CONFIG_HOME/aria2/aria2.conf). |
 | `--no-conf` | flag | `false` | Do not load a configuration file. |
 | `-v`, `--version` | flag | `false` | Print the version and exit. |
@@ -86,6 +86,8 @@ through RPC (`aria2.addUri` options, `aria2.changeOption`,
 | --- | --- | --- | --- |
 | `--allow-overwrite` | flag | `false` | Restart from scratch when the output file exists. |
 | `--auto-file-renaming` | flag | `true` | Use a numbered name when the output file exists. |
+| `--incomplete-suffix` | VALUE |  | Suffix of unfinished HTTP, FTP and SFTP files, removed when they complete (for example .part). |
+| `--auto-file-renaming-style` | `dot` \| `parentheses` | `dot` | Numbered names: dot (name.1.ext, as aria2) or parentheses (name (1).ext, as browsers). |
 | `-a`, `--file-allocation` | `none` \| `prealloc` \| `falloc` \| `trunc` | `none` | none/trunc: sparse file; prealloc/falloc: reserve its space before downloading. |
 | `--remove-control-file` | flag | `false` | Ignore stored progress and start over. |
 | `--force-save` | flag | `false` | Save the task in the session even when it is finished. |
@@ -203,6 +205,7 @@ through RPC (`aria2.addUri` options, `aria2.changeOption`,
 | `--summary-interval` | VALUE | `60` | Seconds between progress summaries (0: off). |
 | `--show-console-readout` | flag | `true` | Show the progress line. |
 | `--enable-color` | flag | `true` | Use colors on the console. |
+| `--download-result` | `default` \| `full` \| `hide` | `default` | Results table printed on exit: default, full (each file with its progress) or hide. |
 | `--log-level` | `debug` \| `info` \| `notice` \| `warn` \| `error` | `debug` | File log level. |
 | `--console-log-level` | `debug` \| `info` \| `notice` \| `warn` \| `error` | `notice` | Console log level. |
 | `--log-max-size` | SIZE | `10M` | Rotate the log at this size. |

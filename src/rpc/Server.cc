@@ -288,6 +288,8 @@ struct Server::State : std::enable_shared_from_this<State> {
         co_return;
       }
       auto response = co_await self->answer(request);
+      // The answer may take long (aria2.moveDownload); time the write alone.
+      stream.expires_after(120s);
       co_await http::async_write(stream, response,
                                  asio::redirect_error(use_awaitable, error));
       if (error || !response.keep_alive()) {

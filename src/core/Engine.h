@@ -11,6 +11,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -72,6 +73,11 @@ public:
   void remove(const std::shared_ptr<Task>& task, bool force);
   void pauseAll(bool force);
   void unpauseAll();
+  // Moves an unfinished task's files to `dir` and stores downloads there from
+  // now on. A running task pauses for the move and then resumes; `done` gets
+  // an error message, or an empty one on success.
+  void relocate(const std::shared_ptr<Task>& task, const std::string& dir,
+                std::function<void(std::string error)> done);
   size_t move(const std::shared_ptr<Task>& task, int64_t offset, Position how);
   bool removeResult(Gid gid);
   // Moves a stopped task back to the end of the queue, keeping its GID.
@@ -118,6 +124,7 @@ private:
   void fill();
   void startTask(const std::shared_ptr<Task>& task);
   void stopTask(const std::shared_ptr<Task>& task, bool force, TaskState next);
+  void moveFilesOf(const std::shared_ptr<Task>& task);
   void retire(const std::shared_ptr<Task>& task, TaskState state);
   void tick();
   void finishShutdown();
@@ -129,6 +136,14 @@ private:
   std::map<Gid, std::shared_ptr<Task>> tasks_;
   std::vector<std::shared_ptr<Task>> active_;
   std::deque<std::shared_ptr<Task>> waiting_;
+  struct Move {
+    std::string dir;
+    std::function<void(std::string error)> done;
+    bool resume = false; // unpause once the files are in place
+    bool started = false;
+  };
+  // Tasks being moved, first waiting for their transfers to stop.
+  std::map<Gid, Move> moving_;
   std::deque<std::shared_ptr<Task>> stopped_;
   size_t stoppedTotal_ = 0;
   std::vector<Listener> listeners_;

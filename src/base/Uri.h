@@ -31,4 +31,11 @@ std::string redact(std::string_view url);
 // last path segment. Empty when nothing usable exists.
 std::string fileName(std::string_view url);
 
+// Thunder links (thunder://) carry a URI as Base64 of "AA" + URI + "ZZ".
+bool isThunder(std::string_view link);
+// The URI a Thunder link carries; nullopt when it carries none. Bytes outside
+// printable ASCII come back percent-encoded, as sent, whatever charset made
+// them.
+std::optional<std::string> unwrapThunder(std::string_view link);
+
 } // namespace aria2::uri

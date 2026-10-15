@@ -6,7 +6,10 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
+#include <utility>
+#include <vector>
 
 namespace aria2 {
 
@@ -60,11 +63,23 @@ private:
 std::error_code removeFile(const std::string& path);
 std::error_code renameFile(const std::string& from, const std::string& to);
 bool fileExists(const std::string& path);
-// The first free "name.N.ext" beside `path` (auto-file-renaming), if any.
+// How auto-file-renaming numbers a name: aria2's "name.1.ext", or the
+// "name (1).ext" of browsers and file managers.
+enum class Numbering { Dot, Parentheses };
+// The `auto-file-renaming-style` value; anything else is aria2's.
+Numbering numbering(std::string_view style);
+// The first free numbered name beside `path` (auto-file-renaming), if any.
 // `taken` rejects names that do not exist yet but are spoken for.
 std::optional<std::string>
-numberedPath(const std::string& path,
+numberedPath(const std::string& path, Numbering numbering = Numbering::Dot,
              const std::function<bool(const std::string&)>& taken = {});
+// Moves each (from, to) file, across volumes too, into directories created as
+// needed; an existing target fails the move. On failure the files already
+// moved go back. Directories left empty below `root` are removed. Returns an
+// error message, or an empty string.
+std::string
+moveFiles(const std::vector<std::pair<std::string, std::string>>& moves,
+          const std::string& root);
 int64_t fileSize(const std::string& path); // -1 when missing
 void setModificationTime(const std::string& path, int64_t unixSeconds);
 

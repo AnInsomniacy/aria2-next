@@ -48,6 +48,7 @@ public:
   void checkpoint() override;
   void discardState() override;
   void optionChanged(std::string_view name) override;
+  std::optional<Moves> relocation(const std::string& dir) const override;
   bool countsTowardConcurrency() const override;
 
   std::string infoHash() const;

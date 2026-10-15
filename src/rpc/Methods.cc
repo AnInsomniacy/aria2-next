@@ -196,7 +196,10 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
   auto& e = engine;
 
   d.addAsync("aria2.probe", [&e](json::array& p, Dispatcher::Reply reply) {
-    const auto uri = text(p, 0, "uri");
+    auto uri = text(p, 0, "uri");
+    if (uri::isThunder(uri)) {
+      uri = uri::unwrapThunder(uri).value_or(std::string());
+    }
     const auto parts = uri::parse(uri);
     if (!parts || (parts->scheme != "http" && parts->scheme != "https")) {
       invalid("aria2.probe takes an HTTP or HTTPS URI");
@@ -381,6 +384,24 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
                        static_cast<int64_t>(added.size())};
   });
 
+  // Moves an unfinished download's files to a new directory, as BitTorrent
+  // clients' "Set location"; answers once the files are there.
+  d.addAsync("aria2.moveDownload",
+             [&e](json::array& p, Dispatcher::Reply reply) {
+               auto target = task(e, p);
+               const auto dir = text(p, 1, "dir");
+               if (dir.empty()) {
+                 invalid("dir must not be empty");
+               }
+               e.relocate(target, dir, [reply](std::string error) {
+                 if (error.empty()) {
+                   reply("OK");
+                 }
+                 else {
+                   reply.fail(std::move(error));
+                 }
+               });
+             });
   d.add("aria2.getOption", [&e](json::array& p) -> json::value {
     return optionObject(effectiveOptions(task(e, p)->options(), scope::Task));
   });

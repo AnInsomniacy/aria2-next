@@ -47,6 +47,35 @@ TEST_CASE("file names from URLs")
   CHECK(uri::fileName("http://host/").empty());
 }
 
+TEST_CASE("Thunder links carry the URI they wrap")
+{
+  const auto wrap = [](std::string_view inner) {
+    return "thunder://" + text::base64Encode("AA" + std::string(inner) + "ZZ");
+  };
+  CHECK(uri::unwrapThunder(wrap("http://host/a.zip")) == "http://host/a.zip");
+  CHECK(uri::unwrapThunder("THUNDER://" +
+                           wrap("ed2k://|file|a|1|0|/").substr(10)) ==
+        "ed2k://|file|a|1|0|/");
+  // Pages append a slash, drop or escape the padding.
+  CHECK(uri::unwrapThunder("thunder://"
+                           "QUFodHRwczovL3NlY3VyZS1hcHBsZG5sZC5hcHBsZS5jb20vaVB"
+                           "ob25lLzA2MS03NDgxLjIwMTAwMjAyLjRvcm90L2lQaG9uZTEsMV"
+                           "8zLjEuM183RTE4X1Jlc3RvcmUuaXBzd1pa/") ==
+        "https://secure-appldnld.apple.com/iPhone/061-7481.20100202.4orot/"
+        "iPhone1,1_3.1.3_7E18_Restore.ipsw");
+  CHECK(uri::unwrapThunder("thunder://QUFodHRwOi8vaC9hWlo%3D") == "http://h/a");
+  CHECK(uri::unwrapThunder("thunder://QUFodHRwOi8vaC9hWlo") == "http://h/a");
+  // A GBK name is sent as it was written.
+  CHECK(uri::unwrapThunder(wrap("http://h/\xCD\xB7 1.png")) ==
+        "http://h/%CD%B7%201.png");
+  CHECK_FALSE(uri::unwrapThunder("thunder://"));
+  CHECK_FALSE(uri::unwrapThunder("thunder://not*base64"));
+  CHECK_FALSE(uri::unwrapThunder("thunder://" +
+                                 text::base64Encode("http://host/a.zip")));
+  CHECK_FALSE(uri::unwrapThunder(wrap("")));
+  CHECK_FALSE(uri::unwrapThunder("http://host/a.zip"));
+}
+
 TEST_CASE("sizes")
 {
   CHECK(text::toSize("1K") == 1024);
@@ -80,10 +109,46 @@ TEST_CASE("numbered names skip existing files")
   std::ofstream(directory / "video.1.mp4") << "x";
   CHECK(numberedPath(base) == toUtf8(directory / "video.2.mp4"));
   const auto second = toUtf8(directory / "video.2.mp4");
-  CHECK(numberedPath(base, [&](const std::string& path) {
+  CHECK(numberedPath(base, Numbering::Dot, [&](const std::string& path) {
           return samePath(path, second);
         }) == toUtf8(directory / "video.3.mp4"));
+  // The style browsers and file managers use, chosen by the desktop app.
+  CHECK(numberedPath(base, Numbering::Parentheses) ==
+        toUtf8(directory / "video (1).mp4"));
+  CHECK(numbering("parentheses") == Numbering::Parentheses);
+  CHECK(numbering("dot") == Numbering::Dot);
   std::filesystem::remove_all(directory);
+}
+
+TEST_CASE("moving files is all or nothing and tidies the old directory")
+{
+  const auto root =
+      std::filesystem::temp_directory_path() / "aria2-engine-test-move";
+  std::filesystem::remove_all(root);
+  std::filesystem::create_directories(root / "old" / "album");
+  std::filesystem::create_directories(root / "new");
+  std::ofstream(root / "old" / "album" / "a.flac") << "a";
+  std::ofstream(root / "old" / "album" / "b.flac") << "b";
+  std::ofstream(root / "new" / "b.flac") << "taken";
+  const auto at = [&](const std::filesystem::path& path) {
+    return toUtf8(root / path);
+  };
+  // A target that exists fails the move before anything moves.
+  CHECK_FALSE(moveFiles({{at("old/album/a.flac"), at("new/a.flac")},
+                         {at("old/album/b.flac"), at("new/b.flac")}},
+                        at("old"))
+                  .empty());
+  CHECK(std::filesystem::exists(root / "old" / "album" / "a.flac"));
+  CHECK_FALSE(std::filesystem::exists(root / "new" / "a.flac"));
+  CHECK(moveFiles({{at("old/album/a.flac"), at("new/album/a.flac")},
+                   {at("old/album/b.flac"), at("new/album/b.flac")}},
+                  at("old"))
+            .empty());
+  CHECK(std::filesystem::exists(root / "new" / "album" / "b.flac"));
+  // The emptied album folder goes; the download directory itself stays.
+  CHECK_FALSE(std::filesystem::exists(root / "old" / "album"));
+  CHECK(std::filesystem::exists(root / "old"));
+  std::filesystem::remove_all(root);
 }
 
 TEST_CASE("files grow sparse or reserved, keeping their content")

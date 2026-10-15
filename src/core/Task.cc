@@ -56,6 +56,13 @@ void Task::failed(ErrorCode code, std::string message)
   engine_.taskFailed(*this);
 }
 
+std::optional<Task::Moves> Task::relocation(const std::string&) const
+{
+  return std::nullopt;
+}
+
+void Task::relocated(const std::string& dir) { options().set("dir", dir); }
+
 bool Task::changeUris(int, const std::vector<std::string>&,
                       const std::vector<std::string>&, int)
 {

@@ -140,6 +140,38 @@ std::string BtTask::savePath() const
   return toUtf8(fs::absolute(toPath(options().get("dir"))));
 }
 
+std::optional<Task::Moves> BtTask::relocation(const std::string& dir) const
+{
+  Moves moves;
+  if (!info_) {
+    return moves; // nothing is stored before the metadata arrives
+  }
+  const auto from = savePath();
+  const auto to = toUtf8(fs::absolute(toPath(dir)));
+  const auto add = [&](const std::string& relative) {
+    const auto source = joinPath(from, relative);
+    if (fileExists(source)) {
+      moves.emplace_back(source, joinPath(to, relative));
+    }
+  };
+  const auto& layout = info_->layout();
+  for (const auto index : layout.file_range()) {
+    if (layout.pad_file_at(index)) {
+      continue;
+    }
+    const auto renamed = params_.renamed_files.find(index);
+    add(renamed != params_.renamed_files.end() ? renamed->second
+                                               : layout.file_path(index));
+  }
+  // Pieces of unselected files that overlap selected ones (libtorrent's part
+  // file, named after the info hash its storage uses).
+  const auto hash = info_->info_hash();
+  add("." +
+      text::toHex({reinterpret_cast<const char*>(hash.data()), hash.size()}) +
+      ".parts");
+  return moves;
+}
+
 std::string BtTask::resumePath() const
 {
   return joinPath(engine().state().directory("bittorrent/torrents"),

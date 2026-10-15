@@ -3,6 +3,8 @@
 
 #include "base/Path.h"
 
+#include <spdlog/fmt/fmt.h>
+
 #include <chrono>
 
 #ifdef _WIN32
@@ -359,20 +361,81 @@ bool fileExists(const std::string& path)
   return fs::exists(toPath(path), error);
 }
 
+Numbering numbering(std::string_view style)
+{
+  return style == "parentheses" ? Numbering::Parentheses : Numbering::Dot;
+}
+
 std::optional<std::string>
-numberedPath(const std::string& path,
+numberedPath(const std::string& path, Numbering numbering,
              const std::function<bool(const std::string&)>& taken)
 {
   const auto full = toPath(path);
   const auto stem = toUtf8(full.parent_path() / full.stem());
   const auto extension = toUtf8(full.extension());
   for (int i = 1; i < 10000; ++i) {
-    auto candidate = stem + '.' + std::to_string(i) + extension;
+    auto candidate = numbering == Numbering::Parentheses
+                         ? stem + " (" + std::to_string(i) + ")" + extension
+                         : stem + '.' + std::to_string(i) + extension;
     if (!fileExists(candidate) && !(taken && taken(candidate))) {
       return candidate;
     }
   }
   return std::nullopt;
+}
+
+namespace {
+// rename(), or a copy where rename cannot cross volumes.
+std::error_code moveFile(const fs::path& from, const fs::path& to)
+{
+  std::error_code error;
+  fs::create_directories(to.parent_path(), error);
+  if (error) {
+    return error;
+  }
+  fs::rename(from, to, error);
+  if (error != std::errc::cross_device_link) {
+    return error;
+  }
+  error.clear();
+  fs::copy_file(from, to, fs::copy_options::none, error);
+  if (!error) {
+    fs::remove(from, error);
+  }
+  return error;
+}
+} // namespace
+
+std::string
+moveFiles(const std::vector<std::pair<std::string, std::string>>& moves,
+          const std::string& root)
+{
+  for (const auto& [from, to] : moves) {
+    if (fileExists(to)) {
+      return fmt::format("{} already exists", to);
+    }
+  }
+  for (size_t i = 0; i < moves.size(); ++i) {
+    const auto& [from, to] = moves[i];
+    if (const auto error = moveFile(toPath(from), toPath(to))) {
+      for (size_t j = i; j-- > 0;) {
+        moveFile(toPath(moves[j].second), toPath(moves[j].first));
+      }
+      return fmt::format("Cannot move {} to {}: {}", from, to, error.message());
+    }
+  }
+  const auto top = fs::absolute(toPath(root));
+  for (const auto& [from, to] : moves) {
+    std::error_code error;
+    for (auto dir = fs::absolute(toPath(from)).parent_path();
+         dir != top && dir.has_relative_path() &&
+         dir.native().starts_with(top.native()) && fs::is_empty(dir, error) &&
+         !error;
+         dir = dir.parent_path()) {
+      fs::remove(dir, error);
+    }
+  }
+  return {};
 }
 
 int64_t fileSize(const std::string& path)

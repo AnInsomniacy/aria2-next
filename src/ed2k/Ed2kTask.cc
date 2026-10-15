@@ -216,8 +216,11 @@ void Ed2kTask::open()
       check = true;
     }
     else if (!options().flag("allow-overwrite")) {
-      auto numbered = options().flag("auto-file-renaming") ? numberedPath(path_)
-                                                           : std::nullopt;
+      auto numbered =
+          options().flag("auto-file-renaming")
+              ? numberedPath(
+                    path_, numbering(options().get("auto-file-renaming-style")))
+              : std::nullopt;
       if (!numbered) {
         failed(ErrorCode::FileExists, fmt::format("{} already exists", path_));
         phase_ = Phase::Idle;

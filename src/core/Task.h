@@ -10,7 +10,9 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace aria2 {
@@ -90,6 +92,13 @@ public:
   virtual void discardState() {}
   // An option in scope::Live changed while active.
   virtual void optionChanged(std::string_view) {}
+  // The files a paused task keeps on disk and where they go when its
+  // download directory becomes `dir`, as (from, to) pairs. nullopt: this kind
+  // of download cannot move.
+  using Moves = std::vector<std::pair<std::string, std::string>>;
+  virtual std::optional<Moves> relocation(const std::string& dir) const;
+  // The files are in `dir` now.
+  virtual void relocated(const std::string& dir);
   // Seeding tasks may be excluded from max-concurrent-downloads.
   virtual bool countsTowardConcurrency() const { return true; }
   // The URI-specific RPC views (getUris/getServers) use these.

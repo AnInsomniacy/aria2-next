@@ -44,6 +44,8 @@ public:
   void loadProgress() override;
   void discardState() override;
   void optionChanged(std::string_view name) override;
+  std::optional<Moves> relocation(const std::string& dir) const override;
+  void relocated(const std::string& dir) override;
   bool changeUris(int fileIndex, const std::vector<std::string>& remove,
                   const std::vector<std::string>& add, int position) override;
 
@@ -130,6 +132,14 @@ private:
   void write(int64_t offset, std::string data);
   void written(int64_t offset, size_t size, std::error_code error);
   void openOutput(bool truncate);
+  // Where the bytes are: the final path plus --incomplete-suffix while this
+  // task's own file is unfinished.
+  std::string diskPath() const { return path_ + suffix_; }
+  std::string relocatedPath(const std::string& dir) const;
+  // The suffix a stored record's file carries, or nullopt when it is gone.
+  std::optional<std::string> storedSuffix(const std::string& path) const;
+  // Gives the finished file its final name.
+  bool publish();
   void outputReady(std::error_code error);
   bool decidePath(Worker& worker);
   void changed(const std::string& why);
@@ -162,6 +172,7 @@ private:
   std::string contentType_;
   int64_t remoteTime_ = -1;
   bool owned_ = false;  // the output file belongs to this task
+  std::string suffix_;  // on the unfinished file; see diskPath()
   bool ranged_ = true;  // the server honours byte ranges
   bool single_ = false; // one connection only
   // A ranged answer carried more than the length it announced: ask for

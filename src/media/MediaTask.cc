@@ -172,9 +172,11 @@ void MediaTask::start()
       Store store(directory_, gidText(gid()));
       const auto publication = store.publication();
       if (!publication || publication->output != path) {
-        auto numbered = options().flag("auto-file-renaming")
-                            ? numberedPath(path)
-                            : std::nullopt;
+        auto numbered =
+            options().flag("auto-file-renaming")
+                ? numberedPath(path, numbering(options().get(
+                                         "auto-file-renaming-style")))
+                : std::nullopt;
         if (!numbered) {
           fail(ErrorCode::FileExists, "{} already exists", path);
         }

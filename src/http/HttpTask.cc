@@ -122,8 +122,8 @@ constexpr auto stallAfter = 8s;
 // A probe without an answer after this long (a server that accepts and stays
 // silent, a lost SYN) gets a second copy; the first answer wins.
 constexpr auto probeHedge = 2s;
-// Overload feedback is relaxed one connection at a time after a calm period.
-constexpr auto calmPeriod = 30s;
+// After a calm period, a cap lowered by overload feedback doubles again.
+constexpr auto calmPeriod = 5s;
 constexpr int maxRestarts = 3;
 // Rounds of downloading pieces again that failed their hash.
 constexpr int maxRepairs = 3;
@@ -373,9 +373,13 @@ void HttpTask::start()
   // A stored record resumes the file this task created before; a missing
   // file means the partial download was deleted and starts over.
   if (!options().flag("remove-control-file") && !options().flag("dry-run")) {
-    if (const auto record = engine().state().loadTransfer(gid());
-        record && record->totalLength > 0 && fileExists(record->path)) {
+    const auto record = engine().state().loadTransfer(gid());
+    const auto suffix = record && record->totalLength > 0
+                            ? storedSuffix(record->path)
+                            : std::nullopt;
+    if (suffix) {
       path_ = record->path;
+      suffix_ = *suffix;
       owned_ = true;
       etag_ = record->etag;
       lastModified_ = record->lastModified;
@@ -384,7 +388,7 @@ void HttpTask::start()
       for (const auto& [begin, end] : record->completed) {
         persisted_.add(begin, end);
       }
-      log::info("{}: resuming {} at {}/{} bytes", gidText(gid()), path_,
+      log::info("{}: resuming {} at {}/{} bytes", gidText(gid()), diskPath(),
                 persisted_.total(), record->totalLength);
       phase_ = Phase::Opening;
       openOutput(false);
@@ -941,13 +945,18 @@ bool HttpTask::decidePath(Worker& worker)
     }
   }
   auto path = joinPath(options().get("dir"), name);
-  const auto taken = [this](const std::string& candidate) {
-    return engine().writing(candidate, gid());
+  const auto suffix = options().get("incomplete-suffix");
+  // A leftover unfinished file holds the name like a finished one.
+  const auto leftover = [&suffix](const std::string& candidate) {
+    return !suffix.empty() && fileExists(candidate + suffix);
+  };
+  const auto taken = [this, &leftover](const std::string& candidate) {
+    return engine().writing(candidate, gid()) || leftover(candidate);
   };
   // Another task's file is never adopted, overwritten or shared.
-  const bool shared = taken(path);
-  if (shared || fileExists(path)) {
-    if (!shared && options().flag("continue")) {
+  const bool shared = engine().writing(path, gid());
+  if (shared || leftover(path) || fileExists(path)) {
+    if (!shared && !leftover(path) && options().flag("continue")) {
       // An existing file is adopted as a prefix and never truncated.
       const auto size = fileSize(path);
       const auto length = planner_.length();
@@ -957,6 +966,7 @@ bool HttpTask::decidePath(Worker& worker)
         return false;
       }
       path_ = path;
+      suffix_.clear(); // the adopted file keeps its name
       owned_ = false;
       if (size > 0 && ranged_) {
         planner_.restore({{0, size}});
@@ -973,7 +983,8 @@ bool HttpTask::decidePath(Worker& worker)
                      : fmt::format("{} already exists", path));
         return false;
       }
-      auto numbered = numberedPath(path, taken);
+      auto numbered = numberedPath(
+          path, numbering(options().get("auto-file-renaming-style")), taken);
       if (!numbered) {
         abort(ErrorCode::FileExists, fmt::format("{} already exists", path));
         return false;
@@ -982,14 +993,27 @@ bool HttpTask::decidePath(Worker& worker)
     }
   }
   path_ = path;
+  suffix_ = suffix;
   owned_ = true;
   openOutput(true);
   return true;
 }
 
+std::optional<std::string> HttpTask::storedSuffix(const std::string& path) const
+{
+  const auto suffix = options().get("incomplete-suffix");
+  if (!suffix.empty() && fileExists(path + suffix)) {
+    return suffix;
+  }
+  if (fileExists(path)) {
+    return std::string();
+  }
+  return std::nullopt;
+}
+
 void HttpTask::openOutput(bool truncate)
 {
-  output_ = std::make_shared<Output>(engine().disk(), path_);
+  output_ = std::make_shared<Output>(engine().disk(), diskPath());
   const auto allocation = parseAllocation(options().get("file-allocation"));
   output_->open(truncate, allocation, planner_.length(),
                 [this, self = shared_from_this()](std::error_code error) {
@@ -1005,7 +1029,7 @@ void HttpTask::outputReady(std::error_code error)
   }
   if (error) {
     abort(ErrorCode::FileCreate,
-          fmt::format("Cannot open {}: {}", path_, error.message()));
+          fmt::format("Cannot open {}: {}", diskPath(), error.message()));
     return;
   }
   phase_ = Phase::Running;
@@ -1163,7 +1187,7 @@ void HttpTask::written(int64_t offset, size_t size, std::error_code error)
   }
   if (error) {
     abort(ErrorCode::FileIo,
-          fmt::format("Cannot write {}: {}", path_, error.message()));
+          fmt::format("Cannot write {}: {}", diskPath(), error.message()));
     return;
   }
   persisted_.add(offset, offset + static_cast<int64_t>(size));
@@ -1521,9 +1545,6 @@ void HttpTask::verifyAndComplete()
     quiesce();
     return;
   }
-  if (remoteTime_ > 0 && options().flag("remote-time")) {
-    setModificationTime(path_, remoteTime_);
-  }
   const auto checksum = options().get("checksum");
   if (checksum.empty()) {
     if (pieces_.hashes.empty()) {
@@ -1534,7 +1555,7 @@ void HttpTask::verifyAndComplete()
     }
     return;
   }
-  verifyChecksum(engine().disk(), path_, checksum,
+  verifyChecksum(engine().disk(), diskPath(), checksum,
                  [this, self = shared_from_this()](
                      std::optional<std::string> failure) {
                    if (phase_ != Phase::Finishing) {
@@ -1559,7 +1580,7 @@ void HttpTask::checkPieces(std::string failure)
   auto strand = engine().disk().strand();
   engine().disk().run(
       strand,
-      [path = path_, pieces = pieces_] { return badPieces(path, pieces); },
+      [path = diskPath(), pieces = pieces_] { return badPieces(path, pieces); },
       [this, self = shared_from_this(),
        failure = std::move(failure)](std::optional<std::vector<size_t>> bad) {
         if (phase_ != Phase::Finishing) {
@@ -1616,10 +1637,45 @@ void HttpTask::repair(const std::vector<size_t>& bad)
 
 void HttpTask::succeed()
 {
+  if (!suffix_.empty() && !publish()) {
+    return;
+  }
+  if (remoteTime_ > 0 && options().flag("remote-time")) {
+    setModificationTime(path_, remoteTime_);
+  }
   phase_ = Phase::Done;
   engine().state().removeTransfer(gid());
   log::notice("Download complete: {}", path_);
   complete();
+}
+
+bool HttpTask::publish()
+{
+  // A file that appeared under the final name meanwhile is not replaced
+  // unless overwriting is allowed.
+  if (fileExists(path_) && !options().flag("allow-overwrite")) {
+    const auto numbered =
+        options().flag("auto-file-renaming")
+            ? numberedPath(path_,
+                           numbering(options().get("auto-file-renaming-style")),
+                           [this](const std::string& candidate) {
+                             return engine().writing(candidate, gid());
+                           })
+            : std::nullopt;
+    if (!numbered) {
+      abort(ErrorCode::FileExists, fmt::format("{} already exists", path_));
+      return false;
+    }
+    path_ = *numbered;
+  }
+  if (const auto error = renameFile(diskPath(), path_)) {
+    abort(ErrorCode::RenameFailed,
+          fmt::format("Cannot rename {} to {}: {}", diskPath(), path_,
+                      error.message()));
+    return false;
+  }
+  suffix_.clear();
+  return true;
 }
 
 void HttpTask::setMetalink(int64_t size, PieceHashes pieces)
@@ -1764,7 +1820,10 @@ void HttpTask::tick()
   }
   if (overloaded_ && cap_ < configuredConnections() &&
       now - calmSince_ > calmPeriod) {
-    ++cap_;
+    // Recover quickly: the 503 that lowered the cap may have come from
+    // other downloads from the same server, which have finished since (#71).
+    // A server that is really full answers 503 again and lowers it again.
+    cap_ = std::min(cap_ * 2, configuredConnections());
     calmSince_ = now;
   }
   launch();
@@ -1788,9 +1847,13 @@ void HttpTask::loadProgress()
   if (options().flag("remove-control-file") || options().flag("dry-run")) {
     return;
   }
-  if (const auto record = engine().state().loadTransfer(gid());
-      record && record->totalLength > 0 && fileExists(record->path)) {
+  const auto record = engine().state().loadTransfer(gid());
+  const auto suffix = record && record->totalLength > 0
+                          ? storedSuffix(record->path)
+                          : std::nullopt;
+  if (suffix) {
     path_ = record->path;
+    suffix_ = *suffix;
     owned_ = true;
     planner_.setLength(record->totalLength);
     planner_.restore(record->completed);
@@ -1798,6 +1861,35 @@ void HttpTask::loadProgress()
 }
 
 void HttpTask::discardState() { engine().state().removeTransfer(gid()); }
+
+// The file keeps its place below the download directory: --out may name a
+// subdirectory.
+std::string HttpTask::relocatedPath(const std::string& dir) const
+{
+  const auto relative =
+      toPath(path_).lexically_relative(toPath(options().get("dir")));
+  return relative.empty() || *relative.begin() == ".."
+             ? joinPath(dir, toUtf8(toPath(path_).filename()))
+             : joinPath(dir, toUtf8(relative));
+}
+
+std::optional<Task::Moves> HttpTask::relocation(const std::string& dir) const
+{
+  Moves moves;
+  if (!path_.empty() && fileExists(diskPath())) {
+    moves.emplace_back(diskPath(), relocatedPath(dir) + suffix_);
+  }
+  return moves;
+}
+
+void HttpTask::relocated(const std::string& dir)
+{
+  if (!path_.empty()) {
+    path_ = relocatedPath(dir);
+  }
+  Task::relocated(dir);
+  checkpoint();
+}
 
 void HttpTask::optionChanged(std::string_view name)
 {

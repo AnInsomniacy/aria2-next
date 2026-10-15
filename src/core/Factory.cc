@@ -226,6 +226,13 @@ std::vector<std::shared_ptr<Task>> createTasks(Engine& engine,
   }
   std::vector<std::string> mirrors;
   for (auto& uri : uris) {
+    if (uri::isThunder(uri)) {
+      auto carried = uri::unwrapThunder(uri);
+      if (!carried) {
+        fail(ErrorCode::Option, "Invalid Thunder link: {}", uri::redact(uri));
+      }
+      uri = std::move(*carried);
+    }
     if (ed2k::isLink(uri)) {
       return {ed2kTask(engine, uri, std::move(options))};
     }

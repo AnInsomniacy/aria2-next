@@ -248,9 +248,13 @@ void Dispatcher::respond(const json::value& request,
   json::array list = params ? params->as_array() : json::array();
   try {
     authorize(name, list);
-    found->second(list, [requestId, done](json::value result) {
-      done(reply(requestId, std::move(result)));
-    });
+    found->second(list, Reply{[requestId, done](json::value result) {
+                                done(reply(requestId, std::move(result)));
+                              },
+                              [requestId, done, name](std::string message) {
+                                log::info("RPC {} failed: {}", name, message);
+                                done(failure(requestId, 1, message));
+                              }});
   }
   catch (const std::exception& error) {
     log::info("RPC {} failed: {}", name, error.what());

@@ -85,7 +85,6 @@ constexpr std::array retired{"allow-piece-length-change",
                              "dht-listen-port",
                              "dht-message-timeout",
                              "disk-cache",
-                             "download-result",
                              "dscp",
                              "ed2k-min-split-size",
                              "ed2k-piece-selector",
@@ -265,6 +264,12 @@ std::string normalizeOption(const OptionSpec& spec, std::string_view value)
     }
     invalid(spec.name, value, fmt::format("expected {}", spec.choices));
   case OptionType::Text:
+    // Appended to a file name: it must not reach into another directory.
+    if (spec.name == "incomplete-suffix" &&
+        value.find_first_of("/\\:*?\"<>|") != std::string_view::npos) {
+      invalid(spec.name, value, "expected a file name suffix such as .part");
+    }
+    return std::string(value);
   case OptionType::Path:
   case OptionType::List:
     return std::string(value);
