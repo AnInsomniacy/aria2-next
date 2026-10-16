@@ -340,6 +340,24 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             "request": {"method": "GET", "url": "/tiny.bin?case=understated"},
             "response": {"proxyBaseUrl": caddy.base_url},
         })
+        # A 206 that does not place its body: no Content-Range at all
+        # (cloud.mail.ru, rayburst#734), or one starting elsewhere than asked.
+        # Both are read as a server that ignores ranges.
+        wiremock.stub({
+            "priority": 1,
+            "request": {"method": "GET", "url": "/payload.bin?case=no-content-range",
+                        "headers": {"Range": {"matches": "bytes=.*"}}},
+            "response": {"status": 206, "bodyFileName": "payload.bin"},
+        })
+        wiremock.stub({
+            "priority": 1,
+            "request": {"method": "GET", "url": "/payload.bin?case=misplaced-range",
+                        "headers": {"Range": {"matches": "bytes=[1-9][0-9]*-.*"}}},
+            "response": {
+                "status": 206, "bodyFileName": "payload.bin",
+                "headers": {"Content-Range": f"bytes 0-{size - 1}/{size}"},
+            },
+        })
         engine = EngineProcess(run, "engine", engine_path)
         session = run.state / "download.session"
         engine.start([f"--save-session={session}"])
@@ -624,6 +642,10 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                   restart=True)
             check("understated.bin", f"{wiremock.base_url}/tiny.bin?case=understated",
                   digest=hashlib.sha256(block[:60651]).hexdigest(), restart=True)
+            check("no-content-range.bin",
+                  f"{wiremock.base_url}/payload.bin?case=no-content-range")
+            check("misplaced-range.bin",
+                  f"{wiremock.base_url}/payload.bin?case=misplaced-range")
             ignored_done = time.time()
             # A file the task created is downloaded again when the remote
             # representation changes under it, so progress legitimately

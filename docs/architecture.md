@@ -73,11 +73,13 @@ worker is one libcurl transfer that owns `[position, end)` of the file.
    connection moves to another; `max-tries` applies per mirror.
 6. Every response is checked against the established length and validator,
    and Content-Range must match the request. A mismatching single response is
-   retried; a changed representation restarts a task-owned file from zero and
-   fails a foreign file without modifying it. A server that ignores ranges
-   gets one connection from offset zero. Mirrors keep their own validators
-   (each mirror's ETag differs); a mirror that ignores ranges or changes the
-   file is dropped while another mirror remains.
+   retried; a 206 without a Content-Range that places its body counts as
+   ignoring ranges. A changed representation restarts a task-owned file from
+   zero and fails a foreign file without modifying it. A server that ignores
+   ranges gets one connection from offset zero. Mirrors keep their own
+   validators (each mirror's ETag differs); a mirror that ignores ranges or
+   changes the file is dropped while another mirror remains. `getServers`
+   reports where redirects lead as `currentUri`.
 7. Parallel ranges use HTTP/1.1 so each range has its own TCP window; single
    transfers may negotiate HTTP/2.
 8. A Metalink's `<size>` is binding: a mirror reporting another length is
@@ -182,11 +184,6 @@ A Thunder link (`thunder://` and Base64 of `AA` + URI + `ZZ`) is unwrapped
 where a URI is accepted, by `aria2.addUri`, the command line, sessions and
 `aria2.probe`; the task then holds the URI it carried. Bytes outside printable
 ASCII are percent-encoded as they were written, whatever charset made them.
-
-A Thunder link (`thunder://` and Base64 of `AA` + URI + `ZZ`) is unwrapped
-wherever a URI is accepted, including `aria2.probe`; the task then holds the
-URI it carried. Bytes outside printable ASCII are percent-encoded as written,
-whatever charset made them.
 
 `aria2.probe(uri, options)` requests the first byte of an HTTP(S) URL with
 the request settings a task with `options` would use and answers

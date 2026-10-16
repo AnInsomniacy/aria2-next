@@ -333,9 +333,10 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
       json::array servers;
       for (const auto& uri : file.uris) {
         if (uri.used) {
-          servers.push_back(json::object{{"uri", uri.uri},
-                                         {"currentUri", uri.uri},
-                                         {"downloadSpeed", "0"}});
+          servers.push_back(json::object{
+              {"uri", uri.uri},
+              {"currentUri", uri.current.empty() ? uri.uri : uri.current},
+              {"downloadSpeed", "0"}});
         }
       }
       out.push_back(json::object{{"index", std::to_string(file.index)},

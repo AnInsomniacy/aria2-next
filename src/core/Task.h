@@ -26,6 +26,7 @@ std::string_view stateName(TaskState state);
 struct UriState {
   std::string uri;
   bool used = false;
+  std::string current; // where redirects lead, when known; aria2's currentUri
 };
 
 struct TaskFile {

@@ -698,11 +698,10 @@ void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
                             : std::string());
 }
 
-// A 200 answer to a ranged request. With a validator attached it means the
-// file changed; otherwise the server does not serve ranges.
-// A 200 to a ranged request with If-Range means the representation changed,
-// unless it carries the validators we sent: then the server ignores ranges,
-// and the connection that started at byte 0 carries on alone.
+// A 200 answer to a ranged request, or a 206 whose Content-Range does not
+// place its body. With If-Range it means the representation changed, unless
+// it carries the validators we sent: then the server ignores ranges, and the
+// download carries on over one connection from byte 0.
 bool HttpTask::rangesIgnored(Worker& worker)
 {
   const auto [etag, modified] = validators(sources_[worker.source]);
@@ -754,19 +753,18 @@ void HttpTask::accept(Worker& worker)
   }
   auto& source = sources_[worker.source];
   int64_t total = -1;
-  int64_t start = 0;
   if (worker.status == 206) {
     const auto range = parseContentRange(worker.contentRange);
-    start = range ? range->first : -1;
-    total = range ? range->total : -1;
-    if (start != worker.begin) {
-      log::warn("{}: response range starts at {} instead of {}", gidText(gid()),
-                start, worker.begin);
-      const auto slot = worker.slot;
-      cancelWorker(worker.id);
-      slotFailed(slot, ErrorCode::HttpProtocol, "Mismatched Content-Range");
+    if (!range || range->first != worker.begin) {
+      // Without a Content-Range that places the body (RFC 9110 15.3.7) its
+      // bytes cannot be trusted at any offset, and asking again gets the same
+      // answer; the server is read as one that ignores ranges.
+      log::warn("{}: HTTP 206 for byte {} with Content-Range \"{}\"",
+                gidText(gid()), worker.begin, worker.contentRange);
+      rangesIgnored(worker);
       return;
     }
+    total = range->total;
   }
   else if (worker.status == 0) {
     // SFTP: the size of the remaining file, ranges always honoured.
@@ -1954,7 +1952,7 @@ std::vector<TaskFile> HttpTask::files() const
   file.length = totalLength();
   file.completed = completedLength();
   for (const auto& source : sources_) {
-    file.uris.push_back({source.uri, source.used});
+    file.uris.push_back({source.uri, source.used, source.redirect});
   }
   return {file};
 }
