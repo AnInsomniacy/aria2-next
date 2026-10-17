@@ -4,6 +4,7 @@
 #include "base/Uri.h"
 #include "disk/File.h"
 #include "http/Request.h"
+#include "http/SegmentPlanner.h"
 
 #include <doctest/doctest.h>
 
@@ -22,6 +23,19 @@ TEST_CASE("content ranges")
   CHECK_FALSE(http::parseContentRange("bytes */1000"));
   CHECK_FALSE(http::parseContentRange("bytes 9-0/10"));
   CHECK_FALSE(http::parseContentRange("items 0-9/10"));
+  CHECK(http::parseContentRange("bytes=0-9/10")->last == 9);
+  // A 206 without Content-Range: the open tail, or exactly the bounded span.
+  const auto tail = http::impliedContentRange(0, http::unbounded, 1000);
+  REQUIRE(tail);
+  CHECK(tail->last == 999);
+  CHECK(tail->total == 1000);
+  const auto span = http::impliedContentRange(100, 200, 100);
+  REQUIRE(span);
+  CHECK(span->first == 100);
+  CHECK(span->last == 199);
+  CHECK(span->total == -1);
+  CHECK_FALSE(http::impliedContentRange(100, 200, 1000));
+  CHECK_FALSE(http::impliedContentRange(0, http::unbounded, -1));
   CHECK(http::unsatisfiedRangeLength("bytes */0") == 0);
   CHECK(http::unsatisfiedRangeLength("bytes */1000") == 1000);
   CHECK_FALSE(http::unsatisfiedRangeLength("bytes 0-9/10"));

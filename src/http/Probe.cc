@@ -82,8 +82,9 @@ private:
     result.status = responseCode();
     result.finalUrl = effectiveUrl();
     const auto range = parseContentRange(contentRange_);
-    if (result.status == 206 && range) {
-      result.size = range->total;
+    if (result.status == 206 && (range || contentRange_.empty())) {
+      // A 206 without Content-Range honoured the range but hides the size.
+      result.size = range ? range->total : -1;
       result.resumable = true;
     }
     else if (result.status == 416 &&

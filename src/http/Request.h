@@ -31,8 +31,14 @@ struct ContentRange {
   int64_t total = -1; // -1: unknown ("*")
 };
 
-// "bytes 100-199/1000" or "bytes 100-199/*".
+// "bytes 100-199/1000" or "bytes 100-199/*"; "bytes=" is accepted as well.
 std::optional<ContentRange> parseContentRange(std::string_view value);
+// Where the body of a 206 without Content-Range belongs, when its length
+// leaves one answer: the tail of a request open to the end (`requestEnd` is
+// `unbounded`) or exactly the bounded range [begin, requestEnd).
+std::optional<ContentRange> impliedContentRange(int64_t begin,
+                                                int64_t requestEnd,
+                                                int64_t contentLength);
 // The length a 416 answer states: "bytes */1000".
 std::optional<int64_t> unsatisfiedRangeLength(std::string_view value);
 

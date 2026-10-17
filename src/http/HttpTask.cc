@@ -754,11 +754,18 @@ void HttpTask::accept(Worker& worker)
   auto& source = sources_[worker.source];
   int64_t total = -1;
   if (worker.status == 206) {
-    const auto range = parseContentRange(worker.contentRange);
+    // RFC 9110 15.3.7 requires Content-Range on a single-part 206. Servers
+    // that leave it out still answered the one range asked for; the body is
+    // placed when its length leaves no doubt, and If-Range guards the file.
+    const auto range =
+        worker.contentRange.empty()
+            ? impliedContentRange(worker.begin, worker.requestEnd,
+                                  worker.contentLength)
+            : parseContentRange(worker.contentRange);
     if (!range || range->first != worker.begin) {
-      // Without a Content-Range that places the body (RFC 9110 15.3.7) its
-      // bytes cannot be trusted at any offset, and asking again gets the same
-      // answer; the server is read as one that ignores ranges.
+      // A body that cannot be placed is not trusted at any offset, and asking
+      // again gets the same answer; the server is read as one that ignores
+      // ranges.
       log::warn("{}: HTTP 206 for byte {} with Content-Range \"{}\"",
                 gidText(gid()), worker.begin, worker.contentRange);
       rangesIgnored(worker);

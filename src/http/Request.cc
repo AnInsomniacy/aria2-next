@@ -6,6 +6,7 @@
 #include "http/Client.h"
 #include "http/Cookies.h"
 #include "http/Request.h"
+#include "http/SegmentPlanner.h"
 #include "options/Options.h"
 
 #include <regex>
@@ -227,6 +228,9 @@ std::optional<ContentRange> parseContentRange(std::string_view value)
     return std::nullopt;
   }
   value = text::trim(value.substr(5));
+  if (value.starts_with('=')) {
+    value = text::trim(value.substr(1)); // a common misspelling of the unit
+  }
   const auto dash = value.find('-');
   const auto slash = value.find('/');
   if (dash == std::string_view::npos || slash == std::string_view::npos ||
@@ -240,6 +244,23 @@ std::optional<ContentRange> parseContentRange(std::string_view value)
   }
   const auto total = text::toInt(value.substr(slash + 1));
   return ContentRange{*first, *last, total.value_or(-1)};
+}
+
+std::optional<ContentRange> impliedContentRange(int64_t begin,
+                                                int64_t requestEnd,
+                                                int64_t contentLength)
+{
+  if (begin < 0 || contentLength <= 0) {
+    return std::nullopt;
+  }
+  if (requestEnd == unbounded) {
+    return ContentRange{begin, begin + contentLength - 1,
+                        begin + contentLength};
+  }
+  if (requestEnd - begin != contentLength) {
+    return std::nullopt;
+  }
+  return ContentRange{begin, requestEnd - 1, -1};
 }
 
 std::optional<int64_t> unsatisfiedRangeLength(std::string_view value)
