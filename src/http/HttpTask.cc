@@ -122,8 +122,6 @@ constexpr auto stallAfter = 8s;
 // A probe without an answer after this long (a server that accepts and stays
 // silent, a lost SYN) gets a second copy; the first answer wins.
 constexpr auto probeHedge = 2s;
-// After a calm period, a cap lowered by overload feedback doubles again.
-constexpr auto calmPeriod = 5s;
 constexpr int maxRestarts = 3;
 // Rounds of downloading pieces again that failed their hash.
 constexpr int maxRepairs = 3;
@@ -317,6 +315,7 @@ HttpTask::~HttpTask()
   for (auto& [id, worker] : workers_) {
     worker->cancel();
   }
+  leaveHost();
 }
 
 bool HttpTask::parallel() const
@@ -335,7 +334,75 @@ int HttpTask::connectionTarget() const
     hosts += source.dead ? 0 : perHost;
   }
   return static_cast<int>(std::clamp<int64_t>(
-      std::min({options().integer("split"), hosts, int64_t{cap_}}), 1, 256));
+      std::min({options().integer("split"), hosts,
+                int64_t{allowedConnections()}}),
+      1, 256));
+}
+
+std::string HttpTask::hostKey() const
+{
+  const auto& source = sources_.front();
+  const auto& url = source.redirect.empty() ? source.uri : source.redirect;
+  const auto parts = uri::parse(url);
+  return parts ? parts->scheme + "://" + parts->host + ':' + parts->port : url;
+}
+
+void HttpTask::syncHost()
+{
+  // Only a download that is fetching holds a place; see leaveHost().
+  if (!pooled() || (phase_ != Phase::Probing && phase_ != Phase::Opening &&
+                    phase_ != Phase::Running)) {
+    return;
+  }
+  const auto wanted = phase_ == Phase::Probing || !parallel()
+                          ? 1
+                          : configuredConnections();
+  const auto remaining = planner_.length() >= 0
+                             ? planner_.length() - completedLength()
+                             : int64_t{-1};
+  // Connections the server answered, live: overload feedback compares them.
+  const auto answered = std::count_if(
+      workers_.begin(), workers_.end(), [](const auto& entry) {
+        return entry.second->accepted && !entry.second->cancelled();
+      });
+  engine().http().hosts().update(this, hostKey(), wanted, remaining,
+                                 static_cast<int>(answered));
+}
+
+void HttpTask::leaveHost() { engine().http().hosts().leave(this); }
+
+int HttpTask::allowedConnections() const
+{
+  return pooled() ? engine().http().hosts().allowance(this)
+                  : configuredConnections();
+}
+
+void HttpTask::shedConnections()
+{
+  if (!pooled() || phase_ != Phase::Running) {
+    return;
+  }
+  const auto allowed = static_cast<size_t>(allowedConnections());
+  // The connections with the most left to fetch give way: they cost the
+  // least progress, and their ranges are split up again by those that stay.
+  while (workers_.size() > std::max<size_t>(allowed, 1)) {
+    std::optional<int> victim;
+    int64_t most = -1;
+    for (const auto& [id, worker] : workers_) {
+      const auto* planned = planner_.worker(id);
+      const auto left = planned ? planned->end - planned->position : 0;
+      if (left > most) {
+        most = left;
+        victim = id;
+      }
+    }
+    if (!victim) {
+      break;
+    }
+    log::debug("{}: connection {} yields to other downloads from the server",
+               gidText(gid()), *victim);
+    cancelWorker(*victim);
+  }
 }
 
 void HttpTask::reset()
@@ -351,9 +418,8 @@ void HttpTask::reset()
   held_.clear();
   pendingWrites_ = 0;
   unflushed_ = 0;
-  cap_ = configuredConnections();
-  overloaded_ = false;
-  slots_.assign(static_cast<size_t>(std::max(1, cap_)), Slot{});
+  slots_.assign(static_cast<size_t>(std::max(1, configuredConnections())),
+                Slot{});
   for (auto& source : sources_) {
     source.active = 0;
     source.failures = 0;
@@ -570,6 +636,11 @@ void HttpTask::launch()
   if (planner_.complete()) {
     return;
   }
+  syncHost();
+  if (pooled() && (now < engine().http().hosts().readyAt(this) ||
+                   allowedConnections() == 0)) {
+    return; // the server asked for a pause, or is full with other downloads
+  }
   if (phase_ == Phase::Probing) {
     // One request learns the length, validators and the name. Its attempts
     // and retry waits are kept on slot 0, also for the hedged copy.
@@ -667,8 +738,9 @@ void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
   // Parallel ranges use separate TCP connections rather than one HTTP/2
   // connection whose flow control would cap them all.
   curl_easy_setopt(easy, CURLOPT_HTTP_VERSION,
-                   connectionTarget() > 1 ? CURL_HTTP_VERSION_1_1
-                                          : CURL_HTTP_VERSION_2TLS);
+                   parallel() && configuredConnections() > 1
+                       ? CURL_HTTP_VERSION_1_1
+                       : CURL_HTTP_VERSION_2TLS);
   const bool bounded = requestEnd != unbounded;
   const auto range = std::to_string(begin) + '-' +
                      (bounded ? std::to_string(requestEnd - 1) : std::string());
@@ -826,6 +898,7 @@ void HttpTask::accept(Worker& worker)
   }
   worker.accepted = true;
   source.failures = 0;
+  syncHost();
   if (source.etag.empty() && source.lastModified.empty()) {
     source.etag = tag;
     source.lastModified = strongDate(worker.lastModified, worker.date);
@@ -870,6 +943,7 @@ void HttpTask::accept(Worker& worker)
   }
   if (options().flag("dry-run")) {
     phase_ = Phase::Done;
+    leaveHost();
     cancelWorker(worker.id);
     complete();
     return;
@@ -1243,6 +1317,7 @@ void HttpTask::failedResponse(Worker& worker, int code)
   auto& source = sources_[worker.source];
   const bool redirected = worker.redirected;
   const auto retryAfter = worker.retryAfter;
+  const auto sent = worker.started;
   if (blameFamily(worker, source, code)) {
     retireWorker(worker);
     slots_[slot].readyAt = {};
@@ -1290,18 +1365,7 @@ void HttpTask::failedResponse(Worker& worker, int code)
   };
   if (code == CURLE_HTTP_RETURNED_ERROR) {
     if (status == 429 || status == 503) {
-      int transferring = 0;
-      for (const auto& [id, other] : workers_) {
-        transferring += other->receiving ? 1 : 0;
-      }
-      // An entry point handing out destinations is not the server that
-      // carries the transfers, and one mirror's overload is not the
-      // others': only that source waits then.
-      if (!mirrors && (!source.refreshing || redirected)) {
-        cap_ = std::max(1, transferring);
-        overloaded_ = true;
-        calmSince_ = Clock::now();
-      }
+      auto& hosts = engine().http().hosts();
       auto wait =
           backoff(slots_[slot].failures, options().integer("retry-wait"));
       if (const auto seconds = text::toInt(retryAfter)) {
@@ -1311,10 +1375,27 @@ void HttpTask::failedResponse(Worker& worker, int code)
       }
       // The server asked for a pause: no new request reaches it before the
       // wait; running transfers continue.
-      source.readyAt = Clock::now() + wait;
+      const auto now = Clock::now();
+      source.readyAt = now + wait;
+      // An entry point handing out destinations is not the server that
+      // carries the transfers, and one mirror's overload is not the
+      // others': only that source waits then.
+      if (pooled() && (!source.refreshing || redirected)) {
+        syncHost();
+        hosts.overloaded(this, sent, now, now + wait);
+      }
+      // Transfers from the server, this download's and others', show that
+      // it works; only a server that lets nothing through fails attempts.
+      int transferring = 0;
+      for (const auto& [id, other] : workers_) {
+        transferring += other->receiving ? 1 : 0;
+      }
+      if (pooled()) {
+        transferring = std::max(transferring, hosts.transferring(this));
+      }
       log::info(
           "{}: server overloaded (HTTP {}); {} connection(s), retry in {} ms",
-          gidText(gid()), status, cap_,
+          gidText(gid()), status, allowedConnections(),
           std::chrono::duration_cast<std::chrono::milliseconds>(wait).count());
       if (allDead()) {
         abort(ErrorCode::ServiceUnavailable, fmt::format("HTTP {}", status));
@@ -1404,6 +1485,7 @@ void HttpTask::retireWorker(Worker& worker)
     slots_[worker.slot].worker.reset();
   }
   workers_.erase(worker.id);
+  syncHost();
 }
 
 void HttpTask::slotFailed(size_t slot, ErrorCode code, std::string message,
@@ -1538,6 +1620,7 @@ void HttpTask::tryFinish()
     return; // written() calls back
   }
   phase_ = Phase::Finishing;
+  leaveHost();
   output_->close([this, self = shared_from_this()](std::error_code) {
     output_.reset();
     verifyAndComplete();
@@ -1649,6 +1732,7 @@ void HttpTask::succeed()
     setModificationTime(path_, remoteTime_);
   }
   phase_ = Phase::Done;
+  leaveHost();
   engine().state().removeTransfer(gid());
   log::notice("Download complete: {}", path_);
   complete();
@@ -1696,6 +1780,7 @@ void HttpTask::abort(ErrorCode code, std::string message)
     return;
   }
   phase_ = Phase::Done;
+  leaveHost();
   for (const auto& [id, worker] : std::map(workers_)) {
     worker->cancel();
     flush(*worker);
@@ -1715,6 +1800,7 @@ void HttpTask::handOverToMedia()
   log::info("{}: {} is a media manifest", gidText(gid()),
             uri::redact(sources_.front().uri));
   phase_ = Phase::Done;
+  leaveHost();
   ticker_.cancel();
   for (const auto& [id, worker] : std::map(workers_)) {
     cancelWorker(id);
@@ -1731,6 +1817,7 @@ void HttpTask::stop(bool, std::function<void()> done)
 {
   stopped_ = std::move(done);
   phase_ = Phase::Stopping;
+  leaveHost();
   if (output_) {
     output_->stopExtending();
   }
@@ -1823,14 +1910,9 @@ void HttpTask::tick()
       slotFailed(slot, ErrorCode::TimedOut, "Connection stalled", 1s);
     }
   }
-  if (overloaded_ && cap_ < configuredConnections() &&
-      now - calmSince_ > calmPeriod) {
-    // Recover quickly: the 503 that lowered the cap may have come from
-    // other downloads from the same server, which have finished since (#71).
-    // A server that is really full answers 503 again and lowers it again.
-    cap_ = std::min(cap_ * 2, configuredConnections());
-    calmSince_ = now;
-  }
+  syncHost();
+  engine().http().hosts().tick(now);
+  shedConnections();
   launch();
   scheduleTick();
 }

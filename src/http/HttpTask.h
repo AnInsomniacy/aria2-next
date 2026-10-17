@@ -151,6 +151,15 @@ private:
   void repair(const std::vector<size_t>& bad);
   void succeed();
   int configuredConnections() const; // split and max-connection-per-server
+  // A single-source download shares its server's connections with the other
+  // downloads from it (HostPool); mirrors back off individually instead.
+  bool pooled() const { return sources_.size() == 1; }
+  std::string hostKey() const;
+  void syncHost();
+  void leaveHost();
+  int allowedConnections() const;
+  // Cancels connections beyond the allowance; their ranges return to others.
+  void shedConnections();
   void tick();
   void scheduleTick();
   void quiesce();
@@ -184,12 +193,6 @@ private:
   // Per piece, a bit for each mirror (below 64) that delivered some of it.
   std::vector<uint64_t> pieceSources_;
   int repairs_ = 0;
-  // Connections allowed now. They start at the configured split and
-  // max-connection-per-server; overload feedback lowers them and then lets
-  // them recover one per calm period.
-  int cap_ = 1;
-  bool overloaded_ = false;
-  Clock::time_point calmSince_ = Clock::now();
   Phase phase_ = Phase::Idle;
   ErrorCode lastError_ = ErrorCode::Network;
   std::string lastMessage_;

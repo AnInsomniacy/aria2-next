@@ -65,16 +65,26 @@ worker is one libcurl transfer that owns `[position, end)` of the file.
    remainder returns to the unowned set. In the endgame a slow worker is
    raced by a duplicate request; the first to finish wins, the other is
    cancelled. Identical bytes may be written twice; that is harmless.
-5. Errors affect one worker. 429/503 lower the connection cap to the number
-   of workers currently transferring and honour Retry-After; the cap probes
-   upward again after a stable period. A task fails only after
+5. Errors affect one worker. Connections to one server are shared by every
+   download from it (`HostPool`). A 429/503 sets that server's limit to the
+   connections then transferring from it, over all downloads, and honours
+   Retry-After for all of them. Each download gets one connection and the
+   rest go by remaining bytes; connections beyond a download's share give
+   way, and their ranges are split up by the others. As in TCP congestion
+   control the limit drops once per window (refusals of requests sent before
+   the drop change nothing), gains one connection per calm period, and is
+   lifted once it covers every request; drops in a row lengthen the pause
+   before the next new request. A server nobody downloads from any more is
+   asked afresh.
+   A task fails only after
    `max-tries` consecutive failures without progress. With several mirrors
    (Metalink) a failing or overloaded mirror backs off alone and the
    connection moves to another; `max-tries` applies per mirror.
 6. Every response is checked against the established length and validator,
    and Content-Range must match the request. A mismatching single response is
-   retried; a 206 without a Content-Range that places its body counts as
-   ignoring ranges. A changed representation restarts a task-owned file from
+   retried. A 206 without Content-Range is placed when its Content-Length
+   leaves one answer (the whole tail of an open request, or exactly the
+   bounded range); one that cannot be placed counts as ignoring ranges. A changed representation restarts a task-owned file from
    zero and fails a foreign file without modifying it. A server that ignores
    ranges gets one connection from offset zero. Mirrors keep their own
    validators (each mirror's ETag differs); a mirror that ignores ranges or

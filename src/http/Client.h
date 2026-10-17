@@ -2,6 +2,7 @@
 #pragma once
 
 #include "core/Speed.h"
+#include "http/HostPool.h"
 
 #include <curl/curl.h>
 
@@ -89,6 +90,8 @@ public:
   void optionsChanged();
   // max-overall-download-limit, shared by all HTTP transfers.
   RateLimit& downloadLimit() { return downloadLimit_; }
+  // Connections per server, shared by the downloads from it.
+  HostPool& hosts() { return hosts_; }
   void close();
 
   void add(Transfer& transfer);
@@ -121,6 +124,7 @@ private:
   std::map<curl_socket_t, std::shared_ptr<Socket>> sockets_;
   std::string loadedCookies_;
   RateLimit downloadLimit_;
+  HostPool hosts_;
 };
 
 } // namespace aria2::http
