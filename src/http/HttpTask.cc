@@ -1115,8 +1115,10 @@ void HttpTask::outputReady(std::error_code error)
     return;
   }
   if (error) {
+    auto reason = missingVolumeMessage(diskPath());
     abort(ErrorCode::FileCreate,
-          fmt::format("Cannot open {}: {}", diskPath(), error.message()));
+          fmt::format("Cannot open {}: {}", diskPath(),
+                      reason.empty() ? error.message() : reason));
     return;
   }
   phase_ = Phase::Running;

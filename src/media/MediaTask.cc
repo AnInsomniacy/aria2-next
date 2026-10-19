@@ -196,7 +196,7 @@ void MediaTask::start()
         }
       }
     }
-    std::filesystem::create_directories(nativePath(path).parent_path());
+    createDirectories(utf8(toPath(path).parent_path()));
     snapshot_.path = std::move(path);
     snapshot_.state = "probing";
     snapshot_.error.clear();

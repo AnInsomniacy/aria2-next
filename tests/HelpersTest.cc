@@ -232,3 +232,26 @@ TEST_CASE("text from the system is repaired into UTF-8")
   CHECK(text::repairUtf8("\xED\xA0\x80") == // a UTF-16 surrogate
         "\xEF\xBF\xBD\xEF\xBF\xBD\xEF\xBF\xBD");
 }
+
+TEST_CASE("missing drives and shares are named")
+{
+  CHECK(volumeAvailable("relative/name"));
+  CHECK(missingVolumeMessage("relative/name").empty());
+#ifdef _WIN32
+  CHECK(volumeAvailable("C:/"));
+  // A drive letter nothing is mounted on, as a drive mapped in another
+  // session appears to the engine.
+  std::string missing;
+  for (char letter = 'Z'; letter >= 'D' && missing.empty(); --letter) {
+    const std::string root = std::string(1, letter) + ":/";
+    if (!fs::exists(toPath(root)))
+      missing = root + "downloads/file.bin";
+  }
+  if (!missing.empty()) {
+    CHECK_FALSE(volumeAvailable(missing));
+    CHECK_FALSE(volumeAvailable("\\\\?\\" + missing));
+    CHECK(missingVolumeMessage(missing).find("network path") !=
+          std::string::npos);
+  }
+#endif
+}

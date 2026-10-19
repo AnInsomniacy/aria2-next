@@ -31,6 +31,16 @@ bool samePath(std::string_view a, std::string_view b);
 // Rejects relative paths that escape their base ("..", absolute, drive).
 bool isContainedRelativePath(std::string_view path);
 
+// Whether the drive or network share holding an absolute path is there. A
+// drive mapped in another logon session, such as a non-elevated one when the
+// engine runs elevated, is not; nor is a disconnected share.
+bool volumeAvailable(std::string_view path);
+
+// Explains why `path` could not be created or opened when its drive or share
+// is missing, which the system reports only as an invalid argument; empty
+// otherwise.
+std::string missingVolumeMessage(std::string_view path);
+
 std::string homeDirectory();
 // $XDG_CONFIG_HOME/aria2/aria2.conf, or ~/.config/aria2/aria2.conf.
 std::string defaultConfigPath();

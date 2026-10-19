@@ -4,6 +4,7 @@
 #include "base/Path.h"
 
 #include <filesystem>
+#include <stdexcept>
 #include <string>
 #include <system_error>
 #ifdef _WIN32
@@ -38,6 +39,20 @@ inline std::filesystem::path nativePath(const std::string& value)
 #else
   return path;
 #endif
+}
+
+// Creates a directory and its parents. A missing drive or share is named:
+// with the long-path prefix, the system's error would name only "\\?\".
+inline void createDirectories(const std::string& value)
+{
+  std::error_code error;
+  std::filesystem::create_directories(nativePath(value), error);
+  if (!error)
+    return;
+  if (auto reason = missingVolumeMessage(value); !reason.empty())
+    throw std::runtime_error("Cannot create " + value + ": " + reason);
+  throw std::filesystem::filesystem_error("create_directories", toPath(value),
+                                          error);
 }
 
 inline std::string failureMessage(const std::exception& error)

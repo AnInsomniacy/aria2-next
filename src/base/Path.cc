@@ -110,6 +110,46 @@ bool isContainedRelativePath(std::string_view value)
   return true;
 }
 
+bool volumeAvailable(std::string_view value)
+{
+#ifdef _WIN32
+  auto wide = toPath(value).make_preferred().wstring();
+  if (wide.rfind(L"\\\\?\\UNC\\", 0) == 0)
+    wide = L"\\\\" + wide.substr(8);
+  else if (wide.rfind(L"\\\\?\\", 0) == 0)
+    wide = wide.substr(4);
+  std::wstring root;
+  if (wide.size() >= 2 && wide[1] == L':') {
+    root = wide.substr(0, 2) + L"\\";
+  }
+  else if (wide.rfind(L"\\\\", 0) == 0) {
+    // \\server\share\: the share, not the server, is what can be missing.
+    const auto server = wide.find(L'\\', 2);
+    if (server == std::wstring::npos)
+      return true;
+    const auto share = wide.find(L'\\', server + 1);
+    root = (share == std::wstring::npos ? wide : wide.substr(0, share)) + L"\\";
+  }
+  else {
+    return true;
+  }
+  return GetFileAttributesW(root.c_str()) != INVALID_FILE_ATTRIBUTES;
+#else
+  (void)value;
+  return true;
+#endif
+}
+
+std::string missingVolumeMessage(std::string_view path)
+{
+  if (volumeAvailable(path))
+    return {};
+  return "its drive or network share is not available; a drive mapped in "
+         "another session, such as one mapped without administrator rights "
+         "while the engine runs with them, cannot be seen, so use its "
+         "network path (\\\\server\\share) instead";
+}
+
 std::string homeDirectory()
 {
 #ifdef _WIN32

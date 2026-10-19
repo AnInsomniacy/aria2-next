@@ -103,7 +103,7 @@ Transport::Transport(const Options* option, std::string source,
       input_(parseInputPlan(option->get("media-input"))),
       throttle_(std::make_unique<Throttle>())
 {
-  std::filesystem::create_directories(nativePath(directory_));
+  createDirectories(directory_);
   multi_ = curl_multi_init();
   share_ = curl_share_init();
   if (!multi_ || !share_) {
