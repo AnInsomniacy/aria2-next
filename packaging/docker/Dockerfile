@@ -31,6 +31,9 @@ RUN set -eux; \
     chmod 644 /usr/share/aria2-next/aria2.conf
 RUN /usr/local/bin/aria2-next --version >/dev/null
 
+# Tools run inside the container print and read file names as UTF-8.
+ENV LANG=C.UTF-8
+
 WORKDIR /downloads
 EXPOSE 6800
 USER root

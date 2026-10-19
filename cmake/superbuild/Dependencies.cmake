@@ -348,12 +348,23 @@ ExternalProject_Add_Step(curl_project verify-trust-policy
   DEPENDEES configure
   DEPENDERS build)
 
+# Linux file names are bytes, written as UTF-8 by every current system. Left to
+# the locale, libtorrent writes each character the C locale of a container or
+# service cannot encode as '.' (aria2-next#72). Targets.cmake defines the same
+# for the engine, whose libtorrent headers inline the conversion then.
+set(ARIA2_LIBTORRENT_CMAKE_ARGS)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  list(APPEND ARIA2_LIBTORRENT_CMAKE_ARGS
+    "-DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS} -DTORRENT_NATIVE_UTF8=1")
+endif()
+
 ExternalProject_Add(libtorrent_project
   DEPENDS openssl_project
   SOURCE_DIR "${ARIA2_VENDOR_ROOT}/libtorrent"
   BINARY_DIR "${CMAKE_BINARY_DIR}/vendor/libtorrent"
   CMAKE_ARGS
     ${ARIA2_EXTERNAL_CMAKE_ARGS}
+    ${ARIA2_LIBTORRENT_CMAKE_ARGS}
     # Header-only Asio types change layout with the C++ standard, and the
     # linker keeps one copy of each inline function for the whole binary, so
     # libtorrent must be compiled as the same standard as the engine.

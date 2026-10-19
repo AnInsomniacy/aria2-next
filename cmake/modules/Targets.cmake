@@ -34,6 +34,10 @@ if(WIN32)
   target_link_libraries(aria2_core PUBLIC
     ws2_32 mswsock iphlpapi crypt32 secur32 bcrypt advapi32 shell32 ole32 winmm)
 endif()
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  # libtorrent is built with UTF-8 file names on Linux (superbuild).
+  target_compile_definitions(aria2_core PUBLIC TORRENT_NATIVE_UTF8=1)
+endif()
 if(APPLE)
   target_link_libraries(aria2_core PUBLIC
     "-framework CoreFoundation" "-framework Security" "-framework Foundation")
