@@ -44,5 +44,6 @@ fi
 gosu "$PUID:$PGID" test -r /config/aria2.conf ||
   fatal "/config/aria2.conf is not readable by $PUID:$PGID"
 
-export HOME=/var/lib/aria2-next
-exec gosu "$PUID:$PGID" aria2-next "$@"
+# gosu sets HOME from the passwd entry, which a numeric PUID usually lacks
+# (HOME=/), so the engine's state directory is given after the switch.
+exec gosu "$PUID:$PGID" env HOME=/var/lib/aria2-next aria2-next "$@"
