@@ -202,6 +202,12 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                 } if nonzero else dribbled({"ETag": etag.strip('"'),
                                             "Last-Modified": modified}),
             })
+        # A server that never offers ranges answers every request in full.
+        wiremock.stub({
+            "priority": 1,
+            "request": {"method": "GET", "url": "/payload.bin?case=unranged"},
+            "response": whole,
+        })
         for case in ("ignored", "changed-200", "changed-206", "changed-412", "416"):
             response = whole
             if case == "changed-200":
@@ -655,7 +661,7 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
                       restart=True)
             # An existing file is only ever extended from the representation it
             # belongs to; otherwise the task fails and leaves it alone.
-            for case in ("changed-200", "changed-206", "changed-412", "416", "ignored"):
+            for case in ("changed-200", "changed-206", "changed-412", "416", "ignored", "unranged"):
                 name = f"protected-{case}.bin"
                 path = engine.download_dir / name
                 prefix = payload.read_bytes()[:4 * 1024 * 1024]

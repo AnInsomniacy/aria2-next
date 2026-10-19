@@ -1044,6 +1044,14 @@ bool HttpTask::decidePath(Worker& worker)
               fmt::format("{} is larger than the remote file", path));
         return false;
       }
+      // Without ranges the body starts over at byte zero and would be written
+      // across the file; like wget, the file is left alone instead.
+      if (size > 0 && !ranged_) {
+        abort(ErrorCode::CannotResume,
+              fmt::format("{} cannot be continued: the server ignores ranges",
+                          path));
+        return false;
+      }
       path_ = path;
       suffix_.clear(); // the adopted file keeps its name
       owned_ = false;
