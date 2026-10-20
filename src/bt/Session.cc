@@ -412,8 +412,7 @@ void Session::loadBlocklist()
 {
   const auto path = engine_.global().get("bt-peer-blocklist");
   if (path.empty()) {
-    session_->set_ip_filter({});
-    blocklistRules_ = 0;
+    replaceBlocklist({});
     return;
   }
   const auto content = readFile(path);
@@ -422,10 +421,19 @@ void Session::loadBlocklist()
     return;
   }
   auto blocklist = parseBlocklist(*content);
-  blocklistRules_ = blocklist.rules;
   log::info("Peer blocklist {}: {} rules, {} lines skipped", path, blocklist.rules,
             blocklist.skipped);
-  session_->set_ip_filter(std::move(blocklist.filter));
+  replaceBlocklist(std::move(blocklist));
+}
+
+std::uint64_t Session::replaceBlocklist(Blocklist blocklist)
+{
+  if (blocklist.filter.export_filter() != session_->get_ip_filter().export_filter()) {
+    session_->set_ip_filter(std::move(blocklist.filter));
+    ++blocklistRevision_;
+  }
+  blocklistRules_ = blocklist.rules;
+  return blocklistRevision_;
 }
 
 void Session::optionsChanged(const std::vector<std::string>& names)

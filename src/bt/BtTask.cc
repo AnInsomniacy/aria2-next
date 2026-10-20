@@ -1065,4 +1065,12 @@ std::pair<int, int> BtTask::addPeers(const std::vector<std::string>& peers)
 
 void BtTask::recheck() { running().force_recheck(); }
 
+void BtTask::announce()
+{
+  const auto& handle = running();
+  handle.force_reannounce();
+  handle.force_dht_announce();
+  handle.force_lsd_announce();
+}
+
 } // namespace aria2::bt

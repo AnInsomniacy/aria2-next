@@ -1,6 +1,8 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
 #pragma once
 
+#include "bt/Blocklist.h"
+
 #include <boost/asio/steady_timer.hpp>
 #include <boost/json/object.hpp>
 #include <libtorrent/add_torrent_params.hpp>
@@ -51,6 +53,11 @@ public:
 
   boost::json::object status() const;
 
+  // Replaces the active peer blocklist, as aria2.setBtPeerBlocklist does for
+  // PeerBanHelper. Returns the revision, which advances only when the blocked
+  // ranges change. Changing --bt-peer-blocklist loads the file again.
+  std::uint64_t replaceBlocklist(Blocklist blocklist);
+
 private:
   void schedule();
   void drain();
@@ -79,6 +86,7 @@ private:
   std::vector<std::pair<const char*, int>> metrics_; // status key -> counter index
   std::uint64_t droppedAlerts_ = 0;
   size_t blocklistRules_ = 0;
+  std::uint64_t blocklistRevision_ = 0;
   int ticks_ = 0;
 };
 

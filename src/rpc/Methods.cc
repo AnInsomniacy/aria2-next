@@ -479,7 +479,9 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
         {"rpcVersion", "1.1.0"},
         {"enabledFeatures", std::move(features)},
         {"mediaFeatures", json::array{"request-contexts", "stable-track-ids",
-                                      "structured-errors", "captured-inputs"}}};
+                                      "structured-errors", "captured-inputs"}},
+        // Rayburst 4.0 hands browser downloads only to engines listing these.
+        {"downloadFeatures", json::array{"filename-hints", "filename-resolution"}}};
   });
   d.add("aria2.getSessionInfo", [](json::array&) -> json::value {
     static const auto session = [] {

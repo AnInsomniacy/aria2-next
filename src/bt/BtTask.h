@@ -61,6 +61,9 @@ public:
   // before the torrent runs are connected when it starts.
   std::pair<int, int> addPeers(const std::vector<std::string>& peers);
   void recheck();
+  // Announces to trackers, DHT and local peer discovery now; trackers still
+  // enforce their minimum interval.
+  void announce();
 
   // Called by Session on the control thread.
   void attached(const lt::torrent_handle& handle);

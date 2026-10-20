@@ -1,9 +1,11 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
 // BitTorrent methods: aria2.getPeers plus the aria2-next extensions for
-// trackers, web seeds, peers, rechecks, metainfo inspection and the session.
+// trackers, web seeds, peers, rechecks, announces, the peer blocklist,
+// metainfo inspection and the session.
 #include "rpc/Params.h"
 
 #include "base/Text.h"
+#include "bt/Blocklist.h"
 #include "bt/BtTask.h"
 #include "bt/Metainfo.h"
 #include "bt/Session.h"
@@ -56,6 +58,11 @@ void registerBtMethods(Dispatcher& d, Engine& e)
     found->recheck();
     return json::string(gidOf(*found));
   });
+  d.add("aria2.forceBtAnnounce", [&e](json::array& p) -> json::value {
+    auto found = btTask(e, p);
+    found->announce();
+    return json::string(gidOf(*found));
+  });
   d.add("aria2.replaceBtTrackers", [&e](json::array& p) -> json::value {
     auto found = btTask(e, p);
     std::vector<std::pair<std::string, int>> trackers;
@@ -79,6 +86,21 @@ void registerBtMethods(Dispatcher& d, Engine& e)
   d.add("aria2.addBtPeers", [&e](json::array& p) -> json::value {
     const auto [added, failed] = btTask(e, p)->addPeers(strings(p, 1));
     return json::object{{"added", added}, {"failed", failed}};
+  });
+  // Each rule is an address, a CIDR block or a range; one bad rule rejects
+  // the call and keeps the current blocklist.
+  d.add("aria2.setBtPeerBlocklist", [&e](json::array& p) -> json::value {
+    std::string content;
+    for (const auto& rule : strings(p, 0)) {
+      if (rule.find('\n') != std::string::npos || bt::parseBlocklist(rule).rules != 1) {
+        invalid(fmt::format("Invalid blocklist rule: {}", rule));
+      }
+      content += rule + '\n';
+    }
+    auto blocklist = bt::parseBlocklist(content);
+    const auto rules = blocklist.rules;
+    const auto revision = e.bt().replaceBlocklist(std::move(blocklist));
+    return json::object{{"ruleCount", rules}, {"revision", revision}};
   });
   d.add("aria2.getBtSessionStatus", [&e](json::array&) -> json::value {
     return e.bt().status();
