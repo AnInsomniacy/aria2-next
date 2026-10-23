@@ -83,6 +83,35 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             },
             "response": {"status": 503, "headers": {"Retry-After": "1"}},
         })
+        # A download that fails partway: the first ranged request beside the
+        # running one is answered 404, which ends the only source.
+        wiremock.stub({
+            "priority": 1,
+            "scenarioName": "retried",
+            "requiredScenarioState": "Started",
+            "newScenarioState": "Failed",
+            "request": {
+                "method": "GET", "url": "/payload.bin?case=retried",
+                "headers": {"Range": {"matches": "bytes=[1-9][0-9]*-.*"}},
+            },
+            "response": {"status": 404},
+        })
+        # A server capping connections per client, as pixeldrain does: ranged
+        # requests beside a running transfer are refused with 403 until fewer
+        # connections ask; the download continues instead of failing.
+        for state, following in (("Started", "refused-1"), ("refused-1", "refused-2"),
+                                 ("refused-2", "Recovered")):
+            wiremock.stub({
+                "priority": 1,
+                "scenarioName": "capped-403",
+                "requiredScenarioState": state,
+                "newScenarioState": following,
+                "request": {
+                    "method": "GET", "url": "/payload.bin?case=capped-403",
+                    "headers": {"Range": {"matches": "bytes=[1-9][0-9]*-.*"}},
+                },
+                "response": {"status": 403},
+            })
         wiremock.stub({
             "priority": 1,
             "request": {
@@ -631,6 +660,19 @@ def validate(run: RunDirectory, engine_path: Path | None) -> dict[str, object]:
             for case in ("delayed", "tail", "retry-429", "retry-503"):
                 check(f"{case}.bin",
                       f"{wiremock.base_url}/payload.bin?case={case}")
+            check("capped-403.bin", f"{wiremock.base_url}/payload.bin?case=capped-403",
+                  {"max-download-limit": "4M"})
+            # Retried as a new task naming the same file, as Rayburst does, the
+            # download continues from the failed task's record: the allocated
+            # file has its full length with holes (rayburst#767).
+            failed = engine.add_uri(
+                f"{wiremock.base_url}/payload.bin?case=retried",
+                {**options, "out": "retried.bin", "file-allocation": "trunc",
+                 "max-download-limit": "4M"})
+            engine.rpc.wait_status(failed, "error", 30)
+            check("retried.bin", f"{wiremock.base_url}/payload.bin?case=retried",
+                  {"continue": "true", "file-allocation": "trunc"})
+            engine.rpc.call("aria2.removeDownloadResult", [failed])
             if results["tail.bin"] >= 12:
                 raise RuntimeError("The stalled tail was waited out instead of raced")
             # Bytes may still arrive on running connections, but no new

@@ -25,3 +25,10 @@ TEST_CASE("input files keep option values verbatim")
         std::vector<std::string>{"C:/torrents/linux.torrent"});
   CHECK(entries[1].options.size() == 1);
 }
+
+TEST_CASE("input files may start with a UTF-8 byte order mark")
+{
+  const auto entries = parseSession("\xEF\xBB\xBFhttp://a/x\r\n out=x.bin\r\n");
+  REQUIRE(entries.size() == 1);
+  CHECK(entries[0].uris == std::vector<std::string>{"http://a/x"});
+}

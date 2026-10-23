@@ -10,6 +10,8 @@ namespace {
 constexpr int64_t alignment = 4096;
 // A new connection gets this long to show its speed before it is raced.
 constexpr double raceSeconds = 2.0;
+// Speed samples younger than this still show TCP slow start, not the route.
+constexpr double measureSeconds = 1.0;
 // A copy is started only for a range that needs at least this long.
 constexpr double minRaceSeconds = 0.5;
 // Ranges are never split below this, however slow the connection.
@@ -18,6 +20,15 @@ constexpr int64_t minSplitFloor = 64 << 10;
 // original. Copies that stay silent do not count; at most 2 * maxCopies of
 // those are tried.
 constexpr int maxCopies = 3;
+
+// The speed a connection is expected to keep: its own once measured, the
+// typical one before that. Choosing a range and cutting it must agree on it,
+// or the cut can leave less than the minimum on either side.
+double expectedSpeed(const SegmentPlanner::Worker& worker, double typical)
+{
+  const bool measured = worker.receiving && worker.age >= measureSeconds;
+  return measured && worker.speed > 0 ? worker.speed : typical;
+}
 } // namespace
 
 void SegmentPlanner::setLength(int64_t length)
@@ -129,13 +140,8 @@ std::optional<Range> SegmentPlanner::split(int id)
   double longest = 0;
   for (auto& [other, worker] : workers_) {
     const auto remaining = worker.end - worker.position;
-    const auto speed = worker.speed > 0 ? worker.speed : typical;
+    const auto speed = expectedSpeed(worker, typical);
     if (worker.end == unbounded || remaining < 2 * minSplitFor(speed)) {
-      continue;
-    }
-    // A connection far behind the others is raced, not split: splitting
-    // would leave it holding the start of its range.
-    if (worker.receiving && typicalSpeed(other) > 2 * worker.speed) {
       continue;
     }
     // Unknown speeds compare by size; any measured speed beats none.
@@ -148,9 +154,13 @@ std::optional<Range> SegmentPlanner::split(int id)
   if (!victim) {
     return std::nullopt;
   }
+  // The new connection takes the tail of the range that would finish last,
+  // cut where both are expected to finish together. A slow connection keeps
+  // only the head it can still deliver in that time, so its tail is not
+  // duplicated (race) but handed over (rayburst#762).
   auto& target = *victim;
   const auto remaining = target.end - target.position;
-  const auto own = target.speed > 0 ? target.speed : typical;
+  const auto own = expectedSpeed(target, typical);
   const auto fresh = typical > 0 ? typical : own;
   const auto share = own > 0 && fresh > 0 ? own / (own + fresh) : 0.5;
   const auto least = minSplitFor(own);

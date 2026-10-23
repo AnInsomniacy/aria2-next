@@ -45,6 +45,9 @@ public:
   std::optional<TransferRecord> loadTransfer(Gid gid);
   void saveTransfer(const TransferRecord& record);
   void removeTransfer(Gid gid);
+  // Hands the record of the unfinished file at `path`, saved by another task,
+  // over to `gid`, which continues that file.
+  std::optional<TransferRecord> claimTransfer(const std::string& path, Gid gid);
 
 private:
   sqlite::Database& transfers();

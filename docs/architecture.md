@@ -188,7 +188,8 @@ Sonarr and Radarr use) is translated to JSON-RPC requests for the same
 dispatcher; base64 values reach the methods still encoded, and failed calls
 in a `system.multicall` answer as faultCode/faultString structs. XML-RPC has
 no notifications. JSONP is not provided.
-Extension methods keep their existing names and fields.
+Extension methods keep their existing names and fields; see
+[RPC extensions](rpc-extensions.md) for the list.
 
 A Thunder link (`thunder://` and Base64 of `AA` + URI + `ZZ`) is unwrapped
 where a URI is accepted, by `aria2.addUri`, the command line, sessions and

@@ -32,10 +32,20 @@ Console::Console(Engine& engine)
 {
 }
 
-void Console::start() { tick(); }
+void Console::start()
+{
+  engine_.listen([this](Event event, const Task& task) {
+    if (event == Event::Start && running_) {
+      started(task);
+    }
+  });
+  running_ = true;
+  tick();
+}
 
 void Console::stop()
 {
+  running_ = false;
   timer_.cancel();
   if (lastWidth_ > 0) {
     std::fputs("\n", stdout);
@@ -85,6 +95,14 @@ std::string describe(const Task& task)
 }
 } // namespace
 
+void Console::started(const Task& task)
+{
+  seen_.try_emplace(task.gid(), Seen{Clock::now(), task.completedLength()});
+  if (readout_) {
+    print("[" + describe(task) + "]");
+  }
+}
+
 void Console::readout()
 {
   const auto active = engine_.active();
@@ -95,6 +113,11 @@ void Console::readout()
   if (active.size() > 1) {
     line += "(+" + std::to_string(active.size() - 1) + ")";
   }
+  print(std::move(line));
+}
+
+void Console::print(std::string line)
+{
   if (!tty_) {
     // Piped output gets whole lines: readers split on newlines.
     std::fprintf(stdout, "%s\n", line.c_str());

@@ -160,6 +160,34 @@ catch (const std::exception& error) {
   log::warn("Could not save resume data: {}", error.what());
 }
 
+std::optional<TransferRecord> StateStore::claimTransfer(const std::string& path,
+                                                        Gid gid)
+try {
+  auto& db = transfers();
+  sqlite::Transaction transaction(db);
+  sqlite::Statement query(db, "SELECT gid,path FROM downloads WHERE gid<>?1");
+  query.bind(1, gidText(gid));
+  std::string owner;
+  while (owner.empty() && query.step()) {
+    if (samePath(query.text(1), path)) {
+      owner = query.text(0);
+    }
+  }
+  if (owner.empty()) {
+    return std::nullopt;
+  }
+  sqlite::Statement mine(db, "DELETE FROM downloads WHERE gid=?1");
+  mine.bind(1, gidText(gid)).run();
+  sqlite::Statement claim(db, "UPDATE downloads SET gid=?1 WHERE gid=?2");
+  claim.bind(1, gidText(gid)).bind(2, owner).run();
+  transaction.commit();
+  return loadTransfer(gid);
+}
+catch (const std::exception& error) {
+  log::warn("Resume data unavailable: {}", error.what());
+  return std::nullopt;
+}
+
 void StateStore::removeTransfer(Gid gid)
 try {
   sqlite::Statement remove(transfers(), "DELETE FROM downloads WHERE gid=?1");

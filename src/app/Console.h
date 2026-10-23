@@ -30,7 +30,9 @@ std::string formatResults(const std::vector<ResultRow>& rows, bool full);
 
 // The progress readout, periodic summaries and the results table of
 // command-line use. On a terminal the readout redraws one line; piped, it
-// prints one line per second, as aria2 does.
+// prints one line per second. A task is also shown the moment it starts, so a
+// download shorter than a second still has a line and an average speed
+// (aria2-next#70: Scoop showed nothing for its usual small downloads).
 class Console {
 public:
   explicit Console(Engine& engine);
@@ -45,7 +47,9 @@ private:
   };
 
   void tick();
+  void started(const Task& task);
   void readout();
+  void print(std::string line);
   void summary();
   void results();
   void observe();
@@ -54,6 +58,7 @@ private:
   boost::asio::steady_timer timer_;
   bool tty_;
   bool readout_;
+  bool running_ = false; // between start() and stop(); events arrive only then
   int64_t summaryInterval_;
   int seconds_ = 0;
   size_t lastWidth_ = 0;

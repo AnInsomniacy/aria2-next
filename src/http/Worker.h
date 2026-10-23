@@ -49,6 +49,7 @@ public:
   bool connected = false; // the stall clock runs once the connection is up
   int64_t tickBytes = 0;
   int64_t received = 0;
+  int slowTicks = 0; // ticks in a row far below the other connections
   bool receiving = false;
 
 private:

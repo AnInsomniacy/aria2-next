@@ -119,6 +119,25 @@ constexpr int64_t writeBudget = 64 << 20;
 // whether or not it delivered anything before. Connecting is bounded by
 // connect-timeout instead.
 constexpr auto stallAfter = 8s;
+// A connection that keeps delivering, but at a fraction of what the others
+// (or this download recently) manage, is replaced by a new one: routes and
+// per-flow shaping slow long-lived connections down, and a new connection
+// usually gets the speed back (rayburst#235). It is judged after a grace
+// period and only when it stays slow, one replacement at a time.
+constexpr double slowGraceSeconds = 5.0;
+constexpr double slowFraction = 0.3;
+constexpr int slowTicks = 6; // 3 s in a row
+// Replacing pays only when the slow connection still has this long to go.
+constexpr double slowWorthSeconds = 10.0;
+// Pause between replacements; it doubles for each that was not faster.
+constexpr auto recycleInterval = 5s;
+constexpr int maxRecycleStrikes = 5;
+// Time constant of the download's long-term speed, the reference of a lone
+// connection.
+constexpr double longRateSeconds = 30.0;
+// One address family is avoided when its connections are this many times
+// slower than the other's.
+constexpr double familySpeedRatio = 4.0;
 // A probe without an answer after this long (a server that accepts and stays
 // silent, a lost SYN) gets a second copy; the first answer wins.
 constexpr auto probeHedge = 2s;
@@ -418,6 +437,10 @@ void HttpTask::reset()
   held_.clear();
   pendingWrites_ = 0;
   unflushed_ = 0;
+  longRate_ = 0;
+  recycleAfter_ = {};
+  recycleStrikes_ = 0;
+  recycled_.reset();
   slots_.assign(static_cast<size_t>(std::max(1, configuredConnections())),
                 Slot{});
   for (auto& source : sources_) {
@@ -439,7 +462,7 @@ void HttpTask::start()
   // A stored record resumes the file this task created before; a missing
   // file means the partial download was deleted and starts over.
   if (!options().flag("remove-control-file") && !options().flag("dry-run")) {
-    const auto record = engine().state().loadTransfer(gid());
+    const auto record = storedRecord();
     const auto suffix = record && record->totalLength > 0
                             ? storedSuffix(record->path)
                             : std::nullopt;
@@ -541,15 +564,70 @@ int HttpTask::familyFor(const Source& source, int avoid) const
     return other.forced ? answered : (answered == 4 ? 6 : 4);
   }
   // A family several times slower per connection gets no new connections.
-  if (v4.worked && v4.speed > 0 && v6.speed > 0) {
-    if (v4.speed > 4 * v6.speed) {
-      return 4;
-    }
-    if (v6.speed > 4 * v4.speed) {
-      return 6;
-    }
+  return fasterFamily(source);
+}
+
+int HttpTask::fasterFamily(const Source& source)
+{
+  const auto& v4 = source.families[0];
+  const auto& v6 = source.families[1];
+  if (!v4.worked || !v6.worked || v4.speed <= 0 || v6.speed <= 0) {
+    return 0;
+  }
+  if (v4.speed > familySpeedRatio * v6.speed) {
+    return 4;
+  }
+  if (v6.speed > familySpeedRatio * v4.speed) {
+    return 6;
   }
   return 0;
+}
+
+// Only new connections follow familyFor(); the ones already on the slow
+// family would keep their ranges for as long as that route takes, and with
+// every slot held by them the fast family never gets another connection.
+// They are moved over once per source: a later reversal compares against a
+// speed the abandoned family no longer reports.
+void HttpTask::leaveSlowFamily()
+{
+  if (phase_ != Phase::Running || !ranged_ || options().flag("disable-ipv6")) {
+    return;
+  }
+  for (size_t index = 0; index < sources_.size(); ++index) {
+    auto& source = sources_[index];
+    const auto fast = fasterFamily(source);
+    if (source.familyMoved || !fast || source.families[0].failed ||
+        source.families[1].failed) {
+      continue;
+    }
+    std::vector<int> moving;
+    for (const auto& [id, worker] : workers_) {
+      const auto* planned = planner_.worker(id);
+      if (worker->source != index || !planned || planned->end == unbounded ||
+          worker->connectedFamily() != (fast == 4 ? 6 : 4)) {
+        continue;
+      }
+      const auto left = static_cast<double>(planned->end - planned->position);
+      if (left > slowWorthSeconds * std::max(planned->speed, 1.0)) {
+        moving.push_back(id);
+      }
+    }
+    if (moving.empty()) {
+      continue;
+    }
+    source.familyMoved = true;
+    log::info("{}: IPv{} is {}x slower per connection; moving {} connections "
+              "to IPv{}",
+              gidText(gid()), fast == 4 ? 6 : 4,
+              static_cast<int>(source.families[fast == 6].speed /
+                               source.families[fast == 4].speed),
+              moving.size(), fast);
+    for (const auto id : moving) {
+      const auto slot = workers_.at(id)->slot;
+      cancelWorker(id);
+      slots_[slot].readyAt = {};
+    }
+  }
 }
 
 // A failure on one address family while the other is untried or works is
@@ -1034,6 +1112,35 @@ bool HttpTask::decidePath(Worker& worker)
   };
   // Another task's file is never adopted, overwritten or shared.
   const bool shared = engine().writing(path, gid());
+  // A file this engine left unfinished continues from its record: allocation
+  // gives it the full length with holes, so its size says nothing about what
+  // was written (rayburst#767).
+  if (const auto record = shared ? std::nullopt : claimRecord(path)) {
+    path_ = record->path;
+    suffix_ = storedSuffix(record->path).value_or("");
+    owned_ = true;
+    const auto same = [](const std::string& stored, const std::string& now) {
+      return stored.empty() || now.empty() || stored == now;
+    };
+    if (record->totalLength == planner_.length() &&
+        same(record->etag, etag_) &&
+        same(record->lastModified, lastModified_)) {
+      planner_.restore(record->completed);
+      for (const auto& [begin, end] : record->completed) {
+        persisted_.add(begin, end);
+      }
+      log::info("{}: continuing {} at {}/{} bytes", gidText(gid()), diskPath(),
+                persisted_.total(), record->totalLength);
+      cancelWorker(worker.id); // the missing ranges follow
+      openOutput(false);
+    }
+    else {
+      log::info("{}: {} changed on the server; downloading it again",
+                gidText(gid()), diskPath());
+      openOutput(true);
+    }
+    return true;
+  }
   if (shared || leftover(path) || fileExists(path)) {
     if (!shared && !leftover(path) && options().flag("continue")) {
       // An existing file is adopted as a prefix and never truncated.
@@ -1096,6 +1203,19 @@ std::optional<std::string> HttpTask::storedSuffix(const std::string& path) const
     return std::string();
   }
   return std::nullopt;
+}
+
+std::optional<TransferRecord> HttpTask::claimRecord(const std::string& path)
+{
+  if (!options().flag("continue") || options().flag("remove-control-file") ||
+      options().flag("dry-run") || engine().writing(path, gid())) {
+    return std::nullopt;
+  }
+  auto record = engine().state().claimTransfer(path, gid());
+  if (!record || record->totalLength <= 0 || !storedSuffix(record->path)) {
+    return std::nullopt;
+  }
+  return record;
 }
 
 void HttpTask::openOutput(bool truncate)
@@ -1373,8 +1493,16 @@ void HttpTask::failedResponse(Worker& worker, int code)
     return std::all_of(sources_.begin(), sources_.end(),
                        [](const Source& s) { return s.dead; });
   };
+  int receiving = 0;
+  for (const auto& [id, other] : workers_) {
+    receiving += other->receiving ? 1 : 0;
+  }
   if (code == CURLE_HTTP_RETURNED_ERROR) {
-    if (status == 429 || status == 503) {
+    // A 403 to one more connection while this download's others deliver is
+    // the server capping connections per client, as pixeldrain does
+    // (rayburst#767), not its answer for the file.
+    const bool capped = status == 403 && receiving > 0;
+    if (status == 429 || status == 503 || capped) {
       auto& hosts = engine().http().hosts();
       auto wait =
           backoff(slots_[slot].failures, options().integer("retry-wait"));
@@ -1396,10 +1524,7 @@ void HttpTask::failedResponse(Worker& worker, int code)
       }
       // Transfers from the server, this download's and others', show that
       // it works; only a server that lets nothing through fails attempts.
-      int transferring = 0;
-      for (const auto& [id, other] : workers_) {
-        transferring += other->receiving ? 1 : 0;
-      }
+      int transferring = receiving;
       if (pooled()) {
         transferring = std::max(transferring, hosts.transferring(this));
       }
@@ -1885,6 +2010,84 @@ int HttpTask::configuredConnections() const
                options().integer("max-connection-per-server")));
 }
 
+void HttpTask::recycleSlow(Clock::time_point now, int64_t tickBytes)
+{
+  const auto rate = static_cast<double>(tickBytes) / tickSeconds;
+  longRate_ = longRate_ > 0 ? longRate_ + (rate - longRate_) * tickSeconds /
+                                              longRateSeconds
+                            : rate;
+  // Speeds under a limit or a full write queue say nothing about the route.
+  if (phase_ != Phase::Running || !ranged_ || !limit_.unlimited() ||
+      !engine().http().downloadLimit().unlimited() ||
+      unflushed_ > writeBudget / 2) {
+    return;
+  }
+  const auto measured = [](const SegmentPlanner::Worker* planned) {
+    return planned && planned->receiving && planned->age >= slowGraceSeconds;
+  };
+  // Judge the last replacement once its connection showed its speed.
+  if (recycled_) {
+    const auto& slot = slots_[recycled_->slot];
+    const auto* planned =
+        slot.worker ? planner_.worker(slot.worker->id) : nullptr;
+    if (measured(planned)) {
+      const bool faster = planned->speed >= 2 * recycled_->speed;
+      recycleStrikes_ =
+          faster ? 0 : std::min(recycleStrikes_ + 1, maxRecycleStrikes);
+      recycleAfter_ = now + recycleInterval * (1 << recycleStrikes_);
+      recycled_.reset();
+    }
+    else if (!slot.worker && now >= recycleAfter_ + 4 * recycleInterval) {
+      recycled_.reset(); // the replacement never came; judge anew
+    }
+    return;
+  }
+  if (now < recycleAfter_) {
+    return;
+  }
+  double sum = 0;
+  int count = 0;
+  for (const auto& [id, worker] : workers_) {
+    if (const auto* planned = planner_.worker(id); measured(planned)) {
+      sum += planned->speed;
+      ++count;
+    }
+  }
+  std::shared_ptr<Worker> slowest;
+  double slowestSpeed = 0;
+  for (const auto& [id, worker] : workers_) {
+    const auto* planned = planner_.worker(id);
+    if (!measured(planned) || worker->paused()) {
+      worker->slowTicks = 0;
+      continue;
+    }
+    // Others' mean; a lone connection is held to the download's own pace.
+    // Connections still in their grace period are no reference yet.
+    const auto reference = count > 1 ? (sum - planned->speed) / (count - 1)
+                           : workers_.size() == 1 ? longRate_
+                                                  : 0.0;
+    const auto left = static_cast<double>(planned->end - planned->position);
+    const bool slow = planned->speed < slowFraction * reference &&
+                      left > slowWorthSeconds * std::max(planned->speed, 1.0);
+    worker->slowTicks = slow ? worker->slowTicks + 1 : 0;
+    if (worker->slowTicks >= slowTicks &&
+        (!slowest || planned->speed < slowestSpeed)) {
+      slowest = worker;
+      slowestSpeed = planned->speed;
+    }
+  }
+  if (!slowest) {
+    return;
+  }
+  log::info("{}: connection {} slowed to {} B/s; replacing it", gidText(gid()),
+            slowest->id, static_cast<int64_t>(slowestSpeed));
+  const auto slot = slowest->slot;
+  cancelWorker(slowest->id);
+  slots_[slot].readyAt = {};
+  recycled_ = Recycled{slot, slowestSpeed};
+  recycleAfter_ = now;
+}
+
 void HttpTask::tick()
 {
   if (phase_ != Phase::Probing && phase_ != Phase::Opening &&
@@ -1894,9 +2097,12 @@ void HttpTask::tick()
   const auto now = Clock::now();
   auto& global = engine().http().downloadLimit();
   measureFamilies();
+  leaveSlowFamily();
+  int64_t tickBytes = 0;
   for (const auto& [id, worker] : std::map(workers_)) {
     planner_.updateSpeed(
         id, static_cast<double>(worker->tickBytes) / tickSeconds, tickSeconds);
+    tickBytes += worker->tickBytes;
     worker->tickBytes = 0;
     if (!worker->buffer.empty() && now - worker->bufferedSince >= flushAfter) {
       flush(*worker);
@@ -1920,6 +2126,7 @@ void HttpTask::tick()
       slotFailed(slot, ErrorCode::TimedOut, "Connection stalled", 1s);
     }
   }
+  recycleSlow(now, tickBytes);
   syncHost();
   engine().http().hosts().tick(now);
   shedConnections();
@@ -1944,7 +2151,7 @@ void HttpTask::loadProgress()
   if (options().flag("remove-control-file") || options().flag("dry-run")) {
     return;
   }
-  const auto record = engine().state().loadTransfer(gid());
+  const auto record = storedRecord();
   const auto suffix = record && record->totalLength > 0
                           ? storedSuffix(record->path)
                           : std::nullopt;
@@ -1955,6 +2162,17 @@ void HttpTask::loadProgress()
     planner_.setLength(record->totalLength);
     planner_.restore(record->completed);
   }
+}
+
+std::optional<TransferRecord> HttpTask::storedRecord()
+{
+  auto record = engine().state().loadTransfer(gid());
+  if (!record && !options().get("out").empty()) {
+    // A retry submitted as a new task names the file it continues; it claims
+    // the record when added, before the failed task's result is removed.
+    record = claimRecord(joinPath(options().get("dir"), options().get("out")));
+  }
+  return record;
 }
 
 void HttpTask::discardState() { engine().state().removeTransfer(gid()); }

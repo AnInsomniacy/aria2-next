@@ -16,6 +16,7 @@
 
 namespace aria2 {
 class Output;
+struct TransferRecord;
 }
 
 namespace aria2::http {
@@ -79,6 +80,7 @@ private:
       double speed = 0; // average bytes per second of one connection
     };
     std::array<Family, 2> families{};
+    bool familyMoved = false; // see leaveSlowFamily()
     bool used = false;
     // The validators this mirror answered with; one mirror's are meaningless
     // to another.
@@ -112,6 +114,9 @@ private:
                    int64_t requestEnd, int avoid = 0);
   std::optional<size_t> pickSource();
   int familyFor(const Source& source, int avoid) const;
+  // The family whose connections are several times faster, or 0.
+  static int fasterFamily(const Source& source);
+  void leaveSlowFamily();
   // A first response compressed with Content-Encoding that is to be decoded.
   bool compressedBody(const Worker& worker) const;
   bool blameFamily(Worker& worker, Source& source, int code);
@@ -138,6 +143,11 @@ private:
   std::string relocatedPath(const std::string& dir) const;
   // The suffix a stored record's file carries, or nullopt when it is gone.
   std::optional<std::string> storedSuffix(const std::string& path) const;
+  // With --continue, takes over the record of the unfinished file an earlier
+  // task left at `path`, when that file is still there.
+  std::optional<TransferRecord> claimRecord(const std::string& path);
+  // This task's record, or the one it claims as a retry naming the file.
+  std::optional<TransferRecord> storedRecord();
   // Gives the finished file its final name.
   bool publish();
   void outputReady(std::error_code error);
@@ -160,6 +170,7 @@ private:
   int allowedConnections() const;
   // Cancels connections beyond the allowance; their ranges return to others.
   void shedConnections();
+  void recycleSlow(Clock::time_point now, int64_t tickBytes);
   void tick();
   void scheduleTick();
   void quiesce();
@@ -199,6 +210,15 @@ private:
   size_t pendingWrites_ = 0;
   int64_t unflushed_ = 0;
   mutable SpeedMeter speed_;
+  // Replacing connections that fell far behind; see recycleSlow().
+  double longRate_ = 0; // task bytes per second, smoothed over ~30 s
+  Clock::time_point recycleAfter_{};
+  int recycleStrikes_ = 0; // replacements in a row that were no faster
+  struct Recycled {
+    size_t slot = 0;
+    double speed = 0; // of the connection that was replaced
+  };
+  std::optional<Recycled> recycled_;
   RateLimit limit_;
   boost::asio::steady_timer ticker_;
   std::function<void()> stopped_;

@@ -110,9 +110,7 @@ Gid Engine::add(std::shared_ptr<Task> task, std::optional<size_t> position)
   task->state_ =
       task->options().flag("pause") ? TaskState::Paused : TaskState::Waiting;
   task->options().erase("pause");
-  if (task->state_ == TaskState::Paused) {
-    task->loadProgress();
-  }
+  task->loadProgress();
   const auto at = std::min(position.value_or(waiting_.size()), waiting_.size());
   waiting_.insert(waiting_.begin() + static_cast<ptrdiff_t>(at), task);
   schedule();

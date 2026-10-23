@@ -229,3 +229,64 @@ TEST_CASE("uniformly slow connections are raced against a faster finished one")
   REQUIRE(range);
   CHECK(range->second % MiB == 0);
 }
+
+TEST_CASE("an idle connection takes over the tail of a slow connection")
+{
+  SegmentPlanner planner(MiB);
+  planner.setLength(16 * MiB);
+  planner.place(1, 0, 8 * MiB);
+  planner.place(2, 8 * MiB, 16 * MiB);
+  planner.receive(1, 1);
+  planner.updateSpeed(1, 100e3, 2);
+  planner.receive(2, 1);
+  planner.updateSpeed(2, 4e6, 2);
+  planner.noteStartup(0.5);
+  const auto range = planner.assign(3);
+  REQUIRE(range);
+  // The slow connection would finish last: its tail is handed over, not the
+  // fast connection's, and not duplicated.
+  CHECK(range->second == 8 * MiB);
+  CHECK(planner.worker(2)->end == 16 * MiB);
+  // It keeps what it delivers while the new connection, expected at the
+  // typical speed, fetches the rest.
+  const auto kept = planner.worker(1)->end - planner.worker(1)->position;
+  const auto remaining = 8 * MiB - 1;
+  CHECK(kept ==
+        doctest::Approx(remaining * 100e3 / (100e3 + 2.05e6)).epsilon(0.02));
+}
+
+TEST_CASE("a connection still ramping up is split evenly")
+{
+  SegmentPlanner planner(MiB);
+  planner.setLength(9 * MiB);
+  planner.place(1, 0, 8 * MiB);
+  planner.place(2, 8 * MiB, 9 * MiB);
+  planner.receive(1, 1);
+  planner.updateSpeed(1, 50e3, 0.5); // slow start, not yet its speed
+  planner.receive(2, 1);
+  planner.updateSpeed(2, 4e6, 2);
+  const auto range = planner.assign(3);
+  REQUIRE(range);
+  CHECK(range->second == 8 * MiB);
+  CHECK(range->first == 4 * MiB);
+}
+
+TEST_CASE("a split never leaves an empty range")
+{
+  // A young connection measures slow-start speed; the range is judged at the
+  // typical speed, which makes 300 KiB too short to split.
+  SegmentPlanner planner(MiB);
+  planner.setLength(2 * MiB);
+  planner.place(1, 0, MiB);
+  planner.place(2, MiB, 2 * MiB);
+  planner.receive(1, MiB - (300 << 10));
+  planner.updateSpeed(1, 50e3, 0.5);
+  planner.receive(2, MiB - (64 << 10));
+  planner.updateSpeed(2, 4e6, 2);
+  planner.noteStartup(0.5);
+  for (int id = 3; id < 8; ++id) {
+    if (const auto range = planner.assign(id)) {
+      CHECK(range->first < range->second);
+    }
+  }
+}

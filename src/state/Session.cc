@@ -11,6 +11,11 @@ namespace aria2 {
 std::vector<SessionEntry> parseSession(std::string_view content)
 {
   std::vector<SessionEntry> entries;
+  // Windows editors and PowerShell 5 write UTF-8 with a byte order mark,
+  // which would otherwise become part of the first URI.
+  if (content.starts_with("\xEF\xBB\xBF")) {
+    content.remove_prefix(3);
+  }
   // Leading whitespace marks option lines, so lines are not trimmed.
   for (size_t begin = 0; begin < content.size();) {
     const auto end = std::min(content.find('\n', begin), content.size());

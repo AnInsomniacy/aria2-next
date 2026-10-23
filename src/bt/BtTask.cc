@@ -249,7 +249,10 @@ void BtTask::start()
   outcome_ = Outcome::Stop;
   hashCheckOnly_ = options().flag("hash-check-only");
   if (!options().blank("select-file")) {
-    options().erase("pause-metadata"); // the selection is made
+    // The selection is made. Erasing the task's value would fall back to a
+    // global pause-metadata=true and report the selection as pending again
+    // whenever the task is paused (rayburst#754).
+    options().set("pause-metadata", "false");
   }
   if (!strand_) {
     strand_ = engine().disk().strand();

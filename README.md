@@ -51,7 +51,7 @@ restart.
 | Command line | aria2 options; retired options are mapped to their replacement or skipped with one warning, unknown options are errors |
 | Configuration | aria2 `key=value` files |
 | Sessions | aria2 input-file format |
-| RPC | aria2 JSON-RPC over HTTP and WebSocket, aria2 XML-RPC over HTTP (`/rpc`), `system.multicall`, notifications, token secret, plus ED2K, BitTorrent and media extensions |
+| RPC | aria2 JSON-RPC over HTTP and WebSocket, aria2 XML-RPC over HTTP (`/rpc`), `system.multicall`, notifications, token secret, plus ED2K, BitTorrent and media [extensions](docs/rpc-extensions.md) |
 
 Not provided: FTP, Metalink 3, JSONP and the libaria2 C++ library. Task state of
 the original aria2 (`.aria2` control files) is not imported.

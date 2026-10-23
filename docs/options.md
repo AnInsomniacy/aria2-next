@@ -16,7 +16,7 @@ through RPC (`aria2.addUri` options, `aria2.changeOption`,
 | `-o`, `--out` | PATH |  | File name of the downloaded file, relative to --dir. |
 | `-i`, `--input-file` | PATH |  | Read URIs and per-task options from FILE ('-' for stdin). |
 | `-j`, `--max-concurrent-downloads` | VALUE | `5` | Maximum number of parallel downloads. |
-| `-c`, `--continue` | flag | `false` | Continue a partially downloaded file that this engine did not start. |
+| `-c`, `--continue` | flag | `false` | Continue a partially downloaded file: one this engine left unfinished from its record, any other from its size. |
 | `-V`, `--check-integrity` | flag | `false` | Verify existing data with piece hashes or --checksum. |
 | `-l`, `--log` | PATH |  | Write the log to FILE ('-' for stdout). |
 | `-q`, `--quiet` | flag | `false` | Do not print to the console. |
