@@ -8,6 +8,10 @@
 #include <libtorrent/session.hpp>
 #include <libtorrent/session_params.hpp>
 #include <libtorrent/settings_pack.hpp>
+#include <libtorrent/torrent_flags.hpp>
+#include <libtorrent/torrent_handle.hpp>
+
+#include <algorithm>
 
 using namespace aria2;
 
@@ -79,4 +83,39 @@ TEST_CASE("a BitTorrent session starts on its own threads")
   // A synchronous call runs after the session's own start-up on its thread.
   CHECK_FALSE(session.get_settings().get_bool(libtorrent::settings_pack::enable_dht));
   CHECK(session.is_listening());
+}
+
+TEST_CASE("preferring UDP trackers preserves tier order")
+{
+  libtorrent::settings_pack pack;
+  pack.set_str(libtorrent::settings_pack::listen_interfaces, "127.0.0.1:0");
+  pack.set_bool(libtorrent::settings_pack::enable_dht, false);
+  pack.set_bool(libtorrent::settings_pack::enable_lsd, false);
+  pack.set_bool(libtorrent::settings_pack::enable_upnp, false);
+  pack.set_bool(libtorrent::settings_pack::enable_natpmp, false);
+  pack.set_bool(libtorrent::settings_pack::prefer_udp_trackers, true);
+  libtorrent::session session(libtorrent::session_params(std::move(pack)));
+
+  auto params = bt::parseMagnet(
+      "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567");
+  params.save_path = ".";
+  params.flags = libtorrent::torrent_flags::paused;
+  params.trackers = {"http://tracker.test/announce",
+                     "http://other.test/announce",
+                     "udp://tracker.test:80/announce"};
+  SUBCASE("different tiers") { params.tracker_tiers = {0, 1, 2}; }
+  SUBCASE("same tier") { params.tracker_tiers = {0, 0, 0}; }
+
+  const auto trackers = session.add_torrent(params).trackers();
+  REQUIRE(trackers.size() == 3);
+  CHECK(trackers[0].url == params.trackers[2]);
+  CHECK(trackers[1].url == params.trackers[1]);
+  CHECK(trackers[2].url == params.trackers[0]);
+  CHECK(std::is_sorted(trackers.begin(), trackers.end(),
+                       [](const auto& left, const auto& right) {
+                         return left.tier < right.tier;
+                       }));
+  for (size_t i = 0; i < trackers.size(); ++i) {
+    CHECK(trackers[i].tier == params.tracker_tiers[i]);
+  }
 }

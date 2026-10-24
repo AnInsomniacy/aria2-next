@@ -120,6 +120,8 @@ void tracker_list::prioritize_udp_trackers()
 			std::tie(ignore, ignore, hostname, ignore, ignore)
 				= parse_url_components(j->url, ec);
 			if (hostname != udp_hostname) continue;
+			// Announce selection and its timer require tiers to stay ordered.
+			std::swap(i->tier, j->tier);
 			auto* ae1 = &*i;
 			auto* ae2 = &*j;
 			i = m_trackers.erase(i);
