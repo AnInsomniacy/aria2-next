@@ -77,6 +77,8 @@ The release workflow is `.github/workflows/release.yml`. It runs on `release: pu
 
 Maintained release artifacts are standalone executable assets named `aria2-next-<version>-linux-x86_64`, `aria2-next-<version>-linux-aarch64`, `aria2-next-<version>-macos-arm64`, `aria2-next-<version>-macos-x86_64`, `aria2-next-<version>-windows-x86_64.exe`, `aria2-next-<version>-windows-arm64.exe`, `aria2-next-<version>-android-arm64`, and `aria2-next-<version>-checksums.sha256`.
 
+A release-triggered run also writes `Formula/aria2-next.rb` in the `AnInsomniacy/homebrew-aria2-next` tap from the published checksums (`packaging/scripts/render-homebrew-formula`). It requires the repository variable `HOMEBREW_ENABLED=true` and the secret `HOMEBREW_TAP_TOKEN` with write access to the tap.
+
 Manual workflow runs are for release-path validation. Official release assets are uploaded only when a GitHub Release is published. Release jobs must check runtime dependency closure before assets are uploaded.
 
 Use `./scripts/release.sh` for releases. This script verifies the local build, stages changes, commits if needed, creates an annotated tag, and pushes the commit and tag. It does not create the GitHub Release, generate release notes, or trigger GitHub Actions manually.

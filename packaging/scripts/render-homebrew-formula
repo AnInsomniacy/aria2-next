@@ -1,0 +1,85 @@
+#!/bin/sh
+# Prints the Homebrew formula for a published release.
+#
+# The formula installs the release's standalone macOS and Linux binaries and
+# pins each one to its SHA-256 from the release checksums file. The release
+# workflow writes it to Formula/aria2-next.rb in AnInsomniacy/homebrew-aria2-next.
+set -eu
+
+usage() {
+  echo "Usage: $0 <version> <checksums.sha256>" >&2
+  exit 2
+}
+
+test $# -eq 2 || usage
+
+version=$1
+checksums=$2
+
+case "$version" in
+  *[!0-9.]* | '' | .* | *.) echo "Invalid version: $version" >&2; exit 1 ;;
+esac
+
+if [ ! -f "$checksums" ]; then
+  echo "Checksums file not found: $checksums" >&2
+  exit 1
+fi
+
+sha() {
+  name="aria2-next-${version}-$1"
+  value=$(awk -v name="$name" '$2 == name || $2 == "*" name { print $1 }' "$checksums")
+  if ! printf '%s\n' "$value" | grep -Eq '^[0-9a-f]{64}$'; then
+    echo "No SHA-256 for $name in $checksums" >&2
+    exit 1
+  fi
+  printf '%s' "$value"
+}
+
+macos_arm64=$(sha macos-arm64)
+macos_x86_64=$(sha macos-x86_64)
+linux_aarch64=$(sha linux-aarch64)
+linux_x86_64=$(sha linux-x86_64)
+
+cat <<EOF
+class Aria2Next < Formula
+  desc "Download engine with aria2's command-line and JSON-RPC interface"
+  homepage "https://github.com/AnInsomniacy/aria2-next"
+  version "${version}"
+  license "GPL-2.0-only"
+
+  livecheck do
+    url :stable
+    strategy :github_latest
+  end
+
+  on_macos do
+    on_arm do
+      url "https://github.com/AnInsomniacy/aria2-next/releases/download/v#{version}/aria2-next-#{version}-macos-arm64"
+      sha256 "${macos_arm64}"
+    end
+    on_intel do
+      url "https://github.com/AnInsomniacy/aria2-next/releases/download/v#{version}/aria2-next-#{version}-macos-x86_64"
+      sha256 "${macos_x86_64}"
+    end
+  end
+
+  on_linux do
+    on_arm do
+      url "https://github.com/AnInsomniacy/aria2-next/releases/download/v#{version}/aria2-next-#{version}-linux-aarch64"
+      sha256 "${linux_aarch64}"
+    end
+    on_intel do
+      url "https://github.com/AnInsomniacy/aria2-next/releases/download/v#{version}/aria2-next-#{version}-linux-x86_64"
+      sha256 "${linux_x86_64}"
+    end
+  end
+
+  def install
+    bin.install Dir["aria2-next-*"].first => "aria2-next"
+  end
+
+  test do
+    assert_match "aria2-next version #{version}", shell_output("#{bin}/aria2-next --version")
+  end
+end
+EOF

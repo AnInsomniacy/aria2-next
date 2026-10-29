@@ -331,3 +331,46 @@ jobs:
             echo
             echo "Release-triggered runs publish assets and dispatch Docker publishing. Manual runs archive validation assets only."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs:
+      - resolve-release
+      - publish-assets
+    if: github.event_name == 'release' && vars.HOMEBREW_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: homebrew-aria2-next
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Update the aria2-next formula
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          RELEASE_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ needs.resolve-release.outputs.version }}
+        run: |
+          set -euo pipefail
+          checksums="$RUNNER_TEMP/aria2-next-${VERSION}-checksums.sha256"
+          GH_TOKEN="$RELEASE_TOKEN" gh release download "$RELEASE_TAG" \
+            --repo "$GITHUB_REPOSITORY" --pattern "$(basename "$checksums")" --dir "$RUNNER_TEMP"
+
+          gh auth setup-git --hostname github.com
+          tap="$RUNNER_TEMP/homebrew-aria2-next"
+          git clone --depth 1 https://github.com/AnInsomniacy/homebrew-aria2-next.git "$tap"
+          mkdir -p "$tap/Formula"
+          sh packaging/scripts/render-homebrew-formula "$VERSION" "$checksums" > "$tap/Formula/aria2-next.rb"
+
+          if [ -z "$(git -C "$tap" status --porcelain)" ]; then
+            echo "aria2-next $VERSION is already in the tap."
+            exit 0
+          fi
+          git -C "$tap" config user.name "github-actions[bot]"
+          git -C "$tap" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$tap" add Formula/aria2-next.rb
+          git -C "$tap" commit -m "aria2-next $VERSION"
+          git -C "$tap" push origin HEAD:main

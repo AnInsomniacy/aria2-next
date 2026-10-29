@@ -111,6 +111,12 @@ Linux, macOS and Android downloads are executable files; if the executable bit
 was cleared, run `chmod +x ./aria2-next-<version>-<platform>`. Linux binaries
 require glibc 2.35 or newer.
 
+On macOS and Linux, Homebrew installs the same binaries from the project's tap:
+
+```bash
+brew install aninsomniacy/aria2-next/aria2-next
+```
+
 Container images for Linux x86_64 and ARM64 are published to the GitHub
 Container Registry:
 
