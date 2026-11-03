@@ -122,10 +122,14 @@ void tracker_list::prioritize_udp_trackers()
 			if (hostname != udp_hostname) continue;
 			auto* ae1 = &*i;
 			auto* ae2 = &*j;
+			// Tiers belong to positions: both announce selection and its timer
+			// require the list to stay ordered when UDP replaces an HTTP URL.
+			std::swap(ae1->tier, ae2->tier);
 			i = m_trackers.erase(i);
 			m_trackers.insert(j, *ae1);
-			j = m_trackers.erase(j);
-			m_trackers.insert(i, *ae2);
+			m_trackers.erase(j);
+			// Continue from the old UDP position, including when it was last.
+			i = m_trackers.insert(i, *ae2);
 			break;
 		}
 	}

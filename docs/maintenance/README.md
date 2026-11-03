@@ -9,6 +9,7 @@ maintenance task owns its own subdirectory.
 
 | Path | Purpose |
 | --- | --- |
+| [issue-79-tracker-busy-loop/README.md](issue-79-tracker-busy-loop/README.md) | Production diagnosis, controlled reproduction and repair acceptance for the tracker timer busy loop |
 | `cmake-migration/progress.md` | Completed checkpoint log for the CMake migration |
 | `upstream-issue-review/summary.md` | Completed human-readable summary of the upstream issue review |
 | `upstream-issue-review/matrix.csv` | Completed issue-by-issue review matrix |

@@ -9,6 +9,10 @@
 #include <libtorrent/session_params.hpp>
 #include <libtorrent/settings_pack.hpp>
 
+#include <algorithm>
+#include <string>
+#include <vector>
+
 using namespace aria2;
 
 namespace {
@@ -62,6 +66,98 @@ TEST_CASE("magnet links round-trip their identity")
   CHECK(bt::isMagnet(
       "MAGNET:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567"));
   CHECK_THROWS_AS(bt::parseMagnet("magnet:?dn=nothing"), Error);
+}
+
+TEST_CASE("additional trackers follow retained tiers without duplicate entries")
+{
+  libtorrent::add_torrent_params params;
+  params.trackers = {"http://a.test/announce", "http://removed.test/announce"};
+  params.tracker_tiers = {4, 200};
+  Options options;
+  options.set("bt-exclude-tracker", "http://removed.test/announce");
+  options.set("bt-tracker", " http://a.test/announce, https://b.test/announce, "
+                            "https://b.test/announce,,udp://c.test/announce ");
+
+  bt::applyTrackerOptions(params, options);
+
+  const std::vector<std::string> expected{"http://a.test/announce",
+                                          "https://b.test/announce",
+                                          "udp://c.test/announce"};
+  CHECK(params.trackers == expected);
+  CHECK(params.tracker_tiers == std::vector<int>{4, 5, 6});
+}
+
+TEST_CASE("additional trackers share the last tier when its range is exhausted")
+{
+  libtorrent::add_torrent_params params;
+  params.trackers = {"http://existing.test/announce"};
+  params.tracker_tiers = {254};
+  SUBCASE("one tier remains") {}
+  SUBCASE("the final tier is already occupied")
+  {
+    params.tracker_tiers = {255};
+  }
+  const auto originalTier = params.tracker_tiers.front();
+  Options options;
+  options.set("bt-tracker", "http://a.test/announce,udp://b.test/announce");
+
+  bt::applyTrackerOptions(params, options);
+
+  const std::vector<std::string> expected{"http://existing.test/announce",
+                                          "http://a.test/announce",
+                                          "udp://b.test/announce"};
+  CHECK(params.trackers == expected);
+  CHECK(params.tracker_tiers == std::vector<int>{originalTier, 255, 255});
+}
+
+TEST_CASE(
+    "large additional tracker lists preserve order without tier wraparound")
+{
+  libtorrent::add_torrent_params params;
+  Options options;
+  std::string list;
+  std::vector<std::string> expected;
+  for (int i = 0; i < 270; ++i) {
+    const auto url = "http://tracker" + std::to_string(i) + ".test/announce";
+    if (!list.empty()) {
+      list += ',';
+    }
+    list += url;
+    expected.push_back(url);
+  }
+  options.set("bt-tracker", list);
+
+  bt::applyTrackerOptions(params, options);
+
+  CHECK(params.trackers == expected);
+  REQUIRE(params.tracker_tiers.size() == expected.size());
+  CHECK(
+      std::is_sorted(params.tracker_tiers.begin(), params.tracker_tiers.end()));
+  CHECK(params.tracker_tiers.front() == 0);
+  CHECK(params.tracker_tiers[254] == 254);
+  CHECK(std::all_of(params.tracker_tiers.begin() + 255,
+                    params.tracker_tiers.end(),
+                    [](int tier) { return tier == 255; }));
+  const auto tiers = params.tracker_tiers;
+  bt::applyTrackerOptions(params, options);
+  CHECK(params.trackers == expected);
+  CHECK(params.tracker_tiers == tiers);
+}
+
+TEST_CASE("excluding all trackers resets the tier for configured replacements")
+{
+  libtorrent::add_torrent_params params;
+  params.trackers = {"http://old.test/announce"};
+  params.tracker_tiers = {255};
+  Options options;
+  options.set("bt-exclude-tracker", "*");
+  options.set("bt-tracker", "http://new.test/announce");
+
+  bt::applyTrackerOptions(params, options);
+
+  CHECK(params.trackers ==
+        std::vector<std::string>{"http://new.test/announce"});
+  CHECK(params.tracker_tiers == std::vector<int>{0});
 }
 
 TEST_CASE("a BitTorrent session starts on its own threads")

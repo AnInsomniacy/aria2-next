@@ -13,10 +13,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 BUILD_ROOT = ROOT.parents[1] / "build" / "transfer-validation"
 PROTOCOLS = ("http", "sftp", "bittorrent", "ed2k", "metalink", "media")
+SLOW_MODULES = {"bittorrent_tracker": "bittorrent/tracker.py"}
 
 
 def run_protocol(protocol: str, forwarded: list[str]) -> dict[str, object]:
-    command = [sys.executable, str(ROOT / protocol / "validate.py"), *forwarded]
+    script = ROOT / SLOW_MODULES[protocol] if protocol in SLOW_MODULES else ROOT / protocol / "validate.py"
+    command = [sys.executable, str(script), *forwarded]
     completed = subprocess.run(command, check=False)
     result: dict[str, object] = {
         "protocol": protocol,
@@ -35,7 +37,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description="Run Aria2 Next transfer validation modules."
     )
-    parser.add_argument("protocol", choices=(*PROTOCOLS, "all"))
+    parser.add_argument("protocol", choices=(*PROTOCOLS, *SLOW_MODULES, "all"))
     parser.add_argument("--engine", type=Path)
     parser.add_argument("--keep-artifacts", action="store_true")
     args = parser.parse_args()

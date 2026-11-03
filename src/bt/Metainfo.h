@@ -35,7 +35,8 @@ std::vector<int> parseSelection(std::string_view text, int fileCount);
 // refines them.
 std::vector<lt::download_priority_t> filePriorities(const Options& options,
                                                     int fileCount);
-// bt-exclude-tracker removes, then bt-tracker appends one tier per URI.
+// bt-exclude-tracker removes, then bt-tracker appends increasing tiers;
+// trackers beyond libtorrent's tier range share the final tier as fallbacks.
 void applyTrackerOptions(lt::add_torrent_params& params, const Options& options);
 // index-out INDEX=PATH entries.
 void applyIndexOut(lt::add_torrent_params& params, const Options& options);

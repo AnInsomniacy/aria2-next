@@ -55,3 +55,21 @@ python3 tools/transfer_validation/media/public.py --suite all
 The public runner requires curl, FFmpeg and ffprobe. It snapshots the executable,
 selects modest representations, fully decodes outputs, checks source content,
 and retains every artifact. See the [sources and acceptance plan](../../docs/media-e2e.md).
+
+The opt-in slow BitTorrent tracker regression takes about 90 seconds and requires
+only Python 3.11+ and a BitTorrent-enabled engine:
+
+```sh
+python3 tools/transfer_validation/run.py bittorrent_tracker --engine PATH
+```
+
+It binds HTTP and UDP trackers to `127.0.0.1`, `127.0.0.2` and `127.0.0.3`;
+the host must support these loopback addresses. A generated private torrent has
+no peers, and discovery and port mapping are disabled. The test checks cross-tier
+UDP prioritization through RPC, keeps a successful tracker on a future deadline,
+and requires the failed backup to retry after its finite backoff expires. RPC
+must remain responsive throughout. Runtime tracker ordering and observed network
+requests provide the regression assertions without a CPU utilization threshold.
+Request history and RPC snapshots are retained in the run's `logs` directory,
+including on failure. This module is excluded from `all`; it can also be run
+directly with `python3 tools/transfer_validation/bittorrent/tracker.py --engine PATH`.

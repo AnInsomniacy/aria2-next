@@ -170,15 +170,23 @@ void applyTrackerOptions(lt::add_torrent_params& params, const Options& options)
                                  static_cast<std::ptrdiff_t>(i));
     }
   }
+  // libtorrent stores tiers in uint8_t. Keep overflow trackers as fallbacks
+  // in the last tier instead of wrapping them ahead of the original trackers.
+  constexpr int lastTier = 255;
   int tier = params.tracker_tiers.empty()
                  ? 0
-                 : *std::max_element(params.tracker_tiers.begin(), params.tracker_tiers.end()) + 1;
+                 : std::min(*std::max_element(params.tracker_tiers.begin(),
+                                              params.tracker_tiers.end()),
+                            lastTier - 1) +
+                       1;
   for (const auto& part : text::split(options.get("bt-tracker"), ',')) {
     const std::string uri(text::trim(part));
     if (!uri.empty() &&
-        std::find(params.trackers.begin(), params.trackers.end(), uri) == params.trackers.end()) {
+        std::find(params.trackers.begin(), params.trackers.end(), uri) ==
+            params.trackers.end()) {
       params.trackers.push_back(uri);
-      params.tracker_tiers.push_back(tier++);
+      params.tracker_tiers.push_back(tier);
+      tier = std::min(tier + 1, lastTier);
     }
   }
 }
