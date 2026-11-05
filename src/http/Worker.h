@@ -23,6 +23,7 @@ public:
   const int64_t requestEnd;
   bool redirected = false; // requested through a cached redirect
   int family = 0;          // forced address family (4 or 6), 0: any
+  std::string ifRange;     // the validator this request was sent with
 
   // Final response of this request.
   long status = 0;

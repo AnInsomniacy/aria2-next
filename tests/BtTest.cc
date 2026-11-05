@@ -2,12 +2,20 @@
 #include "base/Error.h"
 #include "bt/Blocklist.h"
 #include "bt/Metainfo.h"
+#include "options/Options.h"
 
 #include <doctest/doctest.h>
+#include <libtorrent/add_torrent_params.hpp>
 #include <libtorrent/address.hpp>
+#include <libtorrent/announce_entry.hpp>
 #include <libtorrent/session.hpp>
 #include <libtorrent/session_params.hpp>
 #include <libtorrent/settings_pack.hpp>
+#include <libtorrent/torrent_flags.hpp>
+#include <libtorrent/torrent_handle.hpp>
+
+#include <utility>
+#include <vector>
 
 using namespace aria2;
 
@@ -16,6 +24,40 @@ bool blocked(const bt::Blocklist& list, const char* address)
 {
   return list.filter.access(libtorrent::make_address(address)) &
          libtorrent::ip_filter::blocked;
+}
+
+libtorrent::session quietSession()
+{
+  libtorrent::settings_pack pack;
+  pack.set_str(libtorrent::settings_pack::listen_interfaces, "127.0.0.1:0");
+  pack.set_bool(libtorrent::settings_pack::enable_dht, false);
+  pack.set_bool(libtorrent::settings_pack::enable_lsd, false);
+  pack.set_bool(libtorrent::settings_pack::enable_upnp, false);
+  pack.set_bool(libtorrent::settings_pack::enable_natpmp, false);
+  pack.set_bool(libtorrent::settings_pack::prefer_udp_trackers, true);
+  return libtorrent::session(libtorrent::session_params(std::move(pack)));
+}
+
+using Trackers = std::vector<std::pair<std::string, int>>;
+
+// The trackers of a paused torrent added with `trackers`, in list order.
+Trackers trackerOrder(const Trackers& trackers)
+{
+  auto session = quietSession();
+  libtorrent::add_torrent_params params = bt::parseMagnet(
+      "magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567");
+  for (const auto& [url, tier] : trackers) {
+    params.trackers.push_back(url);
+    params.tracker_tiers.push_back(tier);
+  }
+  params.save_path = "."; // a paused magnet writes nothing
+  params.flags |= libtorrent::torrent_flags::paused;
+  params.flags &= ~libtorrent::torrent_flags::auto_managed;
+  Trackers result;
+  for (const auto& entry : session.add_torrent(std::move(params)).trackers()) {
+    result.emplace_back(entry.url, entry.tier);
+  }
+  return result;
 }
 } // namespace
 
@@ -79,4 +121,64 @@ TEST_CASE("a BitTorrent session starts on its own threads")
   // A synchronous call runs after the session's own start-up on its thread.
   CHECK_FALSE(session.get_settings().get_bool(libtorrent::settings_pack::enable_dht));
   CHECK(session.is_listening());
+}
+
+TEST_CASE("UDP trackers move ahead of their host's other trackers by tier")
+{
+  // Announcing and the tracker timer both walk the list in tier order; a
+  // tracker left behind a higher tier is skipped by one and scheduled by
+  // the other, which spins the network thread.
+  SUBCASE("a pair across tiers trades tiers too")
+  {
+    CHECK(trackerOrder({{"http://a.test/announce", 0},
+                        {"http://b.test/announce", 1},
+                        {"udp://a.test:80/announce", 2}}) ==
+          Trackers{{"udp://a.test:80/announce", 0},
+                   {"http://b.test/announce", 1},
+                   {"http://a.test/announce", 2}});
+  }
+  SUBCASE("adjacent entries")
+  {
+    CHECK(trackerOrder({{"http://a.test/announce", 0},
+                        {"udp://a.test:80/announce", 1}}) ==
+          Trackers{{"udp://a.test:80/announce", 0},
+                   {"http://a.test/announce", 1}});
+  }
+  SUBCASE("consecutive UDP trackers are each considered")
+  {
+    CHECK(trackerOrder({{"http://a.test/announce", 0},
+                        {"http://c.test/announce", 1},
+                        {"udp://a.test:80/announce", 2},
+                        {"udp://c.test:80/announce", 3}}) ==
+          Trackers{{"udp://a.test:80/announce", 0},
+                   {"udp://c.test:80/announce", 1},
+                   {"http://a.test/announce", 2},
+                   {"http://c.test/announce", 3}});
+  }
+  SUBCASE("a tracker of the same tier keeps its place")
+  {
+    CHECK(trackerOrder({{"http://a.test/announce", 0},
+                        {"udp://a.test:80/announce", 0}}) ==
+          Trackers{{"udp://a.test:80/announce", 0},
+                   {"http://a.test/announce", 0}});
+  }
+}
+
+TEST_CASE("added trackers past the last tier share it")
+{
+  libtorrent::add_torrent_params params;
+  params.trackers = {"http://own.test/announce"};
+  Options options;
+  std::string list;
+  for (int i = 0; i < 300; ++i) {
+    list += (i ? "," : "") + std::string("http://t") + std::to_string(i) +
+            ".test/announce";
+  }
+  options.set("bt-tracker", list);
+  bt::applyTrackerOptions(params, options);
+  REQUIRE(params.tracker_tiers.size() == 301);
+  CHECK(params.tracker_tiers[0] == 0);
+  CHECK(params.tracker_tiers[1] == 1);
+  CHECK(params.tracker_tiers[255] == 255);
+  CHECK(params.tracker_tiers[300] == 255);
 }

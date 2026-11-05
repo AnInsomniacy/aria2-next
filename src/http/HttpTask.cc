@@ -833,6 +833,7 @@ void HttpTask::startWorker(int id, size_t slot, size_t sourceIndex,
   const auto validator = etag.empty() ? modified : etag;
   if (ranged_ && !validator.empty()) {
     worker->header("If-Range: " + validator);
+    worker->ifRange = validator;
   }
   if (options().flag("dry-run")) {
     curl_easy_setopt(easy, CURLOPT_NOBODY, 1L);
@@ -858,6 +859,13 @@ bool HttpTask::rangesIgnored(Worker& worker)
   const bool same = !etag.empty()       ? strongTag(worker.etag) == etag
                     : !modified.empty() ? worker.lastModified == modified
                                         : true;
+  // A request sent under a tag that has since been found to rotate is asked
+  // for again under the date, like the one that found it.
+  if ((!same && tagRotated(worker, worker.contentLength)) ||
+      (tagsRotate_ && !worker.ifRange.empty() && worker.ifRange != modified)) {
+    cancelWorker(worker.id);
+    return true;
+  }
   if (dropMirror(worker, same ? "it ignores byte ranges" : "its file changed")) {
     return true;
   }
@@ -877,6 +885,30 @@ bool HttpTask::rangesIgnored(Worker& worker)
               gidText(gid()));
   ranged_ = false;
   cancelWorker(worker.id);
+  return true;
+}
+
+// Some servers answer every request for the same bytes with a new strong
+// entity tag. Such a tag validates nothing: when the length and a strong
+// modification date (RFC 9110 13.1.5) are unchanged, ranges are validated by
+// the date from then on, instead of restarting the download over one
+// connection. Without such a date a changed tag still means a changed file.
+bool HttpTask::tagRotated(const Worker& worker, int64_t total)
+{
+  auto& source = sources_[worker.source];
+  const auto [etag, modified] = validators(source);
+  const auto tag = strongTag(worker.etag);
+  if (etag.empty() || tag.empty() || tag == etag || modified.empty() ||
+      worker.lastModified != modified || total < 0 ||
+      total != planner_.length()) {
+    return false;
+  }
+  log::notice("{}: the server sends a new entity tag with every response; "
+              "validating ranges by modification date",
+              gidText(gid()));
+  tagsRotate_ = true;
+  etag_.clear();
+  source.etag.clear();
   return true;
 }
 
@@ -961,8 +993,11 @@ void HttpTask::accept(Worker& worker)
   const bool lengthChanged =
       planner_.length() >= 0 && total >= 0 && total != planner_.length();
   // Validators are compared within one origin; mirrors legitimately differ.
-  const bool tagChanged = sources_.size() == 1 && !single_ && !etag_.empty() &&
-                          !tag.empty() && tag != etag_;
+  bool tagChanged = sources_.size() == 1 && !single_ && !etag_.empty() &&
+                    !tag.empty() && tag != etag_;
+  if (tagChanged && !lengthChanged && tagRotated(worker, total)) {
+    tagChanged = false;
+  }
   const bool timeChanged = sources_.size() == 1 && !single_ && etag_.empty() &&
                            !lastModified_.empty() &&
                            !worker.lastModified.empty() &&
@@ -978,7 +1013,7 @@ void HttpTask::accept(Worker& worker)
   source.failures = 0;
   syncHost();
   if (source.etag.empty() && source.lastModified.empty()) {
-    source.etag = tag;
+    source.etag = tagsRotate_ ? std::string() : tag;
     source.lastModified = strongDate(worker.lastModified, worker.date);
   }
   if (const auto family = worker.connectedFamily()) {
@@ -1013,7 +1048,7 @@ void HttpTask::accept(Worker& worker)
     handOverToMedia();
     return;
   }
-  etag_ = tag;
+  etag_ = tagsRotate_ ? std::string() : tag;
   lastModified_ = strongDate(worker.lastModified, worker.date);
   contentType_ = worker.contentType;
   if (!worker.lastModified.empty()) {

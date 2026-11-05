@@ -170,6 +170,9 @@ void applyTrackerOptions(lt::add_torrent_params& params, const Options& options)
                                  static_cast<std::ptrdiff_t>(i));
     }
   }
+  // libtorrent stores a tier in one byte; trackers past the last tier share
+  // it as fallbacks instead of wrapping ahead of the torrent's own.
+  constexpr int lastTier = 255;
   int tier = params.tracker_tiers.empty()
                  ? 0
                  : *std::max_element(params.tracker_tiers.begin(), params.tracker_tiers.end()) + 1;
@@ -178,7 +181,8 @@ void applyTrackerOptions(lt::add_torrent_params& params, const Options& options)
     if (!uri.empty() &&
         std::find(params.trackers.begin(), params.trackers.end(), uri) == params.trackers.end()) {
       params.trackers.push_back(uri);
-      params.tracker_tiers.push_back(tier++);
+      params.tracker_tiers.push_back(std::min(tier, lastTier));
+      ++tier;
     }
   }
 }

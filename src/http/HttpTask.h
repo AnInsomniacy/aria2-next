@@ -126,6 +126,7 @@ private:
   void finished(Worker& worker, int curlCode);
   void failedResponse(Worker& worker, int curlCode);
   bool rangesIgnored(Worker& worker);
+  bool tagRotated(const Worker& worker, int64_t total);
   bool dropMirror(Worker& worker, const std::string& why);
   std::pair<std::string, std::string> validators(const Source& source) const;
   void reset();
@@ -198,6 +199,9 @@ private:
   // A ranged answer carried more than the length it announced: ask for
   // whole responses from then on.
   bool rangesDistrusted_ = false;
+  // The server sends a new entity tag with every response for the same
+  // bytes, so ranges are validated by modification date only.
+  bool tagsRotate_ = false;
   int restarts_ = 0;
   int64_t declared_ = -1; // the length a Metalink promised
   PieceHashes pieces_;

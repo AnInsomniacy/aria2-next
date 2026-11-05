@@ -48,6 +48,10 @@ delete the others held session shutdown for about 20 seconds. Outgoing TLS
 post-quantum key share makes ClientHellos that some networks drop, which held
 web seeds for the whole connect timeout. `escape_string.cpp` includes `<iterator>`
 itself, which libc++ no longer provides indirectly when building as C++20.
+UDP tracker preference swaps the tiers along with the trackers it reorders, so
+the list stays in tier order (arvidn/libtorrent#9105), and trackers whose URL
+scheme this build cannot announce to are skipped by the tracker timer as by
+announcing (arvidn/libtorrent#8957); either mismatch spun the network thread.
 
 GPAC is configured without a player, renderer, JavaScript runtime, external
 media codecs, or independent TLS and cryptography backends. Its public DASH client uses aria2-next's

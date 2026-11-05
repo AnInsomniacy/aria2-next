@@ -102,9 +102,16 @@ void tracker_list::prioritize_udp_trackers()
 	INVARIANT_CHECK;
 
 	// look for udp-trackers
-	for (auto i = m_trackers.begin(), end(m_trackers.end()); i != end; ++i)
+	for (auto i = m_trackers.begin(); i != m_trackers.end();)
 	{
-		if (i->url.substr(0, 6) != "udp://") continue;
+		// the node after the udp-tracker stays put whatever is exchanged,
+		// so the scan resumes there
+		auto const next = std::next(i);
+		if (i->url.substr(0, 6) != "udp://")
+		{
+			i = next;
+			continue;
+		}
 		// now, look for trackers with the same hostname
 		// that is has higher priority than this one
 		// if we find one, swap with the udp-tracker
@@ -120,14 +127,18 @@ void tracker_list::prioritize_udp_trackers()
 			std::tie(ignore, ignore, hostname, ignore, ignore)
 				= parse_url_components(j->url, ec);
 			if (hostname != udp_hostname) continue;
-			auto* ae1 = &*i;
-			auto* ae2 = &*j;
-			i = m_trackers.erase(i);
-			m_trackers.insert(j, *ae1);
-			j = m_trackers.erase(j);
-			m_trackers.insert(i, *ae2);
+			auto& udp = *i;
+			auto& other = *j;
+			// the entries trade places and tiers, so the list stays sorted
+			// by tier: announcing and the tracker timer both depend on it
+			std::swap(udp.tier, other.tier);
+			m_trackers.erase(i);
+			m_trackers.insert(j, udp);
+			m_trackers.erase(m_trackers.iterator_to(other));
+			m_trackers.insert(next, other);
 			break;
 		}
+		i = next;
 	}
 }
 
