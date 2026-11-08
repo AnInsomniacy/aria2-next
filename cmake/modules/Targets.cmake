@@ -48,6 +48,15 @@ endif()
 
 add_executable(aria2-next "${CMAKE_CURRENT_SOURCE_DIR}/src/app/Main.cc")
 target_link_libraries(aria2-next PRIVATE aria2_core)
+if(WIN32)
+  # Version information and the application manifest.
+  enable_language(RC)
+  set(ARIA2_WINDOWS_MANIFEST
+    "${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/aria2-next.manifest")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/aria2-next.rc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/aria2-next.rc" @ONLY)
+  target_sources(aria2-next PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/aria2-next.rc")
+endif()
 
 if(ARIA2_RELEASE_SIZE_OPTIMIZED)
   foreach(target aria2_core aria2-next)

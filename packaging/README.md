@@ -13,6 +13,9 @@ Runtime checks inspect ELF version requirements with `readelf` before upload.
 Windows builds target Windows 10 or later. CMake supplies the same `WINVER` and
 `_WIN32_WINNT` definitions to the engine and its consumers to match libtorrent;
 header include order must not select incompatible Boost.Asio lock layouts.
+The executable embeds version information and an application manifest
+(`packaging/windows/`) that declares Windows 10/11 support and long path
+awareness.
 
 | Path | Purpose |
 | --- | --- |

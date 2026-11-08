@@ -122,10 +122,16 @@ void addInput(Engine& engine, const CommandLine& line)
       fail(ErrorCode::Option, "Cannot read input file {}", path);
     }
     for (auto& entry : parseSession(*content)) {
+      const auto failure = takeFailure(entry);
       try {
         for (auto& task : createTasks(engine, std::move(entry.uris),
                                       taskOptions(engine, entry.options))) {
-          engine.add(task);
+          if (failure) {
+            engine.addFailed(task, failure->code, failure->message);
+          }
+          else {
+            engine.add(task);
+          }
         }
       }
       catch (const Error& error) {

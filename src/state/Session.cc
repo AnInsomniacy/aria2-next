@@ -5,6 +5,7 @@
 #include "core/Task.h"
 
 #include <algorithm>
+#include <charconv>
 
 namespace aria2 {
 
@@ -41,6 +42,36 @@ std::vector<SessionEntry> parseSession(std::string_view content)
   return entries;
 }
 
+std::optional<SessionFailure> takeFailure(SessionEntry& entry)
+{
+  std::optional<int> code;
+  std::string message;
+  std::erase_if(entry.options, [&](const auto& option) {
+    if (option.first == "error-code") {
+      int value = 0;
+      const auto* end = option.second.data() + option.second.size();
+      if (std::from_chars(option.second.data(), end, value).ptr == end) {
+        code = value;
+      }
+      return true;
+    }
+    if (option.first == "error-message") {
+      message = option.second;
+      return true;
+    }
+    return false;
+  });
+  if (!code) {
+    return std::nullopt;
+  }
+  // A code from a newer engine still restores the task as failed.
+  const bool known = *code > static_cast<int>(ErrorCode::Finished) &&
+                     *code <= static_cast<int>(ErrorCode::Checksum);
+  return SessionFailure{
+      known ? static_cast<ErrorCode>(*code) : ErrorCode::Unknown,
+      std::move(message)};
+}
+
 namespace {
 bool saved(const Task& task)
 {
@@ -75,8 +106,15 @@ std::string serializeSession(const std::vector<std::shared_ptr<Task>>& tasks)
     if (task->state() == TaskState::Paused) {
       out += " pause=true\n";
     }
+    if (task->state() == TaskState::Error) {
+      out += " error-code=" +
+             std::to_string(static_cast<int>(task->errorCode())) + '\n';
+      out += " error-message=" +
+             text::replaceAll(task->errorMessage(), "\n", " ") + '\n';
+    }
     for (const auto& [name, value] : task->options().own()) {
-      if (name == "gid" || name == "pause") {
+      if (name == "gid" || name == "pause" || name == "error-code" ||
+          name == "error-message") {
         continue;
       }
       for (const auto& line : text::split(value, '\n')) {

@@ -64,6 +64,10 @@ public:
   bool shuttingDown() const { return shuttingDown_; }
 
   Gid add(std::shared_ptr<Task> task, std::optional<size_t> position = {});
+  // Restores a task that had failed when the session was saved straight to
+  // the stopped results, so a restart does not retry it.
+  void addFailed(std::shared_ptr<Task> task, ErrorCode code,
+                 std::string message);
   std::shared_ptr<Task> find(Gid gid) const;
   // Accepts a full GID or a unique prefix.
   std::shared_ptr<Task> find(std::string_view text) const;

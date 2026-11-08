@@ -1118,9 +1118,10 @@ bool HttpTask::decidePath(Worker& worker)
       name = hint;
     }
     else {
-      name = uri::fileName(sources_[worker.source].uri);
+      // Like a browser, a redirected link is named after where it landed.
+      name = uri::fileName(worker.effectiveUrl());
       if (name.empty()) {
-        name = uri::fileName(worker.effectiveUrl());
+        name = uri::fileName(sources_[worker.source].uri);
       }
     }
     // Like a browser, give a name without an extension the one its media

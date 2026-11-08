@@ -117,6 +117,18 @@ Gid Engine::add(std::shared_ptr<Task> task, std::optional<size_t> position)
   return gid;
 }
 
+void Engine::addFailed(std::shared_ptr<Task> task, ErrorCode code,
+                       std::string message)
+{
+  tasks_[task->gid()] = task;
+  task->state_ = TaskState::Error;
+  task->errorCode_ = code;
+  task->errorMessage_ = std::move(message);
+  task->options().erase("pause");
+  task->loadProgress();
+  stopped_.push_back(task);
+}
+
 std::shared_ptr<Task> Engine::find(Gid gid) const
 {
   const auto found = tasks_.find(gid);
