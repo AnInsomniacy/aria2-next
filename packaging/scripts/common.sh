@@ -46,6 +46,8 @@ curl_fetch() {
     exit 1
   fi
 
-  curl --fail --show-error -L --retry 5 --connect-timeout 15 -O "$url"
+  # A fixed delay rides out GitHub download outages that outlast exponential
+  # backoff: transient 5xx answers and timeouts are retried for ~2 minutes.
+  curl --fail --show-error -L --retry 8 --retry-delay 15 --connect-timeout 15 -O "$url"
   verify_sha256 "$archive" "$expected"
 }
