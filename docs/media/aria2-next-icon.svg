@@ -19,13 +19,13 @@
   <rect x="38" y="38" width="436" height="436" rx="99" fill="url(#aria2-next-face)" />
   <rect x="38.5" y="38.5" width="435" height="435" rx="98.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.06" />
   <g transform="translate(-15 0)">
-    <!-- A drawn as a pair of compasses -->
+    <!-- A drawn as a pair of compasses, as heavy as the letters beside it -->
     <g fill="url(#aria2-next-gold)" stroke="url(#aria2-next-gold)">
-      <rect x="139" y="120" width="14" height="40" rx="7" stroke="none" />
-      <polygon points="136.5,171.0 155.5,177.0 102.9,319.0 97.1,317.1" stroke="none" />
-      <polygon points="136.5,177.0 155.5,171.0 194.9,317.1 189.1,319.0" stroke="none" />
-      <rect x="116" y="256" width="60" height="12" rx="3" stroke="none" />
-      <circle cx="146" cy="174" r="19" fill="#18181C" stroke-width="12" />
+      <rect x="136.5" y="114" width="19" height="46" rx="9.5" stroke="none" />
+      <polygon points="134,170 158,178 106.5,320.5 93.5,316.5" stroke="none" />
+      <polygon points="134,178 158,170 198.5,316.5 185.5,320.5" stroke="none" />
+      <rect x="110" y="253" width="72" height="17" rx="4" stroke="none" />
+      <circle cx="146" cy="174" r="20" fill="#18181C" stroke-width="17" />
     </g>
     <!-- ria, spaced so the r's arm and the i clear their neighbours -->
     <g fill="none" stroke="#EEEAE3" stroke-width="19" stroke-linecap="round">
