@@ -13,6 +13,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ip/v6_only.hpp>
 #include <boost/asio/redirect_error.hpp>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
@@ -22,8 +23,10 @@
 
 #include <array>
 #include <deque>
+#include <functional>
 #include <optional>
 #include <set>
+#include <utility>
 
 namespace aria2::rpc {
 
@@ -44,9 +47,10 @@ class Socket : public std::enable_shared_from_this<Socket> {
 public:
   explicit Socket(tcp::socket socket) : ws(std::move(socket)) {}
 
-  void send(std::string message)
+  // `sent` runs once the message is written or the connection fails.
+  void send(std::string message, std::function<void()> sent = {})
   {
-    queue_.push_back(std::move(message));
+    queue_.push_back({std::move(message), std::move(sent)});
     if (queue_.size() == 1) {
       asio::co_spawn(ws.get_executor(), drain(shared_from_this()),
                      asio::detached);
@@ -61,17 +65,30 @@ private:
     while (!self->queue_.empty()) {
       self->ws.text(true);
       boost::system::error_code error;
-      co_await self->ws.async_write(asio::buffer(self->queue_.front()),
+      co_await self->ws.async_write(asio::buffer(self->queue_.front().message),
                                     asio::redirect_error(use_awaitable, error));
       if (error) {
-        self->queue_.clear();
+        auto failed = std::exchange(self->queue_, {});
+        for (auto& item : failed) {
+          if (item.sent) {
+            item.sent();
+          }
+        }
         co_return;
       }
+      auto item = std::move(self->queue_.front());
       self->queue_.pop_front();
+      if (item.sent) {
+        item.sent();
+      }
     }
   }
 
-  std::deque<std::string> queue_;
+  struct Outgoing {
+    std::string message;
+    std::function<void()> sent;
+  };
+  std::deque<Outgoing> queue_;
 };
 
 } // namespace
@@ -87,6 +104,29 @@ struct Server::State : std::enable_shared_from_this<State> {
   std::vector<std::unique_ptr<tcp::acceptor>> acceptors;
   std::set<std::shared_ptr<Socket>> sockets;
   bool stopped = false;
+  // Requests read but not yet answered on the wire. The engine's loop stops
+  // after them, so a shutdown request still receives its "OK".
+  size_t answering = 0;
+  std::function<void()> whenAnswered;
+
+  void answered()
+  {
+    if (--answering == 0 && whenAnswered) {
+      std::exchange(whenAnswered, nullptr)();
+    }
+  }
+
+  // Counts one request from its arrival until its answer is written.
+  struct Answering {
+    explicit Answering(std::shared_ptr<State> state) : state(std::move(state))
+    {
+      ++this->state->answering;
+    }
+    ~Answering() { state->answered(); }
+    Answering(const Answering&) = delete;
+    Answering& operator=(const Answering&) = delete;
+    std::shared_ptr<State> state;
+  };
 
   template <typename Body> void decorate(http::response<Body>& response)
   {
@@ -287,12 +327,17 @@ struct Server::State : std::enable_shared_from_this<State> {
         co_await serveSocket(self, stream.release_socket(), std::move(request));
         co_return;
       }
-      auto response = co_await self->answer(request);
-      // The answer may take long (aria2.moveDownload); time the write alone.
-      stream.expires_after(120s);
-      co_await http::async_write(stream, response,
-                                 asio::redirect_error(use_awaitable, error));
-      if (error || !response.keep_alive()) {
+      bool keepAlive = false;
+      {
+        Answering answering(self);
+        auto response = co_await self->answer(request);
+        // The answer may take long (aria2.moveDownload); time the write alone.
+        stream.expires_after(120s);
+        co_await http::async_write(stream, response,
+                                   asio::redirect_error(use_awaitable, error));
+        keepAlive = response.keep_alive();
+      }
+      if (error || !keepAlive) {
         co_return;
       }
     }
@@ -345,9 +390,15 @@ struct Server::State : std::enable_shared_from_this<State> {
       if (error) {
         break;
       }
+      auto answering = std::make_shared<Answering>(self);
       self->dispatcher.handle(
           beast::buffers_to_string(buffer.data()),
-          [client](std::string reply) { client->send(std::move(reply)); });
+          [client, answering](std::string reply) mutable {
+            client->send(std::move(reply),
+                         [answering = std::move(answering)]() mutable {
+                           answering.reset();
+                         });
+          });
       buffer.consume(buffer.size());
     }
     self->sockets.erase(client);
@@ -421,6 +472,28 @@ void Server::stop()
     beast::get_lowest_layer(socket->ws).close(ignored);
   }
   state_->sockets.clear();
+}
+
+void Server::close(std::function<void()> done)
+{
+  auto& state = *state_;
+  state.stopped = true;
+  for (auto& acceptor : state.acceptors) {
+    boost::system::error_code ignored;
+    acceptor->close(ignored);
+  }
+  if (state.answering == 0) {
+    done();
+    return;
+  }
+  state.whenAnswered = std::move(done);
+  // A client that stops reading must not hold the exit.
+  auto timer = std::make_shared<asio::steady_timer>(state.engine.io(), 2s);
+  timer->async_wait([state = state_, timer](const boost::system::error_code&) {
+    if (state->whenAnswered) {
+      std::exchange(state->whenAnswered, nullptr)();
+    }
+  });
 }
 
 void Server::notify(const std::string& method, const std::string& gid)

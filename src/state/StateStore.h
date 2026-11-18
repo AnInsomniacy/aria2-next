@@ -51,8 +51,10 @@ public:
 
 private:
   sqlite::Database& transfers();
+  void forgetDeletedFiles();
 
   std::string root_;
+  std::string suffix_;
   std::optional<sqlite::Database> transfers_;
 };
 

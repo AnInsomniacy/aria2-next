@@ -211,6 +211,9 @@ int run(const std::vector<std::string>& args)
     rpc::registerMethods(*dispatcher, engine);
     server = std::make_unique<rpc::Server>(engine, *dispatcher);
     server->start();
+    engine.setCloser([&server](std::function<void()> stop) {
+      server->close(std::move(stop));
+    });
     engine.listen([&server](Event event, const Task& task) {
       server->notify(std::string(eventMethod(event)), gidText(task.gid()));
     });

@@ -15,6 +15,7 @@
 #include <boost/asio/post.hpp>
 
 #include <algorithm>
+#include <utility>
 
 namespace aria2 {
 
@@ -279,8 +280,10 @@ void Engine::moveFilesOf(const std::shared_ptr<Task>& task)
   auto& move = moving_.at(task->gid());
   move.started = true;
   auto moves = task->relocation(move.dir).value_or(Task::Moves{});
-  auto strand = disk_->strand();
-  disk_->run(
+  // The pool starts on first use; a download that never wrote has none yet.
+  auto& disk = this->disk();
+  auto strand = disk.strand();
+  disk.run(
       strand,
       [moves = std::move(moves), from = task->options().get("dir")] {
         return moveFiles(moves, from);
@@ -645,6 +648,10 @@ void Engine::finishShutdown()
 
 void Engine::stopLoop()
 {
+  if (closer_) {
+    std::exchange(closer_, nullptr)([this] { stopLoop(); });
+    return;
+  }
   if (http_) {
     http_->close();
   }

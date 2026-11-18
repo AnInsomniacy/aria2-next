@@ -28,6 +28,17 @@ namespace json = boost::json;
 
 namespace {
 
+// An absolute directory without "." or ".." parts: libtorrent opens Windows
+// files through extended-length paths, which take every part literally.
+std::string storagePath(const std::string& dir)
+{
+  auto path = fs::absolute(toPath(dir)).lexically_normal();
+  if (!path.has_filename() && path.has_relative_path()) {
+    path = path.parent_path(); // "C:/x/" names the same directory as "C:/x"
+  }
+  return toUtf8(path);
+}
+
 std::string hexBits(const lt::bitfield& bits)
 {
   return bits.empty() ? std::string()
@@ -137,7 +148,7 @@ std::string BtTask::infoHash() const { return hashText(params_.info_hashes); }
 
 std::string BtTask::savePath() const
 {
-  return toUtf8(fs::absolute(toPath(options().get("dir"))));
+  return storagePath(options().get("dir"));
 }
 
 std::optional<Task::Moves> BtTask::relocation(const std::string& dir) const
@@ -147,7 +158,7 @@ std::optional<Task::Moves> BtTask::relocation(const std::string& dir) const
     return moves; // nothing is stored before the metadata arrives
   }
   const auto from = savePath();
-  const auto to = toUtf8(fs::absolute(toPath(dir)));
+  const auto to = storagePath(dir);
   const auto add = [&](const std::string& relative) {
     const auto source = joinPath(from, relative);
     if (fileExists(source)) {
@@ -523,6 +534,9 @@ void BtTask::updated(const lt::torrent_status& status)
                     !awaitingSelection();
   if (done && !finished_) {
     finished_ = true;
+    if (!countsTowardConcurrency()) {
+      engine().slotFreed(); // a queued download may start
+    }
     // A torrent that was already complete when it started (resumed, or
     // found on disk) downloaded nothing and is not announced again; one
     // that finished before its first status update is.

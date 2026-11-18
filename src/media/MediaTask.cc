@@ -167,34 +167,46 @@ void MediaTask::start()
     }
     auto path = toUtf8(std::filesystem::absolute(
         toPath(joinPath(options().get("dir"), mediaName(options(), uri_)))));
-    if (fileExists(path) && !options().flag("allow-overwrite")) {
+    // Streams from different sites often share a name (index.m3u8); another
+    // task's output is numbered around like an existing file.
+    const auto writing = [this](const std::string& candidate) {
+      for (const auto& task : engine().active()) {
+        if (task.get() == this) {
+          continue;
+        }
+        for (const auto& file : task->files()) {
+          if (file.path == candidate) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+    bool exists = fileExists(path) && !options().flag("allow-overwrite");
+    if (exists) {
       // A pending publication of this task may already have placed it.
       Store store(directory_, gidText(gid()));
       const auto publication = store.publication();
-      if (!publication || publication->output != path) {
-        auto numbered =
-            options().flag("auto-file-renaming")
-                ? numberedPath(path, numbering(options().get(
-                                         "auto-file-renaming-style")))
-                : std::nullopt;
-        if (!numbered) {
-          fail(ErrorCode::FileExists, "{} already exists", path);
-        }
-        path = std::move(*numbered);
-        // Recovery must reuse this destination.
-        options().set("out", toUtf8(toPath(path).filename()));
-      }
+      exists = !publication || publication->output != path;
     }
-    for (const auto& task : engine().active()) {
-      if (task.get() == this) {
-        continue;
-      }
-      for (const auto& file : task->files()) {
-        if (file.path == path) {
+    const bool shared = writing(path);
+    if (exists || shared) {
+      auto numbered =
+          options().flag("auto-file-renaming")
+              ? numberedPath(
+                    path, numbering(options().get("auto-file-renaming-style")),
+                    writing)
+              : std::nullopt;
+      if (!numbered) {
+        if (shared) {
           fail(ErrorCode::DuplicateDownload, "Another task is writing {}",
                path);
         }
+        fail(ErrorCode::FileExists, "{} already exists", path);
       }
+      path = std::move(*numbered);
+      // Recovery must reuse this destination.
+      options().set("out", toUtf8(toPath(path).filename()));
     }
     createDirectories(utf8(toPath(path).parent_path()));
     snapshot_.path = std::move(path);

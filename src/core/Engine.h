@@ -110,6 +110,10 @@ public:
   // Tasks created after a download completes, such as a fetched .torrent.
   using Follower = std::function<void(Task& finished)>;
   void setFollower(Follower follower) { follower_ = std::move(follower); }
+  // Runs once before the loop stops and calls `stop` when it may: the RPC
+  // server first answers the requests it read, such as aria2.shutdown.
+  using Closer = std::function<void(std::function<void()> stop)>;
+  void setCloser(Closer closer) { closer_ = std::move(closer); }
 
   DiskPool& disk();
   StateStore& state();
@@ -122,6 +126,8 @@ public:
   // Called by Task.
   void taskCompleted(Task& task);
   void taskFailed(Task& task);
+  // A task stopped counting toward max-concurrent-downloads (it seeds).
+  void slotFreed() { schedule(); }
 
 private:
   void schedule();
@@ -152,6 +158,7 @@ private:
   size_t stoppedTotal_ = 0;
   std::vector<Listener> listeners_;
   Follower follower_;
+  Closer closer_;
   boost::asio::steady_timer ticker_;
   bool scheduled_ = false;
   bool shuttingDown_ = false;

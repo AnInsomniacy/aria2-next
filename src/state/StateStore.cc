@@ -5,6 +5,7 @@
 #include "base/Path.h"
 #include "base/Text.h"
 #include "core/Engine.h"
+#include "disk/File.h"
 
 #include <cstdlib>
 
@@ -67,7 +68,8 @@ std::string defaultStateDirectory()
 }
 
 StateStore::StateStore(Engine& engine)
-    : root_(engine.global().get("state-dir"))
+    : root_(engine.global().get("state-dir")),
+      suffix_(engine.global().get("incomplete-suffix"))
 {
   if (root_.empty()) {
     root_ = defaultStateDirectory();
@@ -95,8 +97,43 @@ sqlite::Database& StateStore::transfers()
         "total_length INTEGER NOT NULL, completed_length INTEGER NOT NULL, "
         "completed_ranges TEXT NOT NULL, "
         "updated_at INTEGER NOT NULL DEFAULT (unixepoch()));");
+    forgetDeletedFiles();
   }
   return *transfers_;
+}
+
+// Records outlive removed downloads while their files remain; a file deleted
+// since then takes its record along. A missing directory may be a drive that
+// is not mounted yet, so its records stay.
+void StateStore::forgetDeletedFiles()
+try {
+  auto& db = *transfers_;
+  std::vector<std::string> gone;
+  sqlite::Statement query(db, "SELECT gid,path FROM downloads");
+  while (query.step()) {
+    const auto path = query.text(1);
+    const auto parent = toPath(path).parent_path();
+    std::error_code error;
+    if (parent.empty() || !fs::is_directory(parent, error)) {
+      continue;
+    }
+    if (!fileExists(path) && (suffix_.empty() || !fileExists(path + suffix_))) {
+      gone.push_back(query.text(0));
+    }
+  }
+  if (gone.empty()) {
+    return;
+  }
+  sqlite::Transaction transaction(db);
+  for (const auto& gid : gone) {
+    sqlite::Statement remove(db, "DELETE FROM downloads WHERE gid=?1");
+    remove.bind(1, gid).run();
+  }
+  transaction.commit();
+  log::info("Forgot resume data of {} deleted file(s)", gone.size());
+}
+catch (const std::exception& error) {
+  log::warn("Could not check resume data: {}", error.what());
 }
 
 std::optional<TransferRecord> StateStore::loadTransfer(Gid gid)

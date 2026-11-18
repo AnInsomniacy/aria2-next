@@ -2211,7 +2211,17 @@ std::optional<TransferRecord> HttpTask::storedRecord()
   return record;
 }
 
-void HttpTask::discardState() { engine().state().removeTransfer(gid()); }
+// A removed download keeps its unfinished file, so it keeps the record that
+// resumes it: adding the same file again continues instead of adopting the
+// file by size, which a multi-connection download has already filled to its
+// end. The record goes with the file.
+void HttpTask::discardState()
+{
+  if (phase_ != Phase::Done && !path_.empty() && fileExists(diskPath())) {
+    return;
+  }
+  engine().state().removeTransfer(gid());
+}
 
 // The file keeps its place below the download directory: --out may name a
 // subdirectory.

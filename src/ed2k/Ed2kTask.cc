@@ -540,6 +540,9 @@ void Ed2kTask::downloaded()
   dropSources();
   phase_ = Phase::Sharing;
   sharingSince_ = Clock::now();
+  if (!countsTowardConcurrency()) {
+    engine().slotFreed(); // a queued download may start
+  }
   engine().ed2k().server().filesChanged();
   ++pendingWrites_;
   engine().disk().run(

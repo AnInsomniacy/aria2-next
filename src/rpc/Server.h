@@ -3,6 +3,7 @@
 
 #include <boost/json/value.hpp>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -29,6 +30,9 @@ public:
   // failure so the process can report a port conflict.
   void start();
   void stop();
+  // Stops accepting connections and calls `done` once the requests already
+  // read are answered, or after a short grace period.
+  void close(std::function<void()> done);
   void notify(const std::string& method, const std::string& gid);
 
 private:
