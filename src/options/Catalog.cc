@@ -91,6 +91,11 @@ constexpr std::array catalog{
   OptionSpec{"force-save", 0, Flag, "false", TLG, "file", "Save the task in the session even when it is finished."},
   OptionSpec{"save-not-found", 0, Flag, "true", TLG, "file", "Save tasks that failed with 404 in the session."},
   OptionSpec{"index-out", 'O', List, "", Task, "file", "INDEX=PATH output path for a torrent file; repeatable."},
+  OptionSpec{"filename-invalid-chars", 0, Choice, "replace", TG, "file", "Handling of characters a file system rejects in a derived name: keep them (none), delete, or replace with '_'.", 0, 0, "none|delete|replace"},
+  OptionSpec{"filename-max-length", 0, Integer, "240", TG, "file", "Shorten a derived file name longer than this many UTF-8 bytes (0: no limit).", 0, INT32_MAX},
+  OptionSpec{"filename-truncate-style", 0, Choice, "extension", TG, "file", "How a shortened name keeps its ends: extension (first bytes and the extension, as earlier versions) or head-tail (first --filename-truncate-head and last --filename-truncate-tail characters).", 0, 0, "extension|head-tail"},
+  OptionSpec{"filename-truncate-head", 0, Integer, "25", TG, "file", "Characters kept from the start when --filename-truncate-style=head-tail shortens a name.", 0, INT32_MAX},
+  OptionSpec{"filename-truncate-tail", 0, Integer, "10", TG, "file", "Characters kept from the end when --filename-truncate-style=head-tail shortens a name.", 0, INT32_MAX},
 
   // BitTorrent
   OptionSpec{"torrent-file", 'T', Path, "", 0, "bittorrent", "Torrent file to download."},

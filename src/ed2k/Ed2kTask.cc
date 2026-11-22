@@ -6,6 +6,7 @@
 #include "base/Text.h"
 #include "core/Engine.h"
 #include "disk/File.h"
+#include "disk/FileName.h"
 #include "ed2k/Client.h"
 #include "ed2k/Compression.h"
 #include "ed2k/Hash.h"
@@ -94,7 +95,7 @@ std::string Ed2kTask::defaultPath() const
 {
   auto name = options().get("out");
   if (name.empty()) {
-    name = safeFileName(link_.name);
+    name = sanitizeFileName(link_.name, options());
   }
   if (name.empty()) {
     name = text::toHex(link_.hash);

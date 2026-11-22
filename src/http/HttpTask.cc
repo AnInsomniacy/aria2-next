@@ -7,6 +7,7 @@
 #include "base/Text.h"
 #include "base/Uri.h"
 #include "core/Engine.h"
+#include "disk/FileName.h"
 #include "disk/Output.h"
 #include "http/Checksum.h"
 #include "http/Client.h"
@@ -919,7 +920,8 @@ bool HttpTask::compressedBody(const Worker& worker) const
       !options().flag("http-accept-gzip") || planner_.length() >= 0) {
     return false;
   }
-  auto name = safeFileName(contentDispositionFileName(worker.disposition));
+  auto name = sanitizeFileName(contentDispositionFileName(worker.disposition),
+                               FileNamePolicy{});
   if (name.empty()) {
     name = uri::fileName(worker.effectiveUrl());
   }
@@ -1105,9 +1107,10 @@ bool HttpTask::decidePath(Worker& worker)
 {
   auto name = options().get("out");
   if (name.empty()) {
-    const auto hint = safeFileName(options().get("filename-hint"));
-    const auto disposition =
-        safeFileName(contentDispositionFileName(worker.disposition));
+    const auto hint =
+        sanitizeFileName(options().get("filename-hint"), options());
+    const auto disposition = sanitizeFileName(
+        contentDispositionFileName(worker.disposition), options());
     if (!hint.empty() && options().get("filename-hint-source") == "browser") {
       name = hint;
     }
@@ -1119,9 +1122,10 @@ bool HttpTask::decidePath(Worker& worker)
     }
     else {
       // Like a browser, a redirected link is named after where it landed.
-      name = uri::fileName(worker.effectiveUrl());
+      name = sanitizeFileName(uri::fileName(worker.effectiveUrl()), options());
       if (name.empty()) {
-        name = uri::fileName(sources_[worker.source].uri);
+        name = sanitizeFileName(uri::fileName(sources_[worker.source].uri),
+                                options());
       }
     }
     // Like a browser, give a name without an extension the one its media
@@ -1136,6 +1140,9 @@ bool HttpTask::decidePath(Worker& worker)
     if (name.empty()) {
       name = "index.html";
     }
+    // The implied extension is part of the name, so the length limit applies
+    // after it is added.
+    name = sanitizeFileName(name, options());
   }
   auto path = joinPath(options().get("dir"), name);
   const auto suffix = options().get("incomplete-suffix");
