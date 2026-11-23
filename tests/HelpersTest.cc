@@ -200,8 +200,8 @@ TEST_CASE("files grow sparse or reserved, keeping their content")
   REQUIRE_FALSE(stopped.open(toUtf8(directory / "stopped.bin"), true));
   stopped.stopExtending();
   REQUIRE_FALSE(stopped.extend(length, Allocation::Reserve));
-#ifdef _WIN32
-  // Stopped before writing any zeros; the next opening fills them.
+#if defined(_WIN32) || defined(__linux__) || defined(__ANDROID__)
+  // Stopped before reserving anything; the next opening reserves the rest.
   CHECK(stopped.size() == 0);
 #else
   CHECK(stopped.size() == length);

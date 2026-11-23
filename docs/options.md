@@ -6,7 +6,9 @@ Every option can be given on the command line (`--name=value`), in the
 configuration file (`name=value`), in a session file under a URI, and
 through RPC (`aria2.addUri` options, `aria2.changeOption`,
 `aria2.changeGlobalOption`). `aria2-next --help=#TAG` prints one section,
-`aria2-next --help=WORD` the options whose names contain WORD.
+`aria2-next --help=WORD` the options whose names contain WORD. Values of
+PATH options expand `${HOME}` to the home directory, also in the
+configuration file, where no shell expands it.
 
 ## Basic
 
@@ -16,7 +18,7 @@ through RPC (`aria2.addUri` options, `aria2.changeOption`,
 | `-o`, `--out` | PATH |  | File name of the downloaded file, relative to --dir. |
 | `-i`, `--input-file` | PATH |  | Read URIs and per-task options from FILE ('-' for stdin). |
 | `-j`, `--max-concurrent-downloads` | VALUE | `5` | Maximum number of parallel downloads. |
-| `-c`, `--continue` | flag | `false` | Continue a partially downloaded file: one this engine left unfinished from its record, any other from its size. |
+| `-c`, `--continue` | flag | `false` | Continue a partially downloaded file: one this engine left unfinished from its record, any other from its size. Without it, a file this engine left unfinished is still continued when the server shows it unchanged (same length, ranges, and a strong ETag or Last-Modified). |
 | `-V`, `--check-integrity` | flag | `false` | Verify existing data with piece hashes or --checksum. |
 | `-l`, `--log` | PATH |  | Write the log to FILE ('-' for stdout). |
 | `-q`, `--quiet` | flag | `false` | Do not print to the console. |

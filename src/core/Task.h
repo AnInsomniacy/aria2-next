@@ -102,6 +102,8 @@ public:
   virtual void relocated(const std::string& dir);
   // Seeding tasks may be excluded from max-concurrent-downloads.
   virtual bool countsTowardConcurrency() const { return true; }
+  // What a stop that takes long still waits for, for the log.
+  virtual std::string stopProgress() const { return {}; }
   // The URI-specific RPC views (getUris/getServers) use these.
   virtual bool changeUris(int fileIndex, const std::vector<std::string>& remove,
                           const std::vector<std::string>& add, int position);
@@ -124,6 +126,10 @@ private:
   std::shared_ptr<Options> options_;
   TaskState state_ = TaskState::Waiting;
   bool stopping_ = false;
+  // Where a stop under way leaves the task, and since when it runs.
+  TaskState stopNext_ = TaskState::Waiting;
+  Clock::time_point stopSince_{};
+  bool stopReported_ = false;
   ErrorCode errorCode_ = ErrorCode::Finished;
   std::string errorMessage_;
 };

@@ -42,6 +42,7 @@ public:
   void status(boost::json::object& out, const StatusKeys& keys) const override;
   std::vector<std::string> sessionUris() const override;
   void checkpoint() override;
+  std::string stopProgress() const override;
   void loadProgress() override;
   void discardState() override;
   void optionChanged(std::string_view name) override;

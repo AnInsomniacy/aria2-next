@@ -1,5 +1,6 @@
 /* Copyright (C) 2026 aria2-next contributors. GPL-2.0-or-later. */
 #include "base/Error.h"
+#include "base/Path.h"
 #include "options/CommandLine.h"
 #include "options/Options.h"
 
@@ -19,6 +20,21 @@ TEST_CASE("task options fall back to the global layer and the catalogue")
   CHECK(global->integer("max-tries") == 7);
   CHECK(task.hasOwn("max-tries"));
   CHECK_FALSE(task.hasOwn("dir"));
+}
+
+TEST_CASE("path values expand ${HOME}, as in aria2")
+{
+  const auto home = homeDirectory();
+  REQUIRE_FALSE(home.empty());
+  Options options;
+  options.set("log", "${HOME}/.config/aria2/log");
+  CHECK(options.get("log") == home + "/.config/aria2/log");
+  options.set("dir", "${HOME}/a/${HOME}");
+  CHECK(options.get("dir") == home + "/a/" + home);
+  options.set("save-session", "$HOME/session");
+  CHECK(options.get("save-session") == "$HOME/session");
+  options.set("user-agent", "${HOME}");
+  CHECK(options.get("user-agent") == "${HOME}");
 }
 
 TEST_CASE("values are validated and canonicalised")

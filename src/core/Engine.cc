@@ -169,9 +169,7 @@ void Engine::pause(const std::shared_ptr<Task>& task, bool force)
     emit(Event::Pause, *task);
     break;
   case TaskState::Active:
-    if (!task->stopping_) {
-      stopTask(task, force, TaskState::Paused);
-    }
+    stopTask(task, force, TaskState::Paused);
     break;
   default:
     break;
@@ -204,9 +202,7 @@ void Engine::remove(const std::shared_ptr<Task>& task, bool force)
     retire(task, TaskState::Removed);
     break;
   case TaskState::Active:
-    if (!task->stopping_ || force) {
-      stopTask(task, force, TaskState::Removed);
-    }
+    stopTask(task, force, TaskState::Removed);
     break;
   default:
     break;
@@ -265,9 +261,7 @@ void Engine::relocate(const std::shared_ptr<Task>& task, const std::string& dir,
   case TaskState::Active:
     // The files are free once the transfers stop; stopTask() continues.
     move.resume = true;
-    if (!task->stopping_) {
-      stopTask(task, true, TaskState::Paused);
-    }
+    stopTask(task, true, TaskState::Paused);
     break;
   default:
     moving_.erase(task->gid());
@@ -483,12 +477,42 @@ void Engine::startTask(const std::shared_ptr<Task>& task)
   }
 }
 
+namespace {
+// Removing outranks pausing, which outranks requeueing at shutdown.
+int stopRank(TaskState state)
+{
+  if (state == TaskState::Removed) {
+    return 2;
+  }
+  return state == TaskState::Paused ? 1 : 0;
+}
+} // namespace
+
 void Engine::stopTask(const std::shared_ptr<Task>& task, bool force,
                       TaskState next)
 {
+  if (task->stopping_) {
+    // The stop under way decides the outcome when it ends. Stopping the task
+    // again would hand it a second completion, which would requeue the task
+    // and retire it as well (rayburst#832).
+    if (stopRank(next) > stopRank(task->stopNext_)) {
+      task->stopNext_ = next;
+    }
+    return;
+  }
   task->stopping_ = true;
-  task->stop(force, [this, task, next] {
+  task->stopNext_ = next;
+  task->stopSince_ = Clock::now();
+  task->stopReported_ = false;
+  task->stop(force, [this, task] {
     task->stopping_ = false;
+    const auto next = task->stopNext_;
+    if (task->stopReported_) {
+      log::info("{}: stopped after {} ms", gidText(task->gid()),
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    Clock::now() - task->stopSince_)
+                    .count());
+    }
     task->checkpoint();
     active_.erase(std::remove(active_.begin(), active_.end(), task),
                   active_.end());
@@ -596,6 +620,15 @@ void Engine::tick()
   if (stopAfter > 0 && now - started_ >= std::chrono::seconds(stopAfter)) {
     shutdown(false);
   }
+  for (const auto& task : active_) {
+    if (task->stopping_ && !task->stopReported_ &&
+        now - task->stopSince_ >= std::chrono::seconds(2)) {
+      task->stopReported_ = true;
+      const auto progress = task->stopProgress();
+      log::info("{}: still stopping after 2 s{}{}", gidText(task->gid()),
+                progress.empty() ? "" : ": ", progress);
+    }
+  }
   const auto parent = global_->integer("stop-with-process");
   if (parent > 0 && !processAlive(parent)) {
     log::notice("Process {} ended; shutting down", parent);
@@ -622,9 +655,7 @@ void Engine::shutdown(bool force)
     return;
   }
   for (const auto& task : std::vector(active_)) {
-    if (!task->stopping_ || force) {
-      stopTask(task, force, TaskState::Waiting);
-    }
+    stopTask(task, force, TaskState::Waiting);
   }
 }
 

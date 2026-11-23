@@ -3,6 +3,7 @@
 
 #include "base/Error.h"
 #include "base/Log.h"
+#include "base/Path.h"
 #include "base/Text.h"
 
 #include <array>
@@ -231,6 +232,30 @@ bool isRetiredFlag(std::string_view name)
          retiredFlags.end();
 }
 
+// The shell expands variables on the command line but not in a
+// configuration file, so path values expand ${HOME} themselves, as in aria2.
+static std::string expandHome(std::string_view value)
+{
+  constexpr std::string_view variable = "${HOME}";
+  if (value.find(variable) == std::string_view::npos) {
+    return std::string(value);
+  }
+  const auto home = homeDirectory();
+  if (home.empty()) {
+    return std::string(value);
+  }
+  std::string result;
+  for (size_t at = 0;;) {
+    const auto found = value.find(variable, at);
+    result.append(value.substr(at, found - at));
+    if (found == std::string_view::npos) {
+      return result;
+    }
+    result += home;
+    at = found + variable.size();
+  }
+}
+
 std::string normalizeOption(const OptionSpec& spec, std::string_view value)
 {
   switch (spec.type) {
@@ -271,6 +296,7 @@ std::string normalizeOption(const OptionSpec& spec, std::string_view value)
     }
     return std::string(value);
   case OptionType::Path:
+    return expandHome(value);
   case OptionType::List:
     return std::string(value);
   }

@@ -48,8 +48,11 @@ public:
   // Hands the record of the unfinished file at `path`, saved by another task,
   // over to `gid`, which continues that file.
   std::optional<TransferRecord> claimTransfer(const std::string& path, Gid gid);
+  // The record another task saved for `path`, left where it is.
+  std::optional<TransferRecord> findTransfer(const std::string& path, Gid gid);
 
 private:
+  std::optional<Gid> transferOwner(const std::string& path, Gid gid);
   sqlite::Database& transfers();
   void forgetDeletedFiles();
 

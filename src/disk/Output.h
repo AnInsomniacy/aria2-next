@@ -4,6 +4,7 @@
 #include "disk/DiskPool.h"
 #include "disk/File.h"
 
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <string>
@@ -28,10 +29,14 @@ public:
   void close(Done done);
 
 private:
+  Done timed(const char* operation, Done done);
+
   DiskPool& pool_;
   DiskPool::Strand strand_;
   std::string path_;
   std::shared_ptr<File> file_ = std::make_shared<File>();
+  // Control thread only: when a slow disk job was last logged.
+  std::chrono::steady_clock::time_point lastSlow_{};
 };
 
 } // namespace aria2

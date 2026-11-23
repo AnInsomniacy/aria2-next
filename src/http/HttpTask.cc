@@ -1243,9 +1243,31 @@ std::optional<std::string> HttpTask::storedSuffix(const std::string& path) const
 
 std::optional<TransferRecord> HttpTask::claimRecord(const std::string& path)
 {
-  if (!options().flag("continue") || options().flag("remove-control-file") ||
-      options().flag("dry-run") || engine().writing(path, gid())) {
+  if (options().flag("remove-control-file") || options().flag("dry-run") ||
+      engine().writing(path, gid())) {
     return std::nullopt;
+  }
+  // Without --continue, the file this engine left unfinished is continued
+  // only when the server proves it unchanged, as browsers resume: the same
+  // length, ranges, and a strong validator equal to the stored one. Any doubt
+  // keeps the old file and its record, and the download gets a new name.
+  if (!options().flag("continue")) {
+    const auto found = engine().state().findTransfer(path, gid());
+    const auto equal = [](const std::string& stored, const std::string& now) {
+      return !stored.empty() && stored == now;
+    };
+    const auto agree = [](const std::string& stored, const std::string& now) {
+      return stored.empty() || now.empty() || stored == now;
+    };
+    if (!found || !ranged_ || found->totalLength <= 0 ||
+        found->totalLength != planner_.length() ||
+        !((equal(found->etag, etag_) && !etag_.starts_with("W/")) ||
+          equal(found->lastModified, lastModified_)) ||
+        !agree(found->etag, etag_) ||
+        !agree(found->lastModified, lastModified_) ||
+        !storedSuffix(found->path)) {
+      return std::nullopt;
+    }
   }
   auto record = engine().state().claimTransfer(path, gid());
   if (!record || record->totalLength <= 0 || !storedSuffix(record->path)) {
@@ -1428,6 +1450,13 @@ void HttpTask::written(int64_t offset, size_t size, std::error_code error)
   unflushed_ -= static_cast<int64_t>(size);
   if (phase_ == Phase::Restarting) {
     restartWhenQuiet();
+    return;
+  }
+  if (error && phase_ == Phase::Stopping) {
+    // The stop still ends; the range was not stored and is fetched again.
+    log::warn("{}: cannot write {} while stopping: {}", gidText(gid()),
+              diskPath(), error.message());
+    quiesce();
     return;
   }
   if (error) {
@@ -2000,6 +2029,15 @@ void HttpTask::stop(bool, std::function<void()> done)
     retireWorker(*worker);
   }
   quiesce();
+}
+
+std::string HttpTask::stopProgress() const
+{
+  if (pendingWrites_ > 0) {
+    return fmt::format("{} write(s) of {} bytes to {} pending", pendingWrites_,
+                       unflushed_, diskPath());
+  }
+  return output_ ? fmt::format("closing {}", diskPath()) : std::string();
 }
 
 void HttpTask::quiesce()

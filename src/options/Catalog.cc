@@ -20,7 +20,7 @@ constexpr std::array catalog{
   OptionSpec{"out", 'o', Path, "", Task, "basic", "File name of the downloaded file, relative to --dir."},
   OptionSpec{"input-file", 'i', Path, "", 0, "basic", "Read URIs and per-task options from FILE ('-' for stdin)."},
   OptionSpec{"max-concurrent-downloads", 'j', Integer, "5", Global, "basic", "Maximum number of parallel downloads.", 1, 1000},
-  OptionSpec{"continue", 'c', Flag, "false", TG, "basic", "Continue a partially downloaded file: one this engine left unfinished from its record, any other from its size."},
+  OptionSpec{"continue", 'c', Flag, "false", TG, "basic", "Continue a partially downloaded file: one this engine left unfinished from its record, any other from its size. Without it, a file this engine left unfinished is still continued when the server shows it unchanged (same length, ranges, and a strong ETag or Last-Modified)."},
   OptionSpec{"check-integrity", 'V', Flag, "false", TG, "basic", "Verify existing data with piece hashes or --checksum."},
   OptionSpec{"log", 'l', Path, "", Global, "basic", "Write the log to FILE ('-' for stdout)."},
   OptionSpec{"quiet", 'q', Flag, "false", 0, "basic", "Do not print to the console."},

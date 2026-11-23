@@ -5,6 +5,7 @@
 
 #include <spdlog/fmt/fmt.h>
 
+#include <algorithm>
 #include <chrono>
 
 #ifdef _WIN32
@@ -314,9 +315,22 @@ std::error_code File::extend(int64_t length, Allocation allocation)
   }
   return setLength(length);
 #  elif defined(__linux__) || defined(__ANDROID__)
-  const auto result = ::posix_fallocate(fd_, 0, static_cast<off_t>(length));
-  return result == 0 ? std::error_code()
-                     : std::error_code(result, std::system_category());
+  // In steps, so that a stop does not wait for a whole reservation: where the
+  // file system cannot allocate, glibc writes a byte into every block.
+  constexpr int64_t step = int64_t{256} << 20;
+  for (auto offset = std::max<int64_t>(size(), 0); offset < length;
+       offset += step) {
+    if (stopExtending_) {
+      return {}; // the next opening reserves the rest
+    }
+    const auto count = std::min(step, length - offset);
+    const auto result = ::posix_fallocate(fd_, static_cast<off_t>(offset),
+                                          static_cast<off_t>(count));
+    if (result != 0) {
+      return std::error_code(result, std::system_category());
+    }
+  }
+  return {};
 #  else
   return setLength(length);
 #  endif

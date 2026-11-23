@@ -57,7 +57,9 @@ def main() -> int:
         "configuration file (`name=value`), in a session file under a URI, and",
         "through RPC (`aria2.addUri` options, `aria2.changeOption`,",
         "`aria2.changeGlobalOption`). `aria2-next --help=#TAG` prints one section,",
-        "`aria2-next --help=WORD` the options whose names contain WORD.",
+        "`aria2-next --help=WORD` the options whose names contain WORD. Values of",
+        "PATH options expand `${HOME}` to the home directory, also in the",
+        "configuration file, where no shell expands it.",
         "",
     ]
     for tag, title in TAGS:
