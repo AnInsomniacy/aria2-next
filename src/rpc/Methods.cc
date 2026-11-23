@@ -8,6 +8,7 @@
 #include "base/Uri.h"
 #include "core/Engine.h"
 #include "core/Version.h"
+#include "disk/FileName.h"
 #include "http/Probe.h"
 #include "rpc/Dispatcher.h"
 
@@ -508,7 +509,7 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
     }
     return "OK";
   });
-  d.add("aria2.resolveFilename", [](json::array& p) -> json::value {
+  d.add("aria2.resolveFilename", [&engine](json::array& p) -> json::value {
     // The name the engine would choose for a URL and Content-Disposition
     // bytes, so browsers and the engine agree before a download starts.
     const auto url = text(p, 0, "url");
@@ -521,9 +522,10 @@ void registerMethods(Dispatcher& dispatcher, Engine& engine)
         disposition.push_back(static_cast<char>(byte.as_int64()));
       }
     }
-    auto name = safeFileName(contentDispositionFileName(disposition));
+    auto name = sanitizeFileName(contentDispositionFileName(disposition),
+                                 engine.global());
     if (name.empty()) {
-      name = uri::fileName(url);
+      name = sanitizeFileName(uri::fileName(url), engine.global());
     }
     return json::string(name.empty() ? "index.html" : name);
   });

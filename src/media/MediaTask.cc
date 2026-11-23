@@ -7,6 +7,7 @@
 #include "base/Uri.h"
 #include "core/Engine.h"
 #include "disk/File.h"
+#include "disk/FileName.h"
 #include "media/MediaFiles.h"
 #include "media/MediaSession.h"
 #include "media/MediaStore.h"
@@ -37,22 +38,24 @@ std::string mediaName(const Options& options, const std::string& uri)
 {
   const auto format = options.get("media-format");
   auto name = options.get("out");
-  if (name.empty()) {
-    name = safeFileName(options.get("filename-hint"));
-    if (!name.empty() && options.get("filename-hint-source") == "title") {
+  const bool derived = name.empty();
+  if (derived) {
+    const auto hint = sanitizeFileName(options.get("filename-hint"), options);
+    if (!hint.empty() && options.get("filename-hint-source") == "title") {
       // A title is not a file name; "Part 1.5" keeps its dot.
-      return name + "." + format;
+      return sanitizeFileName(hint + "." + format, options);
     }
-    if (name.empty()) {
-      name = uri::fileName(uri);
-    }
+    name = hint.empty() ? sanitizeFileName(uri::fileName(uri), options) : hint;
     if (name.empty()) {
       name = "media";
     }
   }
   auto path = toPath(name);
   path.replace_extension("." + format);
-  return toUtf8(path);
+  const auto result = toUtf8(path);
+  // An explicit --out keeps its path and characters; only a derived name
+  // follows the file name policy.
+  return derived ? sanitizeFileName(result, options) : result;
 }
 
 ErrorCode errorCodeFor(FailureCode code)

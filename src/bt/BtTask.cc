@@ -8,6 +8,7 @@
 #include "bt/Session.h"
 #include "core/Engine.h"
 #include "disk/File.h"
+#include "disk/FileName.h"
 #include "state/StateStore.h"
 
 #include <boost/asio/ip/address.hpp>
@@ -724,8 +725,9 @@ std::vector<TaskFile> BtTask::files() const
   if (!info_) {
     TaskFile file;
     file.path = joinPath(options().get("dir"),
-                         params_.name.empty() ? infoHash()
-                                              : safeFileName(params_.name));
+                         params_.name.empty()
+                             ? infoHash()
+                             : sanitizeFileName(params_.name, options()));
     return {file};
   }
   std::vector<lt::download_priority_t> wanted;

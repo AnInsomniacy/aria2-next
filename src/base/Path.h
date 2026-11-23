@@ -19,10 +19,37 @@ std::string toUtf8(const fs::path& path);
 // kept as given.
 std::string joinPath(std::string_view directory, std::string_view name);
 
-// Turns untrusted text into one safe path component: no separators, control
-// characters, reserved Windows names or trailing dots; at most 240 bytes with
-// the extension preserved. Returns empty for names that cannot be used.
-std::string safeFileName(std::string_view name);
+// How characters a file system rejects in a name are handled: left for the
+// operating system to refuse, removed, or replaced by '_'.
+enum class InvalidFileNameCharacters { Keep, Delete, Replace };
+
+// How an over-long name gives way to the byte limit.
+enum class FileNameTruncation {
+  // Keep the beginning and the extension, as aria2 did before the policy
+  // became configurable.
+  Extension,
+  // Keep the first and last characters around one '_'.
+  HeadTail,
+};
+
+// How a name derived from untrusted text becomes a file name.
+struct FileNamePolicy {
+  InvalidFileNameCharacters invalidCharacters = InvalidFileNameCharacters::Keep;
+  FileNameTruncation truncation = FileNameTruncation::Extension;
+  // No limit when 0. Otherwise a name longer than this many UTF-8 bytes is
+  // shortened according to `truncation`.
+  size_t maxBytes = 0;
+  size_t headCharacters = 25;
+  size_t tailCharacters = 10;
+};
+
+// Turns untrusted text into one path component. Separators, a root name, "."
+// and ".." are always neutralized so the result stays directly inside the
+// download directory; reserved Windows device names and trailing dots or
+// spaces are normalized. Invalid characters and an over-long name follow
+// `policy`. Returns empty when no usable name is left.
+std::string sanitizeFileName(std::string_view name,
+                             const FileNamePolicy& policy);
 
 // Compares two paths for the same file: normalized, and case-insensitive on
 // Windows.

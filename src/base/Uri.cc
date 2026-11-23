@@ -94,8 +94,9 @@ std::string fileName(std::string_view text)
     const auto equals = entry.find('=');
     if (equals != std::string::npos &&
         text::percentDecode(entry.substr(0, equals)) == "filename") {
-      auto name = safeFileName(text::percentDecode(
-          text::replaceAll(entry.substr(equals + 1), "+", " ")));
+      auto name = sanitizeFileName(text::percentDecode(text::replaceAll(
+                                       entry.substr(equals + 1), "+", " ")),
+                                   FileNamePolicy{});
       if (!name.empty()) {
         return name;
       }
@@ -104,7 +105,8 @@ std::string fileName(std::string_view text)
   const auto slash = parts->path.rfind('/');
   const auto segment = parts->path.substr(slash + 1);
   auto decoded = text::percentDecode(segment);
-  return safeFileName(text::isUtf8(decoded) ? decoded : segment);
+  return sanitizeFileName(text::isUtf8(decoded) ? decoded : segment,
+                          FileNamePolicy{});
 }
 
 bool isThunder(std::string_view link)

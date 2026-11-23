@@ -95,6 +95,11 @@ configuration file, where no shell expands it.
 | `--force-save` | flag | `false` | Save the task in the session even when it is finished. |
 | `--save-not-found` | flag | `true` | Save tasks that failed with 404 in the session. |
 | `-O`, `--index-out` | VALUE |  | INDEX=PATH output path for a torrent file; repeatable. |
+| `--filename-invalid-chars` | `none` \| `delete` \| `replace` | `replace` | Handling of characters a file system rejects in a derived name: keep them (none), delete, or replace with '_'. |
+| `--filename-max-length` | VALUE | `240` | Shorten a derived file name longer than this many UTF-8 bytes (0: no limit). |
+| `--filename-truncate-style` | `extension` \| `head-tail` | `extension` | How a shortened name keeps its ends: extension (first bytes and the extension, as earlier versions) or head-tail (first --filename-truncate-head and last --filename-truncate-tail characters). |
+| `--filename-truncate-head` | VALUE | `25` | Characters kept from the start when --filename-truncate-style=head-tail shortens a name. |
+| `--filename-truncate-tail` | VALUE | `10` | Characters kept from the end when --filename-truncate-style=head-tail shortens a name. |
 
 ## BitTorrent
 

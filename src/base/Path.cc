@@ -35,19 +35,158 @@ std::string joinPath(std::string_view directory, std::string_view name)
   return toUtf8(toPath(directory) / path);
 }
 
-std::string safeFileName(std::string_view input)
+namespace {
+
+bool isInvalidFileNameCharacter(unsigned char c)
+{
+  return c < 0x20 || c == 0x7f || c == '"' || c == '*' || c == ':' ||
+         c == '<' || c == '>' || c == '?' || c == '|';
+}
+
+size_t codePointLength(unsigned char lead)
+{
+  if ((lead & 0x80) == 0) {
+    return 1;
+  }
+  if ((lead & 0xe0) == 0xc0) {
+    return 2;
+  }
+  if ((lead & 0xf0) == 0xe0) {
+    return 3;
+  }
+  if ((lead & 0xf8) == 0xf0) {
+    return 4;
+  }
+  return 1;
+}
+
+size_t prefixBytes(std::string_view text, size_t characters)
+{
+  size_t bytes = 0;
+  while (bytes < text.size() && characters > 0) {
+    bytes += std::min(codePointLength(static_cast<unsigned char>(text[bytes])),
+                      text.size() - bytes);
+    --characters;
+  }
+  return bytes;
+}
+
+size_t suffixBytes(std::string_view text, size_t characters)
+{
+  size_t bytes = text.size();
+  while (bytes > 0 && characters > 0) {
+    --bytes;
+    while (bytes > 0 &&
+           (static_cast<unsigned char>(text[bytes]) & 0xc0) == 0x80) {
+      --bytes;
+    }
+    --characters;
+  }
+  return text.size() - bytes;
+}
+
+size_t characterCount(std::string_view text)
+{
+  size_t count = 0;
+  for (size_t bytes = 0; bytes < text.size();) {
+    bytes += codePointLength(static_cast<unsigned char>(text[bytes]));
+    ++count;
+  }
+  return count;
+}
+
+// The pre-policy shortening: keep the beginning up to the byte limit and
+// append the extension when it fits, so an established name changes as little
+// as possible. A limit too small for the extension cuts the name instead.
+std::string shortenKeepingExtension(std::string_view name, size_t limit)
+{
+  const auto dot = name.rfind('.');
+  const bool hasExtension =
+      dot != std::string_view::npos && name.size() - dot < 32;
+  if (!hasExtension || limit <= name.size() - dot) {
+    auto shortened = std::string(name.substr(0, limit));
+    while (!shortened.empty() && !text::isUtf8(shortened)) {
+      shortened.pop_back();
+    }
+    return shortened;
+  }
+  const auto extension = name.substr(dot);
+  auto shortened = std::string(name.substr(0, limit - extension.size()));
+  while (!shortened.empty() && !text::isUtf8(shortened)) {
+    shortened.pop_back();
+  }
+  shortened += extension;
+  return shortened;
+}
+
+// Keeps the first and last characters of an over-long name so the start stays
+// readable and the extension survives. The two ends never overlap, and the
+// tail gives way only after the head, which keeps the extension.
+std::string shortenToHeadAndTail(std::string_view name,
+                                 const FileNamePolicy& policy)
+{
+  const auto characters = characterCount(name);
+  auto head = std::min(policy.headCharacters, characters);
+  auto tail = std::min(policy.tailCharacters, characters);
+  if (head + tail >= characters) {
+    // The ends would overlap; keep at least one character out. The tail is
+    // what carries the extension, so the head gives way first.
+    tail = std::min(tail, characters - 1);
+    head = std::min(head, characters - tail - 1);
+  }
+  std::string headText(name.substr(0, prefixBytes(name, head)));
+  std::string tailText(name.substr(name.size() - suffixBytes(name, tail)));
+  std::string result = headText + '_' + tailText;
+  while (result.size() > policy.maxBytes) {
+    if (!headText.empty()) {
+      headText.resize(headText.size() - suffixBytes(headText, 1));
+    }
+    else if (!tailText.empty()) {
+      tailText.erase(0, prefixBytes(tailText, 1));
+    }
+    else {
+      result = "_";
+      break;
+    }
+    result = headText + '_' + tailText;
+  }
+  return result;
+}
+
+} // namespace
+
+std::string sanitizeFileName(std::string_view input,
+                             const FileNamePolicy& policy)
 {
   std::string name;
+  name.reserve(input.size());
   for (const char ch : input) {
-    const auto c = static_cast<unsigned char>(ch);
-    const bool reserved = c < 0x20 || c == 0x7f || ch == '/' || ch == '\\' ||
-                          ch == ':' || ch == '*' || ch == '?' || ch == '"' ||
-                          ch == '<' || ch == '>' || ch == '|';
-    name += reserved ? '_' : ch;
+    const auto byte = static_cast<unsigned char>(ch);
+    if (ch == '/' || ch == '\\' || byte == 0) {
+      // A derived name is one component and must never leave its directory.
+      name += '_';
+    }
+    else if (isInvalidFileNameCharacter(byte)) {
+      switch (policy.invalidCharacters) {
+      case InvalidFileNameCharacters::Keep:
+        name += ch;
+        break;
+      case InvalidFileNameCharacters::Delete:
+        break;
+      case InvalidFileNameCharacters::Replace:
+        name += '_';
+        break;
+      }
+    }
+    else {
+      name += ch;
+    }
   }
   if (!text::isUtf8(name)) {
     name = text::latin1ToUtf8(name);
   }
+  // Windows drops trailing dots and spaces, so a name made of them names no
+  // file; a name that only shrinks to nothing is unusable.
   while (!name.empty() && (name.back() == '.' || name.back() == ' ')) {
     name.pop_back();
   }
@@ -57,6 +196,11 @@ std::string safeFileName(std::string_view input)
   if (name.empty()) {
     return {};
   }
+  // A root name such as "C:" would make joinPath treat the name as a drive
+  // path. Prefixing keeps it a component even when ':' is kept.
+  if (toPath(name).has_root_name()) {
+    name.insert(0, 1, '_');
+  }
   const auto stem = text::lower(name.substr(0, name.find('.')));
   const bool device = stem == "con" || stem == "prn" || stem == "aux" ||
                       stem == "nul" ||
@@ -64,19 +208,12 @@ std::string safeFileName(std::string_view input)
                        (stem.starts_with("com") || stem.starts_with("lpt")) &&
                        stem[3] >= '1' && stem[3] <= '9');
   if (device) {
-    name.insert(0, "_");
+    name.insert(0, 1, '_');
   }
-  constexpr size_t limit = 240;
-  if (name.size() > limit) {
-    const auto dot = name.rfind('.');
-    std::string extension = dot != std::string::npos && name.size() - dot < 32
-                                ? name.substr(dot)
-                                : "";
-    name.resize(limit - extension.size());
-    while (!name.empty() && !text::isUtf8(name)) {
-      name.pop_back();
-    }
-    name += extension;
+  if (policy.maxBytes > 0 && name.size() > policy.maxBytes) {
+    name = policy.truncation == FileNameTruncation::HeadTail
+               ? shortenToHeadAndTail(name, policy)
+               : shortenKeepingExtension(name, policy.maxBytes);
   }
   return name;
 }
